@@ -3,11 +3,12 @@ pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "./IKYC.sol";
 
-contract UDAOContent is ERC721, ERC721URIStorage, Ownable {
+contract UDAOContent is ERC721, ERC721URIStorage, AccessControl {
+    bytes32 public constant VERIFIER_ROLE = keccak256("VERIFIER_ROLE");
     using Counters for Counters.Counter;
 
     IKYC ikyc;
@@ -15,13 +16,38 @@ contract UDAOContent is ERC721, ERC721URIStorage, Ownable {
     Counters.Counter private _tokenIdCounter;
 
     mapping(uint => uint) contentPrice;
+    mapping(uint => uint) isValidated;
 
-    constructor(address _kycAddress) ERC721("UDAO Content", "UDAOC-O") {
+    string public defaultURI;
+
+    uint public requiredValidator;
+    uint public minRequiredVote;
+
+    struct Validation {
+        uint id;
+        uint8 validationCount;
+        address[] validators;
+        bool[] validationResults;
+        bool finalValidationResult;
+        mapping(address => bool) isVoted;
+    }
+
+    Validation[] public validations;
+
+    constructor(address _kycAddress) ERC721("UDAO Content", "UDAOC") {
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         ikyc = IKYC(_kycAddress);
     }
 
-    function _baseURI() internal pure override returns (string memory) {
-        return "ipfs://CID/";
+    function _baseURI() internal view override returns (string memory) {
+        return defaultURI;
+    }
+
+    function setBaseURI(string calldata _newURI)
+        external
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        defaultURI = _newURI;
     }
 
     function safeMint(
@@ -66,7 +92,21 @@ contract UDAOContent is ERC721, ERC721URIStorage, Ownable {
         contentPrice[tokenId] = _contentPrice;
     }
 
-    function setKycContractAddress(address _kycAddress) external onlyOwner {
+    function setKycContractAddress(address _kycAddress)
+        external
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
         ikyc = IKYC(address(_kycAddress));
+    }
+
+    // The following functions are overrides required by Solidity.
+
+    function supportsInterface(bytes4 interfaceId)
+        public
+        view
+        override(ERC721, AccessControl)
+        returns (bool)
+    {
+        return super.supportsInterface(interfaceId);
     }
 }
