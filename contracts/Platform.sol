@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import "@openzeppelin/contracts/utils/Counters.sol";
 import "./IKYC.sol";
 
 interface IUDAOC is IERC721 {
@@ -15,8 +16,17 @@ contract Platform is Pausable, AccessControl {
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
     bytes32 public constant FOUNDATION_ROLE = keccak256("FOUNDATION_ROLE");
     mapping(address => bool) isCompany;
-    mapping(address => bool) isCoach;
+    struct Coach {
+        uint teamId;
+        bool isTeamLeader;
+        uint coachingFee;
+    }
+
+    mapping(address => Coach) coaches;
     mapping(address => uint[]) ownedContents;
+
+    using Counters for Counters.Counter;
+    Counters.Counter private teamIds;
 
     IKYC ikyc;
     IERC20 udao;
@@ -47,13 +57,12 @@ contract Platform is Pausable, AccessControl {
     function buyCoaching(address _coach) external {
         /// @dev Should be updated
         require(ikyc.getKYC(msg.sender), "You are not KYCed");
-        require(isCoach[_coach], "Address is not coach");
+        require(coaches[_coach].teamId != 0, "Address is not coach");
         require(ikyc.getBan(_coach), "Coach is banned");
         udao.transferFrom(
             msg.sender,
             address(this),
             100
-            // udaoc.getPriceContent(tokenId)
         );
     }
 
@@ -85,8 +94,28 @@ contract Platform is Pausable, AccessControl {
         ikyc = IKYC(address(_kycAddress));
     }
 
-    function setCoach(address _coachAddress, bool _isCoach) external {
+    function createCoach(uint coachingFee) external {
+        require(ikyc.getKYC(msg.sender), "You are not KYCed");
+        require(coaches[msg.sender].teamId == 0, "You are already registered as a coach");
+        teamIds.increment();
+        coaches[msg.sender] = Coach(teamIds.current(), true, coachingFee);
+    }
+    
+    function addCoachToTeam(address _coachAddress, uint _coachingFee) external {
         require(udaoc.balanceOf(msg.sender) > 0, "You are not an instructor");
-        isCoach[_coachAddress] = _isCoach;
+        require(coaches[msg.sender].isTeamLeader == true, "You are not the team leader");
+        coaches[_coachAddress] = Coach(coaches[msg.sender].teamId, false, _coachingFee);
+    }
+
+    function removeCoachFromTeam(address _coachAddress) external {
+        require(coaches[msg.sender].isTeamLeader == true, "You are not the team leader");
+        require(coaches[msg.sender].teamId == coaches[_coachAddress].teamId);
+        delete coaches[_coachAddress];
+    }
+
+    function setCoachingFee(address _coachAddress, uint _coachingFee) external {
+        require(coaches[msg.sender].isTeamLeader == true, "You are not the team leader");
+        require(coaches[msg.sender].teamId == coaches[_coachAddress].teamId);
+        coaches[_coachAddress].coachingFee = _coachingFee;
     }
 }
