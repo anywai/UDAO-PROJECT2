@@ -3,18 +3,11 @@ pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
-import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "./IKYC.sol";
+import "./RoleManager.sol";
 
-contract UDAOContent is ERC721, ERC721URIStorage, AccessControl {
-    bytes32 public constant VALIDATOR_ROLE = keccak256("VALIDATOR_ROLE");
-    bytes32 public constant SUPER_VALIDATOR_ROLE =
-        keccak256("SUPER_VALIDATOR_ROLE");
-    bytes32 public constant BACKEND_ROLE = keccak256("BACKEND_ROLE");
-    bytes32 public constant FOUNDATION_ROLE = keccak256("FOUNDATION_ROLE");
-    bytes32 public constant STAKING_CONTRACT = keccak256("STAKING_CONTRACT");
-    bytes32 public constant GOVERNANCE_ROLE = keccak256("GOVERNANCE_ROLE");
+contract UDAOContent is ERC721, ERC721URIStorage, RoleManager {
     using Counters for Counters.Counter;
 
     IKYC ikyc;
@@ -51,6 +44,7 @@ contract UDAOContent is ERC721, ERC721URIStorage, AccessControl {
     mapping(address => uint) maximumValidation;
     mapping(address => uint) public successfulValidation;
     mapping(address => uint) public unsuccessfulValidation;
+    uint public totalSuccesfulValidation;
 
     /**
      * assignValidation(uint tokenId) onlyRole(VALIDATION_ROLE || SUPER_VALIDATION_ROLE)
@@ -142,6 +136,19 @@ contract UDAOContent is ERC721, ERC721URIStorage, AccessControl {
     // Getters
     function getPriceContent(uint tokenId) external view returns (uint) {
         return contentPrice[tokenId];
+    }
+
+    function getValidationResults(address account)
+        external
+        view
+        returns (uint[2] memory results)
+    {
+        results[0] = successfulValidation[account];
+        results[1] = unsuccessfulValidation[account];
+    }
+
+    function getTotalValidation() external view returns (uint) {
+        return totalSuccesfulValidation;
     }
 
     // Setters
