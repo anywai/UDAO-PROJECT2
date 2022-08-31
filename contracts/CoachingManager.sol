@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+/// @title 
 pragma solidity ^0.8.4;
 
 import "./BasePlatform.sol";
@@ -39,6 +40,7 @@ abstract contract CoachingManager is BasePlatform {
     }
 
     function createTeam(uint coachingFee) external {
+        /// @dev Modify to allow coaches to be a part of multiple teams
         require(ikyc.getKYC(msg.sender), "You are not KYCed");
         require(
             coaches[msg.sender].teamId == 0,
@@ -49,6 +51,7 @@ abstract contract CoachingManager is BasePlatform {
     }
 
     function addCoachToTeam(address _coachAddress, uint _coachingFee) external {
+        /// @dev Modify to allow coaches to be a part of multiple teams, move to off-chain maybe?
         require(udaoc.balanceOf(msg.sender) > 0, "You are not an instructor");
         require(
             coaches[msg.sender].isTeamLeader == true,
@@ -62,6 +65,7 @@ abstract contract CoachingManager is BasePlatform {
     }
 
     function removeCoachFromTeam(address _coachAddress) external {
+        /// @dev Modify to allow coaches to be a part of multiple teams, move to off-chain maybe?
         require(
             coaches[msg.sender].isTeamLeader == true,
             "You are not the team leader"
