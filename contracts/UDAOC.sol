@@ -5,77 +5,16 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "./IKYC.sol";
-import "./RoleManager.sol";
+import "./ValidationManager.sol";
 
-contract UDAOContent is ERC721, ERC721URIStorage, RoleManager {
+contract UDAOContent is ERC721, ERC721URIStorage, ValidationManager {
     using Counters for Counters.Counter;
 
     IKYC ikyc;
 
     Counters.Counter private _tokenIdCounter;
 
-    mapping(uint => uint) contentPrice;
-    mapping(uint => uint) isValidated;
-
     string public defaultURI;
-
-    uint public requiredValidator;
-    uint public minRequiredVote;
-
-    struct Validation {
-        uint id;
-        uint tokenId;
-        uint8 validationCount;
-        address[] validators;
-        bool[] validationResults;
-        bool finalValidationResult;
-        mapping(address => bool) vote;
-        mapping(address => bool) isVoted;
-        uint resultDate;
-        uint validationScore;
-        uint validatorScore; // successfulValidation * validationScore
-    }
-
-    Validation[] validations;
-    mapping(uint => uint[]) validationIdOfToken;
-    mapping(address => uint) validationCount;
-    mapping(address => bool) activeValidation;
-    mapping(address => bool) isInDispute;
-    mapping(address => uint) maximumValidation;
-    mapping(address => uint) public successfulValidation;
-    mapping(address => uint) public unsuccessfulValidation;
-    uint public totalSuccesfulValidation;
-
-    /**
-     * assignValidation(uint tokenId) onlyRole(VALIDATION_ROLE || SUPER_VALIDATION_ROLE)
-     *      - makeActiveValidation true
-     *      - validations[tokenId].validators.push(msg.sender)
-     * sendValidation(bool result) onlyRole(VALIDATION_ROLE || SUPER_VALIDATION_ROLE)
-     *      - validationCount++
-     *      - makeActiveValidation false
-     *      - validations[tokenId].validationResults.push(true || false)
-     *      - validations[tokenId].isVoted[msg.sender] = true
-     *      - (validationCount == requiredValidator) ? event ValiadationFinalised(tokenId,result);finalValidationResult=result; successfulValidation(address) ++ , unsuccessfulValidation(address2) --; resultDate = block.timestamp
-     *
-     * dismissValidation(uint tokenId) onlyRole(VALIDATION_ROLE || SUPER_VALIDATION_ROLE)
-     *      - makeActiveValidation false
-     *      - validations[tokenId].validators remove msg.sender
-     *
-     *
-     * setMavimumValidation(uint max) onlyRole(STAKING_CONTRACT)
-     * grantValidatorRole(uint8 roleId, address account)  onlyRole(STAKING_CONTRACT) aynısnın revoke'u
-     *      - 0 -> VALIDATOR_ROLE
-     *      - 1 -> SUPER_VALIDATOR_ROLE
-     *      - _grantRole(role,account) => _revokeRole
-     *
-     *  setDisputer(uint id) onlyRole(FOUNDATION_ROLE) millet canı sıkıldıkça dispute açmasın (off-chain rapor toplayıp foundation dispute açabilir)
-     *      - isInDispute[addresses] = true
-     *      - successfulValidation(address) ++ , unsuccessfulValidation(address2) --;
-     *  endDispute(uint id, bool) onlyRole(FOUNDATION_ROLE)
-     *      - isInDispute[addresses] = false
-     *      - successfulValidation(address) ++ , unsuccessfulValidation(address2) --;
-     *
-     */
 
     constructor(address _kycAddress) ERC721("UDAO Content", "UDAOC") {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
@@ -105,16 +44,6 @@ contract UDAOContent is ERC721, ERC721URIStorage, RoleManager {
         contentPrice[tokenId] = _contentPrice;
     }
 
-    function createValidatior(uint tokenId, uint score)
-        external
-        onlyRole(BACKEND_ROLE)
-    {
-        Validation storage validation = validations.push();
-        validation.id = validations.length;
-        validation.tokenId = tokenId;
-        validation.validationScore = score;
-    }
-
     // The following functions are overrides required by Solidity.
 
     function _burn(uint256 tokenId)
@@ -136,19 +65,6 @@ contract UDAOContent is ERC721, ERC721URIStorage, RoleManager {
     // Getters
     function getPriceContent(uint tokenId) external view returns (uint) {
         return contentPrice[tokenId];
-    }
-
-    function getValidationResults(address account)
-        external
-        view
-        returns (uint[2] memory results)
-    {
-        results[0] = successfulValidation[account];
-        results[1] = unsuccessfulValidation[account];
-    }
-
-    function getTotalValidation() external view returns (uint) {
-        return totalSuccesfulValidation;
     }
 
     // Setters
