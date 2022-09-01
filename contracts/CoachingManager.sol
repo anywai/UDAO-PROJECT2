@@ -1,85 +1,132 @@
 // SPDX-License-Identifier: MIT
-/// @title 
+/// @title
 pragma solidity ^0.8.4;
 
 import "./BasePlatform.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 
 abstract contract CoachingManager is BasePlatform {
-    struct Coach {
-        uint teamId;
-        bool isTeamLeader;
-        uint coachingFee;
-    }
-
-    mapping(address => Coach) coaches;
-
     using Counters for Counters.Counter;
     Counters.Counter private teamIds;
 
-    function buyCoaching(address _coach) external {
+    //teeamid => teamLeader
+    mapping(uint => address) teamLeader;
+
+    // teamid => members
+    mapping(uint => mapping(address => bool)) teamMembers;
+
+    // teamid => (address => fee))
+    mapping(uint => mapping(address => uint)) coachingFees;
+
+    // teamid => "does leader distribute earnings"
+    mapping(uint => bool) leaderDistributed;
+
+    function buyCoaching(address _coach, uint _teamId) external {
         /// @dev Should be updated
         require(ikyc.getKYC(msg.sender), "You are not KYCed");
-        require(coaches[_coach].teamId != 0, "Address is not coach");
+        require(
+            teamMembers[_teamId][_coach],
+            "Address is not registered as a coach in this team."
+        );
         require(!ikyc.getBan(_coach), "Coach is banned");
         foundationBalance +=
-            (coaches[_coach].coachingFee * coachingFoundationCut) /
+            (coachingFees[_teamId][_coach] * coachingFoundationCut) /
             100000;
         governacneBalance +=
-            (coaches[_coach].coachingFee * coachingGovernancenCut) /
+            (coachingFees[_teamId][_coach] * coachingGovernancenCut) /
             100000;
-        teamBalance[coaches[_coach].teamId] +=
-            coaches[_coach].coachingFee -
-            ((coaches[_coach].coachingFee * coachingFoundationCut) / 100000) -
-            ((coaches[_coach].coachingFee * coachingGovernancenCut) / 100000);
+        if (leaderDistributed[_teamId]) {
+            teamBalance[_teamId] +=
+                coachingFees[_teamId][_coach] -
+                ((coachingFees[_teamId][_coach] * coachingFoundationCut) /
+                    100000) -
+                ((coachingFees[_teamId][_coach] * coachingGovernancenCut) /
+                    100000);
+        } else {
+            coachBalance[_coach] +=
+                coachingFees[_teamId][_coach] -
+                ((coachingFees[_teamId][_coach] * coachingFoundationCut) /
+                    100000) -
+                ((coachingFees[_teamId][_coach] * coachingGovernancenCut) /
+                    100000);
+        }
         udao.transferFrom(
             msg.sender,
             address(this),
-            coaches[_coach].coachingFee
+            coachingFees[_teamId][_coach]
         );
     }
 
-    function createTeam(uint coachingFee) external {
+    function createTeam(uint _coachingFee, bool _leaderDistributed) external {
         /// @dev Modify to allow coaches to be a part of multiple teams
-        require(ikyc.getKYC(msg.sender), "You are not KYCed");
-        require(
-            coaches[msg.sender].teamId == 0,
-            "You are already registered as a coach"
-        );
-        teamIds.increment();
-        coaches[msg.sender] = Coach(teamIds.current(), true, coachingFee);
-    }
-
-    function addCoachToTeam(address _coachAddress, uint _coachingFee) external {
-        /// @dev Modify to allow coaches to be a part of multiple teams, move to off-chain maybe?
         require(udaoc.balanceOf(msg.sender) > 0, "You are not an instructor");
-        require(
-            coaches[msg.sender].isTeamLeader == true,
-            "You are not the team leader"
-        );
-        coaches[_coachAddress] = Coach(
-            coaches[msg.sender].teamId,
-            false,
-            _coachingFee
-        );
+        require(ikyc.getKYC(msg.sender), "You are not KYCed");
+        teamIds.increment();
+        teamLeader[teamIds.current()] = msg.sender;
+        teamMembers[teamIds.current()][msg.sender] = true;
+        coachingFees[teamIds.current()][msg.sender] = _coachingFee;
+        leaderDistributed[teamIds.current()] = _leaderDistributed;
     }
 
-    function removeCoachFromTeam(address _coachAddress) external {
+    function setLeaderDistributed(uint _teamId, bool _leaderDistributed)
+        external
+    {
+        require(
+            teamLeader[_teamId] == msg.sender,
+            "You are not the team leader."
+        );
+        leaderDistributed[teamIds.current()] = _leaderDistributed;
+    }
+
+    function addCoachToTeam(
+        uint _teamId,
+        address _coachAddress,
+        uint _coachingFee
+    ) external {
         /// @dev Modify to allow coaches to be a part of multiple teams, move to off-chain maybe?
         require(
-            coaches[msg.sender].isTeamLeader == true,
-            "You are not the team leader"
+            teamLeader[_teamId] == msg.sender,
+            "You are not the team leader."
         );
-        require(coaches[msg.sender].teamId == coaches[_coachAddress].teamId);
-        delete coaches[_coachAddress];
+        teamMembers[_teamId][_coachAddress] = true;
+        coachingFees[_teamId][_coachAddress] = _coachingFee;
     }
 
-    function setCoachingFee(address _coachAddress, uint _coachingFee) external {
+    function removeCoachFromTeam(uint _teamId, address _coachAddress) external {
+        /// @dev Modify to allow coaches to be a part of multiple teams, move to off-chain maybe?
         require(
-            coaches[msg.sender].isTeamLeader == true,
-            "You are not the team leader"
+            teamLeader[_teamId] == msg.sender,
+            "You are not the team leader."
         );
-        require(coaches[msg.sender].teamId == coaches[_coachAddress].teamId);
-        coaches[_coachAddress].coachingFee = _coachingFee;
+        teamMembers[_teamId][_coachAddress] = false;
+        coachingFees[_teamId][_coachAddress] = 0;
+    }
+
+    function setCoachingFee(
+        uint _teamId,
+        address _coachAddress,
+        uint _coachingFee
+    ) external {
+        require(
+            teamLeader[_teamId] == msg.sender,
+            "You are not the team leader."
+        );
+        require(
+            teamMembers[_teamId][_coachAddress] == true,
+            "This coach doesn't belong to this team."
+        );
+        coachingFees[_teamId][_coachAddress] = _coachingFee;
+    }
+
+    function withdrawTeam(uint _teamId) external {
+        require(
+            teamLeader[_teamId] == msg.sender,
+            "You are not the team leader."
+        );
+        udao.transfer(teamLeader[_teamId], teamBalance[_teamId]);
+    }
+
+    function withdrawCoach() external {
+        udao.transfer(msg.sender, coachBalance[msg.sender]);
     }
 }

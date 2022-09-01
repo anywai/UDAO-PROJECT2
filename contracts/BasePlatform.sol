@@ -13,6 +13,7 @@ abstract contract BasePlatform is Pausable, RoleManager {
 
     mapping(address => uint[]) ownedContents;
     mapping(uint => uint) teamBalance;
+    mapping(address => uint) coachBalance;
     mapping(address => uint) contentBalance;
     mapping(address => mapping(uint => bool)) isTokenBought;
     uint public foundationBalance;
