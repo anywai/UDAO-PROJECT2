@@ -21,22 +21,16 @@ contract UDAOContent is ERC721, ERC721URIStorage, ValidationManager {
         ikyc = IKYC(_kycAddress);
     }
 
-    function _baseURI() internal view override returns (string memory) {
-        return defaultURI;
-    }
-
-    function setBaseURI(string calldata _newURI)
-        external
-        onlyRole(DEFAULT_ADMIN_ROLE)
-    {
-        defaultURI = _newURI;
-    }
 
     function safeMint(
         address to,
         string memory uri,
         uint _contentPrice
     ) public {
+        /// @notice mints content token to `to` address
+        /// @param to address of content owner
+        /// @param uri URI address of content
+        /// @param _contentPrice price of content
         uint256 tokenId = _tokenIdCounter.current();
         _tokenIdCounter.increment();
         _safeMint(to, tokenId);
@@ -46,6 +40,17 @@ contract UDAOContent is ERC721, ERC721URIStorage, ValidationManager {
 
     // The following functions are overrides required by Solidity.
 
+    /// @dev her token'ın kendi URI'yı olacağı için override kısmına taşıyıp comment out ettim
+    // function _baseURI() internal view override returns (string memory) {
+    //     return defaultURI;
+    // }
+
+    // function setBaseURI(string calldata _newURI)
+    //     external
+    //     onlyRole(DEFAULT_ADMIN_ROLE)
+    // {
+    //     defaultURI = _newURI;
+    // }
     function _burn(uint256 tokenId)
         internal
         override(ERC721, ERC721URIStorage)
