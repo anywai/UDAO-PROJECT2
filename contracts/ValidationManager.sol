@@ -12,7 +12,7 @@ abstract contract ValidationManager is RoleManager {
         uint tokenId;
         uint8 validationCount;
         address[] validators;
-        bool[] validationResults;
+        uint validationResults;
         bool finalValidationResult;
         mapping(address => bool) vote;
         mapping(address => bool) isVoted;
@@ -27,30 +27,67 @@ abstract contract ValidationManager is RoleManager {
     Validation[] validations;
     mapping(uint => uint[]) validationIdOfToken;
     mapping(address => uint) validationCount;
-    mapping(address => bool) activeValidation;
+    mapping(address => uint) activeValidation;
     mapping(address => bool) isInDispute;
     mapping(address => uint) maximumValidation;
     mapping(address => uint) public successfulValidation;
     mapping(address => uint) public unsuccessfulValidation;
     uint public totalSuccesfulValidation;
 
-    /**
-     * sendValidation(bool result) onlyRole(VALIDATION_ROLE || SUPER_VALIDATION_ROLE)
-     *      - validationCount++
-     *      - makeActiveValidation false
-     *      - validations[tokenId].validationResults.push(true || false)
-     *      - validations[tokenId].isVoted[msg.sender] = true
-     *      - (validationCount == requiredValidator) ? event ValiadationFinalised(tokenId,result);finalValidationResult=result; successfulValidation(address) ++ , unsuccessfulValidation(address2) --; resultDate = block.timestamp
-     *
-     * dismissValidation(uint tokenId) onlyRole(VALIDATION_ROLE || SUPER_VALIDATION_ROLE)
-     *      - makeActiveValidation false
-     *      - validations[tokenId].validators remove msg.sender
-     *
-     *
-     * setMavimumValidation(uint max) onlyRole(STAKING_CONTRACT)
-     *
-     *
-     */
+    function sendValidation(uint tokenId, bool result) external {
+        require(
+            hasRole(VALIDATOR_ROLE, msg.sender) ||
+                hasRole(SUPER_VALIDATOR_ROLE, msg.sender),
+            "You are not a validator"
+        );
+        require(
+            activeValidation[msg.sender] == tokenId,
+            "This content is not assigned to this wallet"
+        );
+        validationCount[msg.sender]++;
+        activeValidation[msg.sender] = 0;
+        if (result) {
+            validations[tokenId].validationResults++;
+        }
+        validations[tokenId].isVoted[msg.sender] = true;
+        validations[tokenId].vote[msg.sender] = true;
+        validations[tokenId].validationCount++;
+        if (validations[tokenId].validationCount >= requiredValidator) {
+            if (validations[tokenId].validationResults >= minRequiredVote) {
+                validations[tokenId].finalValidationResult = true;
+            } else {
+                validations[tokenId].finalValidationResult = false;
+            }
+            validations[tokenId].resultDate = block.timestamp;
+        }
+    }
+
+    function dismissValidation(uint tokenId) external {
+        require(
+            hasRole(VALIDATOR_ROLE, msg.sender) ||
+                hasRole(SUPER_VALIDATOR_ROLE, msg.sender),
+            "You are not a validator"
+        );
+        require(
+            activeValidation[msg.sender] == tokenId,
+            "This content is not assigned to this wallet"
+        );
+        activeValidation[msg.sender] = 0;
+        for (uint i; i < validations[tokenId].validators.length; i++) {
+            if (msg.sender == validations[tokenId].validators[i]) {
+                validations[tokenId].validators[i] = validations[tokenId]
+                    .validators[validations[tokenId].validators.length - 1];
+                validations[tokenId].validators.pop();
+            }
+        }
+    }
+
+    function seetMaximumValidation(uint _requiredValidator)
+        external
+        onlyRole(GOVERNANCE_ROLE)
+    {
+        requiredValidator = _requiredValidator;
+    }
 
     function createValidatior(uint tokenId, uint score)
         external
@@ -132,14 +169,15 @@ abstract contract ValidationManager is RoleManager {
             "You are not a validator"
         );
         require(
-            !activeValidation[msg.sender],
+            activeValidation[msg.sender] == 0,
             "You already have an assigned content"
         );
-        activeValidation[msg.sender] = true;
         require(
             validations[tokenId].validators.length < requiredValidator,
             "Content already have enough validators!"
         );
+
+        activeValidation[msg.sender] = tokenId;
         validations[tokenId].validators.push(msg.sender);
     }
 }
