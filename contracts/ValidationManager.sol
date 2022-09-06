@@ -4,8 +4,11 @@ pragma solidity ^0.8.4;
 import "./RoleManager.sol";
 
 abstract contract ValidationManager is RoleManager {
+    /// @dev why did we add this :D
     mapping(uint => uint) contentPrice;
-    mapping(uint => uint) isValidated;
+
+    // tokenId => is validation done
+    mapping(uint => bool) isValidated;
 
     struct Validation {
         uint id;
@@ -25,6 +28,7 @@ abstract contract ValidationManager is RoleManager {
     uint public minRequiredVote;
 
     Validation[] validations;
+
     mapping(uint => uint[]) validationIdOfToken;
     mapping(address => uint) validationCount;
     mapping(address => uint) activeValidation;
@@ -35,6 +39,9 @@ abstract contract ValidationManager is RoleManager {
     uint public totalSuccesfulValidation;
 
     function sendValidation(uint tokenId, bool result) external {
+        /// @notice sends validation result
+        /// @param tokenId id of the content
+        /// @param result result of validation
         require(
             hasRole(VALIDATOR_ROLE, msg.sender) ||
                 hasRole(SUPER_VALIDATOR_ROLE, msg.sender),
@@ -58,11 +65,14 @@ abstract contract ValidationManager is RoleManager {
             } else {
                 validations[tokenId].finalValidationResult = false;
             }
+            isValidated[tokenId] = true;
             validations[tokenId].resultDate = block.timestamp;
         }
     }
 
     function dismissValidation(uint tokenId) external {
+        /// @notice dismisses validation of content
+        /// @param tokenId id of the content that will be dismissed
         require(
             hasRole(VALIDATOR_ROLE, msg.sender) ||
                 hasRole(SUPER_VALIDATOR_ROLE, msg.sender),
@@ -86,13 +96,18 @@ abstract contract ValidationManager is RoleManager {
         external
         onlyRole(GOVERNANCE_ROLE)
     {
+        /// @notice sets required validator vote count per content
+        /// @param _requiredValidator new required vote count
         requiredValidator = _requiredValidator;
     }
 
-    function createValidatior(uint tokenId, uint score)
+    function createValidation(uint tokenId, uint score)
         external
         onlyRole(BACKEND_ROLE)
     {
+        /// @notice starts new validation for content
+        /// @param tokenId id of the content that will be validated
+        /// @param score validation score of the content
         Validation storage validation = validations.push();
         validation.id = validations.length;
         validation.tokenId = tokenId;
