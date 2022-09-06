@@ -36,7 +36,7 @@ abstract contract ValidationManager is RoleManager {
     mapping(address => uint) maximumValidation;
     mapping(address => uint) public successfulValidation;
     mapping(address => uint) public unsuccessfulValidation;
-    uint public totalSuccesfulValidation;
+    uint public totalSuccessfulValidation;
 
     function sendValidation(uint tokenId, bool result) external {
         /// @notice sends validation result
@@ -92,7 +92,7 @@ abstract contract ValidationManager is RoleManager {
         }
     }
 
-    function seetMaximumValidation(uint _requiredValidator)
+    function setMaximumValidation(uint _requiredValidator)
         external
         onlyRole(GOVERNANCE_ROLE)
     {
@@ -124,7 +124,7 @@ abstract contract ValidationManager is RoleManager {
     }
 
     function getTotalValidation() external view returns (uint) {
-        return totalSuccesfulValidation;
+        return totalSuccessfulValidation;
     }
 
     function setDispute(uint id) external onlyRole(FOUNDATION_ROLE) {
