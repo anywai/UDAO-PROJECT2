@@ -29,7 +29,7 @@ abstract contract ValidationManager is RoleManager {
 
     Validation[] validations;
 
-    mapping(uint => uint[]) validationIdOfToken;
+    mapping(uint => uint[]) validationIdOfToken;  ///TODO
     mapping(address => uint) validationCount;
     mapping(address => uint) activeValidation;
     mapping(address => bool) isInDispute;
@@ -127,8 +127,9 @@ abstract contract ValidationManager is RoleManager {
         return totalSuccessfulValidation;
     }
 
-    function setDispute(uint id) external onlyRole(FOUNDATION_ROLE) {
-        //millet canı sıkıldıkça dispute açmasın (off-chain rapor toplayıp foundation dispute açabilir)
+    function openDispute(uint id) external onlyRole(FOUNDATION_ROLE) {
+        /// @notice Only foundation can open a dispute after enough off-chain dispute reports gathered from users.
+        /// @param id
         Validation storage validation = validations[id];
         address[] memory disputedAddresses = validation.validators;
         for (uint i; i < disputedAddresses.length; i++) {
