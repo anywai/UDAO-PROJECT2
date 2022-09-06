@@ -4,29 +4,31 @@ import "./BasePlatform.sol";
 
 abstract contract ContentManager is BasePlatform {
     function buyContent(uint tokenId) external {
+        /// @notice buys content
+        /// @param tokenId id of the token that will be bought
         require(ikyc.getKYC(msg.sender), "You are not KYCed");
         require(
             isTokenBought[msg.sender][tokenId] == false,
             "Content Already Bought"
         );
         foundationBalance +=
-            (udaoc.getPriceContent(tokenId) * courseFoundationCut) /
+            (udaoc.getPriceContent(tokenId) * contentFoundationCut) /
             100000;
-        governacneBalance +=
-            (udaoc.getPriceContent(tokenId) * courseGovernancenCut) /
+        governanceBalance +=
+            (udaoc.getPriceContent(tokenId) * contentGovernancenCut) /
             100000;
         validatorBalance +=
             (udaoc.getPriceContent(tokenId) * validatorBalance) /
             100000;
         jurorBalance +=
-            (udaoc.getPriceContent(tokenId) * courseGovernancenCut) /
+            (udaoc.getPriceContent(tokenId) * contentGovernancenCut) /
             100000;
         contentBalance[udaoc.ownerOf(tokenId)] +=
             udaoc.getPriceContent(tokenId) -
-            ((udaoc.getPriceContent(tokenId) * courseFoundationCut) / 100000) -
-            ((udaoc.getPriceContent(tokenId) * courseGovernancenCut) / 100000) -
+            ((udaoc.getPriceContent(tokenId) * contentFoundationCut) / 100000) -
+            ((udaoc.getPriceContent(tokenId) * contentGovernancenCut) / 100000) -
             ((udaoc.getPriceContent(tokenId) * validatorBalance) / 100000) -
-            ((udaoc.getPriceContent(tokenId) * courseGovernancenCut) / 100000);
+            ((udaoc.getPriceContent(tokenId) * contentGovernancenCut) / 100000);
         udao.transferFrom(
             msg.sender,
             address(this),

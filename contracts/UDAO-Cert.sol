@@ -13,11 +13,10 @@ contract UDAOCertificate is ERC721, ERC721URIStorage, Ownable {
 
     constructor() ERC721("UDAO Certificate", "UDAO-Cert") {}
 
-    function _baseURI() internal pure override returns (string memory) {
-        return "ipfs://CID/";
-    }
-
     function safeMint(address to, string memory uri) public onlyOwner {
+        /// @notice mints certificate token to `to` address
+        /// @param to address of certificate owner
+        /// @param uri URI address of certificate
         uint256 tokenId = _tokenIdCounter.current();
         _tokenIdCounter.increment();
         _safeMint(to, tokenId);
@@ -25,6 +24,11 @@ contract UDAOCertificate is ERC721, ERC721URIStorage, Ownable {
     }
 
     // The following functions are overrides required by Solidity.
+
+    /// @dev her token'ın kendi URI'yı olacağı için override kısmına taşıyıp comment out ettim
+    // function _baseURI() internal view override returns (string memory) {
+    //     return super._baseURI();
+    // }
 
     function _burn(uint256 tokenId)
         internal

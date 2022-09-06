@@ -35,7 +35,7 @@ abstract contract CoachingManager is BasePlatform {
         foundationBalance +=
             (coachingFees[_teamId][_coach] * coachingFoundationCut) /
             100000;
-        governacneBalance +=
+        governanceBalance +=
             (coachingFees[_teamId][_coach] * coachingGovernancenCut) /
             100000;
         if (leaderDistributed[_teamId]) {
