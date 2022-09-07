@@ -16,11 +16,13 @@ contract UDAOContent is ERC721, ERC721URIStorage, ValidationManager {
 
     string public defaultURI;
 
+    // tokenId => price
+    mapping(uint => uint) contentPrice;
+
     constructor(address _kycAddress) ERC721("UDAO Content", "UDAOC") {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         ikyc = IKYC(_kycAddress);
     }
-
 
     function safeMint(
         address to,
