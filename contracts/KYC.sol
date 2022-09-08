@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+/// @title KYC(know-your-customer) and user ban management
 pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/security/Pausable.sol";
@@ -26,7 +27,7 @@ contract KYC is Pausable, Ownable {
     function setBan(address _address, bool _isBanned) external onlyOwner {
         /// @notice set ban for the address
         /// @param _address address that will be ban set
-        /// @param _isBanned ban seet result
+        /// @param _isBanned ban set result
         isBanned[_address] = _isBanned;
     }
 

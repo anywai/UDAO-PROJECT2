@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+/// @title The token given to the users who successfully complete a course.
 pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
