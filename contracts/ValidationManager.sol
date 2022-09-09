@@ -118,7 +118,7 @@ abstract contract ValidationManager is RoleManager {
         }
     }
 
-    function setMaximumValidation(uint _requiredValidator)
+    function setRequiredValidators(uint _requiredValidator)
         external
         onlyRole(GOVERNANCE_ROLE)
     {
