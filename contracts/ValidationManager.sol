@@ -51,6 +51,7 @@ abstract contract ValidationManager is RoleManager {
         );
         validationCount[msg.sender]++;
         activeValidation[msg.sender] = 0;
+        /// FIXME ValidationResults and validationCount seems to serve to same thing
         if (result) {
             validations[validationId].validationResults++;
         }
@@ -62,9 +63,11 @@ abstract contract ValidationManager is RoleManager {
     function finalizeValidation(uint validationId) external {
         /// @notice finalizes validation if enough validation is sent
         /// @param validationId id of the validation
+        /// TODO below, shouldn't the number of validations equal to no of validators?
+        /// FIXME minRequiredVote and requiredValidator seems to serve to same thing
         require(
             validations[validationId].validationCount >= requiredValidator,
-            "Note enough validation"
+            "Not enough validation"
         );
         if (validations[validationId].validationResults >= minRequiredVote) {
             validations[validationId].finalValidationResult = true;
@@ -97,6 +100,7 @@ abstract contract ValidationManager is RoleManager {
 
     function dismissValidation(uint validationId) external {
         /// @notice dismisses validation of content
+        /// TODO ask burak what is the exact use case of this function
         /// @param validationId id of the content that will be dismissed
         require(
             hasRole(VALIDATOR_ROLE, msg.sender) ||
@@ -118,7 +122,7 @@ abstract contract ValidationManager is RoleManager {
         }
     }
 
-    function setMaximumValidation(uint _requiredValidator)
+    function setRequiredValidators(uint _requiredValidator)
         external
         onlyRole(GOVERNANCE_ROLE)
     {

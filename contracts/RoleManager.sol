@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+/// @title UDAO smart contract's role definitions. Other contracts inherits this to allow usage of custom roles.
 pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";

@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+/// @title Content purchasing and cut management
 pragma solidity ^0.8.4;
 import "./BasePlatform.sol";
 

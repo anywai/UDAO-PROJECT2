@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+/// @title KYC interface
 pragma solidity ^0.8.4;
 
 interface IKYC {
