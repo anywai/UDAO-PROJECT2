@@ -51,6 +51,7 @@ abstract contract ValidationManager is RoleManager {
         );
         validationCount[msg.sender]++;
         activeValidation[msg.sender] = 0;
+        /// FIXME ValidationResults and validationCount seems to serve to same thing
         if (result) {
             validations[validationId].validationResults++;
         }
