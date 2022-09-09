@@ -9,12 +9,8 @@ import "./IUDAOC.sol";
 import "./RoleManager.sol";
 
 abstract contract BasePlatform is Pausable, RoleManager {
-
     // wallet => is comapny wallet
     mapping(address => bool) isCompany;
-
-    // wallet => content token Ids
-    mapping(address => uint[]) ownedContents;
 
     // teamId => tean balance
     mapping(uint => uint) teamBalance;
@@ -80,14 +76,13 @@ abstract contract BasePlatform is Pausable, RoleManager {
         udao = IERC20(udaoAddress);
         udaoc = IUDAOC(udaocAddress);
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        _grantRole(PAUSER_ROLE, msg.sender);
     }
 
-    function pause() public onlyRole(PAUSER_ROLE) {
+    function pause() public onlyRole(GOVERNANCE_ROLE) {
         _pause();
     }
 
-    function unpause() public onlyRole(PAUSER_ROLE) {
+    function unpause() public onlyRole(GOVERNANCE_ROLE) {
         _unpause();
     }
 
@@ -174,7 +169,7 @@ abstract contract BasePlatform is Pausable, RoleManager {
     }
 
     function withdrawValidator() external {
-        /// @notice calculates validator earnings and withdraws calculated earning to validator wallet 
+        /// @notice calculates validator earnings and withdraws calculated earning to validator wallet
         require(udaoc.hasRole(VALIDATOR_ROLE, msg.sender));
         uint[2] memory results = udaoc.getValidationResults(msg.sender);
         uint participation = (results[0] * 100000) / udaoc.getTotalValidation();

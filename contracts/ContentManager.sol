@@ -3,6 +3,9 @@ pragma solidity ^0.8.4;
 import "./BasePlatform.sol";
 
 abstract contract ContentManager is BasePlatform {
+    // wallet => content token Ids
+    mapping(address => uint[]) ownedContents;
+
     function buyContent(uint tokenId) external {
         /// @notice buys content
         /// @param tokenId id of the token that will be bought
@@ -26,7 +29,8 @@ abstract contract ContentManager is BasePlatform {
         contentBalance[udaoc.ownerOf(tokenId)] +=
             udaoc.getPriceContent(tokenId) -
             ((udaoc.getPriceContent(tokenId) * contentFoundationCut) / 100000) -
-            ((udaoc.getPriceContent(tokenId) * contentGovernancenCut) / 100000) -
+            ((udaoc.getPriceContent(tokenId) * contentGovernancenCut) /
+                100000) -
             ((udaoc.getPriceContent(tokenId) * validatorBalance) / 100000) -
             ((udaoc.getPriceContent(tokenId) * contentGovernancenCut) / 100000);
         udao.transferFrom(

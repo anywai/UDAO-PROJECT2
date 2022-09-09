@@ -12,5 +12,5 @@ abstract contract RoleManager is AccessControl {
     bytes32 public constant STAKING_CONTRACT = keccak256("STAKING_CONTRACT");
     bytes32 public constant GOVERNANCE_ROLE = keccak256("GOVERNANCE_ROLE");
     bytes32 public constant JUROR_ROLE = keccak256("JUROR_ROLE");
-    bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
+    bytes32 public constant JUROR_CONTRACT = keccak256("JUROR_CONTRACT");
 }

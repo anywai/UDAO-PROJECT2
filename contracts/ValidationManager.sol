@@ -172,7 +172,7 @@ abstract contract ValidationManager is RoleManager {
     function endDispute(
         uint validationId,
         bool result // result true means validators lost the case
-    ) external onlyRole(FOUNDATION_ROLE) {
+    ) external onlyRole(JUROR_CONTRACT) {
         /// @notice ends dispute
         /// @param validationId id of the validation
         /// @param result result of the dispute
