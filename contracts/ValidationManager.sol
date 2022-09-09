@@ -64,7 +64,7 @@ abstract contract ValidationManager is RoleManager {
         /// @param validationId id of the validation
         require(
             validations[validationId].validationCount >= requiredValidator,
-            "Note enough validation"
+            "Not enough validation"
         );
         if (validations[validationId].validationResults >= minRequiredVote) {
             validations[validationId].finalValidationResult = true;
