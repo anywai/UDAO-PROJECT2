@@ -2,9 +2,13 @@
 pragma solidity ^0.8.4;
 
 import "./RoleManager.sol";
+import "./IUDAOC.sol";
 
 abstract contract ValidationManager is RoleManager {
     event ValidationEnded(uint validationId, uint tokenId, bool result);
+
+    // UDAO (ERC721) Token interface
+    IUDAOC udaoc;
 
     // tokenId => is validation done
     mapping(uint => bool) isValidated;
@@ -35,6 +39,14 @@ abstract contract ValidationManager is RoleManager {
     mapping(address => uint) public successfulValidation;
     mapping(address => uint) public unsuccessfulValidation;
     uint public totalSuccessfulValidation;
+
+    constructor(address udaocAddress) {
+        udaoc = IUDAOC(udaocAddress);
+    }
+
+    function setUDAOC(address udaocAddress) external onlyRole(FOUNDATION_ROLE) {
+        udaoc = IUDAOC(udaocAddress);
+    }
 
     function sendValidation(uint validationId, bool result) external {
         /// @notice sends validation result
@@ -207,6 +219,10 @@ abstract contract ValidationManager is RoleManager {
         require(
             validations[validationId].validators.length < requiredValidator,
             "Content already have enough validators!"
+        );
+        require(
+            udaoc.ownerOf(validations[validationId].tokenId) != msg.sender,
+            "You are the instructor of this course."
         );
 
         activeValidation[msg.sender] = validationId;
