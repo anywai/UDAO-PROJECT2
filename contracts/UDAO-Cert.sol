@@ -14,6 +14,7 @@ contract UDAOCertificate is ERC721, ERC721URIStorage, Ownable {
 
     constructor() ERC721("UDAO Certificate", "UDAO-Cert") {}
 
+    /// @dev convert this to lazy mint
     function safeMint(address to, string memory uri) public onlyOwner {
         /// @notice mints certificate token to `to` address
         /// @param to address of certificate owner
