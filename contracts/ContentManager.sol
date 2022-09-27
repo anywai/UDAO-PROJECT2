@@ -8,7 +8,7 @@ abstract contract ContentManager is BasePlatform {
     mapping(address => uint[]) ownedContents;
 
     function buyContent(uint tokenId) external {
-        /// @notice buys content
+        /// @notice allows KYCed users to purchase a content
         /// @param tokenId id of the token that will be bought
         require(ikyc.getKYC(msg.sender), "You are not KYCed");
         require(
