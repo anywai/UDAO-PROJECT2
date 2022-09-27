@@ -86,7 +86,7 @@ contract UDAOContent is ERC721, ERC721URIStorage, RoleManager {
 
     function setKycContractAddress(address _kycAddress)
         external
-        onlyRole(DEFAULT_ADMIN_ROLE)
+        onlyRole(FOUNDATION_ROLE)
     {
         ikyc = IKYC(address(_kycAddress));
     }
