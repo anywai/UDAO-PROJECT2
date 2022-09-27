@@ -6,9 +6,9 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "./IKYC.sol";
-import "./ValidationManager.sol";
+import "./RoleManager.sol";
 
-contract UDAOContent is ERC721, ERC721URIStorage, ValidationManager {
+contract UDAOContent is ERC721, ERC721URIStorage, RoleManager {
     using Counters for Counters.Counter;
 
     IKYC ikyc;

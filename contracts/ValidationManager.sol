@@ -4,7 +4,7 @@ pragma solidity ^0.8.4;
 import "./RoleManager.sol";
 import "./IUDAOC.sol";
 
-abstract contract ValidationManager is RoleManager {
+contract ValidationManager is RoleManager {
     event ValidationEnded(uint validationId, uint tokenId, bool result);
 
     // UDAO (ERC721) Token interface
