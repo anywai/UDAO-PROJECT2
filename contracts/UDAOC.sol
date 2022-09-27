@@ -72,12 +72,17 @@ contract UDAOContent is ERC721, ERC721URIStorage, RoleManager {
 
     // Getters
     function getPriceContent(uint tokenId) external view returns (uint) {
+        /// @notice returns the price of a specific content
+        /// @param tokenId the content ID of the token
         return contentPrice[tokenId];
     }
 
     // Setters
 
     function setPriceContent(uint tokenId, uint _contentPrice) external {
+        /// @notice allows content owners to set content price
+        /// @param tokenId the content ID of the token
+        /// @param _contentPrice the price to set
         require(ownerOf(tokenId) == msg.sender);
         contentPrice[tokenId] = _contentPrice;
     }
