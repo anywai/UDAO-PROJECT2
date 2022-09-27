@@ -3,28 +3,35 @@
 pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/security/Pausable.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/access/AccessControl.sol";
+import "./RoleManager.sol";
 
-contract KYC is Pausable, Ownable {
+contract KYC is Pausable, AccessControl, RoleManager {
     mapping(address => bool) isKYCed;
     mapping(address => bool) isBanned;
 
-    function pause() public onlyOwner {
+    function pause() public onlyRole(BACKEND_ROLE) {
         _pause();
     }
 
-    function unpause() public onlyOwner {
+    function unpause() public onlyRole(BACKEND_ROLE) {
         _unpause();
     }
 
-    function setKYC(address _address, bool _isKYCed) external onlyOwner {
+    function setKYC(address _address, bool _isKYCed)
+        external
+        onlyRole(BACKEND_ROLE)
+    {
         /// @notice set KYC for the address
         /// @param _address address that will be KYCed
         /// @param _isKYCed result of KYC
         isKYCed[_address] = _isKYCed;
     }
 
-    function setBan(address _address, bool _isBanned) external onlyOwner {
+    function setBan(address _address, bool _isBanned)
+        external
+        onlyRole(BACKEND_ROLE)
+    {
         /// @notice set ban for the address
         /// @param _address address that will be ban set
         /// @param _isBanned ban set result
