@@ -48,6 +48,7 @@ contract ValidationManager is RoleManager {
         udaoc = IUDAOC(udaocAddress);
     }
 
+    /// @dev this is possibly deprecated, moved to offchain?
     function sendValidation(uint validationId, bool result) external {
         /// @notice sends validation result
         /// @param validationId id of the validation
