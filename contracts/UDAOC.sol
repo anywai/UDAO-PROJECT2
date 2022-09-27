@@ -25,6 +25,8 @@ contract UDAOContent is ERC721, ERC721URIStorage, RoleManager {
         ikyc = IKYC(_kycAddress);
     }
 
+    /// @dev add KYC control
+    /// change to lazy mint
     function safeMint(
         address to,
         string memory uri,
@@ -89,7 +91,7 @@ contract UDAOContent is ERC721, ERC721URIStorage, RoleManager {
 
     function setKycContractAddress(address _kycAddress)
         external
-        onlyRole(DEFAULT_ADMIN_ROLE)
+        onlyRole(FOUNDATION_ROLE)
     {
         ikyc = IKYC(address(_kycAddress));
     }
