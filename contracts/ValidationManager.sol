@@ -112,8 +112,7 @@ contract ValidationManager is RoleManager {
     }
 
     function dismissValidation(uint validationId) external {
-        /// @notice dismisses validation of content
-        /// TODO ask burak what is the exact use case of this function
+        /// @notice allows validators to dismiss a validation assignment
         /// @param validationId id of the content that will be dismissed
         require(
             hasRole(VALIDATOR_ROLE, msg.sender) ||
