@@ -25,7 +25,7 @@ abstract contract ContentManager is BasePlatform {
             (udaoc.getPriceContent(tokenId) * validatorBalance) /
             100000;
         jurorBalance +=
-            (udaoc.getPriceContent(tokenId) * contentGovernancenCut) /
+            (udaoc.getPriceContent(tokenId) * contentJurorCut) /
             100000;
         contentBalance[udaoc.ownerOf(tokenId)] +=
             udaoc.getPriceContent(tokenId) -
