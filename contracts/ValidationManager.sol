@@ -213,6 +213,10 @@ contract ValidationManager is RoleManager {
             "You are not a validator"
         );
         require(
+            validationId < validations.length,
+            "Validation does not exist!"
+        );
+        require(
             activeValidation[msg.sender] == 0,
             "You already have an assigned content"
         );
