@@ -9,11 +9,6 @@ import "./IUDAOC.sol";
 import "./RoleManager.sol";
 
 abstract contract BasePlatform is Pausable, RoleManager {
-    // wallet => is comapny wallet
-    mapping(address => bool) isCompany;
-
-    // teamId => tean balance
-    mapping(uint => uint) teamBalance;
 
     // coach wallet => team balance
     mapping(address => uint) coachBalance;
@@ -87,17 +82,6 @@ abstract contract BasePlatform is Pausable, RoleManager {
     }
 
     // SETTERS
-
-    function setCompany(address _companyAddress, bool _isCompany)
-        external
-        onlyRole(FOUNDATION_ROLE)
-    {
-        /// @notice grants or revokes a company role to an address
-        /// @param _companyAddress address that will be role granted or revoked
-        /// @param _isCompany true if grant, false if revoke
-        isCompany[_companyAddress] = _isCompany;
-    }
-
     function setKycContractAddress(address _kycAddress)
         external
         onlyRole(FOUNDATION_ROLE)
