@@ -66,7 +66,7 @@ abstract contract ContentManager is BasePlatform {
     function setCoachingFee(
         uint _coachingFee
     ) external {
-        /// @notice Allows team leaders to modify coaching fees in their teams.
+        /// @notice Allows coaches to set their coaching fee.
         /// @param _coachingFee The new coaching fee.
         coachingFee[msg.sender] = _coachingFee;
     }
