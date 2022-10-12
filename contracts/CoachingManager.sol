@@ -3,7 +3,6 @@
 pragma solidity ^0.8.4;
 
 import "./BasePlatform.sol";
-import "@openzeppelin/contracts/utils/Counters.sol";
 
 abstract contract CoachingManager is BasePlatform {
 
