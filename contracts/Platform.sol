@@ -5,10 +5,9 @@ import "./IKYC.sol";
 import "./IUDAOC.sol";
 import "./RoleManager.sol";
 import "./BasePlatform.sol";
-import "./CoachingManager.sol";
 import "./ContentManager.sol";
 
-contract Platform is BasePlatform, CoachingManager, ContentManager {
+contract Platform is BasePlatform, ContentManager {
     // ITreasury treasury;
 
     constructor(
