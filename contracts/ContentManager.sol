@@ -17,6 +17,7 @@ abstract contract ContentManager is BasePlatform {
             isTokenBought[msg.sender][tokenId] == false,
             "Content Already Bought"
         );
+        /// FIXME getPriceContent is calculated multiple times below
         foundationBalance +=
             (udaoc.getPriceContent(tokenId) * contentFoundationCut) /
             100000;
