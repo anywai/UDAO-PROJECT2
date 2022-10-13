@@ -5,7 +5,7 @@ pragma solidity ^0.8.4;
 import "./IRoleManager.sol";
 import "@openzeppelin/contracts/utils/Context.sol";
 
-abstract contract RoleController {
+abstract contract RoleController is Context {
     bytes32 public constant VALIDATOR_ROLE = keccak256("VALIDATOR_ROLE");
     bytes32 public constant SUPER_VALIDATOR_ROLE =
         keccak256("SUPER_VALIDATOR_ROLE");
@@ -22,7 +22,7 @@ abstract contract RoleController {
         irm.checkRole(role, _msgSender());
         _;
     }
-    modifier onlyRoles(bytes32 roles) {
+    modifier onlyRoles(bytes32[] calldata roles) {
         irm.checkRoles(roles, _msgSender());
         _;
     }
