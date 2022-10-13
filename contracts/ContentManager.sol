@@ -17,34 +17,22 @@ abstract contract ContentManager is BasePlatform {
             isTokenBought[msg.sender][tokenId] == false,
             "Content Already Bought"
         );
-        /// FIXME getPriceContent is calculated multiple times below
-        foundationBalance +=
-            (udaoc.getPriceContent(tokenId) * contentFoundationCut) /
-            100000;
-        governanceBalance +=
-            (udaoc.getPriceContent(tokenId) * contentGovernancenCut) /
-            100000;
-        validatorBalance +=
-            (udaoc.getPriceContent(tokenId) * validatorBalance) /
-            100000;
-        jurorBalance +=
-            (udaoc.getPriceContent(tokenId) * contentJurorCut) /
-            100000;
+        uint contentPrice = udaoc.getPriceContent(tokenId);
+        foundationBalance += (contentPrice * contentFoundationCut) / 100000;
+        governanceBalance += (contentPrice * contentGovernancenCut) / 100000;
+        validatorBalance += (contentPrice * validatorBalance) / 100000;
+        jurorBalance += (contentPrice * contentJurorCut) / 100000;
         contentBalance[udaoc.ownerOf(tokenId)] +=
-            udaoc.getPriceContent(tokenId) -
-            ((udaoc.getPriceContent(tokenId) * contentFoundationCut) / 100000) -
-            ((udaoc.getPriceContent(tokenId) * contentGovernancenCut) /
-                100000) -
-            ((udaoc.getPriceContent(tokenId) * validatorBalance) / 100000) -
-            ((udaoc.getPriceContent(tokenId) * contentGovernancenCut) / 100000);
-        udao.transferFrom(
-            msg.sender,
-            address(this),
-            udaoc.getPriceContent(tokenId)
-        );
+            contentPrice -
+            ((contentPrice * contentFoundationCut) / 100000) -
+            ((contentPrice * contentGovernancenCut) / 100000) -
+            ((contentPrice * validatorBalance) / 100000) -
+            ((contentPrice * contentGovernancenCut) / 100000);
+        udao.transferFrom(msg.sender, address(this), contentPrice);
         isTokenBought[msg.sender][tokenId] = true;
         ownedContents[msg.sender].push(tokenId);
     }
+
     function buyCoaching(address _coach) external {
         /// @notice Allows users to buy coaching service.
         /// @param _coach The address of the coach that a user want to buy service from
@@ -52,21 +40,15 @@ abstract contract ContentManager is BasePlatform {
         require(!ikyc.getBan(_coach), "Coach is banned");
 
         foundationBalance +=
-        (coachingFee[_coach] * coachingFoundationCut) /
-        100000;
+            (coachingFee[_coach] * coachingFoundationCut) /
+            100000;
         governanceBalance +=
-        (coachingFee[_coach] * coachingGovernancenCut) /
-        100000;
-        udao.transferFrom(
-            msg.sender,
-            address(this),
-            coachingFee[_coach]
-        );
+            (coachingFee[_coach] * coachingGovernancenCut) /
+            100000;
+        udao.transferFrom(msg.sender, address(this), coachingFee[_coach]);
     }
 
-    function setCoachingFee(
-        uint _coachingFee
-    ) external {
+    function setCoachingFee(uint _coachingFee) external {
         /// @notice Allows coaches to set their coaching fee.
         /// @param _coachingFee The new coaching fee.
         coachingFee[msg.sender] = _coachingFee;
