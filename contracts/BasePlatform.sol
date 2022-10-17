@@ -6,10 +6,9 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "./IKYC.sol";
 import "./IUDAOC.sol";
-import "./RoleManager.sol";
+import "./RoleController.sol";
 
-abstract contract BasePlatform is Pausable, RoleManager {
-
+abstract contract BasePlatform is Pausable, RoleController {
     // coach wallet => team balance
     mapping(address => uint) coachBalance;
 
@@ -65,12 +64,12 @@ abstract contract BasePlatform is Pausable, RoleManager {
     constructor(
         address _kycAddress,
         address udaoAddress,
-        address udaocAddress
-    ) {
+        address udaocAddress,
+        address irmAddress
+    ) RoleController(irmAddress) {
         ikyc = IKYC(_kycAddress);
         udao = IERC20(udaoAddress);
         udaoc = IUDAOC(udaocAddress);
-        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
 
     function pause() public onlyRole(GOVERNANCE_ROLE) {
