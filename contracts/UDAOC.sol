@@ -8,28 +8,22 @@ import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
 import "./IKYC.sol";
-import "./RoleManager.sol";
+import "./RoleController.sol";
 
-contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleManager{
-    using Counters for Counters.Counter;
-
+contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController{
     IKYC ikyc;
 
     string private constant SIGNING_DOMAIN = "UDAOCMinter";
     string private constant SIGNATURE_VERSION = "1";
 
-    Counters.Counter private _tokenIdCounter;
-
-    string public defaultURI;
-
     // tokenId => price
     mapping(uint => uint) contentPrice;
 
-    constructor(address _kycAddress) 
+    constructor(address _kycAddress, address irmAdress) 
     ERC721("UDAO Content", "UDAOC")
     EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION)
+    RoleController(irmAdress)
     {
-        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         ikyc = IKYC(_kycAddress);
     }
 
@@ -52,21 +46,18 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleManager{
 
     /// @notice Redeems an NFTVoucher for an actual NFT, creating it in the process.
     /// @param redeemer The address of the account which will receive the NFT upon success.
-    /// @param to the id of the donee which is used to get the address of it.
     /// @param voucher A signed NFTVoucher that describes the NFT to be redeemed.
-    function redeem(address redeemer, address to, NFTVoucher calldata voucher) public payable returns (uint256) {
+    function redeem(address redeemer, NFTVoucher calldata voucher) public {
         // make sure signature is valid and get the address of the signer
         address signer = _verify(voucher);
 
-        // first assign the token to the signer, to establish provenance on-chain
-        _mint(signer, voucher.tokenId);
+        require(irm.hasRole(BACKEND_ROLE, signer), "Signature invalid or unauthorized");
+
+        _mint(redeemer, voucher.tokenId);
         _setTokenURI(voucher.tokenId, voucher.uri);
 
         // save the content price
         contentPrice[voucher.tokenId] = voucher.contentPrice;
-
-        // transfer the token to the redeemer
-        _transfer(signer, redeemer, voucher.tokenId);
     }
 
     /// @notice Returns a hash of the given NFTVoucher, prepared using EIP712 typed data hashing rules.
@@ -145,7 +136,7 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleManager{
     function supportsInterface(bytes4 interfaceId)
         public
         view
-        override(ERC721, AccessControl)
+        override(ERC721)
         returns (bool)
     {
         return super.supportsInterface(interfaceId);
