@@ -6,13 +6,19 @@ import "./BasePlatform.sol";
 abstract contract ContentManager is BasePlatform {
     // wallet => content token Ids
     mapping(address => uint[]) ownedContents;
-    // address => fee
-    mapping(address => uint) coachingFee;
+    // tokenId => fee
+    mapping(uint => uint) coachingFee;
+
+    // tokenId => buyable
+    mapping(uint => bool) coachingEnabled;
 
     function buyContent(uint tokenId) external {
         /// @notice allows KYCed users to purchase a content
         /// @param tokenId id of the token that will be bought
-        require(ikyc.getKYC(msg.sender), "You are not KYCed");
+        require(irm.getKYC(msg.sender), "You are not KYCed");
+        address instructor = udaoc.ownerOf(tokenId);
+        require(!irm.getKYC(instructor), "Instructor is not KYCed");
+        require(!irm.getBan(instructor), "Instructor is banned");
         require(
             isTokenBought[msg.sender][tokenId] == false,
             "Content Already Bought"
@@ -22,7 +28,7 @@ abstract contract ContentManager is BasePlatform {
         governanceBalance += (contentPrice * contentGovernancenCut) / 100000;
         validatorBalance += (contentPrice * validatorBalance) / 100000;
         jurorBalance += (contentPrice * contentJurorCut) / 100000;
-        contentBalance[udaoc.ownerOf(tokenId)] +=
+        instructorBalance[instructor] +=
             contentPrice -
             ((contentPrice * contentFoundationCut) / 100000) -
             ((contentPrice * contentGovernancenCut) / 100000) -
@@ -33,29 +39,50 @@ abstract contract ContentManager is BasePlatform {
         ownedContents[msg.sender].push(tokenId);
     }
 
-    function buyCoaching(address _coach) external {
+    function buyCoaching(uint tokenId) external {
         /// @notice Allows users to buy coaching service.
         /// @param _coach The address of the coach that a user want to buy service from
-        require(ikyc.getKYC(msg.sender), "You are not KYCed");
-        require(!ikyc.getBan(_coach), "Coach is banned");
+        require(irm.getKYC(msg.sender), "You are not KYCed");
+        address instructor = udaoc.ownerOf(tokenId);
+        require(!irm.getKYC(instructor), "Instructor is not KYCed");
+        require(!irm.getBan(instructor), "Instructor is banned");
 
         foundationBalance +=
-            (coachingFee[_coach] * coachingFoundationCut) /
+            (coachingFee[tokenId] * coachingFoundationCut) /
             100000;
         governanceBalance +=
-            (coachingFee[_coach] * coachingGovernancenCut) /
+            (coachingFee[tokenId] * coachingGovernancenCut) /
             100000;
-        udao.transferFrom(msg.sender, address(this), coachingFee[_coach]);
+        instructorBalance[instructor] += (coachingFee[tokenId] -
+            foundationBalance -
+            governanceBalance);
+        udao.transferFrom(msg.sender, address(this), coachingFee[tokenId]);
     }
 
-    function setCoachingFee(uint _coachingFee) external {
+    function createCoaching(uint tokenId) external {
+        require(
+            udaoc.ownerOf(tokenId) == msg.sender,
+            "You are not the owner of token"
+        );
+        coachingEnabled[tokenId] = true;
+    }
+
+    function deleteCoaching(uint tokenId) external {
+        require(
+            udaoc.ownerOf(tokenId) == msg.sender,
+            "You are not the owner of token"
+        );
+        coachingEnabled[tokenId] = false;
+    }
+
+    function setCoachingFee(uint tokenId, uint _coachingFee) external {
         /// @notice Allows coaches to set their coaching fee.
+        /// @param tokenId tokenId of the content that will be coached
         /// @param _coachingFee The new coaching fee.
-        coachingFee[msg.sender] = _coachingFee;
-    }
-
-    function withdrawCoach() external {
-        /// @dev Allows coaches to withdraw individually.
-        udao.transfer(msg.sender, coachBalance[msg.sender]);
+        require(
+            udaoc.ownerOf(tokenId) == msg.sender,
+            "You are not the owner of token"
+        );
+        coachingFee[tokenId] = _coachingFee;
     }
 }

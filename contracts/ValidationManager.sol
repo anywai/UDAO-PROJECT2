@@ -24,7 +24,7 @@ contract ValidationManager is RoleController {
         uint tokenId;
         uint8 validationCount;
         address[] validators;
-        uint validationResults;
+        uint acceptVoteCount;
         bool finalValidationResult;
         mapping(address => bool) vote;
         mapping(address => bool) isVoted;
@@ -34,7 +34,7 @@ contract ValidationManager is RoleController {
     }
 
     uint public requiredValidator;
-    uint public minRequiredVote;
+    uint public minRequiredAcceptVote;
 
     Validation[] validations;
 
@@ -64,9 +64,8 @@ contract ValidationManager is RoleController {
         );
         validationCount[msg.sender]++;
         activeValidation[msg.sender] = 0;
-        /// FIXME ValidationResults and validationCount seems to serve to same thing
         if (result) {
-            validations[validationId].validationResults++;
+            validations[validationId].acceptVoteCount++;
         }
         validations[validationId].isVoted[msg.sender] = true;
         validations[validationId].vote[msg.sender] = true;
@@ -76,13 +75,13 @@ contract ValidationManager is RoleController {
     function finalizeValidation(uint validationId) external {
         /// @notice finalizes validation if enough validation is sent
         /// @param validationId id of the validation
-        /// TODO below, shouldn't the number of validations equal to no of validators?
-        /// FIXME minRequiredVote and requiredValidator seems to serve to same thing
         require(
             validations[validationId].validationCount >= requiredValidator,
             "Not enough validation"
         );
-        if (validations[validationId].validationResults >= minRequiredVote) {
+        if (
+            validations[validationId].acceptVoteCount >= minRequiredAcceptVote
+        ) {
             validations[validationId].finalValidationResult = true;
         } else {
             validations[validationId].finalValidationResult = false;

@@ -8,4 +8,8 @@ interface IRoleManager is IAccessControl {
     function checkRole(bytes32 roles, address account) external view;
 
     function checkRoles(bytes32[] memory roles, address account) external view;
+
+    function getKYC(address _address) external view returns (bool);
+
+    function getBan(address _address) external view returns (bool);
 }

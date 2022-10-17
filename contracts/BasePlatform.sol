@@ -4,16 +4,12 @@ pragma solidity ^0.8.4;
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
-import "./IKYC.sol";
 import "./IUDAOC.sol";
 import "./RoleController.sol";
 
 abstract contract BasePlatform is Pausable, RoleController {
-    // coach wallet => team balance
-    mapping(address => uint) coachBalance;
-
     // content id => content balance
-    mapping(address => uint) contentBalance;
+    mapping(address => uint) instructorBalance;
 
     // user address => content id => content owned by the user
     mapping(address => mapping(uint => bool)) isTokenBought;
@@ -32,9 +28,6 @@ abstract contract BasePlatform is Pausable, RoleController {
 
     // balance to be used for validator rewards
     uint public validatorBalance;
-
-    // KYC interface
-    IKYC ikyc;
 
     // UDAO (ERC20) Token interface
     IERC20 udao;
@@ -62,33 +55,15 @@ abstract contract BasePlatform is Pausable, RoleController {
     // ITreasury treasury;
 
     constructor(
-        address _kycAddress,
         address udaoAddress,
         address udaocAddress,
         address irmAddress
     ) RoleController(irmAddress) {
-        ikyc = IKYC(_kycAddress);
         udao = IERC20(udaoAddress);
         udaoc = IUDAOC(udaocAddress);
     }
 
-    function pause() public onlyRole(GOVERNANCE_ROLE) {
-        _pause();
-    }
-
-    function unpause() public onlyRole(GOVERNANCE_ROLE) {
-        _unpause();
-    }
-
     // SETTERS
-    function setKycContractAddress(address _kycAddress)
-        external
-        onlyRole(FOUNDATION_ROLE)
-    {
-        /// @notice changes KYC contract address
-        /// @param _kycAddress address of new KYC contract
-        ikyc = IKYC(address(_kycAddress));
-    }
 
     function setCoachingFoundationCut(uint _cut)
         external
@@ -139,24 +114,5 @@ abstract contract BasePlatform is Pausable, RoleController {
         /// @notice changes cut from content for validator pool
         /// @param _cut new cut (100000 -> 100% | 5000 -> 5%)
         contentValidatorCut = _cut;
-    }
-
-    function withdrawGovernance() external onlyRole(GOVERNANCE_ROLE) {
-        /// @notice withdraws governance balance to governance treasury
-        udao.transfer(governanceTreasury, governanceBalance);
-    }
-
-    function withdrawFoundation() external onlyRole(FOUNDATION_ROLE) {
-        /// @notice withdraws foundation balance to foundation wallet
-        udao.transfer(foundationWallet, foundationBalance);
-    }
-
-    function withdrawValidator() external {
-        /// @notice calculates validator earnings and withdraws calculated earning to validator wallet
-        require(udaoc.hasRole(VALIDATOR_ROLE, msg.sender));
-        uint[2] memory results = udaoc.getValidationResults(msg.sender);
-        uint participation = (results[0] * 100000) / udaoc.getTotalValidation();
-        uint earning = (participation * validatorBalance) / 100000;
-        udao.transfer(msg.sender, earning);
     }
 }

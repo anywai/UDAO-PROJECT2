@@ -7,10 +7,9 @@ import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
-import "./IKYC.sol";
 import "./RoleController.sol";
 
-contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController{
+contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
     IKYC ikyc;
 
     string private constant SIGNING_DOMAIN = "UDAOCMinter";
@@ -19,10 +18,10 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController{
     // tokenId => price
     mapping(uint => uint) contentPrice;
 
-    constructor(address _kycAddress, address irmAdress) 
-    ERC721("UDAO Content", "UDAOC")
-    EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION)
-    RoleController(irmAdress)
+    constructor(address _kycAddress, address irmAdress)
+        ERC721("UDAO Content", "UDAOC")
+        EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION)
+        RoleController(irmAdress)
     {
         ikyc = IKYC(_kycAddress);
     }
@@ -51,7 +50,10 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController{
         // make sure signature is valid and get the address of the signer
         address signer = _verify(voucher);
 
-        require(irm.hasRole(BACKEND_ROLE, signer), "Signature invalid or unauthorized");
+        require(
+            irm.hasRole(BACKEND_ROLE, signer),
+            "Signature invalid or unauthorized"
+        );
 
         _mint(redeemer, voucher.tokenId);
         _setTokenURI(voucher.tokenId, voucher.uri);
@@ -62,15 +64,26 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController{
 
     /// @notice Returns a hash of the given NFTVoucher, prepared using EIP712 typed data hashing rules.
     /// @param voucher An NFTVoucher to hash.
-    function _hash(NFTVoucher calldata voucher) internal view returns (bytes32) {
-    return _hashTypedDataV4(keccak256(abi.encode(
-        keccak256("UDAOCMinter(uint256 tokenId,uint256 contentPrice,string uri,string name,string description)"),
-        voucher.tokenId,
-        voucher.contentPrice,
-        keccak256(bytes(voucher.uri)),
-        keccak256(bytes(voucher.name)),
-        keccak256(bytes(voucher.description))
-        )));
+    function _hash(NFTVoucher calldata voucher)
+        internal
+        view
+        returns (bytes32)
+    {
+        return
+            _hashTypedDataV4(
+                keccak256(
+                    abi.encode(
+                        keccak256(
+                            "UDAOCMinter(uint256 tokenId,uint256 contentPrice,string uri,string name,string description)"
+                        ),
+                        voucher.tokenId,
+                        voucher.contentPrice,
+                        keccak256(bytes(voucher.uri)),
+                        keccak256(bytes(voucher.name)),
+                        keccak256(bytes(voucher.description))
+                    )
+                )
+            );
     }
 
     /// @notice Returns the chain id of the current blockchain.
@@ -79,7 +92,7 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController{
     function getChainID() external view returns (uint256) {
         uint256 id;
         assembly {
-        id := chainid()
+            id := chainid()
         }
         return id;
     }
@@ -87,7 +100,11 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController{
     /// @notice Verifies the signature for a given NFTVoucher, returning the address of the signer.
     /// @dev Will revert if the signature is invalid. Does not verify that the signer is authorized to mint NFTs.
     /// @param voucher An NFTVoucher describing an unminted NFT.
-    function _verify(NFTVoucher calldata voucher) internal view returns (address) {
+    function _verify(NFTVoucher calldata voucher)
+        internal
+        view
+        returns (address)
+    {
         bytes32 digest = _hash(voucher);
         return ECDSA.recover(digest, voucher.signature);
     }
@@ -116,9 +133,7 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController{
         contentPrice[tokenId] = _contentPrice;
     }
 
-    function setKycContractAddress(address _kycAddress)
-        external
-    {
+    function setKycContractAddress(address _kycAddress) external {
         ikyc = IKYC(address(_kycAddress));
     }
 
@@ -132,7 +147,7 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController{
     {
         return super.tokenURI(tokenId);
     }
-    
+
     function supportsInterface(bytes4 interfaceId)
         public
         view
