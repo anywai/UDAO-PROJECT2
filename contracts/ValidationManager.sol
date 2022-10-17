@@ -1,14 +1,20 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.4;
 
-import "./RoleManager.sol";
+import "./RoleController.sol";
 import "./IUDAOC.sol";
 
-contract ValidationManager is RoleManager {
-    event ValidationEnded(uint validationId, uint tokenId, bool result);
-
+contract ValidationManager is RoleController {
     // UDAO (ERC721) Token interface
     IUDAOC udaoc;
+
+    constructor(address udaocAddress, address irmAddress)
+        RoleController(irmAddress)
+    {
+        udaoc = IUDAOC(udaocAddress);
+    }
+
+    event ValidationEnded(uint validationId, uint tokenId, bool result);
 
     // tokenId => is validation done
     mapping(uint => bool) isValidated;
@@ -40,24 +46,18 @@ contract ValidationManager is RoleManager {
     mapping(address => uint) public unsuccessfulValidation;
     uint public totalSuccessfulValidation;
 
-    constructor(address udaocAddress) {
-        udaoc = IUDAOC(udaocAddress);
-    }
-
     function setUDAOC(address udaocAddress) external onlyRole(FOUNDATION_ROLE) {
         udaoc = IUDAOC(udaocAddress);
     }
 
     /// @dev this is possibly deprecated, moved to offchain?
-    function sendValidation(uint validationId, bool result) external {
+    function sendValidation(uint validationId, bool result)
+        external
+        onlyRoles(validator_roles)
+    {
         /// @notice sends validation result
         /// @param validationId id of the validation
         /// @param result result of validation
-        require(
-            hasRole(VALIDATOR_ROLE, msg.sender) ||
-                hasRole(SUPER_VALIDATOR_ROLE, msg.sender),
-            "You are not a validator"
-        );
         require(
             activeValidation[msg.sender] == validationId,
             "This content is not assigned to this wallet"
@@ -111,14 +111,12 @@ contract ValidationManager is RoleManager {
         );
     }
 
-    function dismissValidation(uint validationId) external {
+    function dismissValidation(uint validationId)
+        external
+        onlyRoles(validator_roles)
+    {
         /// @notice allows validators to dismiss a validation assignment
         /// @param validationId id of the content that will be dismissed
-        require(
-            hasRole(VALIDATOR_ROLE, msg.sender) ||
-                hasRole(SUPER_VALIDATOR_ROLE, msg.sender),
-            "You are not a validator"
-        );
         require(
             activeValidation[msg.sender] == validationId,
             "This content is not assigned to this wallet"
@@ -204,14 +202,13 @@ contract ValidationManager is RoleManager {
         }
     }
 
-    function assignValidation(uint validationId) external {
+    function assignValidation(uint validationId)
+        external
+        onlyRoles(validator_roles)
+    {
         /// @notice assign validation to self
         /// @param validationId id of the validation
-        require(
-            hasRole(VALIDATOR_ROLE, msg.sender) ||
-                hasRole(SUPER_VALIDATOR_ROLE, msg.sender),
-            "You are not a validator"
-        );
+
         require(
             validationId < validations.length,
             "Validation does not exist!"
