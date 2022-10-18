@@ -25,8 +25,8 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
 
     /// @notice Represents an un-minted NFT, which has not yet been recorded into the blockchain.
     /// A signed voucher can be redeemed for a real NFT using the redeem function.
-    struct NFTVoucher {
-        /// @notice The id of the token to be redeemed. Must be unique - if another token with this ID already exists, the redeem function will revert.
+    struct ContentVoucher {
+        /// @notice The id of the token to be redeemed.  
         uint256 tokenId;
         /// @notice The price of the content
         uint256 contentPrice;
@@ -38,13 +38,13 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
         string name;
         /// @notice The descriptiom of the NFT
         string description;
-        /// @notice the EIP-712 signature of all other fields in the NFTVoucher struct. For a voucher to be valid, it must be signed by an account with the MINTER_ROLE.
+        /// @notice the EIP-712 signature of all other fields in the ContentVoucher struct.
         bytes signature;
     }
 
-    /// @notice Redeems an NFTVoucher for an actual NFT, creating it in the process.
-    /// @param voucher A signed NFTVoucher that describes the NFT to be redeemed.
-    function redeem(NFTVoucher calldata voucher) public {
+    /// @notice Redeems a ContentVoucher for an actual NFT, creating it in the process.
+    /// @param voucher A signed ContentVoucher that describes the NFT to be redeemed.
+    function redeem(ContentVoucher calldata voucher) public {
         // make sure redeemer is redeeming
         require(voucher.redeemer == msg.sender, "You are not the redeemer");
         //make sure redeemer is kyced
@@ -65,9 +65,9 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
         contentPrice[voucher.tokenId] = voucher.contentPrice;
     }
 
-    /// @notice Returns a hash of the given NFTVoucher, prepared using EIP712 typed data hashing rules.
-    /// @param voucher An NFTVoucher to hash.
-    function _hash(NFTVoucher calldata voucher)
+    /// @notice Returns a hash of the given ContentVoucher, prepared using EIP712 typed data hashing rules.
+    /// @param voucher A ContentVoucher to hash.
+    function _hash(ContentVoucher calldata voucher)
         internal
         view
         returns (bytes32)
@@ -101,10 +101,10 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
         return id;
     }
 
-    /// @notice Verifies the signature for a given NFTVoucher, returning the address of the signer.
+    /// @notice Verifies the signature for a given ContentVoucher, returning the address of the signer.
     /// @dev Will revert if the signature is invalid. Does not verify that the signer is authorized to mint NFTs.
-    /// @param voucher An NFTVoucher describing an unminted NFT.
-    function _verify(NFTVoucher calldata voucher)
+    /// @param voucher A ContentVoucher describing an unminted NFT.
+    function _verify(ContentVoucher calldata voucher)
         internal
         view
         returns (address)
