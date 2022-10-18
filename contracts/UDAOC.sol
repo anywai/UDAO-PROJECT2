@@ -10,7 +10,6 @@ import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
 import "./RoleController.sol";
 
 contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
-    IKYC ikyc;
 
     string private constant SIGNING_DOMAIN = "UDAOCMinter";
     string private constant SIGNATURE_VERSION = "1";
@@ -18,13 +17,11 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
     // tokenId => price
     mapping(uint => uint) contentPrice;
 
-    constructor(address _kycAddress, address irmAdress)
+    constructor(address irmAdress)
         ERC721("UDAO Content", "UDAOC")
         EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION)
         RoleController(irmAdress)
-    {
-        ikyc = IKYC(_kycAddress);
-    }
+    {}
 
     /// @notice Represents an un-minted NFT, which has not yet been recorded into the blockchain.
     /// A signed voucher can be redeemed for a real NFT using the redeem function.
@@ -47,6 +44,9 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
     /// @param redeemer The address of the account which will receive the NFT upon success.
     /// @param voucher A signed NFTVoucher that describes the NFT to be redeemed.
     function redeem(address redeemer, NFTVoucher calldata voucher) public {
+        //make sure redeemer is kyced
+        require(irm.getKYC(redeemer), "You are not KYCed");
+        
         // make sure signature is valid and get the address of the signer
         address signer = _verify(voucher);
 
@@ -131,10 +131,6 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
         /// @param _contentPrice the price to set
         require(ownerOf(tokenId) == msg.sender);
         contentPrice[tokenId] = _contentPrice;
-    }
-
-    function setKycContractAddress(address _kycAddress) external {
-        ikyc = IKYC(address(_kycAddress));
     }
 
     // The following functions are overrides required by Solidity.
