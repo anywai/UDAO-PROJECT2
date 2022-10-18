@@ -32,6 +32,8 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
         uint256 contentPrice;
         /// @notice The metadata URI to associate with this token.
         string uri;
+        /// @notice Address of the redeemer
+        address redeemer;
         /// @notice The name of the NFT
         string name;
         /// @notice The descriptiom of the NFT
@@ -41,11 +43,12 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
     }
 
     /// @notice Redeems an NFTVoucher for an actual NFT, creating it in the process.
-    /// @param redeemer The address of the account which will receive the NFT upon success.
     /// @param voucher A signed NFTVoucher that describes the NFT to be redeemed.
-    function redeem(address redeemer, NFTVoucher calldata voucher) public {
+    function redeem(NFTVoucher calldata voucher) public {
+        // make sure redeemer is redeeming
+        require(voucher.redeemer == msg.sender, "You are not the redeemer");
         //make sure redeemer is kyced
-        require(irm.getKYC(redeemer), "You are not KYCed");
+        require(irm.getKYC(msg.sender), "You are not KYCed");
         
         // make sure signature is valid and get the address of the signer
         address signer = _verify(voucher);
@@ -55,7 +58,7 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
             "Signature invalid or unauthorized"
         );
 
-        _mint(redeemer, voucher.tokenId);
+        _mint(voucher.redeemer, voucher.tokenId);
         _setTokenURI(voucher.tokenId, voucher.uri);
 
         // save the content price
@@ -74,11 +77,12 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
                 keccak256(
                     abi.encode(
                         keccak256(
-                            "UDAOCMinter(uint256 tokenId,uint256 contentPrice,string uri,string name,string description)"
+                            "UDAOCMinter(uint256 tokenId,uint256 contentPrice,string uri,address redeemer,string name,string description)"
                         ),
                         voucher.tokenId,
                         voucher.contentPrice,
                         keccak256(bytes(voucher.uri)),
+                        voucher.redeemer,
                         keccak256(bytes(voucher.name)),
                         keccak256(bytes(voucher.description))
                     )
