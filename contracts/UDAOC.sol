@@ -120,6 +120,14 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
         super._burn(tokenId);
     }
 
+    function _beforeTokenTransfer(address from, address to, uint256 tokenId)
+        internal virtual override{
+            /// @notice make sure the transfer is made to a KYCed wallet
+            super._beforeTokenTransfer(from, to, tokenId);
+            require(irm.getKYC(to), "Receiver is not KYCed");
+            // TODO add check for ban. 
+    }
+
     // Getters
     function getPriceContent(uint tokenId) external view returns (uint) {
         /// @notice returns the price of a specific content
