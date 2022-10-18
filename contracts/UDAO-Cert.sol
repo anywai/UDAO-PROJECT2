@@ -19,6 +19,9 @@ contract UDAOCertificate is ERC721, EIP712, ERC721URIStorage, RoleController, Ow
 
     Counters.Counter private _tokenIdCounter;
 
+    // tokenId => address
+    mapping(uint256 => address) canBeTransferred;
+
     constructor(address irmAdress) 
     ERC721("UDAO Certificate", "UDAO-Cert")
     EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION) 
@@ -46,7 +49,7 @@ contract UDAOCertificate is ERC721, EIP712, ERC721URIStorage, RoleController, Ow
     /// @param voucher A signed NFTVoucher that describes the NFT to be redeemed.
     function redeem(CertificateVoucher calldata voucher) public {
         // make sure redeemer is redeeming
-        require(voucher.redeemer == msg.sender, "You are not the redeemer.");
+        require(voucher.redeemer == msg.sender, "You are not the redeemer");
         //make sure redeemer is kyced
         require(irm.getKYC(msg.sender), "You are not KYCed");
         
@@ -107,6 +110,31 @@ contract UDAOCertificate is ERC721, EIP712, ERC721URIStorage, RoleController, Ow
     {
         bytes32 digest = _hash(voucher);
         return ECDSA.recover(digest, voucher.signature);
+    }
+
+    function setForTransfer(uint256 tokenId, address to) external onlyRole(BACKEND_ROLE) {
+        // FIXME backend role adresi ile msg.sender değiştir.
+        require(getApproved(tokenId) == msg.sender, "UDAO not approved for this token.");
+        canBeTransferred[tokenId] = to;
+    }
+
+    function _beforeTokenTransfer(address from, address to, uint256 tokenId)
+        internal virtual override
+    {
+        super._beforeTokenTransfer(from, to, tokenId);
+
+        require(canBeTransferred[tokenId]==to, "ERC721WithSafeTransfer: invalid recipient");
+    }
+
+    function _afterTokenTransfer(address from, address to, uint256 tokenId)
+        internal virtual override
+    {
+        super._afterTokenTransfer(from, to, tokenId);
+        
+        if(canBeTransferred[tokenId]!= address(0)){
+            canBeTransferred[tokenId] = to;
+        }
+        
     }
 
     function _burn(uint256 tokenId)
