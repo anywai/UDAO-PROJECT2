@@ -126,17 +126,6 @@ contract UDAOCertificate is ERC721, EIP712, ERC721URIStorage, RoleController, Ow
         require(canBeTransferred[tokenId]==to, "ERC721WithSafeTransfer: invalid recipient");
     }
 
-    function _afterTokenTransfer(address from, address to, uint256 tokenId)
-        internal virtual override
-    {
-        super._afterTokenTransfer(from, to, tokenId);
-        
-        if(canBeTransferred[tokenId]!= address(0)){
-            canBeTransferred[tokenId] = to;
-        }
-        
-    }
-
     function _burn(uint256 tokenId)
         internal
         override(ERC721, ERC721URIStorage)
