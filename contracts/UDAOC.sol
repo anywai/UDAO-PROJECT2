@@ -10,7 +10,6 @@ import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
 import "./RoleController.sol";
 
 contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
-    IKYC ikyc;
 
     string private constant SIGNING_DOMAIN = "UDAOCMinter";
     string private constant SIGNATURE_VERSION = "1";
@@ -18,35 +17,39 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
     // tokenId => price
     mapping(uint => uint) contentPrice;
 
-    constructor(address _kycAddress, address irmAdress)
+    constructor(address irmAdress)
         ERC721("UDAO Content", "UDAOC")
         EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION)
         RoleController(irmAdress)
-    {
-        ikyc = IKYC(_kycAddress);
-    }
+    {}
 
     /// @notice Represents an un-minted NFT, which has not yet been recorded into the blockchain.
     /// A signed voucher can be redeemed for a real NFT using the redeem function.
-    struct NFTVoucher {
-        /// @notice The id of the token to be redeemed. Must be unique - if another token with this ID already exists, the redeem function will revert.
+    struct ContentVoucher {
+        /// @notice The id of the token to be redeemed.  
         uint256 tokenId;
         /// @notice The price of the content
         uint256 contentPrice;
         /// @notice The metadata URI to associate with this token.
         string uri;
+        /// @notice Address of the redeemer
+        address redeemer;
         /// @notice The name of the NFT
         string name;
         /// @notice The descriptiom of the NFT
         string description;
-        /// @notice the EIP-712 signature of all other fields in the NFTVoucher struct. For a voucher to be valid, it must be signed by an account with the MINTER_ROLE.
+        /// @notice the EIP-712 signature of all other fields in the ContentVoucher struct.
         bytes signature;
     }
 
-    /// @notice Redeems an NFTVoucher for an actual NFT, creating it in the process.
-    /// @param redeemer The address of the account which will receive the NFT upon success.
-    /// @param voucher A signed NFTVoucher that describes the NFT to be redeemed.
-    function redeem(address redeemer, NFTVoucher calldata voucher) public {
+    /// @notice Redeems a ContentVoucher for an actual NFT, creating it in the process.
+    /// @param voucher A signed ContentVoucher that describes the NFT to be redeemed.
+    function redeem(ContentVoucher calldata voucher) public {
+        // make sure redeemer is redeeming
+        require(voucher.redeemer == msg.sender, "You are not the redeemer");
+        //make sure redeemer is kyced
+        require(irm.getKYC(msg.sender), "You are not KYCed");
+        
         // make sure signature is valid and get the address of the signer
         address signer = _verify(voucher);
 
@@ -55,16 +58,16 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
             "Signature invalid or unauthorized"
         );
 
-        _mint(redeemer, voucher.tokenId);
+        _mint(voucher.redeemer, voucher.tokenId);
         _setTokenURI(voucher.tokenId, voucher.uri);
 
         // save the content price
         contentPrice[voucher.tokenId] = voucher.contentPrice;
     }
 
-    /// @notice Returns a hash of the given NFTVoucher, prepared using EIP712 typed data hashing rules.
-    /// @param voucher An NFTVoucher to hash.
-    function _hash(NFTVoucher calldata voucher)
+    /// @notice Returns a hash of the given ContentVoucher, prepared using EIP712 typed data hashing rules.
+    /// @param voucher A ContentVoucher to hash.
+    function _hash(ContentVoucher calldata voucher)
         internal
         view
         returns (bytes32)
@@ -74,11 +77,12 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
                 keccak256(
                     abi.encode(
                         keccak256(
-                            "UDAOCMinter(uint256 tokenId,uint256 contentPrice,string uri,string name,string description)"
+                            "UDAOCMinter(uint256 tokenId,uint256 contentPrice,string uri,address redeemer,string name,string description)"
                         ),
                         voucher.tokenId,
                         voucher.contentPrice,
                         keccak256(bytes(voucher.uri)),
+                        voucher.redeemer,
                         keccak256(bytes(voucher.name)),
                         keccak256(bytes(voucher.description))
                     )
@@ -97,10 +101,10 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
         return id;
     }
 
-    /// @notice Verifies the signature for a given NFTVoucher, returning the address of the signer.
+    /// @notice Verifies the signature for a given ContentVoucher, returning the address of the signer.
     /// @dev Will revert if the signature is invalid. Does not verify that the signer is authorized to mint NFTs.
-    /// @param voucher An NFTVoucher describing an unminted NFT.
-    function _verify(NFTVoucher calldata voucher)
+    /// @param voucher A ContentVoucher describing an unminted NFT.
+    function _verify(ContentVoucher calldata voucher)
         internal
         view
         returns (address)
@@ -114,6 +118,14 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
         override(ERC721, ERC721URIStorage)
     {
         super._burn(tokenId);
+    }
+
+    function _beforeTokenTransfer(address from, address to, uint256 tokenId)
+        internal virtual override{
+            /// @notice make sure the transfer is made to a KYCed wallet
+            super._beforeTokenTransfer(from, to, tokenId);
+            require(irm.getKYC(to), "Receiver is not KYCed!");
+            require(irm.getBan(to), "Receiver is banned!");
     }
 
     // Getters
@@ -131,10 +143,6 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
         /// @param _contentPrice the price to set
         require(ownerOf(tokenId) == msg.sender);
         contentPrice[tokenId] = _contentPrice;
-    }
-
-    function setKycContractAddress(address _kycAddress) external {
-        ikyc = IKYC(address(_kycAddress));
     }
 
     // The following functions are overrides required by Solidity.
