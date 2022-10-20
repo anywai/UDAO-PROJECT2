@@ -9,8 +9,12 @@ contract PlatformTreasury is Pausable, ContentManager {
     constructor(
         address udaoAddress,
         address udaocAddress,
-        address irmAddress
-    ) BasePlatform(udaoAddress, udaocAddress, irmAddress) {}
+        address irmAddress,
+        address ivmAddress
+    )
+        BasePlatform(udaoAddress, udaocAddress, irmAddress)
+        ContentManager(ivmAddress)
+    {}
 
     function withdrawGovernance() external onlyRole(GOVERNANCE_ROLE) {
         /// @notice withdraws governance balance to governance treasury

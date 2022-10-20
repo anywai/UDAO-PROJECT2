@@ -3,6 +3,10 @@
 pragma solidity ^0.8.4;
 import "./BasePlatform.sol";
 
+interface IValidationManager {
+    function isValidated(uint tokenId) external view returns (bool);
+}
+
 abstract contract ContentManager is BasePlatform {
     // wallet => content token Ids
     mapping(address => uint[]) ownedContents;
@@ -12,6 +16,19 @@ abstract contract ContentManager is BasePlatform {
     // tokenId => buyable
     mapping(uint => bool) coachingEnabled;
 
+    IValidationManager ivm;
+
+    constructor(address ivmAddress) {
+        ivm = IValidationManager(ivmAddress);
+    }
+
+    function setValidationManager(address ivmAddress)
+        external
+        onlyRole(FOUNDATION_ROLE)
+    {
+        ivm = IValidationManager(ivmAddress);
+    }
+
     function buyContent(uint tokenId) external {
         /// @notice allows KYCed users to purchase a content
         /// @param tokenId id of the token that will be bought
@@ -19,6 +36,7 @@ abstract contract ContentManager is BasePlatform {
         address instructor = udaoc.ownerOf(tokenId);
         require(!irm.getKYC(instructor), "Instructor is not KYCed");
         require(!irm.getBan(instructor), "Instructor is banned");
+        require(ivm.isValidated(tokenId), "Content is not validated yet");
         require(
             isTokenBought[msg.sender][tokenId] == false,
             "Content Already Bought"
@@ -46,6 +64,7 @@ abstract contract ContentManager is BasePlatform {
         address instructor = udaoc.ownerOf(tokenId);
         require(!irm.getKYC(instructor), "Instructor is not KYCed");
         require(!irm.getBan(instructor), "Instructor is banned");
+        require(ivm.isValidated(tokenId), "Content is not validated yet");
 
         foundationBalance +=
             (coachingFee[tokenId] * coachingFoundationCut) /

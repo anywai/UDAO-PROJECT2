@@ -228,4 +228,8 @@ contract ValidationManager is RoleController {
         activeValidation[msg.sender] = validationId;
         validations[validationId].validators.push(msg.sender);
     }
+
+    function getIsValidated(uint tokenId) external view returns (bool) {
+        return isValidated[tokenId];
+    }
 }
