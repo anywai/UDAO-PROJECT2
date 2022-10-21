@@ -9,7 +9,7 @@ interface IValidationManager {
 
 abstract contract ContentManager is BasePlatform {
     // wallet => content token Ids
-    mapping(address => uint[]) ownedContents;
+    mapping(address => uint[][]) ownedContents;
     // tokenId => fee
     mapping(uint => uint) coachingFee;
 
@@ -29,7 +29,7 @@ abstract contract ContentManager is BasePlatform {
         ivm = IValidationManager(ivmAddress);
     }
 
-    function buyContent(uint tokenId) external {
+    function buyContent(uint tokenId, uint partId) external {
         /// @notice allows KYCed users to purchase a content
         /// @param tokenId id of the token that will be bought
         require(irm.getKYC(msg.sender), "You are not KYCed");
@@ -41,7 +41,7 @@ abstract contract ContentManager is BasePlatform {
             isTokenBought[msg.sender][tokenId] == false,
             "Content Already Bought"
         );
-        uint contentPrice = udaoc.getPriceContent(tokenId);
+        uint contentPrice = udaoc.getPriceContent(tokenId, partId);
         foundationBalance += (contentPrice * contentFoundationCut) / 100000;
         governanceBalance += (contentPrice * contentGovernancenCut) / 100000;
         validatorBalance += (contentPrice * validatorBalance) / 100000;
@@ -54,7 +54,7 @@ abstract contract ContentManager is BasePlatform {
             ((contentPrice * contentGovernancenCut) / 100000);
         udao.transferFrom(msg.sender, address(this), contentPrice);
         isTokenBought[msg.sender][tokenId] = true;
-        ownedContents[msg.sender].push(tokenId);
+        ownedContents[msg.sender].push([tokenId, partId]);
     }
 
     function buyCoaching(uint tokenId) external {

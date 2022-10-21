@@ -10,12 +10,11 @@ import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
 import "./RoleController.sol";
 
 contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
-
     string private constant SIGNING_DOMAIN = "UDAOCMinter";
     string private constant SIGNATURE_VERSION = "1";
 
     // tokenId => price
-    mapping(uint => uint) contentPrice;
+    mapping(uint => mapping(uint => uint)) contentPrice;
 
     constructor(address irmAdress)
         ERC721("UDAO Content", "UDAOC")
@@ -26,7 +25,7 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
     /// @notice Represents an un-minted NFT, which has not yet been recorded into the blockchain.
     /// A signed voucher can be redeemed for a real NFT using the redeem function.
     struct ContentVoucher {
-        /// @notice The id of the token to be redeemed.  
+        /// @notice The id of the token to be redeemed.
         uint256 tokenId;
         /// @notice The price of the content
         uint256 contentPrice;
@@ -49,7 +48,7 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
         require(voucher.redeemer == msg.sender, "You are not the redeemer");
         //make sure redeemer is kyced
         require(irm.getKYC(msg.sender), "You are not KYCed");
-        
+
         // make sure signature is valid and get the address of the signer
         address signer = _verify(voucher);
 
@@ -62,7 +61,7 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
         _setTokenURI(voucher.tokenId, voucher.uri);
 
         // save the content price
-        contentPrice[voucher.tokenId] = voucher.contentPrice;
+        contentPrice[voucher.tokenId][0] = voucher.contentPrice;
     }
 
     /// @notice Returns a hash of the given ContentVoucher, prepared using EIP712 typed data hashing rules.
@@ -120,19 +119,26 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
         super._burn(tokenId);
     }
 
-    function _beforeTokenTransfer(address from, address to, uint256 tokenId)
-        internal virtual override{
-            /// @notice make sure the transfer is made to a KYCed wallet
-            super._beforeTokenTransfer(from, to, tokenId);
-            require(irm.getKYC(to), "Receiver is not KYCed!");
-            require(irm.getBan(to), "Receiver is banned!");
+    function _beforeTokenTransfer(
+        address from,
+        address to,
+        uint256 tokenId
+    ) internal virtual override {
+        /// @notice make sure the transfer is made to a KYCed wallet
+        super._beforeTokenTransfer(from, to, tokenId);
+        require(irm.getKYC(to), "Receiver is not KYCed!");
+        require(irm.getBan(to), "Receiver is banned!");
     }
 
     // Getters
-    function getPriceContent(uint tokenId) external view returns (uint) {
+    function getPriceContent(uint tokenId, uint partId)
+        external
+        view
+        returns (uint)
+    {
         /// @notice returns the price of a specific content
         /// @param tokenId the content ID of the token
-        return contentPrice[tokenId];
+        return contentPrice[tokenId][partId];
     }
 
     // Setters
@@ -142,7 +148,34 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
         /// @param tokenId the content ID of the token
         /// @param _contentPrice the price to set
         require(ownerOf(tokenId) == msg.sender);
-        contentPrice[tokenId] = _contentPrice;
+        contentPrice[tokenId][0] = _contentPrice;
+    }
+
+    function setPartialContent(
+        uint tokenId,
+        uint partId,
+        uint _contentPrice
+    ) external {
+        /// @notice allows content owners to set content price
+        /// @param tokenId the content ID of the token
+        /// @param _contentPrice the price to set
+        require(ownerOf(tokenId) == msg.sender);
+        contentPrice[tokenId][partId] = _contentPrice;
+    }
+
+    function setBatchPartialContent(
+        uint tokenId,
+        uint[] calldata partId,
+        uint[] calldata _contentPrice
+    ) external {
+        /// @notice allows content owners to set content price
+        /// @param tokenId the content ID of the token
+        /// @param _contentPrice the price to set
+        require(ownerOf(tokenId) == msg.sender);
+        uint partLength = partId.length;
+        for (uint i = 0; i < partLength; i++) {
+            contentPrice[tokenId][partId[i]] = _contentPrice[i];
+        }
     }
 
     // The following functions are overrides required by Solidity.

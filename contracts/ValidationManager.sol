@@ -191,7 +191,8 @@ contract ValidationManager is RoleController {
         /// @param result result of the dispute
         Validation storage validation = validations[validationId];
         address[] memory disputedAddresses = validation.validators;
-        for (uint i; i < disputedAddresses.length; i++) {
+        uint disputeLength = disputedAddresses.length;
+        for (uint i; i < disputeLength; i++) {
             isInDispute[disputedAddresses[i]] = false;
             if (!result) {
                 successfulValidation[disputedAddresses[i]]++;
