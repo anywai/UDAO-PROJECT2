@@ -13,10 +13,21 @@ contract UDAOStaker is RoleController {
 
     mapping(address => uint) public balanceOf;
 
-    uint public amountPerValidation;
+    uint public payablePerValidation;
+    /// @notice the required duration to be a validator
+    uint public validatorLockTime = 90 days;
+    /// @notice the required duration to be a super validator
+    uint public superValidatorLockTime = 180 days;
 
-    mapping(address => bool) validatorStatus;
+    struct locked{
+        uint256 expire;
+        uint256 amount;
+    }
+
+    mapping(address => locked[]) validatorValidity;
     mapping(address => uint) maximumValidation;
+
+
 
     constructor(
         address udaovpAddress,
@@ -29,13 +40,22 @@ contract UDAOStaker is RoleController {
         igovernor = IGovernor(governorAddress);
     }
 
+    /// @notice allows users to apply for validator role
+    /// @param validationAmount The amount of validations that a validator wants to do
     function applyForValidator(uint validationAmount) external {
+        uint tokenToExtract = payablePerValidation * validationAmount;
+        
         iudao.transferFrom(
             msg.sender,
             address(this),
-            amountPerValidation * validationAmount
+            tokenToExtract
         );
         maximumValidation[msg.sender] = validationAmount;
+        
+        locked storage userInfo = validatorValidity[msg.sender].push();
+        userInfo.expire = block.timestamp + validatorLockTime;
+        userInfo.amount = tokenToExtract;
+
         address[] memory addresses = new address[](1);
         addresses[0] = address(iudao);
         uint[] memory amounts = new uint[](1);
@@ -67,11 +87,18 @@ contract UDAOStaker is RoleController {
     }
 
     function applyForSuperValidator(uint validationAmount) external {
+        uint tokenToExtract = payablePerValidation * validationAmount;
+
         iudao.transferFrom(
             msg.sender,
             address(this),
-            amountPerValidation * validationAmount
+            tokenToExtract
         );
+
+        locked storage userInfo = validatorValidity[msg.sender].push();
+        userInfo.expire = block.timestamp + superValidatorLockTime;
+        userInfo.amount = tokenToExtract;
+
         address[] memory addresses = new address[](1);
         addresses[0] = address(iudao);
         uint[] memory amounts = new uint[](1);
@@ -101,5 +128,18 @@ contract UDAOStaker is RoleController {
     {
         irm.grantRole(SUPER_VALIDATOR_ROLE, _newValidator);
         maximumValidation[_newValidator] = 2**256 - 1;
+    }
+
+    /// @notice allows validators to withdraw their staked tokens
+    function withdraw() public {
+        require(block.timestamp>=validatorValidity[msg.sender].expire, "Stakig duration hasn't ended yet!");
+        locked storage userInfo = validatorValidity[msg.sender];
+        uint256 value = userInfo.amount;
+        userInfo.expire = 0;
+        userInfo.amount = 0;
+        iudao.transfer(
+            msg.sender,
+            value
+        );
     }
 }
