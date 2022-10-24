@@ -19,15 +19,13 @@ contract UDAOStaker is RoleController {
     /// @notice the required duration to be a super validator
     uint public superValidatorLockTime = 180 days;
 
-    struct locked{
+    struct locked {
         uint256 expire;
         uint256 amount;
     }
 
     mapping(address => locked[]) validatorValidity;
     mapping(address => uint) maximumValidation;
-
-
 
     constructor(
         address udaovpAddress,
@@ -44,14 +42,10 @@ contract UDAOStaker is RoleController {
     /// @param validationAmount The amount of validations that a validator wants to do
     function applyForValidator(uint validationAmount) external {
         uint tokenToExtract = payablePerValidation * validationAmount;
-        
-        iudao.transferFrom(
-            msg.sender,
-            address(this),
-            tokenToExtract
-        );
+
+        iudao.transferFrom(msg.sender, address(this), tokenToExtract);
         maximumValidation[msg.sender] = validationAmount;
-        
+
         locked storage userInfo = validatorValidity[msg.sender].push();
         userInfo.expire = block.timestamp + validatorLockTime;
         userInfo.amount = tokenToExtract;
@@ -89,11 +83,7 @@ contract UDAOStaker is RoleController {
     function applyForSuperValidator(uint validationAmount) external {
         uint tokenToExtract = payablePerValidation * validationAmount;
 
-        iudao.transferFrom(
-            msg.sender,
-            address(this),
-            tokenToExtract
-        );
+        iudao.transferFrom(msg.sender, address(this), tokenToExtract);
 
         locked storage userInfo = validatorValidity[msg.sender].push();
         userInfo.expire = block.timestamp + superValidatorLockTime;
@@ -131,15 +121,32 @@ contract UDAOStaker is RoleController {
     }
 
     /// @notice allows validators to withdraw their staked tokens
-    function withdraw() public {
-        require(block.timestamp>=validatorValidity[msg.sender].expire, "Stakig duration hasn't ended yet!");
-        locked storage userInfo = validatorValidity[msg.sender];
-        uint256 value = userInfo.amount;
-        userInfo.expire = 0;
-        userInfo.amount = 0;
-        iudao.transfer(
-            msg.sender,
-            value
-        );
+    function withdrawStake() public {
+        uint withdrawableBalance;
+        for (uint i; i < validatorValidity[msg.sender].length; i++) {
+            locked storage userInfo = validatorValidity[msg.sender][i];
+            if (block.timestamp >= userInfo.expire) {
+                withdrawableBalance += userInfo.amount;
+                validatorValidity[msg.sender][i] = validatorValidity[
+                    msg.sender
+                ][validatorValidity[msg.sender].length - 1];
+                validatorValidity[msg.sender].pop();
+                i--;
+            }
+        }
+        require(withdrawableBalance > 0, "You don't have withdrawable token");
+        iudao.transfer(msg.sender, withdrawableBalance);
+    }
+
+    function withdrawableStake() public view returns (uint) {
+        uint withdrawableBalance;
+        uint stakings = validatorValidity[msg.sender].length;
+        for (uint i; i < stakings; i++) {
+            locked storage userInfo = validatorValidity[msg.sender][i];
+            if (block.timestamp >= userInfo.expire) {
+                withdrawableBalance += userInfo.amount;
+            }
+        }
+        return withdrawableBalance;
     }
 }
