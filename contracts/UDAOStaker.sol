@@ -83,17 +83,17 @@ contract UDAOStaker is RoleController {
             irm.hasRole(VALIDATOR_ROLE, msg.sender) ||
             irm.hasRole(SUPER_VALIDATOR_ROLE, msg.sender)
         ) {
-            for (uint i; i < validatorValidity[msg.sender].length; i++) {
-                locked storage userInfo = validatorValidity[msg.sender][i];
+            for (int i; uint(i) < validatorValidity[msg.sender].length; i++) {
+                locked storage userInfo = validatorValidity[msg.sender][
+                    uint(i)
+                ];
                 if (block.timestamp >= userInfo.expire) {
                     withdrawableBalance += userInfo.amount;
-                    validatorValidity[msg.sender][i] = validatorValidity[
+                    validatorValidity[msg.sender][uint(i)] = validatorValidity[
                         msg.sender
                     ][validatorValidity[msg.sender].length - 1];
                     validatorValidity[msg.sender].pop();
-                    unchecked {
-                        i--;
-                    }
+                    i--;
                 }
             }
         } else {
