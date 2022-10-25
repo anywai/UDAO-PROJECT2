@@ -79,16 +79,29 @@ contract UDAOStaker is RoleController {
     /// @notice allows validators to withdraw their staked tokens
     function withdrawStake() public {
         uint withdrawableBalance;
-        for (uint i; i < validatorValidity[msg.sender].length; i++) {
-            locked storage userInfo = validatorValidity[msg.sender][i];
-            if (block.timestamp >= userInfo.expire) {
-                withdrawableBalance += userInfo.amount;
-                validatorValidity[msg.sender][i] = validatorValidity[
-                    msg.sender
-                ][validatorValidity[msg.sender].length - 1];
-                validatorValidity[msg.sender].pop();
-                i--;
+        if (
+            irm.hasRole(VALIDATOR_ROLE, msg.sender) ||
+            irm.hasRole(SUPER_VALIDATOR_ROLE, msg.sender)
+        ) {
+            for (uint i; i < validatorValidity[msg.sender].length; i++) {
+                locked storage userInfo = validatorValidity[msg.sender][i];
+                if (block.timestamp >= userInfo.expire) {
+                    withdrawableBalance += userInfo.amount;
+                    validatorValidity[msg.sender][i] = validatorValidity[
+                        msg.sender
+                    ][validatorValidity[msg.sender].length - 1];
+                    validatorValidity[msg.sender].pop();
+                    unchecked {
+                        i--;
+                    }
+                }
             }
+        } else {
+            for (uint i; i < validatorValidity[msg.sender].length; i++) {
+                locked storage userInfo = validatorValidity[msg.sender][i];
+                withdrawableBalance += userInfo.amount;
+            }
+            delete validatorValidity[msg.sender];
         }
         require(withdrawableBalance > 0, "You don't have withdrawable token");
         iudao.transfer(msg.sender, withdrawableBalance);
@@ -99,7 +112,14 @@ contract UDAOStaker is RoleController {
         uint stakings = validatorValidity[msg.sender].length;
         for (uint i; i < stakings; i++) {
             locked storage userInfo = validatorValidity[msg.sender][i];
-            if (block.timestamp >= userInfo.expire) {
+            if (
+                irm.hasRole(VALIDATOR_ROLE, msg.sender) ||
+                irm.hasRole(SUPER_VALIDATOR_ROLE, msg.sender)
+            ) {
+                if (block.timestamp >= userInfo.expire) {
+                    withdrawableBalance += userInfo.amount;
+                }
+            } else {
                 withdrawableBalance += userInfo.amount;
             }
         }
