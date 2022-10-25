@@ -49,28 +49,6 @@ contract UDAOStaker is RoleController {
         locked storage userInfo = validatorValidity[msg.sender].push();
         userInfo.expire = block.timestamp + validatorLockTime;
         userInfo.amount = tokenToExtract;
-
-        address[] memory addresses = new address[](1);
-        addresses[0] = address(iudao);
-        uint[] memory amounts = new uint[](1);
-        amounts[0] = 0;
-        bytes[] memory calldatas = new bytes[](1);
-        calldatas[0] = abi.encode(
-            bytes4(keccak256(bytes("0xdbd9a031"))),
-            msg.sender
-        );
-        igovernor.propose(
-            addresses,
-            amounts,
-            calldatas,
-            string(
-                abi.encodePacked(
-                    "Approve",
-                    Strings.toHexString(uint160(msg.sender), 20),
-                    "as validator"
-                )
-            )
-        );
     }
 
     function approveValidator(address _newValidator)
@@ -88,28 +66,6 @@ contract UDAOStaker is RoleController {
         locked storage userInfo = validatorValidity[msg.sender].push();
         userInfo.expire = block.timestamp + superValidatorLockTime;
         userInfo.amount = tokenToExtract;
-
-        address[] memory addresses = new address[](1);
-        addresses[0] = address(iudao);
-        uint[] memory amounts = new uint[](1);
-        amounts[0] = 0;
-        bytes[] memory calldatas = new bytes[](1);
-        calldatas[0] = abi.encode(
-            bytes4(keccak256(bytes("0xac030ba9"))),
-            msg.sender
-        );
-        igovernor.propose(
-            addresses,
-            amounts,
-            calldatas,
-            string(
-                abi.encodePacked(
-                    "Approve",
-                    Strings.toHexString(uint160(msg.sender), 20),
-                    "as validator"
-                )
-            )
-        );
     }
 
     function approveSuperValidator(address _newValidator)
