@@ -7,11 +7,9 @@ import "./RoleController.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 
 contract UDAOStaker is RoleController {
-    IERC20 public iudao;
-    IERC20 public iudaovp;
+    IERC20 public udao;
+    IERC20 public udaovp;
     IGovernor public igovernor;
-
-    mapping(address => uint) public balanceOf;
 
     uint public payablePerValidation;
     /// @notice the required duration to be a validator
@@ -19,13 +17,21 @@ contract UDAOStaker is RoleController {
     /// @notice the required duration to be a super validator
     uint public superValidatorLockTime = 180 days;
 
-    struct locked {
+    struct StakeLock {
         uint256 expire;
         uint256 amount;
     }
 
-    mapping(address => locked[]) validatorValidity;
+    mapping(address => StakeLock[]) validatorValidity;
     mapping(address => uint) maximumValidation;
+
+    struct GovernanceLock {
+        uint256 expire;
+        uint256 amount;
+        uint256 vpamount;
+    }
+
+    mapping(address => GovernanceLock[]) governanceStakes;
 
     struct ValidationApplication {
         address applicant;
@@ -43,8 +49,8 @@ contract UDAOStaker is RoleController {
         address governorAddress,
         address irmAddress
     ) RoleController(irmAddress) {
-        iudao = IERC20(udaoAddress);
-        iudaovp = IERC20(udaovpAddress);
+        udao = IERC20(udaoAddress);
+        udaovp = IERC20(udaovpAddress);
         igovernor = IGovernor(governorAddress);
     }
 
@@ -61,10 +67,10 @@ contract UDAOStaker is RoleController {
         );
         uint tokenToExtract = payablePerValidation * validationAmount;
 
-        iudao.transferFrom(msg.sender, address(this), tokenToExtract);
+        udao.transferFrom(msg.sender, address(this), tokenToExtract);
         maximumValidation[msg.sender] = validationAmount;
 
-        locked storage userInfo = validatorValidity[msg.sender].push();
+        StakeLock storage userInfo = validatorValidity[msg.sender].push();
         userInfo.expire = block.timestamp + validatorLockTime;
         userInfo.amount = tokenToExtract;
         ValidationApplication
@@ -85,9 +91,9 @@ contract UDAOStaker is RoleController {
         );
         uint tokenToExtract = payablePerValidation * validationAmount;
 
-        iudao.transferFrom(msg.sender, address(this), tokenToExtract);
+        udao.transferFrom(msg.sender, address(this), tokenToExtract);
 
-        locked storage userInfo = validatorValidity[msg.sender].push();
+        StakeLock storage userInfo = validatorValidity[msg.sender].push();
         userInfo.expire = block.timestamp + superValidatorLockTime;
         userInfo.amount = tokenToExtract;
         ValidationApplication
@@ -134,7 +140,7 @@ contract UDAOStaker is RoleController {
             irm.hasRole(SUPER_VALIDATOR_ROLE, msg.sender)
         ) {
             for (int i; uint(i) < validatorValidity[msg.sender].length; i++) {
-                locked storage userInfo = validatorValidity[msg.sender][
+                StakeLock storage userInfo = validatorValidity[msg.sender][
                     uint(i)
                 ];
                 if (block.timestamp >= userInfo.expire) {
@@ -148,20 +154,20 @@ contract UDAOStaker is RoleController {
             }
         } else {
             for (uint i; i < validatorValidity[msg.sender].length; i++) {
-                locked storage userInfo = validatorValidity[msg.sender][i];
+                StakeLock storage userInfo = validatorValidity[msg.sender][i];
                 withdrawableBalance += userInfo.amount;
             }
             delete validatorValidity[msg.sender];
         }
         require(withdrawableBalance > 0, "You don't have withdrawable token");
-        iudao.transfer(msg.sender, withdrawableBalance);
+        udao.transfer(msg.sender, withdrawableBalance);
     }
 
     function withdrawableValidatorStake() public view returns (uint) {
         uint withdrawableBalance;
-        uint stakings = validatorValidity[msg.sender].length;
-        for (uint i; i < stakings; i++) {
-            locked storage userInfo = validatorValidity[msg.sender][i];
+        uint stakingsLength = validatorValidity[msg.sender].length;
+        for (uint i; i < stakingsLength; i++) {
+            StakeLock storage userInfo = validatorValidity[msg.sender][i];
             if (
                 irm.hasRole(VALIDATOR_ROLE, msg.sender) ||
                 irm.hasRole(SUPER_VALIDATOR_ROLE, msg.sender)
@@ -174,5 +180,51 @@ contract UDAOStaker is RoleController {
             }
         }
         return withdrawableBalance;
+    }
+
+    function stakeForGovernance(uint _amount, uint _days) public {
+        require(_amount > 0, "Stake amount can't be 0");
+        require(_days >= 7, "Minimum lock duration is 7 days");
+        require(irm.getKYC(msg.sender), "Address is not KYCed");
+        require(!irm.getBan(msg.sender), "Address is banned");
+        udao.transferFrom(msg.sender, address(this), _amount);
+
+        GovernanceLock storage lock = governanceStakes[msg.sender].push();
+        lock.amount = _amount;
+        lock.expire = block.timestamp + (_days * (1 days));
+        lock.vpamount = _amount * _days;
+
+        udaovp.transfer(msg.sender, lock.vpamount);
+    }
+
+    function withdrawGovernanceStake(uint _amount) public {
+        require(_amount > 0, "Stake amount can't be 0");
+        uint withdrawableBalance;
+        uint vpBalance;
+        uint stakingsLength = governanceStakes[msg.sender].length;
+        for (int i = 0; uint(i) < stakingsLength; i++) {
+            GovernanceLock storage lock = governanceStakes[msg.sender][uint(i)];
+            if (block.timestamp >= lock.expire) {
+                if (_amount < (withdrawableBalance + lock.amount)) {
+                    uint vpFromLatest = ((lock.vpamount *
+                        (((_amount - withdrawableBalance) * 100) /
+                            lock.amount)) / 100);
+                    uint udaoFromLatest = lock.amount -
+                        (_amount - withdrawableBalance);
+                    lock.amount -= udaoFromLatest;
+                    lock.vpamount -= vpFromLatest;
+                    vpBalance += vpFromLatest;
+                    udaovp.transferFrom(msg.sender, address(0x0), vpBalance);
+                    udao.transfer(msg.sender, _amount);
+                }
+                withdrawableBalance += lock.amount;
+                vpBalance += lock.vpamount;
+                governanceStakes[msg.sender][uint(i)] = governanceStakes[
+                    msg.sender
+                ][governanceStakes[msg.sender].length - 1];
+                governanceStakes[msg.sender].pop();
+                i--;
+            }
+        }
     }
 }
