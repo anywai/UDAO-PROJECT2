@@ -36,6 +36,13 @@ contract UDAOVp is
         );
     }
 
+    function setStakingContract(address _newStakingContract)
+        external
+        onlyRole(FOUNDATION_ROLE)
+    {
+        stakingContractAddress = _newStakingContract;
+    }
+
     function allowance(address owner, address spender)
         public
         view
