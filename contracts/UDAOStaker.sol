@@ -27,6 +27,16 @@ contract UDAOStaker is RoleController {
     mapping(address => locked[]) validatorValidity;
     mapping(address => uint) maximumValidation;
 
+    struct ValidationApplication {
+        address applicant;
+        bool isSuper;
+        bool isFinished;
+    }
+
+    ValidationApplication[] validatorApplications;
+    mapping(address => uint) validatorApplicationId;
+    uint private applicationIndex;
+
     constructor(
         address udaovpAddress,
         address udaoAddress,
@@ -41,6 +51,14 @@ contract UDAOStaker is RoleController {
     /// @notice allows users to apply for validator role
     /// @param validationAmount The amount of validations that a validator wants to do
     function applyForValidator(uint validationAmount) external {
+        require(
+            !irm.hasRole(SUPER_VALIDATOR_ROLE, msg.sender),
+            "Address is a Super Validator"
+        );
+        require(
+            !irm.hasRole(VALIDATOR_ROLE, msg.sender),
+            "Address is already a Validator"
+        );
         uint tokenToExtract = payablePerValidation * validationAmount;
 
         iudao.transferFrom(msg.sender, address(this), tokenToExtract);
@@ -49,16 +67,22 @@ contract UDAOStaker is RoleController {
         locked storage userInfo = validatorValidity[msg.sender].push();
         userInfo.expire = block.timestamp + validatorLockTime;
         userInfo.amount = tokenToExtract;
-    }
-
-    function approveValidator(address _newValidator)
-        external
-        onlyRole(GOVERNANCE_ROLE)
-    {
-        irm.grantRole(VALIDATOR_ROLE, _newValidator);
+        ValidationApplication
+            storage validationApplication = validatorApplications.push();
+        validationApplication.applicant = msg.sender;
+        validatorApplicationId[msg.sender] = applicationIndex;
+        applicationIndex++;
     }
 
     function applyForSuperValidator(uint validationAmount) external {
+        require(
+            !irm.hasRole(SUPER_VALIDATOR_ROLE, msg.sender),
+            "Address is a Super Validator"
+        );
+        require(
+            irm.hasRole(VALIDATOR_ROLE, msg.sender),
+            "Address is should be a Validator"
+        );
         uint tokenToExtract = payablePerValidation * validationAmount;
 
         iudao.transferFrom(msg.sender, address(this), tokenToExtract);
@@ -66,18 +90,44 @@ contract UDAOStaker is RoleController {
         locked storage userInfo = validatorValidity[msg.sender].push();
         userInfo.expire = block.timestamp + superValidatorLockTime;
         userInfo.amount = tokenToExtract;
+        ValidationApplication
+            storage validationApplication = validatorApplications.push();
+        validationApplication.applicant = msg.sender;
+        validationApplication.isSuper = true;
+        validatorApplicationId[msg.sender] = applicationIndex;
+        applicationIndex++;
     }
 
-    function approveSuperValidator(address _newValidator)
+    function approveApplication(address _newValidator)
         external
-        onlyRole(GOVERNANCE_ROLE)
+        onlyRole(BACKEND_ROLE)
     {
-        irm.grantRole(SUPER_VALIDATOR_ROLE, _newValidator);
-        maximumValidation[_newValidator] = 2**256 - 1;
+        ValidationApplication
+            storage validationApplication = validatorApplications[
+                validatorApplicationId[_newValidator]
+            ];
+        if (validationApplication.isSuper) {
+            irm.grantRole(SUPER_VALIDATOR_ROLE, _newValidator);
+            maximumValidation[_newValidator] = 2**256 - 1;
+        } else {
+            irm.grantRole(VALIDATOR_ROLE, _newValidator);
+        }
+        validationApplication.isFinished = true;
+    }
+
+    function rejectApplication(address _applicant)
+        external
+        onlyRole(BACKEND_ROLE)
+    {
+        ValidationApplication
+            storage validationApplication = validatorApplications[
+                validatorApplicationId[_applicant]
+            ];
+        validationApplication.isFinished = true;
     }
 
     /// @notice allows validators to withdraw their staked tokens
-    function withdrawStake() public {
+    function withdrawValidatorStake() public {
         uint withdrawableBalance;
         if (
             irm.hasRole(VALIDATOR_ROLE, msg.sender) ||
@@ -107,7 +157,7 @@ contract UDAOStaker is RoleController {
         iudao.transfer(msg.sender, withdrawableBalance);
     }
 
-    function withdrawableStake() public view returns (uint) {
+    function withdrawableValidatorStake() public view returns (uint) {
         uint withdrawableBalance;
         uint stakings = validatorValidity[msg.sender].length;
         for (uint i; i < stakings; i++) {
