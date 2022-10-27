@@ -2,19 +2,24 @@
 pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
+import "@openzeppelin/contracts/governance/utils/IVotes.sol";
 import "@openzeppelin/contracts/governance/IGovernor.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
 import "./RoleController.sol";
 
+interface IUDAOVP is IVotes, IERC20 {}
+
 contract UDAOStaker is RoleController, EIP712 {
     string private constant SIGNING_DOMAIN = "UDAOStaker";
     string private constant SIGNATURE_VERSION = "1";
 
     IERC20 public udao;
-    IERC20 public udaovp;
+    IUDAOVP public udaovp;
     IGovernor public igovernor;
+    address platformTreasuryAddress;
 
     uint public payablePerValidation;
     /// @notice the required duration to be a validator
@@ -26,11 +31,12 @@ contract UDAOStaker is RoleController, EIP712 {
 
     struct StakeLock {
         uint256 expire;
+        uint256 validationAmount;
         uint256 amount;
     }
 
     mapping(address => StakeLock[]) validatorValidity;
-    mapping(address => uint) maximumValidation;
+    mapping(address => StakeLock) superValidationLock;
 
     struct GovernanceLock {
         uint256 expire;
@@ -39,6 +45,9 @@ contract UDAOStaker is RoleController, EIP712 {
     }
 
     mapping(address => GovernanceLock[]) governanceStakes;
+    mapping(address => uint) rewardBalanceOf;
+    mapping(address => uint) lastRewardBlock;
+    uint public voteReward;
 
     struct ValidationApplication {
         address applicant;
@@ -54,13 +63,34 @@ contract UDAOStaker is RoleController, EIP712 {
         address udaovpAddress,
         address udaoAddress,
         address governorAddress,
+        address _platformTreasuryAddress,
         address irmAddress
-    ) 
-    EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION)
-    RoleController(irmAddress) {
+    ) EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION) RoleController(irmAddress) {
         udao = IERC20(udaoAddress);
-        udaovp = IERC20(udaovpAddress);
+        udaovp = IUDAOVP(udaovpAddress);
         igovernor = IGovernor(governorAddress);
+        platformTreasuryAddress = _platformTreasuryAddress;
+    }
+
+    function setSuperValidatorLockAmount(uint _amount)
+        external
+        onlyRoles(administrator_roles)
+    {
+        superValidatorLockAmount = _amount;
+    }
+
+    function setVoteReward(uint _reward)
+        external
+        onlyRoles(administrator_roles)
+    {
+        voteReward = _reward;
+    }
+
+    function setPlatformTreasuryAddress(address _platformTreasuryAddress)
+        external
+        onlyRoles(administrator_roles)
+    {
+        platformTreasuryAddress = _platformTreasuryAddress;
     }
 
     /// @notice Represents the right to get a role
@@ -85,11 +115,12 @@ contract UDAOStaker is RoleController, EIP712 {
         uint tokenToExtract = payablePerValidation * validationAmount;
 
         udao.transferFrom(msg.sender, address(this), tokenToExtract);
-        maximumValidation[msg.sender] = validationAmount;
 
         StakeLock storage userInfo = validatorValidity[msg.sender].push();
         userInfo.expire = block.timestamp + validatorLockTime;
         userInfo.amount = tokenToExtract;
+        userInfo.validationAmount = validationAmount;
+
         ValidationApplication
             storage validationApplication = validatorApplications.push();
         validationApplication.applicant = msg.sender;
@@ -104,15 +135,15 @@ contract UDAOStaker is RoleController, EIP712 {
         );
         require(
             irm.hasRole(VALIDATOR_ROLE, msg.sender),
-            "Address is should be a Validator"
+            "Address should be a Validator"
         );
-        
 
         udao.transferFrom(msg.sender, address(this), superValidatorLockAmount);
 
-        StakeLock storage userInfo = validatorValidity[msg.sender].push();
+        StakeLock storage userInfo = superValidationLock[msg.sender];
         userInfo.expire = block.timestamp + superValidatorLockTime;
         userInfo.amount = superValidatorLockAmount;
+        userInfo.validationAmount = 2**256 - 1;
         ValidationApplication
             storage validationApplication = validatorApplications.push();
         validationApplication.applicant = msg.sender;
@@ -121,14 +152,30 @@ contract UDAOStaker is RoleController, EIP712 {
         applicationIndex++;
     }
 
-    function getRole(RoleVoucher calldata voucher)
+    function addMoreValidation(uint validationAmount)
         external
+        onlyRole(VALIDATOR_ROLE)
     {
+        require(
+            !irm.hasRole(SUPER_VALIDATOR_ROLE, msg.sender),
+            "Address is a Super Validator"
+        );
+        uint tokenToExtract = payablePerValidation * validationAmount;
+
+        udao.transferFrom(msg.sender, address(this), tokenToExtract);
+
+        StakeLock storage userInfo = validatorValidity[msg.sender].push();
+        userInfo.expire = block.timestamp + validatorLockTime;
+        userInfo.amount = tokenToExtract;
+        userInfo.validationAmount = validationAmount;
+    }
+
+    function getRole(RoleVoucher calldata voucher) external {
         // make sure redeemer is redeeming
         require(voucher.redeemer == msg.sender, "You are not the redeemer");
         //make sure redeemer is kyced
         require(irm.getKYC(msg.sender), "You are not KYCed");
-         // make sure signature is valid and get the address of the signer
+        // make sure signature is valid and get the address of the signer
         address signer = _verify(voucher);
         require(
             irm.hasRole(BACKEND_ROLE, signer),
@@ -141,7 +188,9 @@ contract UDAOStaker is RoleController, EIP712 {
             ];
         if (validationApplication.isSuper) {
             irm.grantRole(SUPER_VALIDATOR_ROLE, voucher.redeemer);
-            maximumValidation[voucher.redeemer] = 2**256 - 1;
+            StakeLock storage userInfo = validatorValidity[msg.sender].push();
+            userInfo = superValidationLock[msg.sender];
+            delete superValidationLock[msg.sender];
         } else {
             irm.grantRole(VALIDATOR_ROLE, voucher.redeemer);
         }
@@ -156,6 +205,18 @@ contract UDAOStaker is RoleController, EIP712 {
             storage validationApplication = validatorApplications[
                 validatorApplicationId[_applicant]
             ];
+        if (validationApplication.isSuper) {
+            StakeLock storage userInfo = validatorValidity[msg.sender].push();
+            userInfo = superValidationLock[msg.sender];
+            userInfo.expire = 0;
+            userInfo.validationAmount = 0;
+            delete superValidationLock[msg.sender];
+        } else {
+            StakeLock storage userInfo = validatorValidity[msg.sender][
+                validatorValidity[msg.sender].length - 1
+            ];
+            userInfo.expire = 0;
+        }
         validationApplication.isFinished = true;
     }
 
@@ -255,9 +316,31 @@ contract UDAOStaker is RoleController, EIP712 {
         }
     }
 
-    function setSuperValidatorLockAmount(uint _amount) external onlyRoles(administrator_roles){
-        superValidatorLockAmount = _amount;
+    function addProposalRewards(uint _amount, address proposer)
+        external
+        onlyRole(GOVERNANCE_ROLE)
+    {
+        rewardBalanceOf[proposer] += _amount;
     }
+
+    function withdrawRewards() external {
+        uint voteRewards = rewardableAmountFromVotes();
+        lastRewardBlock[msg.sender] = block.number;
+        uint reward = rewardBalanceOf[msg.sender] + voteRewards;
+        rewardBalanceOf[msg.sender] = 0;
+        udao.transferFrom(platformTreasuryAddress, msg.sender, reward);
+    }
+
+    function rewardableAmountFromVotes() public view returns (uint) {
+        uint totalVotes = udaovp.getPastVotes(msg.sender, block.number);
+        uint latestVotes = udaovp.getPastVotes(
+            msg.sender,
+            lastRewardBlock[msg.sender]
+        );
+        uint reward = (totalVotes - latestVotes) * voteReward;
+        return reward;
+    }
+
     /// @notice Returns a hash of the given ContentVoucher, prepared using EIP712 typed data hashing rules.
     /// @param voucher A ContentVoucher to hash.
     function _hash(RoleVoucher calldata voucher)
@@ -269,9 +352,7 @@ contract UDAOStaker is RoleController, EIP712 {
             _hashTypedDataV4(
                 keccak256(
                     abi.encode(
-                        keccak256(
-                            "UDAOStaker(address redeemer)"
-                        ),
+                        keccak256("UDAOStaker(address redeemer)"),
                         voucher.redeemer
                     )
                 )

@@ -8,15 +8,32 @@ import "@openzeppelin/contracts/governance/extensions/GovernorVotes.sol";
 import "@openzeppelin/contracts/governance/extensions/GovernorVotesQuorumFraction.sol";
 import "@openzeppelin/contracts/governance/extensions/GovernorTimelockControl.sol";
 
+import "./RoleController.sol";
+
+interface IUDAOStaker {
+    function addProposalRewards(uint _amount, address proposer) external;
+}
+
 contract UDAOGovernor is
     Governor,
     GovernorSettings,
     GovernorCountingSimple,
     GovernorVotes,
     GovernorVotesQuorumFraction,
-    GovernorTimelockControl
+    GovernorTimelockControl,
+    RoleController
 {
-    constructor(IVotes _token, TimelockController _timelock)
+    mapping(uint => address) public proposer;
+    IUDAOStaker stakingContract;
+    uint proposerReward;
+
+    constructor(
+        IVotes _token,
+        TimelockController _timelock,
+        address stakingContractAddress,
+        uint _proposerReward,
+        address irmAddress
+    )
         Governor("UDAOGovernor")
         GovernorSettings(
             1, /* 1 block */
@@ -26,7 +43,25 @@ contract UDAOGovernor is
         GovernorVotes(_token)
         GovernorVotesQuorumFraction(4)
         GovernorTimelockControl(_timelock)
-    {}
+        RoleController(irmAddress)
+    {
+        stakingContract = IUDAOStaker(stakingContractAddress);
+        proposerReward = _proposerReward;
+    }
+
+    function setProposerReward(uint _proposerReward)
+        external
+        onlyRoles(administrator_roles)
+    {
+        proposerReward = _proposerReward;
+    }
+
+    function setStakingContract(address stakingContractAddress)
+        external
+        onlyRoles(administrator_roles)
+    {
+        stakingContract = IUDAOStaker(stakingContractAddress);
+    }
 
     // The following functions are overrides required by Solidity.
 
@@ -72,7 +107,33 @@ contract UDAOGovernor is
         bytes[] memory calldatas,
         string memory description
     ) public override(Governor, IGovernor) returns (uint256) {
-        return super.propose(targets, values, calldatas, description);
+        uint proposalId = super.propose(
+            targets,
+            values,
+            calldatas,
+            description
+        );
+        proposer[proposalId] = _msgSender();
+        return proposalId;
+    }
+
+    function queue(
+        address[] memory targets,
+        uint256[] memory values,
+        bytes[] memory calldatas,
+        bytes32 descriptionHash
+    ) public virtual override(GovernorTimelockControl) returns (uint256) {
+        uint proposalId = super.queue(
+            targets,
+            values,
+            calldatas,
+            descriptionHash
+        );
+        stakingContract.addProposalRewards(
+            proposerReward,
+            proposer[proposalId]
+        );
+        return proposalId;
     }
 
     function proposalThreshold()
