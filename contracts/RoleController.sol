@@ -18,6 +18,7 @@ abstract contract RoleController is Context, Pausable {
     bytes32 public constant JUROR_CONTRACT = keccak256("JUROR_CONTRACT");
 
     bytes32[] validator_roles;
+    bytes32[] administrator_roles;
 
     IRoleManager irm;
 
@@ -34,6 +35,8 @@ abstract contract RoleController is Context, Pausable {
         irm = IRoleManager(irmAddress);
         validator_roles.push(VALIDATOR_ROLE);
         validator_roles.push(SUPER_VALIDATOR_ROLE);
+        administrator_roles.push(FOUNDATION_ROLE);
+        administrator_roles.push(GOVERNANCE_ROLE);
     }
 
     function pause() public onlyRole(BACKEND_ROLE) {

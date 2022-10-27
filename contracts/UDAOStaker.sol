@@ -3,10 +3,15 @@ pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/governance/IGovernor.sol";
-import "./RoleController.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
+import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
+import "./RoleController.sol";
 
-contract UDAOStaker is RoleController {
+contract UDAOStaker is RoleController, EIP712 {
+    string private constant SIGNING_DOMAIN = "UDAOStaker";
+    string private constant SIGNATURE_VERSION = "1";
+
     IERC20 public udao;
     IERC20 public udaovp;
     IGovernor public igovernor;
@@ -16,6 +21,8 @@ contract UDAOStaker is RoleController {
     uint public validatorLockTime = 90 days;
     /// @notice the required duration to be a super validator
     uint public superValidatorLockTime = 180 days;
+    /// @notice Amount to deduct from super validator application
+    uint superValidatorLockAmount = 1000 ether;
 
     struct StakeLock {
         uint256 expire;
@@ -39,7 +46,7 @@ contract UDAOStaker is RoleController {
         bool isFinished;
     }
 
-    ValidationApplication[] validatorApplications;
+    ValidationApplication[] public validatorApplications;
     mapping(address => uint) validatorApplicationId;
     uint private applicationIndex;
 
@@ -48,15 +55,25 @@ contract UDAOStaker is RoleController {
         address udaoAddress,
         address governorAddress,
         address irmAddress
-    ) RoleController(irmAddress) {
+    ) 
+    EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION)
+    RoleController(irmAddress) {
         udao = IERC20(udaoAddress);
         udaovp = IERC20(udaovpAddress);
         igovernor = IGovernor(governorAddress);
     }
 
+    /// @notice Represents the right to get a role
+    struct RoleVoucher {
+        /// @notice Address of the redeemer
+        address redeemer;
+        /// @notice the EIP-712 signature of all other fields in the ContentVoucher struct.
+        bytes signature;
+    }
+
     /// @notice allows users to apply for validator role
     /// @param validationAmount The amount of validations that a validator wants to do
-    function applyForValidator(uint validationAmount) external {
+    function applyForValidator(uint validationAmount, string calldata role) external {
         require(
             !irm.hasRole(SUPER_VALIDATOR_ROLE, msg.sender),
             "Address is a Super Validator"
@@ -80,7 +97,7 @@ contract UDAOStaker is RoleController {
         applicationIndex++;
     }
 
-    function applyForSuperValidator(uint validationAmount) external {
+    function applyForSuperValidator() external {
         require(
             !irm.hasRole(SUPER_VALIDATOR_ROLE, msg.sender),
             "Address is a Super Validator"
@@ -89,13 +106,13 @@ contract UDAOStaker is RoleController {
             irm.hasRole(VALIDATOR_ROLE, msg.sender),
             "Address is should be a Validator"
         );
-        uint tokenToExtract = payablePerValidation * validationAmount;
+        
 
-        udao.transferFrom(msg.sender, address(this), tokenToExtract);
+        udao.transferFrom(msg.sender, address(this), superValidatorLockAmount);
 
         StakeLock storage userInfo = validatorValidity[msg.sender].push();
         userInfo.expire = block.timestamp + superValidatorLockTime;
-        userInfo.amount = tokenToExtract;
+        userInfo.amount = superValidatorLockAmount;
         ValidationApplication
             storage validationApplication = validatorApplications.push();
         validationApplication.applicant = msg.sender;
@@ -104,19 +121,29 @@ contract UDAOStaker is RoleController {
         applicationIndex++;
     }
 
-    function approveApplication(address _newValidator)
+    function getRole(RoleVoucher calldata voucher)
         external
-        onlyRole(BACKEND_ROLE)
     {
+        // make sure redeemer is redeeming
+        require(voucher.redeemer == msg.sender, "You are not the redeemer");
+        //make sure redeemer is kyced
+        require(irm.getKYC(msg.sender), "You are not KYCed");
+         // make sure signature is valid and get the address of the signer
+        address signer = _verify(voucher);
+        require(
+            irm.hasRole(BACKEND_ROLE, signer),
+            "Signature invalid or unauthorized"
+        );
+
         ValidationApplication
             storage validationApplication = validatorApplications[
-                validatorApplicationId[_newValidator]
+                validatorApplicationId[voucher.redeemer]
             ];
         if (validationApplication.isSuper) {
-            irm.grantRole(SUPER_VALIDATOR_ROLE, _newValidator);
-            maximumValidation[_newValidator] = 2**256 - 1;
+            irm.grantRole(SUPER_VALIDATOR_ROLE, voucher.redeemer);
+            maximumValidation[voucher.redeemer] = 2**256 - 1;
         } else {
-            irm.grantRole(VALIDATOR_ROLE, _newValidator);
+            irm.grantRole(VALIDATOR_ROLE, voucher.redeemer);
         }
         validationApplication.isFinished = true;
     }
@@ -226,5 +253,51 @@ contract UDAOStaker is RoleController {
                 i--;
             }
         }
+    }
+
+    function setSuperValidatorLockAmount(uint _amount) external onlyRoles(administrator_roles){
+        superValidatorLockAmount = _amount;
+    }
+    /// @notice Returns a hash of the given ContentVoucher, prepared using EIP712 typed data hashing rules.
+    /// @param voucher A ContentVoucher to hash.
+    function _hash(RoleVoucher calldata voucher)
+        internal
+        view
+        returns (bytes32)
+    {
+        return
+            _hashTypedDataV4(
+                keccak256(
+                    abi.encode(
+                        keccak256(
+                            "UDAOStaker(address redeemer)"
+                        ),
+                        voucher.redeemer
+                    )
+                )
+            );
+    }
+
+    /// @notice Returns the chain id of the current blockchain.
+    /// @dev This is used to workaround an issue with ganache returning different values from the on-chain chainid() function and
+    ///  the eth_chainId RPC method. See https://github.com/protocol/nft-website/issues/121 for context.
+    function getChainID() external view returns (uint256) {
+        uint256 id;
+        assembly {
+            id := chainid()
+        }
+        return id;
+    }
+
+    /// @notice Verifies the signature for a given ContentVoucher, returning the address of the signer.
+    /// @dev Will revert if the signature is invalid. Does not verify that the signer is authorized to mint NFTs.
+    /// @param voucher A ContentVoucher describing an unminted NFT.
+    function _verify(RoleVoucher calldata voucher)
+        internal
+        view
+        returns (address)
+    {
+        bytes32 digest = _hash(voucher);
+        return ECDSA.recover(digest, voucher.signature);
     }
 }
