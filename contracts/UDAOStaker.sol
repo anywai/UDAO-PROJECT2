@@ -73,7 +73,7 @@ contract UDAOStaker is RoleController, EIP712 {
 
     /// @notice allows users to apply for validator role
     /// @param validationAmount The amount of validations that a validator wants to do
-    function applyForValidator(uint validationAmount, string calldata role) external {
+    function applyForValidator(uint validationAmount) external {
         require(
             !irm.hasRole(SUPER_VALIDATOR_ROLE, msg.sender),
             "Address is a Super Validator"
