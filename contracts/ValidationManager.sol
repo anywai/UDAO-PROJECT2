@@ -4,14 +4,22 @@ pragma solidity ^0.8.4;
 import "./RoleController.sol";
 import "./IUDAOC.sol";
 
+interface IStakingContract {
+    function registerValidation() external;
+}
+
 contract ValidationManager is RoleController {
     // UDAO (ERC721) Token interface
     IUDAOC udaoc;
+    IStakingContract staker;
 
-    constructor(address udaocAddress, address irmAddress)
-        RoleController(irmAddress)
-    {
+    constructor(
+        address udaocAddress,
+        address irmAddress,
+        address stakingAddress
+    ) RoleController(irmAddress) {
         udaoc = IUDAOC(udaocAddress);
+        staker = IStakingContract(stakingAddress);
     }
 
     event ValidationEnded(uint validationId, uint tokenId, bool result);
@@ -41,13 +49,19 @@ contract ValidationManager is RoleController {
     mapping(address => uint) validationCount;
     mapping(address => uint) activeValidation;
     mapping(address => bool) isInDispute;
-    mapping(address => uint) maximumValidation; ///TODO after staking contract
     mapping(address => uint) public successfulValidation;
     mapping(address => uint) public unsuccessfulValidation;
     uint public totalSuccessfulValidation;
 
     function setUDAOC(address udaocAddress) external onlyRole(FOUNDATION_ROLE) {
         udaoc = IUDAOC(udaocAddress);
+    }
+
+    function setStaker(address stakerAddress)
+        external
+        onlyRole(FOUNDATION_ROLE)
+    {
+        staker = IStakingContract(stakerAddress);
     }
 
     /// @dev this is possibly deprecated, moved to offchain?
@@ -225,7 +239,7 @@ contract ValidationManager is RoleController {
             udaoc.ownerOf(validations[validationId].tokenId) != msg.sender,
             "You are the instructor of this course."
         );
-
+        staker.registerValidation();
         activeValidation[msg.sender] = validationId;
         validations[validationId].validators.push(msg.sender);
     }

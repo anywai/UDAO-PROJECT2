@@ -30,13 +30,18 @@ contract UDAOStaker is RoleController, EIP712 {
     uint superValidatorLockAmount = 1000 ether;
 
     struct StakeLock {
-        uint256 expire;
         uint256 validationAmount;
         uint256 amount;
     }
 
-    mapping(address => StakeLock[]) validatorValidity;
-    mapping(address => StakeLock) superValidationLock;
+    struct ValidationLock {
+        uint256 validationDate;
+        uint256 lockAmountForValidation;
+    }
+
+    mapping(address => StakeLock) validatorLock;
+    mapping(address => StakeLock) superValidatorLock;
+    mapping(address => ValidationLock[]) validationLocks;
 
     struct GovernanceLock {
         uint256 expire;
@@ -50,6 +55,7 @@ contract UDAOStaker is RoleController, EIP712 {
     uint public voteReward;
 
     struct ValidationApplication {
+        uint256 expire;
         address applicant;
         bool isSuper;
         bool isFinished;
@@ -116,14 +122,14 @@ contract UDAOStaker is RoleController, EIP712 {
 
         udao.transferFrom(msg.sender, address(this), tokenToExtract);
 
-        StakeLock storage userInfo = validatorValidity[msg.sender].push();
-        userInfo.expire = block.timestamp + validatorLockTime;
-        userInfo.amount = tokenToExtract;
-        userInfo.validationAmount = validationAmount;
+        StakeLock storage userInfo = validatorLock[msg.sender];
+        userInfo.amount += tokenToExtract;
+        userInfo.validationAmount += validationAmount;
 
         ValidationApplication
             storage validationApplication = validatorApplications.push();
         validationApplication.applicant = msg.sender;
+        validationApplication.expire = block.timestamp + validatorLockTime;
         validatorApplicationId[msg.sender] = applicationIndex;
         applicationIndex++;
     }
@@ -140,13 +146,13 @@ contract UDAOStaker is RoleController, EIP712 {
 
         udao.transferFrom(msg.sender, address(this), superValidatorLockAmount);
 
-        StakeLock storage userInfo = superValidationLock[msg.sender];
-        userInfo.expire = block.timestamp + superValidatorLockTime;
+        StakeLock storage userInfo = superValidatorLock[msg.sender];
         userInfo.amount = superValidatorLockAmount;
         userInfo.validationAmount = 2**256 - 1;
         ValidationApplication
             storage validationApplication = validatorApplications.push();
         validationApplication.applicant = msg.sender;
+        validationApplication.expire = block.timestamp + superValidatorLockTime;
         validationApplication.isSuper = true;
         validatorApplicationId[msg.sender] = applicationIndex;
         applicationIndex++;
@@ -164,10 +170,19 @@ contract UDAOStaker is RoleController, EIP712 {
 
         udao.transferFrom(msg.sender, address(this), tokenToExtract);
 
-        StakeLock storage userInfo = validatorValidity[msg.sender].push();
-        userInfo.expire = block.timestamp + validatorLockTime;
-        userInfo.amount = tokenToExtract;
-        userInfo.validationAmount = validationAmount;
+        StakeLock storage userInfo = validatorLock[msg.sender];
+        userInfo.amount += tokenToExtract;
+        userInfo.validationAmount += validationAmount;
+    }
+
+    function registerValidation() external onlyRole(VALIDATION_MANAGER) {
+        require(
+            validationLocks[_msgSender()].length <
+                validatorLock[_msgSender()].validationAmount
+        );
+        ValidationLock storage lock = validationLocks[_msgSender()].push();
+        lock.validationDate = block.timestamp;
+        lock.lockAmountForValidation = payablePerValidation;
     }
 
     function getRole(RoleVoucher calldata voucher) external {
@@ -188,11 +203,12 @@ contract UDAOStaker is RoleController, EIP712 {
             ];
         if (validationApplication.isSuper) {
             irm.grantRole(SUPER_VALIDATOR_ROLE, voucher.redeemer);
-            StakeLock storage userInfo = validatorValidity[msg.sender].push();
-            userInfo = superValidationLock[msg.sender];
-            delete superValidationLock[msg.sender];
+            StakeLock storage userInfo = validatorLock[msg.sender];
+            userInfo = superValidatorLock[msg.sender];
+            delete superValidatorLock[msg.sender];
         } else {
             irm.grantRole(VALIDATOR_ROLE, voucher.redeemer);
+            validationApplication.expire = 0;
         }
         validationApplication.isFinished = true;
     }
@@ -206,46 +222,61 @@ contract UDAOStaker is RoleController, EIP712 {
                 validatorApplicationId[_applicant]
             ];
         if (validationApplication.isSuper) {
-            StakeLock storage userInfo = validatorValidity[msg.sender].push();
-            userInfo = superValidationLock[msg.sender];
-            userInfo.expire = 0;
+            StakeLock storage userInfo = validatorLock[msg.sender];
+            userInfo = superValidatorLock[msg.sender];
             userInfo.validationAmount = 0;
-            delete superValidationLock[msg.sender];
-        } else {
-            StakeLock storage userInfo = validatorValidity[msg.sender][
-                validatorValidity[msg.sender].length - 1
-            ];
-            userInfo.expire = 0;
+            delete superValidatorLock[msg.sender];
         }
+        validationApplication.expire = 0;
         validationApplication.isFinished = true;
     }
 
     /// @notice allows validators to withdraw their staked tokens
     function withdrawValidatorStake() public {
         uint withdrawableBalance;
-        if (
-            irm.hasRole(VALIDATOR_ROLE, msg.sender) ||
-            irm.hasRole(SUPER_VALIDATOR_ROLE, msg.sender)
-        ) {
-            for (int i; uint(i) < validatorValidity[msg.sender].length; i++) {
-                StakeLock storage userInfo = validatorValidity[msg.sender][
-                    uint(i)
-                ];
-                if (block.timestamp >= userInfo.expire) {
-                    withdrawableBalance += userInfo.amount;
-                    validatorValidity[msg.sender][uint(i)] = validatorValidity[
+        StakeLock storage lock = validatorLock[msg.sender];
+        if (irm.hasRole(VALIDATOR_ROLE, msg.sender)) {
+            uint lockedAmount;
+            for (int i; uint(i) < validationLocks[msg.sender].length; i++) {
+                ValidationLock storage validationLock = validationLocks[
+                    msg.sender
+                ][uint(i)];
+                if (
+                    block.timestamp >=
+                    (validationLock.validationDate + validatorLockTime)
+                ) {
+                    validationLocks[msg.sender][uint(i)] = validationLocks[
                         msg.sender
-                    ][validatorValidity[msg.sender].length - 1];
-                    validatorValidity[msg.sender].pop();
+                    ][validationLocks[msg.sender].length - 1];
+                    validationLocks[msg.sender].pop();
                     i--;
+                } else {
+                    lockedAmount += validationLock.lockAmountForValidation;
                 }
             }
-        } else {
-            for (uint i; i < validatorValidity[msg.sender].length; i++) {
-                StakeLock storage userInfo = validatorValidity[msg.sender][i];
-                withdrawableBalance += userInfo.amount;
+            withdrawableBalance = lock.amount - lockedAmount;
+        } else if (irm.hasRole(SUPER_VALIDATOR_ROLE, msg.sender)) {
+            ValidationApplication
+                storage validationApplication = validatorApplications[
+                    validatorApplicationId[msg.sender]
+                ];
+            if (validationApplication.expire < block.timestamp) {
+                delete validatorApplications[
+                    validatorApplicationId[msg.sender]
+                ];
+                withdrawableBalance = lock.amount;
             }
-            delete validatorValidity[msg.sender];
+        } else {
+            ValidationApplication
+                storage validationApplication = validatorApplications[
+                    validatorApplicationId[msg.sender]
+                ];
+            if (validationApplication.isFinished) {
+                delete validatorApplications[
+                    validatorApplicationId[msg.sender]
+                ];
+                withdrawableBalance = lock.amount;
+            }
         }
         require(withdrawableBalance > 0, "You don't have withdrawable token");
         udao.transfer(msg.sender, withdrawableBalance);
@@ -253,18 +284,36 @@ contract UDAOStaker is RoleController, EIP712 {
 
     function withdrawableValidatorStake() public view returns (uint) {
         uint withdrawableBalance;
-        uint stakingsLength = validatorValidity[msg.sender].length;
-        for (uint i; i < stakingsLength; i++) {
-            StakeLock storage userInfo = validatorValidity[msg.sender][i];
-            if (
-                irm.hasRole(VALIDATOR_ROLE, msg.sender) ||
-                irm.hasRole(SUPER_VALIDATOR_ROLE, msg.sender)
-            ) {
-                if (block.timestamp >= userInfo.expire) {
-                    withdrawableBalance += userInfo.amount;
+        StakeLock storage lock = validatorLock[msg.sender];
+        if (irm.hasRole(VALIDATOR_ROLE, msg.sender)) {
+            uint lockedAmount;
+            for (int i; uint(i) < validationLocks[msg.sender].length; i++) {
+                ValidationLock storage validationLock = validationLocks[
+                    msg.sender
+                ][uint(i)];
+                if (
+                    block.timestamp <
+                    (validationLock.validationDate + validatorLockTime)
+                ) {
+                    lockedAmount += validationLock.lockAmountForValidation;
                 }
-            } else {
-                withdrawableBalance += userInfo.amount;
+            }
+            withdrawableBalance = lock.amount - lockedAmount;
+        } else if (irm.hasRole(SUPER_VALIDATOR_ROLE, msg.sender)) {
+            ValidationApplication
+                storage validationApplication = validatorApplications[
+                    validatorApplicationId[msg.sender]
+                ];
+            if (validationApplication.expire < block.timestamp) {
+                withdrawableBalance = lock.amount;
+            }
+        } else {
+            ValidationApplication
+                storage validationApplication = validatorApplications[
+                    validatorApplicationId[msg.sender]
+                ];
+            if (validationApplication.isFinished) {
+                withdrawableBalance = lock.amount;
             }
         }
         return withdrawableBalance;
