@@ -47,6 +47,8 @@ contract UDAOStaker is RoleController, EIP712 {
     mapping(address => uint) validationBalanceOf;
     mapping(address => StakeLock[]) validatorLock;
     mapping(address => ValidationLock[]) validationLocks;
+    mapping(address => uint) latestStakeId;
+    mapping(address => uint) latestValidationLockId;
 
     struct GovernanceLock {
         uint256 expire;
@@ -181,7 +183,11 @@ contract UDAOStaker is RoleController, EIP712 {
     }
 
     function registerValidation() external onlyRole(VALIDATION_MANAGER) {
-        for (int i = 0; uint(i) < validatorLock[_msgSender()].length; i++) {
+        for (
+            int i = int(latestStakeId[_msgSender()]);
+            uint(i) < validatorLock[_msgSender()].length;
+            i++
+        ) {
             StakeLock storage stakeLock = validatorLock[_msgSender()][uint(i)];
             if (
                 stakeLock.doneValidationAmount < stakeLock.maxValidationAmount
@@ -192,6 +198,7 @@ contract UDAOStaker is RoleController, EIP712 {
                 lock.validationDate = block.timestamp;
                 lock.lockAmount = uint128(payablePerValidation);
                 stakeLock.doneValidationAmount++;
+                latestStakeId[_msgSender()] = uint(i);
                 return;
             }
         }
