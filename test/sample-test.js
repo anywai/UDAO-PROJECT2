@@ -250,12 +250,10 @@ describe("UDAO Project", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
 
     const tx = await contractUDAOContent.getChainID();
-    console.log("Chain ID is", tx);
     const lazyMinter = new LazyMinter({
       contract: contractUDAOContent,
       signer: backend,
     });
-    console.log("Creating Voucher");
     const voucher = await lazyMinter.createVoucher(
       1,
       ethers.utils.parseEther("1.0"),
