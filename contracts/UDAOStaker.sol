@@ -4,7 +4,6 @@ pragma solidity ^0.8.4;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import "@openzeppelin/contracts/governance/utils/IVotes.sol";
-import "@openzeppelin/contracts/governance/IGovernor.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
@@ -18,7 +17,6 @@ contract UDAOStaker is RoleController, EIP712 {
 
     IERC20 public udao;
     IUDAOVP public udaovp;
-    IGovernor public igovernor;
     address platformTreasuryAddress;
 
     uint public payablePerValidation;
@@ -77,13 +75,11 @@ contract UDAOStaker is RoleController, EIP712 {
     constructor(
         address udaovpAddress,
         address udaoAddress,
-        address governorAddress,
         address _platformTreasuryAddress,
         address irmAddress
     ) EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION) RoleController(irmAddress) {
         udao = IERC20(udaoAddress);
         udaovp = IUDAOVP(udaovpAddress);
-        igovernor = IGovernor(governorAddress);
         platformTreasuryAddress = _platformTreasuryAddress;
     }
 

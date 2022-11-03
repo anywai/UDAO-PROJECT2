@@ -10,6 +10,13 @@ contract RoleManager is AccessControl {
     mapping(address => bool) isKYCed;
     mapping(address => bool) isBanned;
 
+    event SetKYC(address indexed user, bool indexed result);
+    event SetBan(address indexed user, bool indexed result);
+
+    constructor() {
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+    }
+
     function checkRole(bytes32 role, address account) external view {
         _checkRole(role, account);
     }
@@ -48,6 +55,7 @@ contract RoleManager is AccessControl {
         /// @param _address address that will be KYCed
         /// @param _isKYCed result of KYC
         isKYCed[_address] = _isKYCed;
+        emit SetKYC(_address,_isKYCed);
     }
 
     function setBan(address _address, bool _isBanned)
@@ -58,6 +66,8 @@ contract RoleManager is AccessControl {
         /// @param _address address that will be ban set
         /// @param _isBanned ban set result
         isBanned[_address] = _isBanned;
+        emit SetBan(_address,_isBanned);
+
     }
 
     function getKYC(address _address) external view returns (bool) {

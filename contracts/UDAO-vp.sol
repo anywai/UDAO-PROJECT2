@@ -16,12 +16,11 @@ contract UDAOVp is
 {
     address stakingContractAddress;
 
-    constructor(address irmAddress, address _stakingContractAddress)
+    constructor(address irmAddress)
         ERC20("UDAO-vp", "UDAOVP")
         ERC20Permit("UDAO-vp")
         RoleController(irmAddress)
     {
-        stakingContractAddress = _stakingContractAddress;
     }
 
     function mint(address to, uint256 amount)

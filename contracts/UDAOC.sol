@@ -46,12 +46,13 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
     function redeem(ContentVoucher calldata voucher) public {
         // make sure redeemer is redeeming
         require(voucher.redeemer == msg.sender, "You are not the redeemer");
+
+        /// @dev KYC control is already done at transfer
         //make sure redeemer is kyced
-        require(irm.getKYC(msg.sender), "You are not KYCed");
+        // require(irm.getKYC(msg.sender), "You are not KYCed");
 
         // make sure signature is valid and get the address of the signer
         address signer = _verify(voucher);
-
         require(
             irm.hasRole(BACKEND_ROLE, signer),
             "Signature invalid or unauthorized"
@@ -76,7 +77,7 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
                 keccak256(
                     abi.encode(
                         keccak256(
-                            "UDAOCMinter(uint256 tokenId,uint256 contentPrice,string uri,address redeemer,string name,string description)"
+                            "ContentVoucher(uint256 tokenId,uint256 contentPrice,string uri,address redeemer,string name,string description)"
                         ),
                         voucher.tokenId,
                         voucher.contentPrice,
@@ -127,7 +128,7 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
         /// @notice make sure the transfer is made to a KYCed wallet
         super._beforeTokenTransfer(from, to, tokenId);
         require(irm.getKYC(to), "Receiver is not KYCed!");
-        require(irm.getBan(to), "Receiver is banned!");
+        require(!irm.getBan(to), "Receiver is banned!");
     }
 
     // Getters
