@@ -112,7 +112,7 @@ async function deploy() {
   );
   await contractRoleManager.grantRole(
     GOVERNANCE_ROLE,
-    contractUDAOGovernor.address
+    contractUDAOTimelockController.address
   );
   const VALIDATION_MANAGER = ethers.utils.keccak256(
     ethers.utils.toUtf8Bytes("VALIDATION_MANAGER")
