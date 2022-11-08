@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.4;
 
+import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
 import "./RoleController.sol";
 import "./IUDAOC.sol";
 
@@ -8,7 +10,10 @@ interface IStakingContract {
     function registerValidation() external;
 }
 
-contract ValidationManager is RoleController {
+contract ValidationManager is RoleController, EIP712 {
+    string private constant SIGNING_DOMAIN = "ValidationSetter";
+    string private constant SIGNATURE_VERSION = "1";
+    
     // UDAO (ERC721) Token interface
     IUDAOC udaoc;
     IStakingContract staker;
@@ -16,14 +21,30 @@ contract ValidationManager is RoleController {
     constructor(
         address udaocAddress,
         address irmAddress
-    ) RoleController(irmAddress) {
-        udaoc = IUDAOC(udaocAddress);
+    )
+    EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION) 
+    RoleController(irmAddress) 
+    {udaoc = IUDAOC(udaocAddress);}
+
+    /// @notice Represents an un-minted NFT, which has not yet been recorded into the blockchain.
+    /// A signed voucher can be redeemed for a real NFT using the redeem function.
+    struct ValidationVoucher {
+        /// @notice The id of the token to be redeemed.
+        uint256 tokenId;
+        /// @notice Address of the redeemer
+        address redeemer;
+        /// @notice the EIP-712 signature of all other fields in the ContentVoucher struct.
+        bytes signature;
     }
+
+
 
     event ValidationEnded(uint validationId, uint tokenId, bool result);
 
-    // tokenId => is validation done
+    // tokenId => result
     mapping(uint => bool) isValidated;
+    // validator => score
+    mapping(address => uint256) validatorScore;
 
     struct Validation {
         uint id;
@@ -51,6 +72,21 @@ contract ValidationManager is RoleController {
     mapping(address => uint) public unsuccessfulValidation;
     uint public totalSuccessfulValidation;
 
+   
+
+    function setAsValidated(ValidationVoucher calldata voucher) external {
+        // make sure redeemer is redeeming
+        require(voucher.redeemer == msg.sender, "You are not the redeemer");
+        // make sure signature is valid and get the address of the signer
+        address signer = _verify(voucher);
+        require(
+            irm.hasRole(BACKEND_ROLE, signer),
+            "Signature invalid or unauthorized"
+        );
+        isValidated[voucher.tokenId] = true;
+
+    }
+    
     function setUDAOC(address udaocAddress) external onlyRole(FOUNDATION_ROLE) {
         udaoc = IUDAOC(udaocAddress);
     }
@@ -244,5 +280,50 @@ contract ValidationManager is RoleController {
 
     function getIsValidated(uint tokenId) external view returns (bool) {
         return isValidated[tokenId];
+    }
+
+
+    /// @notice Returns a hash of the given ContentVoucher, prepared using EIP712 typed data hashing rules.
+    /// @param voucher A ContentVoucher to hash.
+    function _hash(ValidationVoucher calldata voucher)
+        internal
+        view
+        returns (bytes32)
+    {
+        return
+            _hashTypedDataV4(
+                keccak256(
+                    abi.encode(
+                        keccak256(
+                            "ValidationVoucher(uint256 tokenId,address redeemer)"
+                        ),
+                        voucher.tokenId,
+                        voucher.redeemer
+                    )
+                )
+            );
+    }
+
+    /// @notice Returns the chain id of the current blockchain.
+    /// @dev This is used to workaround an issue with ganache returning different values from the on-chain chainid() function and
+    ///  the eth_chainId RPC method. See https://github.com/protocol/nft-website/issues/121 for context.
+    function getChainID() external view returns (uint256) {
+        uint256 id;
+        assembly {
+            id := chainid()
+        }
+        return id;
+    }
+
+    /// @notice Verifies the signature for a given ContentVoucher, returning the address of the signer.
+    /// @dev Will revert if the signature is invalid. Does not verify that the signer is authorized to mint NFTs.
+    /// @param voucher A ContentVoucher describing an unminted NFT.
+    function _verify(ValidationVoucher calldata voucher)
+        internal
+        view
+        returns (address)
+    {
+        bytes32 digest = _hash(voucher);
+        return ECDSA.recover(digest, voucher.signature);
     }
 }
