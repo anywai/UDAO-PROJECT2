@@ -98,95 +98,8 @@ contract ValidationManager is RoleController, EIP712 {
         staker = IStakingContract(stakerAddress);
     }
 
-    /// @dev this is possibly deprecated, moved to offchain?
-    function sendValidation(uint validationId, bool result)
-        external
-        onlyRoles(validator_roles)
-    {
-        /// @notice sends validation result
-        /// @param validationId id of the validation
-        /// @param result result of validation
-        require(
-            activeValidation[msg.sender] == validationId,
-            "This content is not assigned to this wallet"
-        );
-        validationCount[msg.sender]++;
-        activeValidation[msg.sender] = 0;
-        if (result) {
-            validations[validationId].acceptVoteCount++;
-        }
-        validations[validationId].isVoted[msg.sender] = true;
-        validations[validationId].vote[msg.sender] = true;
-        validations[validationId].validationCount++;
-    }
 
-    function finalizeValidation(uint validationId) external {
-        /// @notice finalizes validation if enough validation is sent
-        /// @param validationId id of the validation
-        require(
-            validations[validationId].validationCount >= requiredValidator,
-            "Not enough validation"
-        );
-        if (
-            validations[validationId].acceptVoteCount >= minRequiredAcceptVote
-        ) {
-            validations[validationId].finalValidationResult = true;
-        } else {
-            validations[validationId].finalValidationResult = false;
-        }
-        isValidated[validationId] = true;
-        validations[validationId].resultDate = block.timestamp;
-        for (uint i; i < validations[validationId].validators.length; i++) {
-            if (
-                validations[validationId].finalValidationResult ==
-                validations[validationId].vote[
-                    validations[validationId].validators[i]
-                ]
-            ) {
-                successfulValidation[validations[validationId].validators[i]]++;
-                totalSuccessfulValidation++;
-            } else {
-                unsuccessfulValidation[
-                    validations[validationId].validators[i]
-                ]++;
-            }
-        }
-        emit ValidationEnded(
-            validations[validationId].id,
-            validations[validationId].tokenId,
-            validations[validationId].finalValidationResult
-        );
-    }
 
-    function dismissValidation(uint validationId)
-        external
-        onlyRoles(validator_roles)
-    {
-        /// @notice allows validators to dismiss a validation assignment
-        /// @param validationId id of the content that will be dismissed
-        require(
-            activeValidation[msg.sender] == validationId,
-            "This content is not assigned to this wallet"
-        );
-        activeValidation[msg.sender] = 0;
-        for (uint i; i < validations[validationId].validators.length; i++) {
-            if (msg.sender == validations[validationId].validators[i]) {
-                validations[validationId].validators[i] = validations[
-                    validationId
-                ].validators[validations[validationId].validators.length - 1];
-                validations[validationId].validators.pop();
-            }
-        }
-    }
-
-    function setRequiredValidators(uint _requiredValidator)
-        external
-        onlyRole(GOVERNANCE_ROLE)
-    {
-        /// @notice sets required validator vote count per content
-        /// @param _requiredValidator new required vote count
-        requiredValidator = _requiredValidator;
-    }
 
     function createValidation(uint tokenId, uint score)
         external
@@ -217,71 +130,9 @@ contract ValidationManager is RoleController, EIP712 {
         return totalSuccessfulValidation;
     }
 
-    function openDispute(uint validationId) external onlyRole(FOUNDATION_ROLE) {
-        /// @notice Only foundation can open a dispute after enough off-chain dispute reports gathered from users.
-        /// @param validationId id of the validation
-        Validation storage validation = validations[validationId];
-        address[] memory disputedAddresses = validation.validators;
-        for (uint i; i < disputedAddresses.length; i++) {
-            isInDispute[disputedAddresses[i]] = true;
-            successfulValidation[disputedAddresses[i]]--;
-            totalSuccessfulValidation--;
-            unsuccessfulValidation[disputedAddresses[i]]++;
-        }
-    }
-
-    function endDispute(
-        uint validationId,
-        bool result // result true means validators lost the case
-    ) external onlyRole(JUROR_CONTRACT) {
-        /// @notice ends dispute
-        /// @param validationId id of the validation
-        /// @param result result of the dispute
-        Validation storage validation = validations[validationId];
-        address[] memory disputedAddresses = validation.validators;
-        uint disputeLength = disputedAddresses.length;
-        for (uint i; i < disputeLength; i++) {
-            isInDispute[disputedAddresses[i]] = false;
-            if (!result) {
-                successfulValidation[disputedAddresses[i]]++;
-                totalSuccessfulValidation++;
-                unsuccessfulValidation[disputedAddresses[i]]--;
-            }
-        }
-    }
-
-    function assignValidation(uint validationId)
-        external
-        onlyRoles(validator_roles)
-    {
-        /// @notice assign validation to self
-        /// @param validationId id of the validation
-
-        require(
-            validationId < validations.length,
-            "Validation does not exist!"
-        );
-        require(
-            activeValidation[msg.sender] == 0,
-            "You already have an assigned content"
-        );
-        require(
-            validations[validationId].validators.length < requiredValidator,
-            "Content already have enough validators!"
-        );
-        require(
-            udaoc.ownerOf(validations[validationId].tokenId) != msg.sender,
-            "You are the instructor of this course."
-        );
-        staker.registerValidation();
-        activeValidation[msg.sender] = validationId;
-        validations[validationId].validators.push(msg.sender);
-    }
-
     function getIsValidated(uint tokenId) external view returns (bool) {
         return isValidated[tokenId];
     }
-
 
     /// @notice Returns a hash of the given ContentVoucher, prepared using EIP712 typed data hashing rules.
     /// @param voucher A ContentVoucher to hash.
