@@ -25,6 +25,9 @@ contract PlatformTreasury is Pausable, ContentManager, EIP712 {
     struct ValidationScoreVoucher {
         /// @notice The id of the token to be redeemed.
         int256 score;
+    
+        uint256 successfulValidation;
+        uint256 unsuccessfulValidation;
         /// @notice Address of the redeemer
         address redeemer;
         /// @notice the EIP-712 signature of all other fields in the ContentVoucher struct.
@@ -84,9 +87,11 @@ contract PlatformTreasury is Pausable, ContentManager, EIP712 {
                 keccak256(
                     abi.encode(
                         keccak256(
-                            "ValidationScoreVoucher(int256 score,address redeemer)"
+                            "ValidationScoreVoucher(int256 score,uint256 successfulValidation,uint256 unsuccessfulValidation,address redeemer)"
                         ),
                         voucher.score,
+                        voucher.successfulValidation,
+                        voucher.unsuccessfulValidation,
                         voucher.redeemer
                     )
                 )
