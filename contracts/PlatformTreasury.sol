@@ -22,7 +22,7 @@ contract PlatformTreasury is Pausable, ContentManager, EIP712 {
         ContentManager(ivmAddress)
     {}
 
-    struct ValidationScoreVoucher {
+    struct ScoreVoucher {
         /// @notice The id of the token to be redeemed.
         int256 score;
     
@@ -47,7 +47,7 @@ contract PlatformTreasury is Pausable, ContentManager, EIP712 {
         udao.transfer(foundationWallet, foundationBalance);
     }
 
-    function writeValidatorScore(ValidationScoreVoucher calldata _scoreVoucher) external onlyRoles(validator_roles){
+    function writeValidatorScore(ScoreVoucher calldata _scoreVoucher) external onlyRoles(validator_roles){
         // make sure redeemer is redeeming
         require(_scoreVoucher.redeemer == msg.sender, "You are not the redeemer");
 
@@ -75,9 +75,9 @@ contract PlatformTreasury is Pausable, ContentManager, EIP712 {
         udao.transfer(msg.sender, instructorBalance[msg.sender]);
     }
 
-    /// @notice Returns a hash of the given ValidationScoreVoucher, prepared using EIP712 typed data hashing rules.
-    /// @param voucher A ValidationScoreVoucher to hash.
-    function _hash(ValidationScoreVoucher calldata voucher)
+    /// @notice Returns a hash of the given ScoreVoucher, prepared using EIP712 typed data hashing rules.
+    /// @param voucher A ScoreVoucher to hash.
+    function _hash(ScoreVoucher calldata voucher)
         internal
         view
         returns (bytes32)
@@ -87,7 +87,7 @@ contract PlatformTreasury is Pausable, ContentManager, EIP712 {
                 keccak256(
                     abi.encode(
                         keccak256(
-                            "ValidationScoreVoucher(int256 score,uint256 successfulValidation,uint256 unsuccessfulValidation,address redeemer)"
+                            "ScoreVoucher(int256 score,uint256 successfulValidation,uint256 unsuccessfulValidation,address redeemer)"
                         ),
                         voucher.score,
                         voucher.successfulValidation,
@@ -109,10 +109,10 @@ contract PlatformTreasury is Pausable, ContentManager, EIP712 {
         return id;
     }
 
-    /// @notice Verifies the signature for a given ContentVoucher, returning the address of the signer.
+    /// @notice Verifies the signature for a given ScoreVoucher, returning the address of the signer.
     /// @dev Will revert if the signature is invalid. Does not verify that the signer is authorized to mint NFTs.
-    /// @param voucher A ContentVoucher describing an unminted NFT.
-    function _verify(ValidationScoreVoucher calldata voucher)
+    /// @param voucher A ScoreVoucher describing an unminted NFT.
+    function _verify(ScoreVoucher calldata voucher)
         internal
         view
         returns (address)
