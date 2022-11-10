@@ -13,18 +13,17 @@ interface IStakingContract {
 contract ValidationManager is RoleController, EIP712 {
     string private constant SIGNING_DOMAIN = "ValidationSetter";
     string private constant SIGNATURE_VERSION = "1";
-    
+
     // UDAO (ERC721) Token interface
     IUDAOC udaoc;
     IStakingContract staker;
 
-    constructor(
-        address udaocAddress,
-        address irmAddress
-    )
-    EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION) 
-    RoleController(irmAddress) 
-    {udaoc = IUDAOC(udaocAddress);}
+    constructor(address udaocAddress, address irmAddress)
+        EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION)
+        RoleController(irmAddress)
+    {
+        udaoc = IUDAOC(udaocAddress);
+    }
 
     /// @notice Represents an un-minted NFT, which has not yet been recorded into the blockchain.
     /// A signed voucher can be redeemed for a real NFT using the redeem function.
@@ -36,8 +35,6 @@ contract ValidationManager is RoleController, EIP712 {
         /// @notice the EIP-712 signature of all other fields in the ContentVoucher struct.
         bytes signature;
     }
-
-
 
     event ValidationEnded(uint validationId, uint tokenId, bool result);
 
@@ -72,8 +69,6 @@ contract ValidationManager is RoleController, EIP712 {
     mapping(address => uint) public unsuccessfulValidation;
     uint public totalSuccessfulValidation;
 
-   
-
     function setAsValidated(ValidationVoucher calldata voucher) external {
         // make sure redeemer is redeeming
         require(voucher.redeemer == msg.sender, "You are not the redeemer");
@@ -84,9 +79,8 @@ contract ValidationManager is RoleController, EIP712 {
             "Signature invalid or unauthorized"
         );
         isValidated[voucher.tokenId] = true;
-
     }
-    
+
     function setUDAOC(address udaocAddress) external onlyRole(FOUNDATION_ROLE) {
         udaoc = IUDAOC(udaocAddress);
     }
@@ -97,9 +91,6 @@ contract ValidationManager is RoleController, EIP712 {
     {
         staker = IStakingContract(stakerAddress);
     }
-
-
-
 
     function createValidation(uint tokenId, uint score)
         external

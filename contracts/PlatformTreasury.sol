@@ -16,7 +16,7 @@ contract PlatformTreasury is Pausable, ContentManager, EIP712 {
         address udaocAddress,
         address irmAddress,
         address ivmAddress
-    )   
+    )
         EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION)
         BasePlatform(udaoAddress, udaocAddress, irmAddress)
         ContentManager(ivmAddress)
@@ -25,7 +25,6 @@ contract PlatformTreasury is Pausable, ContentManager, EIP712 {
     struct ScoreVoucher {
         /// @notice The id of the token to be redeemed.
         int256 score;
-    
         uint256 successfulValidation;
         uint256 unsuccessfulValidation;
         /// @notice Address of the redeemer
@@ -47,9 +46,15 @@ contract PlatformTreasury is Pausable, ContentManager, EIP712 {
         udao.transfer(foundationWallet, foundationBalance);
     }
 
-    function writeValidatorScore(ScoreVoucher calldata _scoreVoucher) external onlyRoles(validator_roles){
+    function writeValidatorScore(ScoreVoucher calldata _scoreVoucher)
+        external
+        onlyRoles(validator_roles)
+    {
         // make sure redeemer is redeeming
-        require(_scoreVoucher.redeemer == msg.sender, "You are not the redeemer");
+        require(
+            _scoreVoucher.redeemer == msg.sender,
+            "You are not the redeemer"
+        );
 
         // make sure signature is valid and get the address of the signer
         address signer = _verify(_scoreVoucher);
@@ -120,5 +125,4 @@ contract PlatformTreasury is Pausable, ContentManager, EIP712 {
         bytes32 digest = _hash(voucher);
         return ECDSA.recover(digest, voucher.signature);
     }
-
 }

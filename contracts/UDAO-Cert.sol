@@ -10,8 +10,13 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "./RoleController.sol";
 
-contract UDAOCertificate is ERC721, EIP712, ERC721URIStorage, RoleController, Ownable {
-
+contract UDAOCertificate is
+    ERC721,
+    EIP712,
+    ERC721URIStorage,
+    RoleController,
+    Ownable
+{
     string private constant SIGNING_DOMAIN = "UDAOCertMinter";
     string private constant SIGNATURE_VERSION = "1";
 
@@ -22,16 +27,16 @@ contract UDAOCertificate is ERC721, EIP712, ERC721URIStorage, RoleController, Ow
     // tokenId => address
     mapping(uint256 => address) canBeTransferred;
 
-    constructor(address irmAdress) 
-    ERC721("UDAO Certificate", "UDAO-Cert")
-    EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION) 
-    RoleController(irmAdress)
+    constructor(address irmAdress)
+        ERC721("UDAO Certificate", "UDAO-Cert")
+        EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION)
+        RoleController(irmAdress)
     {}
 
     /// @notice Represents an un-minted NFT, which has not yet been recorded into the blockchain.
     /// A signed voucher can be redeemed for a real NFT using the redeem function.
     struct CertificateVoucher {
-        /// @notice The id of the token to be redeemed. 
+        /// @notice The id of the token to be redeemed.
         uint256 tokenId;
         /// @notice The metadata URI to associate with this token.
         string uri;
@@ -52,7 +57,7 @@ contract UDAOCertificate is ERC721, EIP712, ERC721URIStorage, RoleController, Ow
         require(voucher.redeemer == msg.sender, "You are not the redeemer");
         //make sure redeemer is kyced
         require(irm.getKYC(msg.sender), "You are not KYCed");
-        
+
         // make sure signature is valid and get the address of the signer
         address signer = _verify(voucher);
 
@@ -65,7 +70,7 @@ contract UDAOCertificate is ERC721, EIP712, ERC721URIStorage, RoleController, Ow
         _setTokenURI(voucher.tokenId, voucher.uri);
     }
 
-     /// @notice Returns a hash of the given CertificateVoucher, prepared using EIP712 typed data hashing rules.
+    /// @notice Returns a hash of the given CertificateVoucher, prepared using EIP712 typed data hashing rules.
     /// @param voucher A CertificateVoucher to hash.
     function _hash(CertificateVoucher calldata voucher)
         internal
@@ -77,7 +82,7 @@ contract UDAOCertificate is ERC721, EIP712, ERC721URIStorage, RoleController, Ow
                 keccak256(
                     abi.encode(
                         keccak256(
-                            "UDAOCMinter(uint256 tokenId,string uri,address redeemer,string name,string description)"
+                            "CertificateVoucher(uint256 tokenId,string uri,address redeemer,string name,string description)"
                         ),
                         voucher.tokenId,
                         keccak256(bytes(voucher.uri)),
@@ -112,18 +117,29 @@ contract UDAOCertificate is ERC721, EIP712, ERC721URIStorage, RoleController, Ow
         return ECDSA.recover(digest, voucher.signature);
     }
 
-    function setForTransfer(uint256 tokenId, address to) external onlyRole(BACKEND_ROLE) {
+    function setForTransfer(uint256 tokenId, address to)
+        external
+        onlyRole(BACKEND_ROLE)
+    {
         // FIXME backend role adresi ile msg.sender değiştir.
-        require(getApproved(tokenId) == msg.sender, "UDAO not approved for this token.");
+        require(
+            getApproved(tokenId) == msg.sender,
+            "UDAO not approved for this token."
+        );
         canBeTransferred[tokenId] = to;
     }
 
-    function _beforeTokenTransfer(address from, address to, uint256 tokenId)
-        internal virtual override
-    {
+    function _beforeTokenTransfer(
+        address from,
+        address to,
+        uint256 tokenId
+    ) internal virtual override {
         super._beforeTokenTransfer(from, to, tokenId);
 
-        require(canBeTransferred[tokenId]==to, "ERC721WithSafeTransfer: invalid recipient");
+        require(
+            canBeTransferred[tokenId] == to,
+            "ERC721WithSafeTransfer: invalid recipient"
+        );
     }
 
     function _burn(uint256 tokenId)
