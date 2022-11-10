@@ -72,6 +72,8 @@ contract UDAOStaker is RoleController, EIP712 {
     mapping(address => uint) validatorApplicationId;
     uint private applicationIndex;
 
+    uint public totalVotingPower;
+
     constructor(
         address udaovpAddress,
         address udaoAddress,
@@ -353,7 +355,7 @@ contract UDAOStaker is RoleController, EIP712 {
         lock.amount = _amount;
         lock.expire = block.timestamp + (_days * (1 days));
         lock.vpamount = _amount * _days;
-
+        totalVotingPower += lock.vpamount;
         udaovp.transfer(msg.sender, lock.vpamount);
     }
 
@@ -374,6 +376,7 @@ contract UDAOStaker is RoleController, EIP712 {
                     lock.amount -= udaoFromLatest;
                     lock.vpamount -= vpFromLatest;
                     vpBalance += vpFromLatest;
+                    totalVotingPower -= vpBalance;
                     udaovp.transferFrom(msg.sender, address(0x0), vpBalance);
                     udao.transfer(msg.sender, _amount);
                 }
@@ -388,29 +391,19 @@ contract UDAOStaker is RoleController, EIP712 {
         }
     }
 
-    function addProposalRewards(uint _amount, address proposer)
-        external
-        onlyRole(GOVERNANCE_ROLE)
-    {
-        rewardBalanceOf[proposer] += _amount;
+    function addVoteRewards(address voter) external onlyRole(GOVERNANCE_ROLE) {
+        votingPowerRatio = (udaovp.balanceOf(vote) * 10000) / totalVotingPower;
+        rewardBalanceOf[proposer] += votingPowerRatio * voteReward;
     }
 
     function withdrawRewards() external {
-        uint voteRewards = rewardableAmountFromVotes();
-        lastRewardBlock[msg.sender] = block.number;
-        uint reward = rewardBalanceOf[msg.sender] + voteRewards;
+        require(
+            rewardBalanceOf[msg.sender] > 0,
+            "You don't have any reward balance"
+        );
+        uint voteRewards = rewardBalanceOf[msg.sender];
         rewardBalanceOf[msg.sender] = 0;
         udao.transferFrom(platformTreasuryAddress, msg.sender, reward);
-    }
-
-    function rewardableAmountFromVotes() public view returns (uint) {
-        uint totalVotes = udaovp.getPastVotes(msg.sender, block.number);
-        uint latestVotes = udaovp.getPastVotes(
-            msg.sender,
-            lastRewardBlock[msg.sender]
-        );
-        uint reward = (totalVotes - latestVotes) * voteReward;
-        return reward;
     }
 
     /// @notice Returns a hash of the given ContentVoucher, prepared using EIP712 typed data hashing rules.

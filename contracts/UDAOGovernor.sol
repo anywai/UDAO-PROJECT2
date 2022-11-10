@@ -11,7 +11,7 @@ import "@openzeppelin/contracts/governance/extensions/GovernorTimelockControl.so
 import "./RoleController.sol";
 
 interface IUDAOStaker {
-    function addProposalRewards(uint _amount, address proposer) external;
+    function addVoteRewards(address voter) external;
 }
 
 contract UDAOGovernor is
@@ -45,13 +45,22 @@ contract UDAOGovernor is
         stakingContract = IUDAOStaker(stakingContractAddress);
     }
 
-
-
     function setStakingContract(address stakingContractAddress)
         external
         onlyRoles(administrator_roles)
     {
         stakingContract = IUDAOStaker(stakingContractAddress);
+    }
+
+    function _castVote(
+        uint256 proposalId,
+        address account,
+        uint8 support,
+        string memory reason
+    ) internal override(Governor, IGovernor) returns (uint256) {
+        stakingContract.addVoteRewards(msg.sender);
+        return
+            _castVote(proposalId, account, support, reason, _defaultParams());
     }
 
     // The following functions are overrides required by Solidity.
