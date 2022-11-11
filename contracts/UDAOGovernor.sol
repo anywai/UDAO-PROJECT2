@@ -57,7 +57,7 @@ contract UDAOGovernor is
         address account,
         uint8 support,
         string memory reason
-    ) internal override(Governor, IGovernor) returns (uint256) {
+    ) internal override(Governor) returns (uint256) {
         stakingContract.addVoteRewards(msg.sender);
         return
             _castVote(proposalId, account, support, reason, _defaultParams());

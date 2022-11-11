@@ -392,8 +392,9 @@ contract UDAOStaker is RoleController, EIP712 {
     }
 
     function addVoteRewards(address voter) external onlyRole(GOVERNANCE_ROLE) {
-        votingPowerRatio = (udaovp.balanceOf(vote) * 10000) / totalVotingPower;
-        rewardBalanceOf[proposer] += votingPowerRatio * voteReward;
+        uint votingPowerRatio = (udaovp.balanceOf(voter) * 10000) /
+            totalVotingPower;
+        rewardBalanceOf[voter] += votingPowerRatio * voteReward;
     }
 
     function withdrawRewards() external {
@@ -403,7 +404,7 @@ contract UDAOStaker is RoleController, EIP712 {
         );
         uint voteRewards = rewardBalanceOf[msg.sender];
         rewardBalanceOf[msg.sender] = 0;
-        udao.transferFrom(platformTreasuryAddress, msg.sender, reward);
+        udao.transferFrom(platformTreasuryAddress, msg.sender, voteRewards);
     }
 
     /// @notice Returns a hash of the given ContentVoucher, prepared using EIP712 typed data hashing rules.
