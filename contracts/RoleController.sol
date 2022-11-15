@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-/// @title ######################### TODO Burak şunu sen yapabilir misin pampa ya :D 
+/// @title Controls roles for whole platform. All contracts inherits this contract.
 pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/security/Pausable.sol";
