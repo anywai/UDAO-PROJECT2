@@ -82,7 +82,7 @@ abstract contract ContentManager is BasePlatform {
 
     /// @notice Allows instructers' to enable coaching for a specific content
     /// @param tokenId The content id
-    function createCoaching(uint tokenId) external {
+    function enableCoaching(uint tokenId) external {
         require(
             udaoc.ownerOf(tokenId) == msg.sender,
             "You are not the owner of token"
@@ -92,7 +92,7 @@ abstract contract ContentManager is BasePlatform {
 
     /// @notice Allows instructers' to disable coaching for a specific content
     /// @param tokenId tokenId of the content that will be not coached
-    function deleteCoaching(uint tokenId) external {
+    function disableCoaching(uint tokenId) external {
         require(
             udaoc.ownerOf(tokenId) == msg.sender,
             "You are not the owner of token"
