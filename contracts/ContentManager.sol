@@ -15,30 +15,31 @@ abstract contract ContentManager is BasePlatform {
     // tokenId => buyable
     mapping(uint => bool) coachingEnabled;
 
-    IValidationManager ivm;
+    IValidationManager IVM;
 
     /// @param ivmAddress The address of the deployed ValidationManager contract
-    constructor(address ivmAddress) {
-        ivm = IValidationManager(ivmAddress);
+    constructor(address vmAddress) {
+        IVM = IValidationManager(vmAddress);
     }
 
     /// @notice Allows seting the address of the valdation manager contract
     /// @param ivmAddress The address of the deployed ValidationManager contract
-    function setValidationManager(address ivmAddress)
+    function setValidationManager(address vmAddress)
         external
         onlyRole(FOUNDATION_ROLE)
     {
-        ivm = IValidationManager(ivmAddress);
+        IVM = IValidationManager(vmAddress);
     }
+
     /// @notice allows KYCed users to purchase a content
     /// @param tokenId id of the token that will be bought
     /// @param partId id of the part of a content (microlearning)
     function buyContent(uint tokenId, uint partId) external {
-        require(irm.getKYC(msg.sender), "You are not KYCed");
+        require(IRM.getKYC(msg.sender), "You are not KYCed");
         address instructor = udaoc.ownerOf(tokenId);
-        require(!irm.getKYC(instructor), "Instructor is not KYCed");
-        require(!irm.getBan(instructor), "Instructor is banned");
-        require(ivm.isValidated(tokenId), "Content is not validated yet");
+        require(!IRM.getKYC(instructor), "Instructor is not KYCed");
+        require(!IRM.getBan(instructor), "Instructor is banned");
+        require(IVM.isValidated(tokenId), "Content is not validated yet");
         require(
             isTokenBought[msg.sender][tokenId] == false,
             "Content is already bought"
@@ -62,11 +63,11 @@ abstract contract ContentManager is BasePlatform {
     /// @notice Allows users to buy coaching service.
     /// @param tokenId Content token id is used for finding the address of the coach
     function buyCoaching(uint tokenId) external {
-        require(irm.getKYC(msg.sender), "You are not KYCed");
+        require(IRM.getKYC(msg.sender), "You are not KYCed");
         address instructor = udaoc.ownerOf(tokenId);
-        require(!irm.getKYC(instructor), "Instructor is not KYCed");
-        require(!irm.getBan(instructor), "Instructor is banned");
-        require(ivm.isValidated(tokenId), "Content is not validated yet");
+        require(!IRM.getKYC(instructor), "Instructor is not KYCed");
+        require(!IRM.getBan(instructor), "Instructor is banned");
+        require(IVM.isValidated(tokenId), "Content is not validated yet");
 
         foundationBalance +=
             (coachingFee[tokenId] * coachingFoundationCut) /
@@ -102,7 +103,7 @@ abstract contract ContentManager is BasePlatform {
 
     /// @notice Allows coaches to set their coaching fee.
     /// @param tokenId tokenId of the content that will be coached
-    /// @param _coachingFee The fee to set 
+    /// @param _coachingFee The fee to set
     function setCoachingFee(uint tokenId, uint _coachingFee) external {
         require(
             udaoc.ownerOf(tokenId) == msg.sender,

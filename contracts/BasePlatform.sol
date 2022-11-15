@@ -57,62 +57,62 @@ abstract contract BasePlatform is Pausable, RoleController {
     constructor(
         address udaoAddress,
         address udaocAddress,
-        address irmAddress
-    ) RoleController(irmAddress) {
+        address rmAddress
+    ) RoleController(rmAddress) {
         udao = IERC20(udaoAddress);
         udaoc = IUDAOC(udaocAddress);
     }
 
     // SETTERS
 
+    /// @notice changes cut from coaching for foundation
+    /// @param _cut new cut (100000 -> 100% | 5000 -> 5%)
     function setCoachingFoundationCut(uint _cut)
         external
         onlyRole(GOVERNANCE_ROLE)
     {
-        /// @notice changes cut from coaching for foundation
-        /// @param _cut new cut (100000 -> 100% | 5000 -> 5%)
         coachingFoundationCut = _cut;
     }
 
+    /// @notice changes cut from coaching for governance
+    /// @param _cut new cut (100000 -> 100% | 5000 -> 5%)
     function setCoachingGovernanceCut(uint _cut)
         external
         onlyRole(GOVERNANCE_ROLE)
     {
-        /// @notice changes cut from coaching for governance
-        /// @param _cut new cut (100000 -> 100% | 5000 -> 5%)
         coachingGovernancenCut = _cut;
     }
 
+    /// @notice changes cut from content for foundation
+    /// @param _cut new cut (100000 -> 100% | 5000 -> 5%)
     function setContentFoundationCut(uint _cut)
         external
         onlyRole(GOVERNANCE_ROLE)
     {
-        /// @notice changes cut from content for foundation
-        /// @param _cut new cut (100000 -> 100% | 5000 -> 5%)
         contentFoundationCut = _cut;
     }
 
+    /// @notice changes cut from content for governance
+    /// @param _cut new cut (100000 -> 100% | 5000 -> 5%)
     function setContentGovernanceCut(uint _cut)
         external
         onlyRole(GOVERNANCE_ROLE)
     {
-        /// @notice changes cut from content for governance
-        /// @param _cut new cut (100000 -> 100% | 5000 -> 5%)
         contentGovernancenCut = _cut;
     }
 
+    /// @notice changes cut from content for juror pool
+    /// @param _cut new cut (100000 -> 100% | 5000 -> 5%)
     function setContentJurorCut(uint _cut) external onlyRole(GOVERNANCE_ROLE) {
-        /// @notice changes cut from content for juror pool
-        /// @param _cut new cut (100000 -> 100% | 5000 -> 5%)
         contentJurorCut = _cut;
     }
 
+    /// @notice changes cut from content for validator pool
+    /// @param _cut new cut (100000 -> 100% | 5000 -> 5%)
     function setContentValidatorCut(uint _cut)
         external
         onlyRole(GOVERNANCE_ROLE)
     {
-        /// @notice changes cut from content for validator pool
-        /// @param _cut new cut (100000 -> 100% | 5000 -> 5%)
         contentValidatorCut = _cut;
     }
 }

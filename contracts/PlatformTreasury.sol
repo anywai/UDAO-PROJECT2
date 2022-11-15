@@ -11,38 +11,38 @@ contract PlatformTreasury is Pausable, ContentManager, EIP712 {
     string private constant SIGNING_DOMAIN = "ValidationScore";
     string private constant SIGNATURE_VERSION = "1";
 
-    /// @param udaoAddress The address of the deployed udao token contract 
-    /// @param udaocAddress The address of the deployed udao content token 
-    /// @param irmAddress The address of the deployed  TODO Ask burak> interface or role manager itself?
-    /// @param ivmAddress The address of the deployed  TODO Ask burak> interface or val. manager itself?
+    /// @param udaoAddress The address of the deployed udao token contract
+    /// @param udaocAddress The address of the deployed udao content token
+    /// @param rmAddress The address of the deployed role manager
+    /// @param vmAddress The address of the deployed validation manager
     constructor(
         address udaoAddress,
         address udaocAddress,
-        address irmAddress,
-        address ivmAddress
+        address rmAddress,
+        address vmAddress
     )
         EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION)
-        BasePlatform(udaoAddress, udaocAddress, irmAddress)
-        ContentManager(ivmAddress)
+        BasePlatform(udaoAddress, udaocAddress, rmAddress)
+        ContentManager(vmAddress)
     {}
 
     /// @notice The id of the token to be redeemed.
     struct ScoreVoucher {
         /// @dev Current accumulated score points in off-chain
-        int256 score;  
+        int256 score;
         /// @dev The number of validation that matched with the final verdict
-        uint256 successfulValidation;  
+        uint256 successfulValidation;
         /// @dev The number of validation that didn't match with the final verdict
-        uint256 unsuccessfulValidation; 
+        uint256 unsuccessfulValidation;
         /// @dev Address of the redeemer (validator)
-        address redeemer; 
-        /// @dev the EIP-712 signature of all other fields in the ContentVoucher struct 
-        bytes signature;  
+        address redeemer;
+        /// @dev the EIP-712 signature of all other fields in the ContentVoucher struct
+        bytes signature;
     }
 
     // validator => score
     mapping(address => int256) validatorScore;
-    
+
     /// @notice withdraws governance balance to governance treasury
     function withdrawGovernance() external onlyRole(GOVERNANCE_ROLE) {
         udao.transfer(governanceTreasury, governanceBalance);
@@ -74,7 +74,7 @@ contract PlatformTreasury is Pausable, ContentManager, EIP712 {
 
         validatorScore[_scoreVoucher.redeemer] = _scoreVoucher.score;
     }
-    
+
     /// @notice calculates validator earnings and withdraws calculated earning to validator wallet
     function withdrawValidator() external onlyRoles(validator_roles) {
         uint[2] memory results = udaoc.getValidationResults(msg.sender);

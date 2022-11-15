@@ -118,11 +118,11 @@ contract UDAOStaker is RoleController, EIP712 {
     /// @param validationAmount The amount of validations that a validator wants to do
     function applyForValidator(uint validationAmount) external {
         require(
-            !irm.hasRole(SUPER_VALIDATOR_ROLE, msg.sender),
+            !IRM.hasRole(SUPER_VALIDATOR_ROLE, msg.sender),
             "Address is a Super Validator"
         );
         require(
-            !irm.hasRole(VALIDATOR_ROLE, msg.sender),
+            !IRM.hasRole(VALIDATOR_ROLE, msg.sender),
             "Address is already a Validator"
         );
         uint tokenToExtract = payablePerValidation * validationAmount;
@@ -141,11 +141,11 @@ contract UDAOStaker is RoleController, EIP712 {
 
     function applyForSuperValidator() external {
         require(
-            !irm.hasRole(SUPER_VALIDATOR_ROLE, msg.sender),
+            !IRM.hasRole(SUPER_VALIDATOR_ROLE, msg.sender),
             "Address is a Super Validator"
         );
         require(
-            irm.hasRole(VALIDATOR_ROLE, msg.sender),
+            IRM.hasRole(VALIDATOR_ROLE, msg.sender),
             "Address should be a Validator"
         );
 
@@ -167,7 +167,7 @@ contract UDAOStaker is RoleController, EIP712 {
         onlyRole(VALIDATOR_ROLE)
     {
         require(
-            !irm.hasRole(SUPER_VALIDATOR_ROLE, msg.sender),
+            !IRM.hasRole(SUPER_VALIDATOR_ROLE, msg.sender),
             "Address is a Super Validator"
         );
         uint tokenToExtract = payablePerValidation * validationAmount;
@@ -207,11 +207,11 @@ contract UDAOStaker is RoleController, EIP712 {
         // make sure redeemer is redeeming
         require(voucher.redeemer == msg.sender, "You are not the redeemer");
         //make sure redeemer is kyced
-        require(irm.getKYC(msg.sender), "You are not KYCed");
+        require(IRM.getKYC(msg.sender), "You are not KYCed");
         // make sure signature is valid and get the address of the signer
         address signer = _verify(voucher);
         require(
-            irm.hasRole(BACKEND_ROLE, signer),
+            IRM.hasRole(BACKEND_ROLE, signer),
             "Signature invalid or unauthorized"
         );
 
@@ -222,10 +222,10 @@ contract UDAOStaker is RoleController, EIP712 {
         StakeLock storage userInfo = validatorLock[msg.sender].push();
 
         if (validationApplication.isSuper) {
-            irm.grantRole(SUPER_VALIDATOR_ROLE, voucher.redeemer);
+            IRM.grantRole(SUPER_VALIDATOR_ROLE, voucher.redeemer);
             userInfo.expire = block.timestamp + superValidatorLockTime;
         } else {
-            irm.grantRole(VALIDATOR_ROLE, voucher.redeemer);
+            IRM.grantRole(VALIDATOR_ROLE, voucher.redeemer);
 
             userInfo.expire = block.timestamp + validatorLockTime;
         }
@@ -257,7 +257,7 @@ contract UDAOStaker is RoleController, EIP712 {
                 validatorApplicationId[msg.sender]
             ];
 
-        if (irm.hasRole(VALIDATOR_ROLE, msg.sender)) {
+        if (IRM.hasRole(VALIDATOR_ROLE, msg.sender)) {
             for (int j; uint(j) < validatorLockLength; j++) {
                 StakeLock storage lock = validatorLock[msg.sender][uint(j)];
                 if (lock.expire < block.timestamp) {
@@ -279,7 +279,7 @@ contract UDAOStaker is RoleController, EIP712 {
                     i--;
                 }
             }
-        } else if (irm.hasRole(SUPER_VALIDATOR_ROLE, msg.sender)) {
+        } else if (IRM.hasRole(SUPER_VALIDATOR_ROLE, msg.sender)) {
             for (int j; uint(j) < validatorLockLength; j++) {
                 StakeLock storage lock = validatorLock[msg.sender][uint(j)];
                 if (lock.expire < block.timestamp) {
@@ -310,7 +310,7 @@ contract UDAOStaker is RoleController, EIP712 {
                 validatorApplicationId[msg.sender]
             ];
 
-        if (irm.hasRole(VALIDATOR_ROLE, msg.sender)) {
+        if (IRM.hasRole(VALIDATOR_ROLE, msg.sender)) {
             for (int j; uint(j) < validatorLockLength; j++) {
                 StakeLock storage lock = validatorLock[msg.sender][uint(j)];
                 if (lock.expire < block.timestamp) {
@@ -327,7 +327,7 @@ contract UDAOStaker is RoleController, EIP712 {
                     withdrawableBalance += validationLock.lockAmount;
                 }
             }
-        } else if (irm.hasRole(SUPER_VALIDATOR_ROLE, msg.sender)) {
+        } else if (IRM.hasRole(SUPER_VALIDATOR_ROLE, msg.sender)) {
             for (int j; uint(j) < validatorLockLength; j++) {
                 StakeLock storage lock = validatorLock[msg.sender][uint(j)];
                 if (lock.expire < block.timestamp) {
@@ -347,8 +347,8 @@ contract UDAOStaker is RoleController, EIP712 {
     function stakeForGovernance(uint _amount, uint _days) public {
         require(_amount > 0, "Stake amount can't be 0");
         require(_days >= 7, "Minimum lock duration is 7 days");
-        require(irm.getKYC(msg.sender), "Address is not KYCed");
-        require(!irm.getBan(msg.sender), "Address is banned");
+        require(IRM.getKYC(msg.sender), "Address is not KYCed");
+        require(!IRM.getBan(msg.sender), "Address is banned");
         udao.transferFrom(msg.sender, address(this), _amount);
 
         GovernanceLock storage lock = governanceStakes[msg.sender].push();

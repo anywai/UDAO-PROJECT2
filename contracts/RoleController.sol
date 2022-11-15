@@ -22,19 +22,19 @@ abstract contract RoleController is Context, Pausable {
     bytes32[] validator_roles;
     bytes32[] administrator_roles;
 
-    IRoleManager irm;
+    IRoleManager IRM;
 
     modifier onlyRole(bytes32 role) {
-        irm.checkRole(role, _msgSender());
+        IRM.checkRole(role, _msgSender());
         _;
     }
     modifier onlyRoles(bytes32[] memory roles) {
-        irm.checkRoles(roles, _msgSender());
+        IRM.checkRoles(roles, _msgSender());
         _;
     }
 
     constructor(address irmAddress) {
-        irm = IRoleManager(irmAddress);
+        IRM = IRoleManager(irmAddress);
         validator_roles.push(VALIDATOR_ROLE);
         validator_roles.push(SUPER_VALIDATOR_ROLE);
         administrator_roles.push(FOUNDATION_ROLE);

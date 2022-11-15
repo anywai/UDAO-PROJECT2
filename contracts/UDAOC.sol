@@ -54,7 +54,7 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
         // make sure signature is valid and get the address of the signer
         address signer = _verify(voucher);
         require(
-            irm.hasRole(BACKEND_ROLE, signer),
+            IRM.hasRole(BACKEND_ROLE, signer),
             "Signature invalid or unauthorized"
         );
 
@@ -127,8 +127,8 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
     ) internal virtual override {
         /// @notice make sure the transfer is made to a KYCed wallet
         super._beforeTokenTransfer(from, to, tokenId);
-        require(irm.getKYC(to), "Receiver is not KYCed!");
-        require(!irm.getBan(to), "Receiver is banned!");
+        require(IRM.getKYC(to), "Receiver is not KYCed!");
+        require(!IRM.getBan(to), "Receiver is banned!");
     }
 
     // Getters
