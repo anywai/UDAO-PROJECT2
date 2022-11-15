@@ -4,6 +4,10 @@ const { ethers } = hardhat;
 const chai = require("chai");
 const BN = require("bn.js");
 const { LazyMinter } = require("../lib/LazyMinter");
+const { LazyRole } = require("../lib/LazyRole");
+const { LazyScore } = require("../lib/LazyScore");
+const { LazyValidation } = require("../lib/LazyValidation");
+const { LazyUDAOCertMinter } = require("../lib/LazyUDAOCertMinter");
 
 // Enable and inject BN dependency
 chai.use(require("chai-bn")(BN));
@@ -269,5 +273,57 @@ describe("UDAO Project", function () {
         contentCreator.address,
         voucher.tokenId
       );
+  });
+
+  it("Should get the price of the content", async function () {
+    const {
+      backend,
+      contentCreator,
+      contentBuyer,
+      validatorCandidate,
+      validator,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+    } = await deploy();
+    await contractRoleManager.setKYC(contentCreator.address, true);
+
+    const tx = await contractUDAOContent.getChainID();
+    const lazyMinter = new LazyMinter({
+      contract: contractUDAOContent,
+      signer: backend,
+    });
+    const voucher = await lazyMinter.createVoucher(
+      1,
+      ethers.utils.parseEther("1.0"),
+      "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
+      contentCreator.address,
+      "Conent Name",
+      "Content Description"
+    );
+    await expect(contractUDAOContent.connect(contentCreator).redeem(voucher))
+      .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
+      .withArgs(
+        "0x0000000000000000000000000000000000000000",
+        contentCreator.address,
+        voucher.tokenId
+      );
+    expect(await contractUDAOContent.getPriceContent(1, 0)).to.eql(
+      ethers.utils.parseEther("1.0")
+    );
   });
 });
