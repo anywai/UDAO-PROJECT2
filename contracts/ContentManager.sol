@@ -12,26 +12,28 @@ abstract contract ContentManager is BasePlatform {
     mapping(address => uint[][]) ownedContents;
     // tokenId => fee
     mapping(uint => uint) coachingFee;
-
     // tokenId => buyable
     mapping(uint => bool) coachingEnabled;
 
     IValidationManager ivm;
 
+    /// @param ivmAddress The address of the deployed ValidationManager contract
     constructor(address ivmAddress) {
         ivm = IValidationManager(ivmAddress);
     }
 
+    /// @notice Allows seting the address of the valdation manager contract
+    /// @param ivmAddress The address of the deployed ValidationManager contract
     function setValidationManager(address ivmAddress)
         external
         onlyRole(FOUNDATION_ROLE)
     {
         ivm = IValidationManager(ivmAddress);
     }
-
+    /// @notice allows KYCed users to purchase a content
+    /// @param tokenId id of the token that will be bought
+    /// @param partId id of the part of a content (microlearning)
     function buyContent(uint tokenId, uint partId) external {
-        /// @notice allows KYCed users to purchase a content
-        /// @param tokenId id of the token that will be bought
         require(irm.getKYC(msg.sender), "You are not KYCed");
         address instructor = udaoc.ownerOf(tokenId);
         require(!irm.getKYC(instructor), "Instructor is not KYCed");
@@ -39,7 +41,7 @@ abstract contract ContentManager is BasePlatform {
         require(ivm.isValidated(tokenId), "Content is not validated yet");
         require(
             isTokenBought[msg.sender][tokenId] == false,
-            "Content Already Bought"
+            "Content is already bought"
         );
         uint contentPrice = udaoc.getPriceContent(tokenId, partId);
         foundationBalance += (contentPrice * contentFoundationCut) / 100000;
@@ -57,9 +59,9 @@ abstract contract ContentManager is BasePlatform {
         ownedContents[msg.sender].push([tokenId, partId]);
     }
 
+    /// @notice Allows users to buy coaching service.
+    /// @param tokenId Content token id is used for finding the address of the coach
     function buyCoaching(uint tokenId) external {
-        /// @notice Allows users to buy coaching service.
-        /// @param _coach The address of the coach that a user want to buy service from
         require(irm.getKYC(msg.sender), "You are not KYCed");
         address instructor = udaoc.ownerOf(tokenId);
         require(!irm.getKYC(instructor), "Instructor is not KYCed");
@@ -78,7 +80,9 @@ abstract contract ContentManager is BasePlatform {
         udao.transferFrom(msg.sender, address(this), coachingFee[tokenId]);
     }
 
-    function createCoaching(uint tokenId) external {
+    /// @notice Allows instructers' to enable coaching for a specific content
+    /// @param tokenId The content id
+    function enableCoaching(uint tokenId) external {
         require(
             udaoc.ownerOf(tokenId) == msg.sender,
             "You are not the owner of token"
@@ -86,7 +90,9 @@ abstract contract ContentManager is BasePlatform {
         coachingEnabled[tokenId] = true;
     }
 
-    function deleteCoaching(uint tokenId) external {
+    /// @notice Allows instructers' to disable coaching for a specific content
+    /// @param tokenId tokenId of the content that will be not coached
+    function disableCoaching(uint tokenId) external {
         require(
             udaoc.ownerOf(tokenId) == msg.sender,
             "You are not the owner of token"
@@ -94,10 +100,10 @@ abstract contract ContentManager is BasePlatform {
         coachingEnabled[tokenId] = false;
     }
 
+    /// @notice Allows coaches to set their coaching fee.
+    /// @param tokenId tokenId of the content that will be coached
+    /// @param _coachingFee The fee to set 
     function setCoachingFee(uint tokenId, uint _coachingFee) external {
-        /// @notice Allows coaches to set their coaching fee.
-        /// @param tokenId tokenId of the content that will be coached
-        /// @param _coachingFee The new coaching fee.
         require(
             udaoc.ownerOf(tokenId) == msg.sender,
             "You are not the owner of token"

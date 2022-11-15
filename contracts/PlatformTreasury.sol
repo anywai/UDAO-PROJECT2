@@ -11,6 +11,10 @@ contract PlatformTreasury is Pausable, ContentManager, EIP712 {
     string private constant SIGNING_DOMAIN = "ValidationScore";
     string private constant SIGNATURE_VERSION = "1";
 
+    /// @param udaoAddress The address of the deployed udao token contract 
+    /// @param udaocAddress The address of the deployed udao content token 
+    /// @param irmAddress The address of the deployed  TODO Ask burak> interface or role manager itself?
+    /// @param ivmAddress The address of the deployed  TODO Ask burak> interface or val. manager itself?
     constructor(
         address udaoAddress,
         address udaocAddress,
@@ -22,30 +26,35 @@ contract PlatformTreasury is Pausable, ContentManager, EIP712 {
         ContentManager(ivmAddress)
     {}
 
+    /// @notice The id of the token to be redeemed.
     struct ScoreVoucher {
-        /// @notice The id of the token to be redeemed.
-        int256 score;
-        uint256 successfulValidation;
-        uint256 unsuccessfulValidation;
-        /// @notice Address of the redeemer
-        address redeemer;
-        /// @notice the EIP-712 signature of all other fields in the ContentVoucher struct.
-        bytes signature;
+        /// @dev Current accumulated score points in off-chain
+        int256 score;  
+        /// @dev The number of validation that matched with the final verdict
+        uint256 successfulValidation;  
+        /// @dev The number of validation that didn't match with the final verdict
+        uint256 unsuccessfulValidation; 
+        /// @dev Address of the redeemer (validator)
+        address redeemer; 
+        /// @dev the EIP-712 signature of all other fields in the ContentVoucher struct 
+        bytes signature;  
     }
 
     // validator => score
     mapping(address => int256) validatorScore;
-
+    
+    /// @notice withdraws governance balance to governance treasury
     function withdrawGovernance() external onlyRole(GOVERNANCE_ROLE) {
-        /// @notice withdraws governance balance to governance treasury
         udao.transfer(governanceTreasury, governanceBalance);
     }
 
+    /// @notice withdraws foundation balance to foundation wallet
     function withdrawFoundation() external onlyRole(FOUNDATION_ROLE) {
-        /// @notice withdraws foundation balance to foundation wallet
         udao.transfer(foundationWallet, foundationBalance);
     }
 
+    /// @notice Allows validators to record their score on-chain
+    /// @param _scoreVoucher The voucher of the score information
     function writeValidatorScore(ScoreVoucher calldata _scoreVoucher)
         external
         onlyRoles(validator_roles)
@@ -65,9 +74,9 @@ contract PlatformTreasury is Pausable, ContentManager, EIP712 {
 
         validatorScore[_scoreVoucher.redeemer] = _scoreVoucher.score;
     }
-
+    
+    /// @notice calculates validator earnings and withdraws calculated earning to validator wallet
     function withdrawValidator() external onlyRoles(validator_roles) {
-        /// @notice calculates validator earnings and withdraws calculated earning to validator wallet
         uint[2] memory results = udaoc.getValidationResults(msg.sender);
         /// @dev results[0] is successful validations
         uint participation = (results[0] * 100000) / udaoc.getTotalValidation();
@@ -75,8 +84,8 @@ contract PlatformTreasury is Pausable, ContentManager, EIP712 {
         udao.transfer(msg.sender, earning);
     }
 
+    /// @notice Allows instructers to withdraw individually.
     function withdrawInstructor() external {
-        /// @dev Allows coaches to withdraw individually.
         udao.transfer(msg.sender, instructorBalance[msg.sender]);
     }
 
