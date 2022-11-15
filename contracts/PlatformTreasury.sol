@@ -68,7 +68,7 @@ contract PlatformTreasury is Pausable, ContentManager, EIP712 {
         // make sure signature is valid and get the address of the signer
         address signer = _verify(_scoreVoucher);
         require(
-            irm.hasRole(BACKEND_ROLE, signer),
+            IRM.hasRole(BACKEND_ROLE, signer),
             "Signature invalid or unauthorized"
         );
 
