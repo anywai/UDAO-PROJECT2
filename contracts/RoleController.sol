@@ -19,15 +19,25 @@ abstract contract RoleController is Context, Pausable {
     bytes32 public constant VALIDATION_MANAGER =
         keccak256("VALIDATION_MANAGER");
 
+    /// Role group for validators
     bytes32[] validator_roles;
+
+    /// Role groupd for administrator roles
     bytes32[] administrator_roles;
 
     IRoleManager IRM;
 
+    /**
+     * @notice onlyRole is used to check is msg.sender has the a role required to call that function
+     */
     modifier onlyRole(bytes32 role) {
         IRM.checkRole(role, _msgSender());
         _;
     }
+
+    /**
+     * @notice onlyRole is used to check is msg.sender has one of the roles required to call that function
+     */
     modifier onlyRoles(bytes32[] memory roles) {
         IRM.checkRoles(roles, _msgSender());
         _;
@@ -41,10 +51,12 @@ abstract contract RoleController is Context, Pausable {
         administrator_roles.push(GOVERNANCE_ROLE);
     }
 
+    /// @notice pauses function
     function pause() public onlyRole(BACKEND_ROLE) {
         _pause();
     }
 
+    /// @notice unpauses function
     function unpause() public onlyRole(BACKEND_ROLE) {
         _unpause();
     }
