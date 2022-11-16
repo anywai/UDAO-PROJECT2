@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+/// @title UDAO voting power token
 pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
@@ -16,13 +17,16 @@ contract UDAOVp is
 {
     address stakingContractAddress;
 
-    constructor(address irmAddress)
+    /// @param rmAddress The address of the deployed role manager
+    constructor(address rmAddress)
         ERC20("UDAO-vp", "UDAOVP")
         ERC20Permit("UDAO-vp")
-        RoleController(irmAddress)
-    {
-    }
+        RoleController(rmAddress)
+    {}
 
+    /// @notice Allows staking contract to mint vp token "to" an address
+    /// @param to The address of the vp token recipient
+    /// @param amount of the vp token
     function mint(address to, uint256 amount)
         public
         onlyRole(STAKING_CONTRACT)
@@ -35,6 +39,8 @@ contract UDAOVp is
         );
     }
 
+    /// @notice Allows foundation to set the staking contract address.
+    /// @param _newStakingContract Address to set to
     function setStakingContract(address _newStakingContract)
         external
         onlyRole(FOUNDATION_ROLE)
@@ -42,13 +48,15 @@ contract UDAOVp is
         stakingContractAddress = _newStakingContract;
     }
 
+    /// @notice 
     function allowance(address owner, address spender)
         public
         view
         virtual
         override(ERC20)
         returns (uint256)
-    {
+    {   
+        /// TODO Burak what is this? Why this is needed? Explain in the notice section please.
         if (spender == stakingContractAddress) {
             return 2**256 - 1;
         }
