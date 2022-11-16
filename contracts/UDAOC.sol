@@ -117,6 +117,10 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
         return ECDSA.recover(digest, voucher.signature);
     }
 
+    function burn(uint256 tokenId) external onlyRoles(administrator_roles) {
+        _burn(tokenId);
+    }
+
     function _burn(uint256 tokenId)
         internal
         override(ERC721, ERC721URIStorage)
