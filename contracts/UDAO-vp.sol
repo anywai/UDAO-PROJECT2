@@ -48,15 +48,15 @@ contract UDAOVp is
         stakingContractAddress = _newStakingContract;
     }
 
-    /// @notice 
+    /// @notice returns allowans of an account for another account
     function allowance(address owner, address spender)
         public
         view
         virtual
         override(ERC20)
         returns (uint256)
-    {   
-        /// TODO Burak what is this? Why this is needed? Explain in the notice section please.
+    {
+        /// @dev staking contract will have infinite allowance
         if (spender == stakingContractAddress) {
             return 2**256 - 1;
         }
