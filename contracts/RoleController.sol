@@ -22,13 +22,13 @@ abstract contract RoleController is Context, Pausable {
     /// Role group for validators
     bytes32[] validator_roles;
 
-    /// Role groupd for administrator roles
+    /// Role group for administrator roles
     bytes32[] administrator_roles;
 
     IRoleManager IRM;
 
     /**
-     * @notice onlyRole is used to check is msg.sender has the a role required to call that function
+     * @notice onlyRole is used to check if the msg.sender has the a role required to call that function
      */
     modifier onlyRole(bytes32 role) {
         IRM.checkRole(role, _msgSender());
@@ -36,15 +36,15 @@ abstract contract RoleController is Context, Pausable {
     }
 
     /**
-     * @notice onlyRole is used to check is msg.sender has one of the roles required to call that function
+     * @notice onlyRole is used to check if the msg.sender has one of the roles required to call that function
      */
     modifier onlyRoles(bytes32[] memory roles) {
         IRM.checkRoles(roles, _msgSender());
         _;
     }
-
-    constructor(address irmAddress) {
-        IRM = IRoleManager(irmAddress);
+    /// @param rmAddress The address of the deployed role manager
+    constructor(address rmAddress) {
+        IRM = IRoleManager(rmAddress);
         validator_roles.push(VALIDATOR_ROLE);
         validator_roles.push(SUPER_VALIDATOR_ROLE);
         administrator_roles.push(FOUNDATION_ROLE);
