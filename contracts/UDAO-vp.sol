@@ -39,11 +39,11 @@ contract UDAOVp is
         );
     }
 
-    /// @notice Allows foundation to set the staking contract address.
+    /// @notice Allows administrator_roles to set the staking contract address.
     /// @param _newStakingContract Address to set to
     function setStakingContract(address _newStakingContract)
         external
-        onlyRole(FOUNDATION_ROLE)
+        onlyRoles(administrator_roles)
     {
         stakingContractAddress = _newStakingContract;
     }
