@@ -52,7 +52,7 @@ contract RoleManager is AccessControl {
                 abi.encodePacked(
                     "AccessControl: account ",
                     Strings.toHexString(uint160(account), 20),
-                    " is missing role "
+                    " is missing role"
                 )
             )
         );
@@ -66,7 +66,7 @@ contract RoleManager is AccessControl {
         onlyRole(BACKEND_ROLE)
     {
         isKYCed[_address] = _isKYCed;
-        emit SetKYC(_address,_isKYCed);
+        emit SetKYC(_address, _isKYCed);
     }
 
     /// @notice set ban for an account address
@@ -77,8 +77,7 @@ contract RoleManager is AccessControl {
         onlyRole(BACKEND_ROLE)
     {
         isBanned[_address] = _isBanned;
-        emit SetBan(_address,_isBanned);
-
+        emit SetBan(_address, _isBanned);
     }
 
     /// @notice gets KYC result of the address
@@ -86,7 +85,7 @@ contract RoleManager is AccessControl {
     function getKYC(address _address) external view returns (bool) {
         return isKYCed[_address];
     }
-    
+
     /// @notice gets ban result of the address
     /// @param _address wallet that ban result will be sent
     function getBan(address _address) external view returns (bool) {
