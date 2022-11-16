@@ -10,6 +10,7 @@ contract RoleManager is AccessControl {
     mapping(address => bool) isKYCed;
     mapping(address => bool) isBanned;
 
+    /// @notice events fired when a KYC or Ban is set
     event SetKYC(address indexed user, bool indexed result);
     event SetBan(address indexed user, bool indexed result);
 
