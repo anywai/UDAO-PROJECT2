@@ -65,7 +65,7 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
         // save the content price
         uint partLength = voucher.contentPrice.length;
         for (uint i = 0; i < partLength; i++) {
-            contentPrice[tokenId][i] = voucher.contentPrice[i];
+            contentPrice[voucher.tokenId][i] = voucher.contentPrice[i];
         }
     }
 
@@ -84,7 +84,7 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
                             "ContentVoucher(uint256 tokenId,uint256[] contentPrice,string uri,address redeemer,string name,string description)"
                         ),
                         voucher.tokenId,
-                        voucher.contentPrice,
+                        keccak256(abi.encodePacked(voucher.contentPrice)),
                         keccak256(bytes(voucher.uri)),
                         voucher.redeemer,
                         keccak256(bytes(voucher.name)),
