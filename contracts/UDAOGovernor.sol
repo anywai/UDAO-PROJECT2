@@ -29,22 +29,24 @@ contract UDAOGovernor is
         IVotes _token,
         TimelockController _timelock,
         address stakingContractAddress,
-        address irmAddress
+        address rmAddress
     )
         Governor("UDAOGovernor")
         GovernorSettings(
-            50400, /* 1 week */
-            50400, /* 1 week */
-            0
+            50400, /* 1 week voting delay */
+            50400, /* 1 week voting period duration*/
+            0 /*proposal threshold*/
         )
         GovernorVotes(_token)
         GovernorVotesQuorumFraction(4)
         GovernorTimelockControl(_timelock)
-        RoleController(irmAddress)
+        RoleController(rmAddress)
     {
         stakingContract = IUDAOStaker(stakingContractAddress);
     }
 
+    /// @notice Allows administrator_roles to set the staking contract address.
+    /// @param stakingContractAddress Address to set to
     function setStakingContract(address stakingContractAddress)
         external
         onlyRoles(administrator_roles)
