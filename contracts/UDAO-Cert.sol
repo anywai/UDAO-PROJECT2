@@ -31,6 +31,7 @@ contract UDAOCertificate is
         ERC721("UDAO Certificate", "UDAO-Cert")
         EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION)
         RoleController(irmAdress)
+        
     {}
 
     /// @notice Represents an un-minted NFT, which has not yet been recorded into the blockchain.
@@ -57,10 +58,8 @@ contract UDAOCertificate is
         require(voucher.redeemer == msg.sender, "You are not the redeemer");
         //make sure redeemer is kyced
         require(IRM.getKYC(msg.sender), "You are not KYCed");
-
         // make sure signature is valid and get the address of the signer
         address signer = _verify(voucher);
-
         require(
             IRM.hasRole(BACKEND_ROLE, signer),
             "Signature invalid or unauthorized"
@@ -117,18 +116,25 @@ contract UDAOCertificate is
         return ECDSA.recover(digest, voucher.signature);
     }
 
+    
+    /// @notice Backend can allow transfer of a token to a specific address.
+    /// @param tokenId The token to set a transfer
+    /// @param to The address of the recipient 
     function setForTransfer(uint256 tokenId, address to)
         external
         onlyRole(BACKEND_ROLE)
     {
-        // FIXME backend role adresi ile msg.sender değiştir.
         require(
             getApproved(tokenId) == msg.sender,
-            "UDAO not approved for this token."
+            "UDAO is not approved for this token."
         );
         canBeTransferred[tokenId] = to;
     }
 
+    /// @notice Checks if token transfer is allowed. Reverts if not allowed.
+    /// @param from The current token owner
+    /// @param to Token to send to
+    /// @param tokenId The id of the token to transfer
     function _beforeTokenTransfer(
         address from,
         address to,
@@ -138,7 +144,7 @@ contract UDAOCertificate is
 
         require(
             canBeTransferred[tokenId] == to,
-            "ERC721WithSafeTransfer: invalid recipient"
+            "ERC721WithSafeTransfer: invalid recipient or not allowed"
         );
     }
 
