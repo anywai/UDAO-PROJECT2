@@ -260,10 +260,10 @@ describe("UDAO Project", function () {
     });
     const voucher = await lazyMinter.createVoucher(
       1,
-      ethers.utils.parseEther("1.0"),
+      [ethers.utils.parseEther("1.0"), ethers.utils.parseEther("2.0")],
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
-      "Conent Name",
+      "Content Name",
       "Content Description"
     );
     await expect(contractUDAOContent.connect(contentCreator).redeem(voucher))
@@ -309,10 +309,10 @@ describe("UDAO Project", function () {
     });
     const voucher = await lazyMinter.createVoucher(
       1,
-      ethers.utils.parseEther("1.0"),
+      [ethers.utils.parseEther("1.0"), ethers.utils.parseEther("2.0")],
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
-      "Conent Name",
+      "Content Name",
       "Content Description"
     );
     await expect(contractUDAOContent.connect(contentCreator).redeem(voucher))
