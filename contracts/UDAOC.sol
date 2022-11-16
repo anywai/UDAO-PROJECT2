@@ -16,10 +16,11 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
     // tokenId => price
     mapping(uint => mapping(uint => uint)) contentPrice;
 
-    constructor(address irmAdress)
+    /// @param rmAddress The address of the deployed role manager
+    constructor(address rmAddress)
         ERC721("UDAO Content", "UDAOC")
         EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION)
-        RoleController(irmAdress)
+        RoleController(rmAddress)
     {}
 
     /// @notice Represents an un-minted NFT, which has not yet been recorded into the blockchain.
@@ -131,47 +132,46 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
         require(!IRM.getBan(to), "Receiver is banned!");
     }
 
-    // Getters
+    /// @notice returns the price of a specific content
+    /// @param tokenId the content ID of the token
+    /// @param partId the part ID of the token (microlearning)
     function getPriceContent(uint tokenId, uint partId)
         external
         view
         returns (uint)
     {
-        /// @notice returns the price of a specific content
-        /// @param tokenId the content ID of the token
+        
         return contentPrice[tokenId][partId];
     }
 
-    // Setters
-
+    /// @notice allows content owners to set content price
+    /// @param tokenId the content ID of the token
+    /// @param _contentPrice the price to set
     function setPriceContent(uint tokenId, uint _contentPrice) external {
-        /// @notice allows content owners to set content price
-        /// @param tokenId the content ID of the token
-        /// @param _contentPrice the price to set
         require(ownerOf(tokenId) == msg.sender);
         contentPrice[tokenId][0] = _contentPrice;
     }
 
+    /// @notice allows content owners to set price for a part in a content (microlearning)
+    /// @param tokenId the content ID of the token
+    /// @param _contentPrice the price to set
     function setPartialContent(
         uint tokenId,
         uint partId,
         uint _contentPrice
     ) external {
-        /// @notice allows content owners to set content price
-        /// @param tokenId the content ID of the token
-        /// @param _contentPrice the price to set
         require(ownerOf(tokenId) == msg.sender);
         contentPrice[tokenId][partId] = _contentPrice;
     }
 
+    /// @notice allows content owners to set price for multiple parts in a content (microlearning)
+    /// @param tokenId the content ID of the token
+    /// @param _contentPrice the price to set
     function setBatchPartialContent(
         uint tokenId,
         uint[] calldata partId,
         uint[] calldata _contentPrice
     ) external {
-        /// @notice allows content owners to set content price
-        /// @param tokenId the content ID of the token
-        /// @param _contentPrice the price to set
         require(ownerOf(tokenId) == msg.sender);
         uint partLength = partId.length;
         for (uint i = 0; i < partLength; i++) {
