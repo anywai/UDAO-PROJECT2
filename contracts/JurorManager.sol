@@ -39,7 +39,7 @@ contract JurorManager is RoleController, EIP712 {
 
     uint public totalJurorScore;
 
-    function addJurorPoint(JurorVoucher calldata voucher) external {
+    function addJurorPoint(CaseVoucher calldata voucher) external {
         // make sure redeemer is redeeming
         require(voucher.redeemer == msg.sender, "You are not the redeemer");
         // make sure signature is valid and get the address of the signer
@@ -69,7 +69,7 @@ contract JurorManager is RoleController, EIP712 {
 
     /// @notice Returns a hash of the given ContentVoucher, prepared using EIP712 typed data hashing rules.
     /// @param voucher A ContentVoucher to hash.
-    function _hash(ValidationVoucher calldata voucher)
+    function _hash(CaseVoucher calldata voucher)
         internal
         view
         returns (bytes32)
@@ -78,10 +78,7 @@ contract JurorManager is RoleController, EIP712 {
             _hashTypedDataV4(
                 keccak256(
                     abi.encode(
-                        keccak256(
-                            "CaseVoucher(uint256 tokenId,address redeemer)"
-                        ),
-                        voucher.tokenId,
+                        keccak256("CaseVoucher(address redeemer)"),
                         voucher.redeemer
                     )
                 )
@@ -102,7 +99,7 @@ contract JurorManager is RoleController, EIP712 {
     /// @notice Verifies the signature for a given ContentVoucher, returning the address of the signer.
     /// @dev Will revert if the signature is invalid. Does not verify that the signer is authorized to mint NFTs.
     /// @param voucher A ContentVoucher describing an unminted NFT.
-    function _verify(ValidationVoucher calldata voucher)
+    function _verify(CaseVoucher calldata voucher)
         internal
         view
         returns (address)
