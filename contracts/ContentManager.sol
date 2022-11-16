@@ -17,13 +17,13 @@ abstract contract ContentManager is BasePlatform {
 
     IValidationManager IVM;
 
-    /// @param ivmAddress The address of the deployed ValidationManager contract
+    /// @param vmAddress The address of the deployed ValidationManager contract
     constructor(address vmAddress) {
         IVM = IValidationManager(vmAddress);
     }
 
     /// @notice Allows seting the address of the valdation manager contract
-    /// @param ivmAddress The address of the deployed ValidationManager contract
+    /// @param vmAddress The address of the deployed ValidationManager contract
     function setValidationManager(address vmAddress)
         external
         onlyRole(FOUNDATION_ROLE)
