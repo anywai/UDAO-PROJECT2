@@ -154,7 +154,7 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
     /// @param tokenId the content ID of the token
     /// @param _contentPrice the price to set
     function setPriceContent(uint tokenId, uint _contentPrice) external {
-        require(ownerOf(tokenId) == msg.sender);
+        require(ownerOf(tokenId) == msg.sender, "You are not the owner");
         contentPrice[tokenId][0] = _contentPrice;
     }
 
@@ -166,7 +166,7 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
         uint partId,
         uint _contentPrice
     ) external {
-        require(ownerOf(tokenId) == msg.sender);
+        require(ownerOf(tokenId) == msg.sender, "You are not the owner");
         contentPrice[tokenId][partId] = _contentPrice;
     }
 
@@ -178,7 +178,7 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
         uint[] calldata partId,
         uint[] calldata _contentPrice
     ) external {
-        require(ownerOf(tokenId) == msg.sender);
+        require(ownerOf(tokenId) == msg.sender, "You are not the owner");
         uint partLength = partId.length;
         for (uint i = 0; i < partLength; i++) {
             contentPrice[tokenId][partId[i]] = _contentPrice[i];
