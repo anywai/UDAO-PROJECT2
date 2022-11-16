@@ -29,7 +29,7 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
         /// @notice The id of the token to be redeemed.
         uint256 tokenId;
         /// @notice The price of the content
-        uint256 contentPrice;
+        uint256[] contentPrice;
         /// @notice The metadata URI to associate with this token.
         string uri;
         /// @notice Address of the redeemer
@@ -63,7 +63,10 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
         _setTokenURI(voucher.tokenId, voucher.uri);
 
         // save the content price
-        contentPrice[voucher.tokenId][0] = voucher.contentPrice;
+        uint partLength = voucher.contentPrice.length;
+        for (uint i = 0; i < partLength; i++) {
+            contentPrice[tokenId][i] = voucher.contentPrice[i];
+        }
     }
 
     /// @notice Returns a hash of the given ContentVoucher, prepared using EIP712 typed data hashing rules.
@@ -78,7 +81,7 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
                 keccak256(
                     abi.encode(
                         keccak256(
-                            "ContentVoucher(uint256 tokenId,uint256 contentPrice,string uri,address redeemer,string name,string description)"
+                            "ContentVoucher(uint256 tokenId,uint256[] contentPrice,string uri,address redeemer,string name,string description)"
                         ),
                         voucher.tokenId,
                         voucher.contentPrice,
@@ -140,7 +143,6 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
         view
         returns (uint)
     {
-        
         return contentPrice[tokenId][partId];
     }
 
