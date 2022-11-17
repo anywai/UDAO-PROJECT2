@@ -15,7 +15,7 @@ abstract contract ContentManager is BasePlatform {
     // tokenId => buyable
     mapping(uint => bool) coachingEnabled;
 
-    IValidationManager IVM;
+    IValidationManager public IVM;
 
     /// @param vmAddress The address of the deployed ValidationManager contract
     constructor(address vmAddress) {
