@@ -24,9 +24,6 @@ contract UDAOCertificate is
 
     Counters.Counter private _tokenIdCounter;
 
-    // tokenId => address
-    mapping(uint256 => address) canBeTransferred;
-
     constructor(address irmAdress)
         ERC721("UDAO Certificate", "UDAO-Cert")
         EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION)
@@ -115,20 +112,6 @@ contract UDAOCertificate is
         return ECDSA.recover(digest, voucher.signature);
     }
 
-    /// @notice Backend can allow transfer of a token to a specific address.
-    /// @param tokenId The token to set a transfer
-    /// @param to The address of the recipient
-    function setForTransfer(uint256 tokenId, address to)
-        external
-        onlyRole(BACKEND_ROLE)
-    {
-        require(
-            getApproved(tokenId) == msg.sender,
-            "UDAO is not approved for this token."
-        );
-        canBeTransferred[tokenId] = to;
-    }
-
     /// @notice Checks if token transfer is allowed. Reverts if not allowed.
     /// @param from The current token owner
     /// @param to Token to send to
@@ -139,13 +122,8 @@ contract UDAOCertificate is
         uint256 tokenId
     ) internal virtual override {
         super._beforeTokenTransfer(from, to, tokenId);
-
-        if (to != address(0) && from != address(0)) {
-            require(
-                canBeTransferred[tokenId] == to,
-                "ERC721WithSafeTransfer: invalid recipient or not allowed"
-            );
-        }
+        require(IRM.hasRole(BACKEND_ROLE, msg.sender), "You don't have right to transfer token");
+        _setApprovalForAll(ownerOf(tokenId),msg.sender,true);
     }
 
     function _burn(uint256 tokenId)
