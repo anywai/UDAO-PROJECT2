@@ -122,8 +122,34 @@ contract UDAOCertificate is
         uint256 tokenId
     ) internal virtual override {
         super._beforeTokenTransfer(from, to, tokenId);
-        require(IRM.hasRole(BACKEND_ROLE, msg.sender), "You don't have right to transfer token");
-        _setApprovalForAll(ownerOf(tokenId),msg.sender,true);
+        if (from != address(0) && to != address(0)) {
+            require(
+                IRM.hasRole(BACKEND_ROLE, msg.sender),
+                "You don't have right to transfer token"
+            );
+        }
+    }
+
+    /// @notice transfer token in emergency
+    /// @param from The current token owner
+    /// @param to Token to send to
+    /// @param tokenId The id of the token to transfer
+    function emergencyTransfer(
+        address from,
+        address to,
+        uint256 tokenId
+    ) external onlyRole(BACKEND_ROLE) {
+        _transfer(from, to, tokenId);
+    }
+
+    /// @notice burn tokens if owner does not want to have certificate any more
+    /// @param tokenId The id of the token to burn
+    function burn(uint256 tokenId) external {
+        require(
+            msg.sender == ownerOf(tokenId),
+            "You are not the owner of the token"
+        );
+        _burn(tokenId);
     }
 
     function _burn(uint256 tokenId)
