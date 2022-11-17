@@ -161,7 +161,7 @@ async function deploy() {
   };
 }
 
-describe("UDAO Project", function () {
+describe("UDAOC Contract", function () {
   it("Should deploy", async function () {
     const {
       backend,

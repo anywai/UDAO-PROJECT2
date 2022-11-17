@@ -160,7 +160,7 @@ async function deploy() {
         contractUDAOGovernor,
     };
 }
-describe("UDAO Project", function () {
+describe("Validation Manageer Contract", function () {
     it("Should deploy", async function () {
         const {
             backend,
