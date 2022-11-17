@@ -4,26 +4,12 @@ pragma solidity ^0.8.4;
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
-import "./IKYC.sol";
 import "./IUDAOC.sol";
-import "./RoleManager.sol";
+import "./RoleController.sol";
 
-abstract contract BasePlatform is Pausable, RoleManager {
-
-    // wallet => is comapny wallet
-    mapping(address => bool) isCompany;
-
-    // wallet => content token Ids
-    mapping(address => uint[]) ownedContents;
-
-    // teamId => tean balance
-    mapping(uint => uint) teamBalance;
-
-    // coach wallet => team balance
-    mapping(address => uint) coachBalance;
-
+abstract contract BasePlatform is Pausable, RoleController {
     // content id => content balance
-    mapping(address => uint) contentBalance;
+    mapping(address => uint) instructorBalance;
 
     // user address => content id => content owned by the user
     mapping(address => mapping(uint => bool)) isTokenBought;
@@ -42,9 +28,6 @@ abstract contract BasePlatform is Pausable, RoleManager {
 
     // balance to be used for validator rewards
     uint public validatorBalance;
-
-    // KYC interface
-    IKYC ikyc;
 
     // UDAO (ERC20) Token interface
     IERC20 udao;
@@ -72,113 +55,64 @@ abstract contract BasePlatform is Pausable, RoleManager {
     // ITreasury treasury;
 
     constructor(
-        address _kycAddress,
         address udaoAddress,
-        address udaocAddress
-    ) {
-        ikyc = IKYC(_kycAddress);
+        address udaocAddress,
+        address rmAddress
+    ) RoleController(rmAddress) {
         udao = IERC20(udaoAddress);
         udaoc = IUDAOC(udaocAddress);
-        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        _grantRole(PAUSER_ROLE, msg.sender);
-    }
-
-    function pause() public onlyRole(PAUSER_ROLE) {
-        _pause();
-    }
-
-    function unpause() public onlyRole(PAUSER_ROLE) {
-        _unpause();
     }
 
     // SETTERS
 
-    function setCompany(address _companyAddress, bool _isCompany)
-        external
-        onlyRole(FOUNDATION_ROLE)
-    {
-        /// @notice grants or revokes a company role to an address
-        /// @param _companyAddress address that will be role granted or revoked
-        /// @param _isCompany true if grant, false if revoke
-        isCompany[_companyAddress] = _isCompany;
-    }
-
-    function setKycContractAddress(address _kycAddress)
-        external
-        onlyRole(FOUNDATION_ROLE)
-    {
-        /// @notice changes KYC contract address
-        /// @param _kycAddress address of new KYC contract
-        ikyc = IKYC(address(_kycAddress));
-    }
-
+    /// @notice changes cut from coaching for foundation
+    /// @param _cut new cut (100000 -> 100% | 5000 -> 5%)
     function setCoachingFoundationCut(uint _cut)
         external
         onlyRole(GOVERNANCE_ROLE)
     {
-        /// @notice changes cut from coaching for foundation
-        /// @param _cut new cut (100000 -> 100% | 5000 -> 5%)
         coachingFoundationCut = _cut;
     }
 
+    /// @notice changes cut from coaching for governance
+    /// @param _cut new cut (100000 -> 100% | 5000 -> 5%)
     function setCoachingGovernanceCut(uint _cut)
         external
         onlyRole(GOVERNANCE_ROLE)
     {
-        /// @notice changes cut from coaching for governance
-        /// @param _cut new cut (100000 -> 100% | 5000 -> 5%)
         coachingGovernancenCut = _cut;
     }
 
+    /// @notice changes cut from content for foundation
+    /// @param _cut new cut (100000 -> 100% | 5000 -> 5%)
     function setContentFoundationCut(uint _cut)
         external
         onlyRole(GOVERNANCE_ROLE)
     {
-        /// @notice changes cut from content for foundation
-        /// @param _cut new cut (100000 -> 100% | 5000 -> 5%)
         contentFoundationCut = _cut;
     }
 
+    /// @notice changes cut from content for governance
+    /// @param _cut new cut (100000 -> 100% | 5000 -> 5%)
     function setContentGovernanceCut(uint _cut)
         external
         onlyRole(GOVERNANCE_ROLE)
     {
-        /// @notice changes cut from content for governance
-        /// @param _cut new cut (100000 -> 100% | 5000 -> 5%)
         contentGovernancenCut = _cut;
     }
 
+    /// @notice changes cut from content for juror pool
+    /// @param _cut new cut (100000 -> 100% | 5000 -> 5%)
     function setContentJurorCut(uint _cut) external onlyRole(GOVERNANCE_ROLE) {
-        /// @notice changes cut from content for juror pool
-        /// @param _cut new cut (100000 -> 100% | 5000 -> 5%)
         contentJurorCut = _cut;
     }
 
+    /// @notice changes cut from content for validator pool
+    /// @param _cut new cut (100000 -> 100% | 5000 -> 5%)
     function setContentValidatorCut(uint _cut)
         external
         onlyRole(GOVERNANCE_ROLE)
     {
-        /// @notice changes cut from content for validator pool
-        /// @param _cut new cut (100000 -> 100% | 5000 -> 5%)
         contentValidatorCut = _cut;
-    }
-
-    function withdrawGovernance() external onlyRole(GOVERNANCE_ROLE) {
-        /// @notice withdraws governance balance to governance treasury
-        udao.transfer(governanceTreasury, governanceBalance);
-    }
-
-    function withdrawFoundation() external onlyRole(FOUNDATION_ROLE) {
-        /// @notice withdraws foundation balance to foundation wallet
-        udao.transfer(foundationWallet, foundationBalance);
-    }
-
-    function withdrawValidator() external {
-        /// @notice calculates validator earnings and withdraws calculated earning to validator wallet 
-        require(udaoc.hasRole(VALIDATOR_ROLE, msg.sender));
-        uint[2] memory results = udaoc.getValidationResults(msg.sender);
-        uint participation = (results[0] * 100000) / udaoc.getTotalValidation();
-        uint earning = (participation * validatorBalance) / 100000;
-        udao.transfer(msg.sender, earning);
     }
 }

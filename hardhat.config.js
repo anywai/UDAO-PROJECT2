@@ -1,6 +1,7 @@
-require('solidity-docgen');
+require("solidity-docgen");
 require("@nomiclabs/hardhat-waffle");
 require("hardhat-contract-sizer");
+require("solidity-coverage");
 
 // This is a sample Hardhat task. To learn how to create your own go to
 // https://hardhat.org/guides/create-task.html
@@ -21,13 +22,7 @@ task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
 module.exports = {
   defaultNetwork: "hardhat",
   networks: {
-    hardhat: {
-      forking: {
-        url: "https://eth-mainnet.alchemyapi.io/v2/DX0NQCxmckHDuT86IzvBc-pST0tDCR-D",
-        blockNumber: 14760538,
-      },
-      chainId: 1337,
-    },
+    hardhat: { chainId: 31337 },
   },
   solidity: {
     version: "0.8.4",

@@ -8,25 +8,62 @@ import "@openzeppelin/contracts/governance/extensions/GovernorVotes.sol";
 import "@openzeppelin/contracts/governance/extensions/GovernorVotesQuorumFraction.sol";
 import "@openzeppelin/contracts/governance/extensions/GovernorTimelockControl.sol";
 
+import "./RoleController.sol";
+
+interface IUDAOStaker {
+    function addVoteRewards(address voter) external;
+}
+
 contract UDAOGovernor is
     Governor,
     GovernorSettings,
     GovernorCountingSimple,
     GovernorVotes,
     GovernorVotesQuorumFraction,
-    GovernorTimelockControl
+    GovernorTimelockControl,
+    RoleController
 {
-    constructor(IVotes _token, TimelockController _timelock)
+    IUDAOStaker stakingContract;
+
+    constructor(
+        IVotes _token,
+        TimelockController _timelock,
+        address stakingContractAddress,
+        address rmAddress
+    )
         Governor("UDAOGovernor")
         GovernorSettings(
-            1, /* 1 block */
-            45818, /* 1 week */
-            0
+            50400, /* 1 week voting delay */
+            50400, /* 1 week voting period duration*/
+            0 /*proposal threshold*/
         )
         GovernorVotes(_token)
         GovernorVotesQuorumFraction(4)
         GovernorTimelockControl(_timelock)
-    {}
+        RoleController(rmAddress)
+    {
+        stakingContract = IUDAOStaker(stakingContractAddress);
+    }
+
+    /// @notice Allows administrator_roles to set the staking contract address.
+    /// @param stakingContractAddress Address to set to
+    function setStakingContract(address stakingContractAddress)
+        external
+        onlyRoles(administrator_roles)
+    {
+        stakingContract = IUDAOStaker(stakingContractAddress);
+    }
+
+    function _castVote(
+        uint256 proposalId,
+        address account,
+        uint8 support,
+        string memory reason
+    ) internal override(Governor) returns (uint256) {
+        stakingContract.addVoteRewards(msg.sender);
+        return
+            _castVote(proposalId, account, support, reason, _defaultParams());
+    }
 
     // The following functions are overrides required by Solidity.
 
@@ -64,15 +101,6 @@ contract UDAOGovernor is
         returns (ProposalState)
     {
         return super.state(proposalId);
-    }
-
-    function propose(
-        address[] memory targets,
-        uint256[] memory values,
-        bytes[] memory calldatas,
-        string memory description
-    ) public override(Governor, IGovernor) returns (uint256) {
-        return super.propose(targets, values, calldatas, description);
     }
 
     function proposalThreshold()

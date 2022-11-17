@@ -1,34 +1,152 @@
 // SPDX-License-Identifier: MIT
+/// @title The token given to the users who successfully complete a course.
 pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
+import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
+import "./RoleController.sol";
 
-contract UDAOCertificate is ERC721, ERC721URIStorage, Ownable {
+contract UDAOCertificate is
+    ERC721,
+    EIP712,
+    ERC721URIStorage,
+    RoleController,
+    Ownable
+{
+    string private constant SIGNING_DOMAIN = "UDAOCertMinter";
+    string private constant SIGNATURE_VERSION = "1";
+
     using Counters for Counters.Counter;
 
     Counters.Counter private _tokenIdCounter;
 
-    constructor() ERC721("UDAO Certificate", "UDAO-Cert") {}
+    // tokenId => address
+    mapping(uint256 => address) canBeTransferred;
 
-    function safeMint(address to, string memory uri) public onlyOwner {
-        /// @notice mints certificate token to `to` address
-        /// @param to address of certificate owner
-        /// @param uri URI address of certificate
-        uint256 tokenId = _tokenIdCounter.current();
-        _tokenIdCounter.increment();
-        _safeMint(to, tokenId);
-        _setTokenURI(tokenId, uri);
+    constructor(address irmAdress)
+        ERC721("UDAO Certificate", "UDAO-Cert")
+        EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION)
+        RoleController(irmAdress)
+    {}
+
+    /// @notice Represents an un-minted NFT, which has not yet been recorded into the blockchain.
+    /// A signed voucher can be redeemed for a real NFT using the redeem function.
+    struct CertificateVoucher {
+        /// @notice The id of the token to be redeemed.
+        uint256 tokenId;
+        /// @notice The metadata URI to associate with this token.
+        string uri;
+        /// @notice Redeemer address
+        address redeemer;
+        /// @notice The name of the NFT
+        string name;
+        /// @notice The descriptiom of the NFT
+        string description;
+        /// @notice the EIP-712 signature of all other fields in the CertificateVoucher struct.
+        bytes signature;
     }
 
-    // The following functions are overrides required by Solidity.
+    /// @notice Redeems a CertificateVoucher for an actual NFT, creating it in the process.
+    /// @param voucher A signed NFTVoucher that describes the NFT to be redeemed.
+    function redeem(CertificateVoucher calldata voucher) public {
+        // make sure redeemer is redeeming
+        require(voucher.redeemer == msg.sender, "You are not the redeemer");
+        //make sure redeemer is kyced
+        require(IRM.getKYC(msg.sender), "You are not KYCed");
+        // make sure signature is valid and get the address of the signer
+        address signer = _verify(voucher);
+        require(
+            IRM.hasRole(BACKEND_ROLE, signer),
+            "Signature invalid or unauthorized"
+        );
 
-    /// @dev her token'ın kendi URI'yı olacağı için override kısmına taşıyıp comment out ettim
-    // function _baseURI() internal view override returns (string memory) {
-    //     return super._baseURI();
-    // }
+        _mint(voucher.redeemer, voucher.tokenId);
+        _setTokenURI(voucher.tokenId, voucher.uri);
+    }
+
+    /// @notice Returns a hash of the given CertificateVoucher, prepared using EIP712 typed data hashing rules.
+    /// @param voucher A CertificateVoucher to hash.
+    function _hash(CertificateVoucher calldata voucher)
+        internal
+        view
+        returns (bytes32)
+    {
+        return
+            _hashTypedDataV4(
+                keccak256(
+                    abi.encode(
+                        keccak256(
+                            "CertificateVoucher(uint256 tokenId,string uri,address redeemer,string name,string description)"
+                        ),
+                        voucher.tokenId,
+                        keccak256(bytes(voucher.uri)),
+                        voucher.redeemer,
+                        keccak256(bytes(voucher.name)),
+                        keccak256(bytes(voucher.description))
+                    )
+                )
+            );
+    }
+
+    /// @notice Returns the chain id of the current blockchain.
+    /// @dev This is used to workaround an issue with ganache returning different values from the on-chain chainid() function and
+    ///  the eth_chainId RPC method. See https://github.com/protocol/nft-website/issues/121 for context.
+    function getChainID() external view returns (uint256) {
+        uint256 id;
+        assembly {
+            id := chainid()
+        }
+        return id;
+    }
+
+    /// @notice Verifies the signature for a given CertificateVoucher, returning the address of the signer.
+    /// @dev Will revert if the signature is invalid. Does not verify that the signer is authorized to mint NFTs.
+    /// @param voucher A CertificateVoucher describing an unminted NFT.
+    function _verify(CertificateVoucher calldata voucher)
+        internal
+        view
+        returns (address)
+    {
+        bytes32 digest = _hash(voucher);
+        return ECDSA.recover(digest, voucher.signature);
+    }
+
+    /// @notice Backend can allow transfer of a token to a specific address.
+    /// @param tokenId The token to set a transfer
+    /// @param to The address of the recipient
+    function setForTransfer(uint256 tokenId, address to)
+        external
+        onlyRole(BACKEND_ROLE)
+    {
+        require(
+            getApproved(tokenId) == msg.sender,
+            "UDAO is not approved for this token."
+        );
+        canBeTransferred[tokenId] = to;
+    }
+
+    /// @notice Checks if token transfer is allowed. Reverts if not allowed.
+    /// @param from The current token owner
+    /// @param to Token to send to
+    /// @param tokenId The id of the token to transfer
+    function _beforeTokenTransfer(
+        address from,
+        address to,
+        uint256 tokenId
+    ) internal virtual override {
+        super._beforeTokenTransfer(from, to, tokenId);
+
+        if (to != address(0) && from != address(0)) {
+            require(
+                canBeTransferred[tokenId] == to,
+                "ERC721WithSafeTransfer: invalid recipient or not allowed"
+            );
+        }
+    }
 
     function _burn(uint256 tokenId)
         internal
