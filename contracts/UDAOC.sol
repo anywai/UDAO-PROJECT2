@@ -136,12 +136,12 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
         /// @notice make sure the transfer is made to a KYCed wallet
         super._beforeTokenTransfer(from, to, tokenId);
         if (to != address(0)) {
-            require(IRM.getKYC(to), "Receiver is not KYCed!");
-            require(!IRM.getBan(to), "Receiver is banned!");
+            require(IRM.isKYCed(to), "Receiver is not KYCed!");
+            require(!IRM.isBanned(to), "Receiver is banned!");
         }
         if (from != address(0)) {
-            require(IRM.getKYC(from), "Sender is not KYCed!");
-            require(!IRM.getBan(from), "Sender is banned!");
+            require(IRM.isKYCed(from), "Sender is not KYCed!");
+            require(!IRM.isBanned(from), "Sender is banned!");
         }
     }
 

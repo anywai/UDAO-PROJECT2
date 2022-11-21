@@ -35,10 +35,10 @@ abstract contract ContentManager is BasePlatform {
     /// @param tokenId id of the token that will be bought
     /// @param partId id of the part of a content (microlearning)
     function buyContent(uint tokenId, uint partId) external {
-        require(IRM.getKYC(msg.sender), "You are not KYCed");
+        require(IRM.isKYCed(msg.sender), "You are not KYCed");
         address instructor = udaoc.ownerOf(tokenId);
-        require(!IRM.getKYC(instructor), "Instructor is not KYCed");
-        require(!IRM.getBan(instructor), "Instructor is banned");
+        require(IRM.isKYCed(instructor), "Instructor is not KYCed");
+        require(!IRM.isBanned(instructor), "Instructor is banned");
         require(IVM.isValidated(tokenId), "Content is not validated yet");
         require(
             isTokenBought[msg.sender][tokenId] == false,
@@ -63,10 +63,10 @@ abstract contract ContentManager is BasePlatform {
     /// @notice Allows users to buy coaching service.
     /// @param tokenId Content token id is used for finding the address of the coach
     function buyCoaching(uint tokenId) external {
-        require(IRM.getKYC(msg.sender), "You are not KYCed");
+        require(IRM.isKYCed(msg.sender), "You are not KYCed");
         address instructor = udaoc.ownerOf(tokenId);
-        require(!IRM.getKYC(instructor), "Instructor is not KYCed");
-        require(!IRM.getBan(instructor), "Instructor is banned");
+        require(IRM.isKYCed(instructor), "Instructor is not KYCed");
+        require(!IRM.isBanned(instructor), "Instructor is banned");
         require(IVM.isValidated(tokenId), "Content is not validated yet");
 
         foundationBalance +=

@@ -207,7 +207,7 @@ contract UDAOStaker is RoleController, EIP712 {
         // make sure redeemer is redeeming
         require(voucher.redeemer == msg.sender, "You are not the redeemer");
         //make sure redeemer is kyced
-        require(IRM.getKYC(msg.sender), "You are not KYCed");
+        require(IRM.isKYCed(msg.sender), "You are not KYCed");
         // make sure signature is valid and get the address of the signer
         address signer = _verify(voucher);
         require(
@@ -347,8 +347,8 @@ contract UDAOStaker is RoleController, EIP712 {
     function stakeForGovernance(uint _amount, uint _days) public {
         require(_amount > 0, "Stake amount can't be 0");
         require(_days >= 7, "Minimum lock duration is 7 days");
-        require(IRM.getKYC(msg.sender), "Address is not KYCed");
-        require(!IRM.getBan(msg.sender), "Address is banned");
+        require(IRM.isKYCed(msg.sender), "Address is not KYCed");
+        require(!IRM.isBanned(msg.sender), "Address is banned");
         udao.transferFrom(msg.sender, address(this), _amount);
 
         GovernanceLock storage lock = governanceStakes[msg.sender].push();

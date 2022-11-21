@@ -7,8 +7,8 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
 contract RoleManager is AccessControl {
     bytes32 public constant BACKEND_ROLE = keccak256("BACKEND_ROLE");
 
-    mapping(address => bool) isKYCed;
-    mapping(address => bool) isBanned;
+    mapping(address => bool) KYCList;
+    mapping(address => bool) BanList;
 
     /// @notice events fired when a KYC or Ban is set
     event SetKYC(address indexed user, bool indexed result);
@@ -65,7 +65,7 @@ contract RoleManager is AccessControl {
         external
         onlyRole(BACKEND_ROLE)
     {
-        isKYCed[_address] = _isKYCed;
+        KYCList[_address] = _isKYCed;
         emit SetKYC(_address, _isKYCed);
     }
 
@@ -76,19 +76,19 @@ contract RoleManager is AccessControl {
         external
         onlyRole(BACKEND_ROLE)
     {
-        isBanned[_address] = _isBanned;
+        BanList[_address] = _isBanned;
         emit SetBan(_address, _isBanned);
     }
 
     /// @notice gets KYC result of the address
     /// @param _address wallet that KYC result will be sent
-    function getKYC(address _address) external view returns (bool) {
-        return isKYCed[_address];
+    function isKYCed(address _address) external view returns (bool) {
+        return KYCList[_address];
     }
 
     /// @notice gets ban result of the address
     /// @param _address wallet that ban result will be sent
-    function getBan(address _address) external view returns (bool) {
-        return isBanned[_address];
+    function isBanned(address _address) external view returns (bool) {
+        return BanList[_address];
     }
 }

@@ -53,7 +53,7 @@ contract UDAOCertificate is
         // make sure redeemer is redeeming
         require(voucher.redeemer == msg.sender, "You are not the redeemer");
         //make sure redeemer is kyced
-        require(IRM.getKYC(msg.sender), "You are not KYCed");
+        require(IRM.isKYCed(msg.sender), "You are not KYCed");
         // make sure signature is valid and get the address of the signer
         address signer = _verify(voucher);
         require(
