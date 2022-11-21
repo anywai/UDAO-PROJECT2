@@ -21,4 +21,8 @@ interface IUDAOC is IERC721 {
         returns (uint[2] memory results);
 
     function getTotalValidation() external view returns (uint);
+
+    function getPartNumberOfContent(uint tokenId) external view returns (uint);
+
+    function exists(uint tokenId) external view returns (bool);
 }

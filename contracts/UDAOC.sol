@@ -16,6 +16,9 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
     // tokenId => price
     mapping(uint => mapping(uint => uint)) contentPrice;
 
+    // tokenId => number of Parts
+    mapping(uint => uint) private partNumberOfContent;
+
     /// @param rmAddress The address of the deployed role manager
     constructor(address rmAddress)
         ERC721("UDAO Content", "UDAOC")
@@ -64,6 +67,7 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
 
         // save the content price
         uint partLength = voucher.contentPrice.length;
+        partNumberOfContent[voucher.tokenId] = partLength;
         for (uint i = 0; i < partLength; i++) {
             contentPrice[voucher.tokenId][i] = voucher.contentPrice[i];
         }
@@ -189,6 +193,14 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
         for (uint i = 0; i < partLength; i++) {
             contentPrice[tokenId][partId[i]] = _contentPrice[i];
         }
+    }
+
+    function getPartNumberOfContent(uint tokenId) external view returns (uint) {
+        return partNumberOfContent[tokenId];
+    }
+
+    function exists(uint tokenId) external view returns (bool) {
+        return _exists(tokenId);
     }
 
     // The following functions are overrides required by Solidity.
