@@ -13,9 +13,6 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
     string private constant SIGNING_DOMAIN = "UDAOCMinter";
     string private constant SIGNATURE_VERSION = "1";
 
-    // tokenId => price
-    mapping(uint => mapping(uint => uint)) contentPrice;
-
     // tokenId => number of Parts
     mapping(uint => uint) private partNumberOfContent;
 
@@ -31,8 +28,6 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
     struct ContentVoucher {
         /// @notice The id of the token to be redeemed.
         uint256 tokenId;
-        /// @notice The price of the content
-        uint256[] contentPrice;
         /// @notice The metadata URI to associate with this token.
         string uri;
         /// @notice Address of the redeemer
@@ -65,12 +60,6 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
         _mint(voucher.redeemer, voucher.tokenId);
         _setTokenURI(voucher.tokenId, voucher.uri);
 
-        // save the content price
-        uint partLength = voucher.contentPrice.length;
-        partNumberOfContent[voucher.tokenId] = partLength;
-        for (uint i = 0; i < partLength; i++) {
-            contentPrice[voucher.tokenId][i] = voucher.contentPrice[i];
-        }
     }
 
     /// @notice Returns a hash of the given ContentVoucher, prepared using EIP712 typed data hashing rules.
@@ -85,10 +74,9 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
                 keccak256(
                     abi.encode(
                         keccak256(
-                            "ContentVoucher(uint256 tokenId,uint256[] contentPrice,string uri,address redeemer,string name,string description)"
+                            "ContentVoucher(uint256 tokenId,string uri,address redeemer,string name,string description)"
                         ),
                         voucher.tokenId,
-                        keccak256(abi.encodePacked(voucher.contentPrice)),
                         keccak256(bytes(voucher.uri)),
                         voucher.redeemer,
                         keccak256(bytes(voucher.name)),
@@ -146,52 +134,6 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
         if (from != address(0)) {
             require(IRM.isKYCed(from), "Sender is not KYCed!");
             require(!IRM.isBanned(from), "Sender is banned!");
-        }
-    }
-
-    /// @notice returns the price of a specific content
-    /// @param tokenId the content ID of the token
-    /// @param partId the part ID of the token (microlearning)
-    function getPriceContent(uint tokenId, uint partId)
-        external
-        view
-        returns (uint)
-    {
-        return contentPrice[tokenId][partId];
-    }
-
-    /// @notice allows content owners to set content price
-    /// @param tokenId the content ID of the token
-    /// @param _contentPrice the price to set
-    function setPriceContent(uint tokenId, uint _contentPrice) external {
-        require(ownerOf(tokenId) == msg.sender, "You are not the owner");
-        contentPrice[tokenId][0] = _contentPrice;
-    }
-
-    /// @notice allows content owners to set price for a part in a content (microlearning)
-    /// @param tokenId the content ID of the token
-    /// @param _contentPrice the price to set
-    function setPartialContent(
-        uint tokenId,
-        uint partId,
-        uint _contentPrice
-    ) external {
-        require(ownerOf(tokenId) == msg.sender, "You are not the owner");
-        contentPrice[tokenId][partId] = _contentPrice;
-    }
-
-    /// @notice allows content owners to set price for multiple parts in a content (microlearning)
-    /// @param tokenId the content ID of the token
-    /// @param _contentPrice the price to set
-    function setBatchPartialContent(
-        uint tokenId,
-        uint[] calldata partId,
-        uint[] calldata _contentPrice
-    ) external {
-        require(ownerOf(tokenId) == msg.sender, "You are not the owner");
-        uint partLength = partId.length;
-        for (uint i = 0; i < partLength; i++) {
-            contentPrice[tokenId][partId[i]] = _contentPrice[i];
         }
     }
 
