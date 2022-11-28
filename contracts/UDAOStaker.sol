@@ -203,6 +203,7 @@ contract UDAOStaker is RoleController, EIP712 {
         revert("You don't have empty validation slots");
     }
 
+    /// @notice Validators can use this function and assign validator role to themselves
     function getApproved(RoleVoucher calldata voucher) external {
         // make sure redeemer is redeeming
         require(voucher.redeemer == msg.sender, "You are not the redeemer");
