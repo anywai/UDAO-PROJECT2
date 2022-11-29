@@ -124,15 +124,14 @@ abstract contract ContentManager is EIP712, BasePlatform {
     }
 
     /// @notice Allows users to buy coaching service.
-    /// @param tokenId Content token id is used for finding the address of the coach
     function buyCoaching(CoachingPurchaseVoucher calldata voucher) external {
         uint256 priceToPay = voucher.priceToPay;
         require(IRM.isKYCed(msg.sender), "You are not KYCed");
         address instructor = udaoc.ownerOf(voucher.tokenId);
         require(IRM.isKYCed(instructor), "Instructor is not KYCed");
         require(!IRM.isBanned(instructor), "Instructor is banned");
-        require(IVM.isValidated(tokenId), "Content is not validated yet");
-        CoachingStruct storage coachingStruct = coachingStructs.push();
+        require(IVM.isValidated(voucher.tokenId), "Content is not validated yet");
+        CoachingStruct storage coachingStruct = coachingStructs[voucher.tokenId];
 
         foundationBalance += (priceToPay * coachingFoundationCut) / 100000;
         governanceBalance += (priceToPay * coachingGovernancenCut) / 100000;
@@ -165,11 +164,11 @@ abstract contract ContentManager is EIP712, BasePlatform {
                 currentCoaching.isLearnerVerified) ||
             (block.timestamp > currentCoaching.moneyLockDeadline)
         ) {
-            instructerBalance[coachingStructs.coach] += coachingStructs[
+            instructorBalance[currentCoaching.coach] += coachingStructs[
                 _coachingId
             ].coachingPaymentAmount;
 
-            coachingStructs.isDone = true;
+            currentCoaching.isDone = true;
         }
     }
 
@@ -182,17 +181,16 @@ abstract contract ContentManager is EIP712, BasePlatform {
         coachingStructs[_coachingId].moneyLockDeadline += 7 days;
     }
 
-    function forcedPayment(uint _coachingId) external onlyRoles(administrator_roles) {
+    function forcedPayment(uint _coachingId) external onlyRoles(administrator_roles){
         CoachingStruct storage currentCoaching = coachingStructs[_coachingId];
-             
-                    instructerBalance[coachingStructs.coach] += coachingStructs[
+            instructorBalance[currentCoaching.coach] += coachingStructs[
                 _coachingId
             ].coachingPaymentAmount;
 
-            coachingStructs.isDone = true;
+            currentCoaching.isDone = true;
     }
 
-    function getCoachings(uint _tokenId) external view returns (uint[]) {
+    function getCoachings(uint _tokenId) external view returns (uint[] memory) {
         return coachingIdsOfToken[_tokenId];
     }
 
