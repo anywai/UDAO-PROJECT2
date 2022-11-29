@@ -21,6 +21,8 @@ abstract contract ContentManager is EIP712, BasePlatform {
         uint256[] purchasedParts;
         /// @notice The price to deduct from buyer
         uint256 priceToPay;
+        /// @notice The date until the voucher is valid
+        uint256 validUntil;
         /// @notice Address of the redeemer
         address redeemer;
         /// @notice the EIP-712 signature of all other fields in the ContentVoucher struct.
@@ -33,6 +35,8 @@ abstract contract ContentManager is EIP712, BasePlatform {
         uint256 tokenId;
         /// @notice The price to deduct from buyer
         uint256 priceToPay;
+        /// @notice The date until the voucher is valid
+        uint256 validUntil;
         /// @notice Address of the redeemer
         address redeemer;
         /// @notice the EIP-712 signature of all other fields in the ContentVoucher struct.
@@ -78,6 +82,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
 
     /// @notice allows KYCed users to purchase a content
     function buyContent(ContentPurchaseVoucher calldata voucher) external {
+        require(voucher.validUntil >= block.timestamp, "Voucher has expired.");
         uint256 tokenId = voucher.tokenId;
         uint256[] memory purchasedParts = voucher.purchasedParts;
         uint priceToPay = voucher.priceToPay;
@@ -125,6 +130,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
 
     /// @notice Allows users to buy coaching service.
     function buyCoaching(CoachingPurchaseVoucher calldata voucher) external {
+        require(voucher.validUntil >= block.timestamp, "Voucher has expired.");
         uint256 priceToPay = voucher.priceToPay;
         require(IRM.isKYCed(msg.sender), "You are not KYCed");
         address instructor = udaoc.ownerOf(voucher.tokenId);
@@ -230,11 +236,12 @@ abstract contract ContentManager is EIP712, BasePlatform {
                 keccak256(
                     abi.encode(
                         keccak256(
-                            "ContentPurchaseVoucher(uint256 tokenId,uint256[] purchasedParts,uint256 priceToPay,address redeemer)"
+                            "ContentPurchaseVoucher(uint256 tokenId,uint256[] purchasedParts,uint256 priceToPay,uint256 validUntil,address redeemer)"
                         ),
                         voucher.tokenId,
                         keccak256(abi.encodePacked(voucher.purchasedParts)),
                         voucher.priceToPay,
+                        voucher.validUntil,
                         voucher.redeemer
                     )
                 )
