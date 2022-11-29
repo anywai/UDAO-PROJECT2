@@ -82,7 +82,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
 
     /// @notice allows KYCed users to purchase a content
     function buyContent(ContentPurchaseVoucher calldata voucher) external {
-        require(voucher.validUntil >= block.timestamp, "Voucher has expired.");
+        require(voucher.validUntil + 1 days >= block.timestamp, "Voucher has expired.");
         uint256 tokenId = voucher.tokenId;
         uint256[] memory purchasedParts = voucher.purchasedParts;
         uint priceToPay = voucher.priceToPay;
@@ -130,7 +130,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
 
     /// @notice Allows users to buy coaching service.
     function buyCoaching(CoachingPurchaseVoucher calldata voucher) external {
-        require(voucher.validUntil >= block.timestamp, "Voucher has expired.");
+        require(voucher.validUntil + 1 days >= block.timestamp, "Voucher has expired.");
         uint256 priceToPay = voucher.priceToPay;
         require(IRM.isKYCed(msg.sender), "You are not KYCed");
         address instructor = udaoc.ownerOf(voucher.tokenId);
