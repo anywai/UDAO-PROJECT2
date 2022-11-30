@@ -59,6 +59,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
         bool isCoachVerified;
         bool isDone;
         bool isRefundable;
+        uint totalPaymentAmount;
         uint coachingPaymentAmount;
         uint moneyLockDeadline;
     }
@@ -168,6 +169,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
             isCoachVerified: false,
             isDone: false,
             isRefundable: voucher.isRefundable,
+            totalPaymentAmount: priceToPay,
             coachingPaymentAmount: (priceToPay -
                 foundationBalance -
                 governanceBalance),
@@ -224,6 +226,77 @@ abstract contract ContentManager is EIP712, BasePlatform {
             .coachingPaymentAmount;
 
         currentCoaching.isDone = true;
+    }
+
+    function refund(uint _coachingId) {
+        CoachingStruct storage currentCoaching = coachingStructs[_coachingId];
+        require(msg.sender == currentCoaching.coach, "Your are not the coach");
+        foundationBalance -=
+            (currentCoaching.totalPaymentAmount * coachingFoundationCut) /
+            100000;
+        governanceBalance -=
+            (currentCoaching.totalPaymentAmount * coachingGovernancenCut) /
+            100000;
+
+        currentCoaching.isDone = true;
+        udao.transferFrom(
+            address(this),
+            currentCoaching.learner,
+            currentCoaching.totalPaymentAmount
+        );
+    }
+
+    function forcedRefundAdmin(
+        uint _coachingId
+    ) external onlyRoles(administrator_roles) {
+        uint256 startGas = gasleft();
+        CoachingStruct storage currentCoaching = coachingStructs[_coachingId];
+        require(currentCoaching.isRefundable, "Coaching is not refundable");
+        foundationBalance -=
+            (currentCoaching.totalPaymentAmount * coachingFoundationCut) /
+            100000;
+        governanceBalance -=
+            (currentCoaching.totalPaymentAmount * coachingGovernancenCut) /
+            100000;
+
+        currentCoaching.isDone = true;
+        udao.transferFrom(
+            address(this),
+            currentCoaching.learner,
+            currentCoaching.totalPaymentAmount
+        );
+
+        uint gasUsed = startGas - gasleft();
+
+        instructorBalance[currentCoaching.coach] -= gasUsed * tx.gasprice;
+    }
+
+    function forcedRefundJuror(
+        uint _coachingId
+    ) external onlyRole(JUROR_CONTRACT) {
+        uint256 startGas = gasleft();
+        CoachingStruct storage currentCoaching = coachingStructs[_coachingId];
+        require(currentCoaching.isRefundable, "Coaching is not refundable");
+        foundationBalance -=
+            (currentCoaching.totalPaymentAmount * coachingFoundationCut) /
+            100000;
+        governanceBalance -=
+            (currentCoaching.totalPaymentAmount * coachingGovernancenCut) /
+            100000;
+
+        currentCoaching.isDone = true;
+        udao.transferFrom(
+            address(this),
+            currentCoaching.learner,
+            currentCoaching.totalPaymentAmount
+        );
+
+        uint gasUsed = startGas - gasleft();
+        if (
+            instructorBalance[currentCoaching.coach] >= (gasUsed * tx.gasprice)
+        ) {
+            instructorBalance[currentCoaching.coach] -= gasUsed * tx.gasprice;
+        }
     }
 
     function getCoachings(uint _tokenId) external view returns (uint[] memory) {
