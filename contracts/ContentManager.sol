@@ -37,6 +37,8 @@ abstract contract ContentManager is EIP712, BasePlatform {
         uint256 priceToPay;
         /// @notice The date until the voucher is valid
         uint256 validUntil;
+        /// @notice if the coaching service is refundable or not
+        bool isRefundable;
         /// @notice Address of the redeemer
         address redeemer;
         /// @notice the EIP-712 signature of all other fields in the ContentVoucher struct.
@@ -56,6 +58,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
         bool isLearnerVerified; // learner verifies they took coaching
         bool isCoachVerified;
         bool isDone;
+        bool isRefundable;
         uint coachingPaymentAmount;
         uint moneyLockDeadline;
     }
@@ -64,6 +67,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
     mapping(uint => uint[]) coachingIdsOfToken;
     // coachinId => coachingStruct  Coaching details
     mapping(uint => CoachingStruct) public coachingStructs;
+    uint private coachingIndex;
 
     IValidationManager public IVM;
 
@@ -82,6 +86,13 @@ abstract contract ContentManager is EIP712, BasePlatform {
 
     /// @notice allows KYCed users to purchase a content
     function buyContent(ContentPurchaseVoucher calldata voucher) external {
+        // make sure signature is valid and get the address of the signer
+        address signer = _verifyContent(voucher);
+        require(
+            IRM.hasRole(BACKEND_ROLE, signer),
+            "Signature invalid or unauthorized"
+        );
+
         require(voucher.validUntil >= block.timestamp, "Voucher has expired.");
         uint256 tokenId = voucher.tokenId;
         uint256[] memory purchasedParts = voucher.purchasedParts;
@@ -130,24 +141,42 @@ abstract contract ContentManager is EIP712, BasePlatform {
 
     /// @notice Allows users to buy coaching service.
     function buyCoaching(CoachingPurchaseVoucher calldata voucher) external {
+        // make sure signature is valid and get the address of the signer
+        address signer = _verifyCoaching(voucher);
+        require(
+            IRM.hasRole(BACKEND_ROLE, signer),
+            "Signature invalid or unauthorized"
+        );
+
         require(voucher.validUntil >= block.timestamp, "Voucher has expired.");
         uint256 priceToPay = voucher.priceToPay;
         require(IRM.isKYCed(msg.sender), "You are not KYCed");
         address instructor = udaoc.ownerOf(voucher.tokenId);
         require(IRM.isKYCed(instructor), "Instructor is not KYCed");
         require(!IRM.isBanned(instructor), "Instructor is banned");
-        require(IVM.isValidated(voucher.tokenId), "Content is not validated yet");
-        CoachingStruct storage coachingStruct = coachingStructs[voucher.tokenId];
+        require(
+            IVM.isValidated(voucher.tokenId),
+            "Content is not validated yet"
+        );
 
         foundationBalance += (priceToPay * coachingFoundationCut) / 100000;
         governanceBalance += (priceToPay * coachingGovernancenCut) / 100000;
-        coachingStruct.coachingPaymentAmount = (priceToPay -
-            foundationBalance -
-            governanceBalance);
-        coachingStruct.moneyLockDeadline = block.timestamp + 30 days;
+        coachingStructs[coachingIndex] = CoachingStruct({
+            coach: instructor,
+            learner: voucher.redeemer,
+            isLearnerVerified: false,
+            isCoachVerified: false,
+            isDone: false,
+            isRefundable: voucher.isRefundable,
+            coachingPaymentAmount: (priceToPay -
+                foundationBalance -
+                governanceBalance),
+            moneyLockDeadline: block.timestamp + 30 days
+        });
+        coachingIdsOfToken[voucher.tokenId].push(coachingIndex);
+        coachingIndex++;
+
         udao.transferFrom(msg.sender, address(this), priceToPay);
-        coachingStruct.learner = msg.sender;
-        coachingStruct.coach = instructor;
         studentList[voucher.tokenId].push(voucher.redeemer);
     }
 
@@ -187,13 +216,14 @@ abstract contract ContentManager is EIP712, BasePlatform {
         coachingStructs[_coachingId].moneyLockDeadline += 7 days;
     }
 
-    function forcedPayment(uint _coachingId) external onlyRoles(administrator_roles){
+    function forcedPayment(
+        uint _coachingId
+    ) external onlyRoles(administrator_roles) {
         CoachingStruct storage currentCoaching = coachingStructs[_coachingId];
-            instructorBalance[currentCoaching.coach] += coachingStructs[
-                _coachingId
-            ].coachingPaymentAmount;
+        instructorBalance[currentCoaching.coach] += coachingStructs[_coachingId]
+            .coachingPaymentAmount;
 
-            currentCoaching.isDone = true;
+        currentCoaching.isDone = true;
     }
 
     function getCoachings(uint _tokenId) external view returns (uint[] memory) {
@@ -248,6 +278,28 @@ abstract contract ContentManager is EIP712, BasePlatform {
             );
     }
 
+    /// @notice Returns a hash of the given CoachingPurchaseVoucher, prepared using EIP712 typed data hashing rules.
+    /// @param voucher A CoachingPurchaseVoucher to hash.
+    function _hashCoaching(
+        CoachingPurchaseVoucher calldata voucher
+    ) internal view returns (bytes32) {
+        return
+            _hashTypedDataV4(
+                keccak256(
+                    abi.encode(
+                        keccak256(
+                            "CoachingPurchaseVoucher(uint256 tokenId,uint256 priceToPay,uint256 validUntil,bool isRefundable,address redeemer)"
+                        ),
+                        voucher.tokenId,
+                        voucher.priceToPay,
+                        voucher.validUntil,
+                        voucher.isRefundable,
+                        voucher.redeemer
+                    )
+                )
+            );
+    }
+
     /// @notice Returns the chain id of the current blockchain.
     /// @dev This is used to workaround an issue with ganache returning different values from the on-chain chainid() function and
     ///  the eth_chainId RPC method. See https://github.com/protocol/nft-website/issues/121 for context.
@@ -259,13 +311,23 @@ abstract contract ContentManager is EIP712, BasePlatform {
         return id;
     }
 
-    /// @notice Verifies the signature for a given PurchaseVoucher, returning the address of the signer.
-    /// @dev Will revert if the signature is invalid. Does not verify that the signer is authorized to mint NFTs.
-    /// @param voucher A PurchaseVoucher describing an unminted NFT.
-    function _verify(
+    /// @notice Verifies the signature for a given ContentPurchaseVoucher, returning the address of the signer.
+    /// @dev Will revert if the signature is invalid.
+    /// @param voucher A ContentPurchaseVoucher describing a content access rights.
+    function _verifyContent(
         ContentPurchaseVoucher calldata voucher
     ) internal view returns (address) {
         bytes32 digest = _hashContent(voucher);
+        return ECDSA.recover(digest, voucher.signature);
+    }
+
+    /// @notice Verifies the signature for a given CoachingPurchaseVoucher, returning the address of the signer.
+    /// @dev Will revert if the signature is invalid.
+    /// @param voucher A CoachingPurchaseVoucher describing a coaching se
+    function _verifyCoaching(
+        CoachingPurchaseVoucher calldata voucher
+    ) internal view returns (address) {
+        bytes32 digest = _hashCoaching(voucher);
         return ECDSA.recover(digest, voucher.signature);
     }
 }
