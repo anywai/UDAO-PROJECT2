@@ -36,11 +36,10 @@ contract RoleManager is AccessControl {
     /// @notice Modified AccessControl checkRoles for multiple role check
     /// @param roles The name of the roles to check
     /// @param account The address of the account to check
-    function _checkRoles(bytes32[] memory roles, address account)
-        internal
-        view
-        virtual
-    {
+    function _checkRoles(
+        bytes32[] memory roles,
+        address account
+    ) internal view virtual {
         uint rolesLength = roles.length;
         for (uint i = 0; i < rolesLength; i++) {
             if (hasRole(roles[i], account)) {
@@ -58,13 +57,20 @@ contract RoleManager is AccessControl {
         );
     }
 
+    function grantRole(
+        bytes32 role,
+        address account
+    ) public virtual override onlyRoles(admi) {
+        _grantRole(role, account);
+    }
+
     /// @notice set KYC for an account address
     /// @param _address address that will be KYCed
     /// @param _isKYCed result of KYC
-    function setKYC(address _address, bool _isKYCed)
-        external
-        onlyRole(BACKEND_ROLE)
-    {
+    function setKYC(
+        address _address,
+        bool _isKYCed
+    ) external onlyRole(BACKEND_ROLE) {
         KYCList[_address] = _isKYCed;
         emit SetKYC(_address, _isKYCed);
     }
@@ -72,10 +78,10 @@ contract RoleManager is AccessControl {
     /// @notice set ban for an account address
     /// @param _address address that will be ban set
     /// @param _isBanned ban set result
-    function setBan(address _address, bool _isBanned)
-        external
-        onlyRole(BACKEND_ROLE)
-    {
+    function setBan(
+        address _address,
+        bool _isBanned
+    ) external onlyRole(BACKEND_ROLE) {
         BanList[_address] = _isBanned;
         emit SetBan(_address, _isBanned);
     }
