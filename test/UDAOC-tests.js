@@ -125,6 +125,14 @@ async function deploy() {
     VALIDATION_MANAGER,
     contractValidationManager.address
   );
+  const DEFAULT_ADMIN_ROLE = ethers.utils.keccak256(
+    ethers.utils.toUtf8Bytes("DEFAULT_ADMIN_ROLE")
+  );
+  await contractRoleManager.grantRole(DEFAULT_ADMIN_ROLE, foundation.address);
+  await contractRoleManager.grantRole(
+    DEFAULT_ADMIN_ROLE,
+    contractUDAOTimelockController.address
+  );
 
   // add staking contract to validation manager
   await contractValidationManager
