@@ -228,7 +228,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
         currentCoaching.isDone = true;
     }
 
-    function refund(uint _coachingId) {
+    function refund(uint _coachingId) external {
         CoachingStruct storage currentCoaching = coachingStructs[_coachingId];
         require(msg.sender == currentCoaching.coach, "Your are not the coach");
         foundationBalance -=
