@@ -270,6 +270,7 @@ describe("UDAOC Contract", function () {
       1,
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
+      true,
       "Content Name",
       "Content Description"
     );
@@ -318,6 +319,7 @@ describe("UDAOC Contract", function () {
       1,
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
+      true,
       "Content Name",
       "Content Description"
     );
@@ -362,6 +364,7 @@ describe("UDAOC Contract", function () {
       1,
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
+      true,
       "Content Name",
       "Content Description"
     );
@@ -406,6 +409,7 @@ describe("UDAOC Contract", function () {
       1,
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
+      true,
       "Content Name",
       "Content Description"
     );
@@ -458,6 +462,7 @@ describe("UDAOC Contract", function () {
       1,
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
+      true,
       "Content Name",
       "Content Description"
     );
@@ -513,6 +518,7 @@ describe("UDAOC Contract", function () {
       1,
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
+      true,
       "Content Name",
       "Content Description"
     );
@@ -568,6 +574,7 @@ describe("UDAOC Contract", function () {
       1,
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
+      true,
       "Content Name",
       "Content Description"
     );
@@ -621,6 +628,7 @@ describe("UDAOC Contract", function () {
       1,
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
+      true,
       "Content Name",
       "Content Description"
     );
@@ -677,6 +685,7 @@ describe("UDAOC Contract", function () {
       1,
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
+      true,
       "Content Name",
       "Content Description"
     );
@@ -734,6 +743,7 @@ describe("UDAOC Contract", function () {
       1,
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
+      true,
       "Content Name",
       "Content Description"
     );
@@ -792,6 +802,7 @@ describe("UDAOC Contract", function () {
       1,
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
+      true,
       "Content Name",
       "Content Description"
     );
