@@ -50,7 +50,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
     // tokenId => buyable
     mapping(uint => bool) coachingEnabled;
     // tokenId => student addresses
-    mapping(uint => address[]) studentList;
+    mapping(uint => address[]) public studentList;
 
     struct CoachingStruct {
         address coach;
@@ -153,6 +153,10 @@ abstract contract ContentManager is EIP712, BasePlatform {
         address instructor = udaoc.ownerOf(voucher.tokenId);
         require(IRM.isKYCed(instructor), "Instructor is not KYCed");
         require(!IRM.isBanned(instructor), "Instructor is banned");
+        require(
+            coachingEnabled[voucher.tokenId],
+            "Coaching is not enabled for this content"
+        );
         require(
             IVM.isValidated(voucher.tokenId),
             "Content is not validated yet"
