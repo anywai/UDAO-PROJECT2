@@ -186,31 +186,6 @@ describe("Validation Manageer Contract", function () {
     } = await deploy();
   });
 
-  it("Should deploy", async function () {
-    const {
-      backend,
-      validatorCandidate,
-      validator,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractValidationManager,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-    } = await deploy();
-  });
-
   it("Should validate content", async function () {
     const {
       backend,
@@ -245,7 +220,6 @@ describe("Validation Manageer Contract", function () {
     });
     const voucher_udaoc = await lazyMinter.createVoucher(
       1,
-      [ethers.utils.parseEther("1.0"), ethers.utils.parseEther("2.0")],
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       "Content Name",
@@ -352,7 +326,6 @@ describe("Validation Manageer Contract", function () {
     });
     const voucher_udaoc = await lazyMinter.createVoucher(
       1,
-      [ethers.utils.parseEther("1.0"), ethers.utils.parseEther("2.0")],
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       "Content Name",

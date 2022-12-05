@@ -8,6 +8,7 @@ const { LazyRole } = require("../lib/LazyRole");
 const { LazyScore } = require("../lib/LazyScore");
 const { LazyValidation } = require("../lib/LazyValidation");
 const { LazyUDAOCertMinter } = require("../lib/LazyUDAOCertMinter");
+const { LazyPurchase } = require("../lib/LazyPurchase");
 
 // Enable and inject BN dependency
 chai.use(require("chai-bn")(BN));
@@ -262,7 +263,6 @@ describe("Platform Treasury Contract", function () {
     });
     const voucher_udaoc = await lazyMinter.createVoucher(
       1,
-      [ethers.utils.parseEther("1.0"), ethers.utils.parseEther("2.0")],
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       "Content Name",
@@ -305,99 +305,25 @@ describe("Platform Treasury Contract", function () {
         contractPlatformTreasury.address,
         ethers.utils.parseEther("999999999999.0")
       );
-
-    await contractPlatformTreasury.connect(contentBuyer).buyContent(1, [0]);
+    const lazyPurchase = new LazyPurchase({
+      contract: contractPlatformTreasury,
+      signer: backend,
+    });
+    const purchase_voucher_udaoc = await lazyPurchase.createVoucher(
+      1,
+      [0],
+      ethers.utils.parseEther("2"),
+      Date.now() + 999999999,
+      contentBuyer.address
+    );
+    await contractPlatformTreasury
+      .connect(contentBuyer)
+      .buyContent(purchase_voucher_udaoc);
     const result = await contractPlatformTreasury
       .connect(contentBuyer)
       .getOwnedContent(contentBuyer.address);
     const numArray = result.map((x) => x.map((y) => y.toNumber()));
     expect(numArray).to.eql([[1, 0]]);
-  });
-
-  it("Should fail to buy a content if part does not exist", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      validatorCandidate,
-      validator,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractValidationManager,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-    } = await deploy();
-
-    /// Set KYC
-    await contractRoleManager.setKYC(contentCreator.address, true);
-    await contractRoleManager.setKYC(contentBuyer.address, true);
-
-    /// Mint content with voucher
-    const lazyMinter = new LazyMinter({
-      contract: contractUDAOContent,
-      signer: backend,
-    });
-    const voucher_udaoc = await lazyMinter.createVoucher(
-      1,
-      [ethers.utils.parseEther("1.0"), ethers.utils.parseEther("2.0")],
-      "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
-      contentCreator.address,
-      "Content Name",
-      "Content Description"
-    );
-    await expect(
-      contractUDAOContent.connect(contentCreator).redeem(voucher_udaoc)
-    )
-      .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
-      .withArgs(
-        "0x0000000000000000000000000000000000000000",
-        contentCreator.address,
-        voucher_udaoc.tokenId
-      );
-
-    /// Validate content with voucher
-    const lazyValidation = new LazyValidation({
-      contract: contractValidationManager,
-      signer: backend,
-    });
-    const voucher = await lazyValidation.createVoucher(
-      1,
-      contentCreator.address
-    );
-    await expect(
-      contractValidationManager.connect(contentCreator).setAsValidated(voucher)
-    )
-      .to.emit(contractValidationManager, "ValidationEnded")
-      .withArgs(voucher.tokenId, true);
-
-    /// Send UDAO to the buyer's wallet
-    await contractUDAO.transfer(
-      contentBuyer.address,
-      ethers.utils.parseEther("100.0")
-    );
-    /// Content buyer needs to give approval to the platformtreasury
-    await contractUDAO
-      .connect(contentBuyer)
-      .approve(
-        contractPlatformTreasury.address,
-        ethers.utils.parseEther("999999999999.0")
-      );
-
-    await expect(
-      contractPlatformTreasury.connect(contentBuyer).buyContent(1, [2])
-    ).to.revertedWith("Part does not exist!");
   });
 
   it("Should fail to buy a content if content does not exists", async function () {
@@ -437,7 +363,6 @@ describe("Platform Treasury Contract", function () {
     });
     const voucher_udaoc = await lazyMinter.createVoucher(
       1,
-      [ethers.utils.parseEther("1.0"), ethers.utils.parseEther("2.0")],
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       "Content Name",
@@ -480,11 +405,24 @@ describe("Platform Treasury Contract", function () {
         contractPlatformTreasury.address,
         ethers.utils.parseEther("999999999999.0")
       );
-
+    const lazyPurchase = new LazyPurchase({
+      contract: contractPlatformTreasury,
+      signer: backend,
+    });
+    const purchase_voucher_udaoc = await lazyPurchase.createVoucher(
+      3,
+      [0],
+      ethers.utils.parseEther("2"),
+      Date.now() + 999999999,
+      contentBuyer.address
+    );
     await expect(
-      contractPlatformTreasury.connect(contentBuyer).buyContent(3, [2])
+      contractPlatformTreasury
+        .connect(contentBuyer)
+        .buyContent(purchase_voucher_udaoc)
     ).to.revertedWith("Content does not exist!");
   });
+
   it("Should fail to buy content if not validated yet", async function () {
     const {
       backend,
@@ -522,7 +460,6 @@ describe("Platform Treasury Contract", function () {
     });
     const voucher_udaoc = await lazyMinter.createVoucher(
       1,
-      [ethers.utils.parseEther("1.0"), ethers.utils.parseEther("2.0")],
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       "Content Name",
@@ -550,9 +487,21 @@ describe("Platform Treasury Contract", function () {
         contractPlatformTreasury.address,
         ethers.utils.parseEther("999999999999.0")
       );
-
+    const lazyPurchase = new LazyPurchase({
+      contract: contractPlatformTreasury,
+      signer: backend,
+    });
+    const purchase_voucher_udaoc = await lazyPurchase.createVoucher(
+      1,
+      [0],
+      ethers.utils.parseEther("2"),
+      Date.now() + 999999999,
+      contentBuyer.address
+    );
     await expect(
-      contractPlatformTreasury.connect(contentBuyer).buyContent(1, [0])
+      contractPlatformTreasury
+        .connect(contentBuyer)
+        .buyContent(purchase_voucher_udaoc)
     ).to.revertedWith("Content is not validated yet");
   });
 
@@ -596,7 +545,6 @@ describe("Platform Treasury Contract", function () {
     });
     const voucher_udaoc = await lazyMinter.createVoucher(
       1,
-      [ethers.utils.parseEther("1.0"), ethers.utils.parseEther("2.0")],
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       "Content Name",
@@ -639,9 +587,21 @@ describe("Platform Treasury Contract", function () {
         contractPlatformTreasury.address,
         ethers.utils.parseEther("999999999999.0")
       );
-
+    const lazyPurchase = new LazyPurchase({
+      contract: contractPlatformTreasury,
+      signer: backend,
+    });
+    const purchase_voucher_udaoc = await lazyPurchase.createVoucher(
+      1,
+      [0],
+      ethers.utils.parseEther("2"),
+      Date.now() + 999999999,
+      contentBuyer.address
+    );
     await expect(
-      contractPlatformTreasury.connect(contentBuyer).buyContent(1, [0])
+      contractPlatformTreasury
+        .connect(contentBuyer)
+        .buyContent(purchase_voucher_udaoc)
     ).to.revertedWith("You are banned");
   });
 
@@ -682,7 +642,6 @@ describe("Platform Treasury Contract", function () {
     });
     const voucher_udaoc = await lazyMinter.createVoucher(
       1,
-      [ethers.utils.parseEther("1.0"), ethers.utils.parseEther("2.0")],
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       "Content Name",
@@ -729,8 +688,21 @@ describe("Platform Treasury Contract", function () {
     /// Set BAN
     await contractRoleManager.setBan(contentCreator.address, true);
 
+    const lazyPurchase = new LazyPurchase({
+      contract: contractPlatformTreasury,
+      signer: backend,
+    });
+    const purchase_voucher_udaoc = await lazyPurchase.createVoucher(
+      1,
+      [0],
+      ethers.utils.parseEther("2"),
+      Date.now() + 999999999,
+      contentBuyer.address
+    );
     await expect(
-      contractPlatformTreasury.connect(contentBuyer).buyContent(1, [0])
+      contractPlatformTreasury
+        .connect(contentBuyer)
+        .buyContent(purchase_voucher_udaoc)
     ).to.revertedWith("Instructor is banned");
   });
 
@@ -771,7 +743,6 @@ describe("Platform Treasury Contract", function () {
     });
     const voucher_udaoc = await lazyMinter.createVoucher(
       1,
-      [ethers.utils.parseEther("1.0"), ethers.utils.parseEther("2.0")],
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       "Content Name",
@@ -818,8 +789,21 @@ describe("Platform Treasury Contract", function () {
     /// Set KYC to false
     await contractRoleManager.setKYC(contentCreator.address, false);
 
+    const lazyPurchase = new LazyPurchase({
+      contract: contractPlatformTreasury,
+      signer: backend,
+    });
+    const purchase_voucher_udaoc = await lazyPurchase.createVoucher(
+      1,
+      [0],
+      ethers.utils.parseEther("2"),
+      Date.now() + 999999999,
+      contentBuyer.address
+    );
     await expect(
-      contractPlatformTreasury.connect(contentBuyer).buyContent(1, [0])
+      contractPlatformTreasury
+        .connect(contentBuyer)
+        .buyContent(purchase_voucher_udaoc)
     ).to.revertedWith("Instructor is not KYCed");
   });
 
@@ -861,7 +845,6 @@ describe("Platform Treasury Contract", function () {
     });
     const voucher_udaoc = await lazyMinter.createVoucher(
       1,
-      [ethers.utils.parseEther("1.0"), ethers.utils.parseEther("2.0")],
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       "Content Name",
@@ -907,8 +890,21 @@ describe("Platform Treasury Contract", function () {
 
     await contractRoleManager.setKYC(contentBuyer.address, false);
 
+    const lazyPurchase = new LazyPurchase({
+      contract: contractPlatformTreasury,
+      signer: backend,
+    });
+    const purchase_voucher_udaoc = await lazyPurchase.createVoucher(
+      1,
+      [0],
+      ethers.utils.parseEther("2"),
+      Date.now() + 999999999,
+      contentBuyer.address
+    );
     await expect(
-      contractPlatformTreasury.connect(contentBuyer).buyContent(1, [0])
+      contractPlatformTreasury
+        .connect(contentBuyer)
+        .buyContent(purchase_voucher_udaoc)
     ).to.revertedWith("You are not KYCed");
   });
 });

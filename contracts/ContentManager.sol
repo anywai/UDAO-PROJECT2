@@ -116,18 +116,14 @@ abstract contract ContentManager is EIP712, BasePlatform {
 
         for (uint i; i < partIdLength; i++) {
             require(
-                purchasedParts[i] < udaoc.getPartNumberOfContent(tokenId),
-                "Part does not exist!"
-            );
-            require(
                 isTokenBought[msg.sender][tokenId][purchasedParts[i]] == false,
                 "Content part is already bought"
             );
-            priceToPay += udaoc.getPriceContent(tokenId, purchasedParts[i]);
 
             isTokenBought[msg.sender][tokenId][purchasedParts[i]] = true;
             ownedContents[msg.sender].push([tokenId, purchasedParts[i]]);
         }
+
         foundationBalance += (priceToPay * contentFoundationCut) / 100000;
         governanceBalance += (priceToPay * contentGovernancenCut) / 100000;
         validatorBalance += (priceToPay * validatorBalance) / 100000;

@@ -67,37 +67,33 @@ abstract contract BasePlatform is Pausable, RoleController {
 
     /// @notice changes cut from coaching for foundation
     /// @param _cut new cut (100000 -> 100% | 5000 -> 5%)
-    function setCoachingFoundationCut(uint _cut)
-        external
-        onlyRole(GOVERNANCE_ROLE)
-    {
+    function setCoachingFoundationCut(
+        uint _cut
+    ) external onlyRole(GOVERNANCE_ROLE) {
         coachingFoundationCut = _cut;
     }
 
     /// @notice changes cut from coaching for governance
     /// @param _cut new cut (100000 -> 100% | 5000 -> 5%)
-    function setCoachingGovernanceCut(uint _cut)
-        external
-        onlyRole(GOVERNANCE_ROLE)
-    {
+    function setCoachingGovernanceCut(
+        uint _cut
+    ) external onlyRole(GOVERNANCE_ROLE) {
         coachingGovernancenCut = _cut;
     }
 
     /// @notice changes cut from content for foundation
     /// @param _cut new cut (100000 -> 100% | 5000 -> 5%)
-    function setContentFoundationCut(uint _cut)
-        external
-        onlyRole(GOVERNANCE_ROLE)
-    {
+    function setContentFoundationCut(
+        uint _cut
+    ) external onlyRole(GOVERNANCE_ROLE) {
         contentFoundationCut = _cut;
     }
 
     /// @notice changes cut from content for governance
     /// @param _cut new cut (100000 -> 100% | 5000 -> 5%)
-    function setContentGovernanceCut(uint _cut)
-        external
-        onlyRole(GOVERNANCE_ROLE)
-    {
+    function setContentGovernanceCut(
+        uint _cut
+    ) external onlyRole(GOVERNANCE_ROLE) {
         contentGovernancenCut = _cut;
     }
 
@@ -109,10 +105,9 @@ abstract contract BasePlatform is Pausable, RoleController {
 
     /// @notice changes cut from content for validator pool
     /// @param _cut new cut (100000 -> 100% | 5000 -> 5%)
-    function setContentValidatorCut(uint _cut)
-        external
-        onlyRole(GOVERNANCE_ROLE)
-    {
+    function setContentValidatorCut(
+        uint _cut
+    ) external onlyRole(GOVERNANCE_ROLE) {
         contentValidatorCut = _cut;
     }
 }

@@ -13,11 +13,10 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
     string private constant SIGNING_DOMAIN = "UDAOCMinter";
     string private constant SIGNATURE_VERSION = "1";
 
-    // tokenId => number of Parts
-    mapping(uint => uint) private partNumberOfContent;
-
     /// @param rmAddress The address of the deployed role manager
-    constructor(address rmAddress)
+    constructor(
+        address rmAddress
+    )
         ERC721("UDAO Content", "UDAOC")
         EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION)
         RoleController(rmAddress)
@@ -59,16 +58,13 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
 
         _mint(voucher.redeemer, voucher.tokenId);
         _setTokenURI(voucher.tokenId, voucher.uri);
-
     }
 
     /// @notice Returns a hash of the given ContentVoucher, prepared using EIP712 typed data hashing rules.
     /// @param voucher A ContentVoucher to hash.
-    function _hash(ContentVoucher calldata voucher)
-        internal
-        view
-        returns (bytes32)
-    {
+    function _hash(
+        ContentVoucher calldata voucher
+    ) internal view returns (bytes32) {
         return
             _hashTypedDataV4(
                 keccak256(
@@ -100,11 +96,9 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
     /// @notice Verifies the signature for a given ContentVoucher, returning the address of the signer.
     /// @dev Will revert if the signature is invalid. Does not verify that the signer is authorized to mint NFTs.
     /// @param voucher A ContentVoucher describing an unminted NFT.
-    function _verify(ContentVoucher calldata voucher)
-        internal
-        view
-        returns (address)
-    {
+    function _verify(
+        ContentVoucher calldata voucher
+    ) internal view returns (address) {
         bytes32 digest = _hash(voucher);
         return ECDSA.recover(digest, voucher.signature);
     }
@@ -113,10 +107,9 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
         _burn(tokenId);
     }
 
-    function _burn(uint256 tokenId)
-        internal
-        override(ERC721, ERC721URIStorage)
-    {
+    function _burn(
+        uint256 tokenId
+    ) internal override(ERC721, ERC721URIStorage) {
         super._burn(tokenId);
     }
 
@@ -137,31 +130,21 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
         }
     }
 
-    function getPartNumberOfContent(uint tokenId) external view returns (uint) {
-        return partNumberOfContent[tokenId];
-    }
-
     function exists(uint tokenId) external view returns (bool) {
         return _exists(tokenId);
     }
 
     // The following functions are overrides required by Solidity.
 
-    function tokenURI(uint256 tokenId)
-        public
-        view
-        override(ERC721, ERC721URIStorage)
-        returns (string memory)
-    {
+    function tokenURI(
+        uint256 tokenId
+    ) public view override(ERC721, ERC721URIStorage) returns (string memory) {
         return super.tokenURI(tokenId);
     }
 
-    function supportsInterface(bytes4 interfaceId)
-        public
-        view
-        override(ERC721)
-        returns (bool)
-    {
+    function supportsInterface(
+        bytes4 interfaceId
+    ) public view override(ERC721) returns (bool) {
         return super.supportsInterface(interfaceId);
     }
 }
