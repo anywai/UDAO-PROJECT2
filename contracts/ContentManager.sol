@@ -12,7 +12,7 @@ interface IValidationManager {
 abstract contract ContentManager is EIP712, BasePlatform {
     string private constant SIGNING_DOMAIN = "ContentManager";
     string private constant SIGNATURE_VERSION = "1";
-    
+
     /// @notice Represents usage rights for a content (or part)
     struct ContentPurchaseVoucher {
         /// @notice The id of the token (content) to be redeemed.
@@ -55,6 +55,8 @@ abstract contract ContentManager is EIP712, BasePlatform {
     struct CoachingStruct {
         address coach;
         address learner;
+        bool isLearnerVerified;
+        bool isCoachVerified;
         uint8 isDone; // 0 not done, 1 done, 2 refunded
         bool isRefundable;
         uint totalPaymentAmount;
@@ -273,7 +275,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
     /// @param _coachingId id of the coaching service
     function forcedRefundAdmin(
         uint _coachingId
-    ) external onlyRole(administrator_roles) {
+    ) external onlyRoles(administrator_roles) {
         uint256 startGas = gasleft();
         CoachingStruct storage currentCoaching = coachingStructs[_coachingId];
         require(currentCoaching.isRefundable, "Coaching is not refundable");

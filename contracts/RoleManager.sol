@@ -57,13 +57,6 @@ contract RoleManager is AccessControl {
         );
     }
 
-    function grantRole(
-        bytes32 role,
-        address account
-    ) public virtual override onlyRoles(admi) {
-        _grantRole(role, account);
-    }
-
     /// @notice set KYC for an account address
     /// @param _address address that will be KYCed
     /// @param _isKYCed result of KYC
