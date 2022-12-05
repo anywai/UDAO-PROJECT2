@@ -150,6 +150,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
         uint256 priceToPay = voucher.priceToPay;
 
         require(udaoc.exists(voucher.tokenId), "Content does not exist!");
+        require(!IRM.isBanned(msg.sender), "You are banned");
         require(IRM.isKYCed(msg.sender), "You are not KYCed");
         address instructor = udaoc.ownerOf(voucher.tokenId);
         require(IRM.isKYCed(instructor), "Instructor is not KYCed");
