@@ -12,7 +12,7 @@ interface IValidationManager {
 abstract contract ContentManager is EIP712, BasePlatform {
     string private constant SIGNING_DOMAIN = "ContentManager";
     string private constant SIGNATURE_VERSION = "1";
-
+    
     /// @notice Represents usage rights for a content (or part)
     struct ContentPurchaseVoucher {
         /// @notice The id of the token (content) to be redeemed.
@@ -84,6 +84,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
     }
 
     /// @notice allows KYCed users to purchase a content
+    /// @param voucher voucher for the content purchase
     function buyContent(ContentPurchaseVoucher calldata voucher) external {
         // make sure signature is valid and get the address of the signer
         address signer = _verifyContent(voucher);
@@ -139,6 +140,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
     }
 
     /// @notice Allows users to buy coaching service.
+    /// @param voucher voucher for the coaching purchase
     function buyCoaching(CoachingPurchaseVoucher calldata voucher) external {
         // make sure signature is valid and get the address of the signer
         address signer = _verifyCoaching(voucher);
@@ -204,6 +206,11 @@ abstract contract ContentManager is EIP712, BasePlatform {
         }
     }
 
+    /**
+     *  @notice The learner or the coach could delay the service payment
+     *  deadline in the last 3 days of the deadline
+     *  @param _coachingId id of the coaching service
+     */
     function delayDeadline(uint _coachingId) external {
         require(
             msg.sender == coachingStructs[_coachingId].coach ||
@@ -218,6 +225,8 @@ abstract contract ContentManager is EIP712, BasePlatform {
         coachingStructs[_coachingId].moneyLockDeadline += 7 days;
     }
 
+    /// @notice Payment and coaching service can be forcefully done by administrator_roles
+    /// @param _coachingId id of the coaching service
     function forcedPayment(
         uint _coachingId
     ) external onlyRoles(administrator_roles) {
@@ -228,6 +237,8 @@ abstract contract ContentManager is EIP712, BasePlatform {
         currentCoaching.isDone = 1;
     }
 
+    /// @notice Payment and coaching service can be forcefully done by jurors
+    /// @param _coachingId id of the coaching service
     function forcedPaymentJuror(
         uint _coachingId
     ) external onlyRole(JUROR_CONTRACT) {
@@ -238,6 +249,8 @@ abstract contract ContentManager is EIP712, BasePlatform {
         currentCoaching.isDone = 1;
     }
 
+    /// @notice refunds the coaching service callable by coach
+    /// @param _coachingId id of the coaching service
     function refund(uint _coachingId) external {
         CoachingStruct storage currentCoaching = coachingStructs[_coachingId];
         require(msg.sender == currentCoaching.coach, "Your are not the coach");
@@ -256,6 +269,8 @@ abstract contract ContentManager is EIP712, BasePlatform {
         );
     }
 
+    /// @notice forces refund of coaching service only be callable by administrator_role (FOUNDATION_ROLE, GOVERNANCE_ROLE)
+    /// @param _coachingId id of the coaching service
     function forcedRefundAdmin(
         uint _coachingId
     ) external onlyRole(administrator_roles) {
@@ -285,6 +300,8 @@ abstract contract ContentManager is EIP712, BasePlatform {
         }
     }
 
+    /// @notice Jurors can force refund of a coaching service
+    /// @param _coachingId The ID of the coaching service
     function forcedRefundJuror(
         uint _coachingId
     ) external onlyRole(JUROR_CONTRACT) {
@@ -313,6 +330,8 @@ abstract contract ContentManager is EIP712, BasePlatform {
         }
     }
 
+    /// @notice returns coaching informations of token
+    /// @param _tokenId id of token that coaching will be returned
     function getCoachings(uint _tokenId) external view returns (uint[] memory) {
         return coachingIdsOfToken[_tokenId];
     }
@@ -337,6 +356,8 @@ abstract contract ContentManager is EIP712, BasePlatform {
         coachingEnabled[tokenId] = false;
     }
 
+    /// @notice returns owned contents of the _owner
+    /// @param _owner address of the user that will owned contents be returned
     function getOwnedContent(
         address _owner
     ) public view returns (uint[][] memory) {
