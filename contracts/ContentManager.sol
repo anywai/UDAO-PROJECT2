@@ -47,8 +47,6 @@ abstract contract ContentManager is EIP712, BasePlatform {
 
     // wallet => content token Ids
     mapping(address => uint[][]) ownedContents;
-    // tokenId => buyable
-    mapping(uint => bool) coachingEnabled;
     // tokenId => student addresses
     mapping(uint => address[]) public studentList;
 
@@ -142,6 +140,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
     function buyCoaching(CoachingPurchaseVoucher calldata voucher) external {
         // make sure signature is valid and get the address of the signer
         address signer = _verifyCoaching(voucher);
+
         require(
             IRM.hasRole(BACKEND_ROLE, signer),
             "Signature invalid or unauthorized"
@@ -154,14 +153,13 @@ abstract contract ContentManager is EIP712, BasePlatform {
         require(IRM.isKYCed(instructor), "Instructor is not KYCed");
         require(!IRM.isBanned(instructor), "Instructor is banned");
         require(
-            coachingEnabled[voucher.tokenId],
+            udaoc.isCoachingEnabled(voucher.tokenId),
             "Coaching is not enabled for this content"
         );
         require(
             IVM.isValidated(voucher.tokenId),
             "Content is not validated yet"
         );
-
         foundationBalance += (priceToPay * coachingFoundationCut) / 100000;
         governanceBalance += (priceToPay * coachingGovernancenCut) / 100000;
         coachingStructs[coachingIndex] = CoachingStruct({
@@ -338,32 +336,18 @@ abstract contract ContentManager is EIP712, BasePlatform {
         return coachingIdsOfToken[_tokenId];
     }
 
-    /// @notice Allows instructers' to enable coaching for a specific content
-    /// @param tokenId The content id
-    function enableCoaching(uint tokenId) external {
-        require(
-            udaoc.ownerOf(tokenId) == msg.sender,
-            "You are not the owner of token"
-        );
-        coachingEnabled[tokenId] = true;
-    }
-
-    /// @notice Allows instructers' to disable coaching for a specific content
-    /// @param tokenId tokenId of the content that will be not coached
-    function disableCoaching(uint tokenId) external {
-        require(
-            udaoc.ownerOf(tokenId) == msg.sender,
-            "You are not the owner of token"
-        );
-        coachingEnabled[tokenId] = false;
-    }
-
     /// @notice returns owned contents of the _owner
     /// @param _owner address of the user that will owned contents be returned
     function getOwnedContent(
         address _owner
     ) public view returns (uint[][] memory) {
         return (ownedContents[_owner]);
+    }
+
+    function getStudentListOfToken(
+        uint tokenId
+    ) public view returns (address[] memory) {
+        return studentList[tokenId];
     }
 
     /// @notice Returns a hash of the given PurchaseVoucher, prepared using EIP712 typed data hashing rules.
