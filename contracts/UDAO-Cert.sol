@@ -24,9 +24,6 @@ contract UDAOCertificate is
 
     Counters.Counter private _tokenIdCounter;
 
-    // tokenId => address
-    mapping(uint256 => address) canBeTransferred;
-
     constructor(address irmAdress)
         ERC721("UDAO Certificate", "UDAO-Cert")
         EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION)
@@ -56,7 +53,7 @@ contract UDAOCertificate is
         // make sure redeemer is redeeming
         require(voucher.redeemer == msg.sender, "You are not the redeemer");
         //make sure redeemer is kyced
-        require(IRM.getKYC(msg.sender), "You are not KYCed");
+        require(IRM.isKYCed(msg.sender), "You are not KYCed");
         // make sure signature is valid and get the address of the signer
         address signer = _verify(voucher);
         require(
@@ -115,20 +112,6 @@ contract UDAOCertificate is
         return ECDSA.recover(digest, voucher.signature);
     }
 
-    /// @notice Backend can allow transfer of a token to a specific address.
-    /// @param tokenId The token to set a transfer
-    /// @param to The address of the recipient
-    function setForTransfer(uint256 tokenId, address to)
-        external
-        onlyRole(BACKEND_ROLE)
-    {
-        require(
-            getApproved(tokenId) == msg.sender,
-            "UDAO is not approved for this token."
-        );
-        canBeTransferred[tokenId] = to;
-    }
-
     /// @notice Checks if token transfer is allowed. Reverts if not allowed.
     /// @param from The current token owner
     /// @param to Token to send to
@@ -139,13 +122,34 @@ contract UDAOCertificate is
         uint256 tokenId
     ) internal virtual override {
         super._beforeTokenTransfer(from, to, tokenId);
-
-        if (to != address(0) && from != address(0)) {
+        if (from != address(0) && to != address(0)) {
             require(
-                canBeTransferred[tokenId] == to,
-                "ERC721WithSafeTransfer: invalid recipient or not allowed"
+                IRM.hasRole(BACKEND_ROLE, msg.sender),
+                "You don't have right to transfer token"
             );
         }
+    }
+
+    /// @notice transfer token in emergency
+    /// @param from The current token owner
+    /// @param to Token to send to
+    /// @param tokenId The id of the token to transfer
+    function emergencyTransfer(
+        address from,
+        address to,
+        uint256 tokenId
+    ) external onlyRole(BACKEND_ROLE) {
+        _transfer(from, to, tokenId);
+    }
+
+    /// @notice burn tokens if owner does not want to have certificate any more
+    /// @param tokenId The id of the token to burn
+    function burn(uint256 tokenId) external {
+        require(
+            msg.sender == ownerOf(tokenId),
+            "You are not the owner of the token"
+        );
+        _burn(tokenId);
     }
 
     function _burn(uint256 tokenId)

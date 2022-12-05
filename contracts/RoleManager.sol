@@ -7,8 +7,8 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
 contract RoleManager is AccessControl {
     bytes32 public constant BACKEND_ROLE = keccak256("BACKEND_ROLE");
 
-    mapping(address => bool) isKYCed;
-    mapping(address => bool) isBanned;
+    mapping(address => bool) KYCList;
+    mapping(address => bool) BanList;
 
     /// @notice events fired when a KYC or Ban is set
     event SetKYC(address indexed user, bool indexed result);
@@ -36,11 +36,10 @@ contract RoleManager is AccessControl {
     /// @notice Modified AccessControl checkRoles for multiple role check
     /// @param roles The name of the roles to check
     /// @param account The address of the account to check
-    function _checkRoles(bytes32[] memory roles, address account)
-        internal
-        view
-        virtual
-    {
+    function _checkRoles(
+        bytes32[] memory roles,
+        address account
+    ) internal view virtual {
         uint rolesLength = roles.length;
         for (uint i = 0; i < rolesLength; i++) {
             if (hasRole(roles[i], account)) {
@@ -61,34 +60,34 @@ contract RoleManager is AccessControl {
     /// @notice set KYC for an account address
     /// @param _address address that will be KYCed
     /// @param _isKYCed result of KYC
-    function setKYC(address _address, bool _isKYCed)
-        external
-        onlyRole(BACKEND_ROLE)
-    {
-        isKYCed[_address] = _isKYCed;
+    function setKYC(
+        address _address,
+        bool _isKYCed
+    ) external onlyRole(BACKEND_ROLE) {
+        KYCList[_address] = _isKYCed;
         emit SetKYC(_address, _isKYCed);
     }
 
     /// @notice set ban for an account address
     /// @param _address address that will be ban set
     /// @param _isBanned ban set result
-    function setBan(address _address, bool _isBanned)
-        external
-        onlyRole(BACKEND_ROLE)
-    {
-        isBanned[_address] = _isBanned;
+    function setBan(
+        address _address,
+        bool _isBanned
+    ) external onlyRole(BACKEND_ROLE) {
+        BanList[_address] = _isBanned;
         emit SetBan(_address, _isBanned);
     }
 
     /// @notice gets KYC result of the address
     /// @param _address wallet that KYC result will be sent
-    function getKYC(address _address) external view returns (bool) {
-        return isKYCed[_address];
+    function isKYCed(address _address) external view returns (bool) {
+        return KYCList[_address];
     }
 
     /// @notice gets ban result of the address
     /// @param _address wallet that ban result will be sent
-    function getBan(address _address) external view returns (bool) {
-        return isBanned[_address];
+    function isBanned(address _address) external view returns (bool) {
+        return BanList[_address];
     }
 }

@@ -2,15 +2,14 @@
 pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "./RoleController.sol";
 import "./ContentManager.sol";
 
-contract PlatformTreasury is Pausable, ContentManager, EIP712 {
+contract PlatformTreasury is Pausable, ContentManager {
     string private constant SIGNING_DOMAIN = "ValidationScore";
     string private constant SIGNATURE_VERSION = "1";
-
+    
     /// @param udaoAddress The address of the deployed udao token contract
     /// @param udaocAddress The address of the deployed udao content token
     /// @param rmAddress The address of the deployed role manager
@@ -21,7 +20,6 @@ contract PlatformTreasury is Pausable, ContentManager, EIP712 {
         address rmAddress,
         address vmAddress
     )
-        EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION)
         BasePlatform(udaoAddress, udaocAddress, rmAddress)
         ContentManager(vmAddress)
     {}
@@ -110,17 +108,6 @@ contract PlatformTreasury is Pausable, ContentManager, EIP712 {
                     )
                 )
             );
-    }
-
-    /// @notice Returns the chain id of the current blockchain.
-    /// @dev This is used to workaround an issue with ganache returning different values from the on-chain chainid() function and
-    ///  the eth_chainId RPC method. See https://github.com/protocol/nft-website/issues/121 for context.
-    function getChainID() external view returns (uint256) {
-        uint256 id;
-        assembly {
-            id := chainid()
-        }
-        return id;
     }
 
     /// @notice Verifies the signature for a given ScoreVoucher, returning the address of the signer.

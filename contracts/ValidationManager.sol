@@ -36,12 +36,12 @@ contract ValidationManager is RoleController, EIP712 {
         bytes signature;
     }
 
-    event ValidationEnded(uint validationId, uint tokenId, bool result);
+    event ValidationEnded(uint tokenId, bool result);
 
     // tokenId => result
-    mapping(uint => bool) isValidated;
+    mapping(uint => bool) public isValidated;
     // validator => score
-    mapping(address => uint256) validatorScore;
+    mapping(address => uint256) public validatorScore;
 
     struct Validation {
         uint id;
@@ -70,6 +70,8 @@ contract ValidationManager is RoleController, EIP712 {
     uint public totalSuccessfulValidation;
 
     function setAsValidated(ValidationVoucher calldata voucher) external {
+
+        require(udaoc.ownerOf(voucher.tokenId) == voucher.redeemer , "Redeemer is not the owner of the token");
         // make sure redeemer is redeeming
         require(voucher.redeemer == msg.sender, "You are not the redeemer");
         // make sure signature is valid and get the address of the signer
@@ -79,6 +81,7 @@ contract ValidationManager is RoleController, EIP712 {
             "Signature invalid or unauthorized"
         );
         isValidated[voucher.tokenId] = true;
+        emit ValidationEnded(voucher.tokenId, true);
     }
 
     function setUDAOC(address udaocAddress) external onlyRole(FOUNDATION_ROLE) {

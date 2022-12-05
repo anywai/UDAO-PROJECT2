@@ -13,11 +13,10 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
     string private constant SIGNING_DOMAIN = "UDAOCMinter";
     string private constant SIGNATURE_VERSION = "1";
 
-    // tokenId => price
-    mapping(uint => mapping(uint => uint)) contentPrice;
-
     /// @param rmAddress The address of the deployed role manager
-    constructor(address rmAddress)
+    constructor(
+        address rmAddress
+    )
         ERC721("UDAO Content", "UDAOC")
         EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION)
         RoleController(rmAddress)
@@ -28,8 +27,6 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
     struct ContentVoucher {
         /// @notice The id of the token to be redeemed.
         uint256 tokenId;
-        /// @notice The price of the content
-        uint256[] contentPrice;
         /// @notice The metadata URI to associate with this token.
         string uri;
         /// @notice Address of the redeemer
@@ -61,30 +58,21 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
 
         _mint(voucher.redeemer, voucher.tokenId);
         _setTokenURI(voucher.tokenId, voucher.uri);
-
-        // save the content price
-        uint partLength = voucher.contentPrice.length;
-        for (uint i = 0; i < partLength; i++) {
-            contentPrice[voucher.tokenId][i] = voucher.contentPrice[i];
-        }
     }
 
     /// @notice Returns a hash of the given ContentVoucher, prepared using EIP712 typed data hashing rules.
     /// @param voucher A ContentVoucher to hash.
-    function _hash(ContentVoucher calldata voucher)
-        internal
-        view
-        returns (bytes32)
-    {
+    function _hash(
+        ContentVoucher calldata voucher
+    ) internal view returns (bytes32) {
         return
             _hashTypedDataV4(
                 keccak256(
                     abi.encode(
                         keccak256(
-                            "ContentVoucher(uint256 tokenId,uint256[] contentPrice,string uri,address redeemer,string name,string description)"
+                            "ContentVoucher(uint256 tokenId,string uri,address redeemer,string name,string description)"
                         ),
                         voucher.tokenId,
-                        keccak256(abi.encodePacked(voucher.contentPrice)),
                         keccak256(bytes(voucher.uri)),
                         voucher.redeemer,
                         keccak256(bytes(voucher.name)),
@@ -108,11 +96,9 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
     /// @notice Verifies the signature for a given ContentVoucher, returning the address of the signer.
     /// @dev Will revert if the signature is invalid. Does not verify that the signer is authorized to mint NFTs.
     /// @param voucher A ContentVoucher describing an unminted NFT.
-    function _verify(ContentVoucher calldata voucher)
-        internal
-        view
-        returns (address)
-    {
+    function _verify(
+        ContentVoucher calldata voucher
+    ) internal view returns (address) {
         bytes32 digest = _hash(voucher);
         return ECDSA.recover(digest, voucher.signature);
     }
@@ -121,10 +107,9 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
         _burn(tokenId);
     }
 
-    function _burn(uint256 tokenId)
-        internal
-        override(ERC721, ERC721URIStorage)
-    {
+    function _burn(
+        uint256 tokenId
+    ) internal override(ERC721, ERC721URIStorage) {
         super._burn(tokenId);
     }
 
@@ -136,78 +121,30 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
         /// @notice make sure the transfer is made to a KYCed wallet
         super._beforeTokenTransfer(from, to, tokenId);
         if (to != address(0)) {
-            require(IRM.getKYC(to), "Receiver is not KYCed!");
-            require(!IRM.getBan(to), "Receiver is banned!");
+            require(IRM.isKYCed(to), "Receiver is not KYCed!");
+            require(!IRM.isBanned(to), "Receiver is banned!");
         }
         if (from != address(0)) {
-            require(IRM.getKYC(from), "Sender is not KYCed!");
-            require(!IRM.getBan(from), "Sender is banned!");
+            require(IRM.isKYCed(from), "Sender is not KYCed!");
+            require(!IRM.isBanned(from), "Sender is banned!");
         }
     }
 
-    /// @notice returns the price of a specific content
-    /// @param tokenId the content ID of the token
-    /// @param partId the part ID of the token (microlearning)
-    function getPriceContent(uint tokenId, uint partId)
-        external
-        view
-        returns (uint)
-    {
-        return contentPrice[tokenId][partId];
-    }
-
-    /// @notice allows content owners to set content price
-    /// @param tokenId the content ID of the token
-    /// @param _contentPrice the price to set
-    function setPriceContent(uint tokenId, uint _contentPrice) external {
-        require(ownerOf(tokenId) == msg.sender, "You are not the owner");
-        contentPrice[tokenId][0] = _contentPrice;
-    }
-
-    /// @notice allows content owners to set price for a part in a content (microlearning)
-    /// @param tokenId the content ID of the token
-    /// @param _contentPrice the price to set
-    function setPartialContent(
-        uint tokenId,
-        uint partId,
-        uint _contentPrice
-    ) external {
-        require(ownerOf(tokenId) == msg.sender, "You are not the owner");
-        contentPrice[tokenId][partId] = _contentPrice;
-    }
-
-    /// @notice allows content owners to set price for multiple parts in a content (microlearning)
-    /// @param tokenId the content ID of the token
-    /// @param _contentPrice the price to set
-    function setBatchPartialContent(
-        uint tokenId,
-        uint[] calldata partId,
-        uint[] calldata _contentPrice
-    ) external {
-        require(ownerOf(tokenId) == msg.sender, "You are not the owner");
-        uint partLength = partId.length;
-        for (uint i = 0; i < partLength; i++) {
-            contentPrice[tokenId][partId[i]] = _contentPrice[i];
-        }
+    function exists(uint tokenId) external view returns (bool) {
+        return _exists(tokenId);
     }
 
     // The following functions are overrides required by Solidity.
 
-    function tokenURI(uint256 tokenId)
-        public
-        view
-        override(ERC721, ERC721URIStorage)
-        returns (string memory)
-    {
+    function tokenURI(
+        uint256 tokenId
+    ) public view override(ERC721, ERC721URIStorage) returns (string memory) {
         return super.tokenURI(tokenId);
     }
 
-    function supportsInterface(bytes4 interfaceId)
-        public
-        view
-        override(ERC721)
-        returns (bool)
-    {
+    function supportsInterface(
+        bytes4 interfaceId
+    ) public view override(ERC721) returns (bool) {
         return super.supportsInterface(interfaceId);
     }
 }

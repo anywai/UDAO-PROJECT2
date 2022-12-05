@@ -161,7 +161,7 @@ async function deploy() {
   };
 }
 
-describe("UDAO Project", function () {
+describe("UDAO Cert Contract", function () {
   it("Should deploy", async function () {
     const {
       backend,
@@ -418,7 +418,7 @@ describe("UDAO Project", function () {
     );
   });
 
-  it("Should set certificate for transfer", async function () {
+  it("Should emergency transfer certificate if backend", async function () {
     const {
       backend,
       contentCreator,
@@ -443,6 +443,7 @@ describe("UDAO Project", function () {
       contractUDAOTimelockController,
       contractUDAOGovernor,
     } = await deploy();
+    await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
     const tx = await contractUDAOCertificate.getChainID();
@@ -453,16 +454,253 @@ describe("UDAO Project", function () {
     const voucher = await lazyMinter.createVoucher(
       1,
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
-      contentBuyer.address,
+      contentCreator.address,
       "Content Name",
       "Content Description"
     );
-    await expect(contractUDAOCertificate.connect(contentBuyer).redeem(voucher))
+    await expect(
+      contractUDAOCertificate.connect(contentCreator).redeem(voucher)
+    )
       .to.emit(contractUDAOCertificate, "Transfer") // transfer from null address to minter
       .withArgs(
         "0x0000000000000000000000000000000000000000",
-        contentBuyer.address,
+        contentCreator.address,
         voucher.tokenId
       );
+    await expect(
+      contractUDAOCertificate
+        .connect(backend)
+        .emergencyTransfer(contentCreator.address, contentBuyer.address, 1)
+    )
+      .to.emit(contractUDAOCertificate, "Transfer") // transfer from null address to minter
+      .withArgs(contentCreator.address, contentBuyer.address, voucher.tokenId);
+  });
+
+  it("Should fail emergency transfer certificate if not backend", async function () {
+    const {
+      backend,
+      contentCreator,
+      contentBuyer,
+      validatorCandidate,
+      validator,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+    } = await deploy();
+    await contractRoleManager.setKYC(contentCreator.address, true);
+    await contractRoleManager.setKYC(contentBuyer.address, true);
+
+    const tx = await contractUDAOCertificate.getChainID();
+    const lazyMinter = new LazyUDAOCertMinter({
+      contract: contractUDAOCertificate,
+      signer: backend,
+    });
+    const voucher = await lazyMinter.createVoucher(
+      1,
+      "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
+      contentCreator.address,
+      "Content Name",
+      "Content Description"
+    );
+    await expect(
+      contractUDAOCertificate.connect(contentCreator).redeem(voucher)
+    )
+      .to.emit(contractUDAOCertificate, "Transfer") // transfer from null address to minter
+      .withArgs(
+        "0x0000000000000000000000000000000000000000",
+        contentCreator.address,
+        voucher.tokenId
+      );
+    await expect(
+      contractUDAOCertificate
+        .connect(foundation)
+        .emergencyTransfer(contentCreator.address, contentBuyer.address, 1)
+    ).to.revertedWith(
+      "AccessControl: account " +
+        foundation.address.toLowerCase() +
+        " is missing role 0x25cf2b509f2a7f322675b2a5322b182f44ad2c03ac941a0af17c9b178f5d5d5f"
+    );
+  });
+
+  it("Should fail transfer certificate if not backend", async function () {
+    const {
+      backend,
+      contentCreator,
+      contentBuyer,
+      validatorCandidate,
+      validator,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+    } = await deploy();
+    await contractRoleManager.setKYC(contentCreator.address, true);
+    await contractRoleManager.setKYC(contentBuyer.address, true);
+
+    const tx = await contractUDAOCertificate.getChainID();
+    const lazyMinter = new LazyUDAOCertMinter({
+      contract: contractUDAOCertificate,
+      signer: backend,
+    });
+    const voucher = await lazyMinter.createVoucher(
+      1,
+      "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
+      contentCreator.address,
+      "Content Name",
+      "Content Description"
+    );
+    await expect(
+      contractUDAOCertificate.connect(contentCreator).redeem(voucher)
+    )
+      .to.emit(contractUDAOCertificate, "Transfer") // transfer from null address to minter
+      .withArgs(
+        "0x0000000000000000000000000000000000000000",
+        contentCreator.address,
+        voucher.tokenId
+      );
+    await expect(
+      contractUDAOCertificate
+        .connect(contentCreator)
+        .transferFrom(contentCreator.address, contentBuyer.address, 1)
+    ).to.revertedWith("You don't have right to transfer token");
+  });
+
+  it("Should burn certificate if owner", async function () {
+    const {
+      backend,
+      contentCreator,
+      contentBuyer,
+      validatorCandidate,
+      validator,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+    } = await deploy();
+    await contractRoleManager.setKYC(contentCreator.address, true);
+    await contractRoleManager.setKYC(contentBuyer.address, true);
+
+    const tx = await contractUDAOCertificate.getChainID();
+    const lazyMinter = new LazyUDAOCertMinter({
+      contract: contractUDAOCertificate,
+      signer: backend,
+    });
+    const voucher = await lazyMinter.createVoucher(
+      1,
+      "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
+      contentCreator.address,
+      "Content Name",
+      "Content Description"
+    );
+    await expect(
+      contractUDAOCertificate.connect(contentCreator).redeem(voucher)
+    )
+      .to.emit(contractUDAOCertificate, "Transfer") // transfer from null address to minter
+      .withArgs(
+        "0x0000000000000000000000000000000000000000",
+        contentCreator.address,
+        voucher.tokenId
+      );
+    await expect(contractUDAOCertificate.connect(contentCreator).burn(1))
+      .to.emit(contractUDAOCertificate, "Transfer") // transfer from null address to minter
+      .withArgs(
+        contentCreator.address,
+        "0x0000000000000000000000000000000000000000",
+        voucher.tokenId
+      );
+  });
+
+  it("Should fail burning certificate if not owner", async function () {
+    const {
+      backend,
+      contentCreator,
+      contentBuyer,
+      validatorCandidate,
+      validator,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+    } = await deploy();
+    await contractRoleManager.setKYC(contentCreator.address, true);
+    await contractRoleManager.setKYC(contentBuyer.address, true);
+
+    const tx = await contractUDAOCertificate.getChainID();
+    const lazyMinter = new LazyUDAOCertMinter({
+      contract: contractUDAOCertificate,
+      signer: backend,
+    });
+    const voucher = await lazyMinter.createVoucher(
+      1,
+      "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
+      contentCreator.address,
+      "Content Name",
+      "Content Description"
+    );
+    await expect(
+      contractUDAOCertificate.connect(contentCreator).redeem(voucher)
+    )
+      .to.emit(contractUDAOCertificate, "Transfer") // transfer from null address to minter
+      .withArgs(
+        "0x0000000000000000000000000000000000000000",
+        contentCreator.address,
+        voucher.tokenId
+      );
+    await expect(
+      contractUDAOCertificate.connect(contentBuyer).burn(1)
+    ).to.revertedWith("You are not the owner of the token");
   });
 });
