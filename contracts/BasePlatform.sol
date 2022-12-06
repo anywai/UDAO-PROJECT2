@@ -9,7 +9,7 @@ import "./RoleController.sol";
 
 abstract contract BasePlatform is Pausable, RoleController {
     // content id => content balance
-    mapping(address => uint) instructorBalance;
+    mapping(address => uint) public instructorBalance;
 
     // user address => content id => content owned by the user
     mapping(address => mapping(uint => mapping(uint => bool))) isTokenBought;
@@ -37,17 +37,17 @@ abstract contract BasePlatform is Pausable, RoleController {
 
     // 100000 -> 100% | 5000 -> 5%
     // cut for foundation from coaching
-    uint public coachingFoundationCut;
+    uint public coachingFoundationCut = 4000;
     // cut for governance from coaching
-    uint public coachingGovernancenCut;
+    uint public coachingGovernancenCut = 700;
     // cut for foundation from content
-    uint public contentFoundationCut;
+    uint public contentFoundationCut = 4000;
     // cut for governance from content
-    uint public contentGovernancenCut;
+    uint public contentGovernancenCut = 700;
     // cut for juror pool from content
-    uint public contentJurorCut;
+    uint public contentJurorCut = 100;
     // cut for validator pool from content
-    uint public contentValidatorCut;
+    uint public contentValidatorCut = 200;
 
     address public governanceTreasury;
     address public foundationWallet;
