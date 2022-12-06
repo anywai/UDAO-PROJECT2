@@ -25,13 +25,15 @@ contract ValidationManager is RoleController, EIP712 {
         udaoc = IUDAOC(udaocAddress);
     }
 
-    /// @notice Represents an un-minted NFT, which has not yet been recorded into the blockchain.
-    /// A signed voucher can be redeemed for a real NFT using the redeem function.
     struct ValidationVoucher {
         /// @notice The id of the token to be redeemed.
         uint256 tokenId;
-        /// @notice Address of the redeemer
-        address redeemer;
+        /// @notice Addresses of the validators
+        address[] validators;
+        /// @notice Verdicts of validators
+        bool[] verdicts;
+        /// @notice Final verdict of the validation process
+        bool isValidated;
         /// @notice the EIP-712 signature of all other fields in the ContentVoucher struct.
         bytes signature;
     }
@@ -69,21 +71,6 @@ contract ValidationManager is RoleController, EIP712 {
     mapping(address => uint) public unsuccessfulValidation;
     uint public totalSuccessfulValidation;
 
-    function setAsValidated(ValidationVoucher calldata voucher) external {
-
-        require(udaoc.ownerOf(voucher.tokenId) == voucher.redeemer , "Redeemer is not the owner of the token");
-        // make sure redeemer is redeeming
-        require(voucher.redeemer == msg.sender, "You are not the redeemer");
-        // make sure signature is valid and get the address of the signer
-        address signer = _verify(voucher);
-        require(
-            IRM.hasRole(BACKEND_ROLE, signer),
-            "Signature invalid or unauthorized"
-        );
-        isValidated[voucher.tokenId] = true;
-        emit ValidationEnded(voucher.tokenId, true);
-    }
-
     function setUDAOC(address udaocAddress) external onlyRole(FOUNDATION_ROLE) {
         udaoc = IUDAOC(udaocAddress);
     }
@@ -94,6 +81,33 @@ contract ValidationManager is RoleController, EIP712 {
     {
         staker = IStakingContract(stakerAddress);
     }
+
+    function setAsValidated(ValidationVoucher calldata voucher) external {
+        // make sure signature is valid and get the address of the signer
+        address signer = _verify(voucher);
+        require(
+            IRM.hasRole(BACKEND_ROLE, signer),
+            "Signature invalid or unauthorized"
+        );
+
+        isValidated[voucher.tokenId] = voucher.isValidated;
+        recordScores(voucher.validators, voucher.verdicts, voucher.isValidated);
+
+        emit ValidationEnded(voucher.tokenId, true);
+    }
+
+    function recordScores(address[] calldata _validators, bool[] calldata _verdicts, bool _isValidated) internal {
+        uint totalValidators = _validators.length;
+
+        for (uint i; i < totalValidators; i++) {
+            if (_verdicts[i] == _isValidated) {
+                successfulValidation[_validators[i]] += 1;
+            } else {
+                unsuccessfulValidation[_validators[i]] -= 1;
+            }
+        }
+    }
+
 
     function createValidation(uint tokenId, uint score)
         external
@@ -140,10 +154,12 @@ contract ValidationManager is RoleController, EIP712 {
                 keccak256(
                     abi.encode(
                         keccak256(
-                            "ValidationVoucher(uint256 tokenId,address redeemer)"
+                            "ValidationVoucher(uint256 tokenId,address[] validators,bool[] verdicts,bool isValidated)"
                         ),
                         voucher.tokenId,
-                        voucher.redeemer
+                        keccak256(abi.encodePacked(voucher.validators)),
+                        keccak256(abi.encodePacked(voucher.verdicts)),
+                        voucher.isValidated
                     )
                 )
             );
