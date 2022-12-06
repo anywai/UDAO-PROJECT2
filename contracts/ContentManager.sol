@@ -150,8 +150,6 @@ abstract contract ContentManager is EIP712, BasePlatform {
         );
 
         require(voucher.validUntil >= block.timestamp, "Voucher has expired.");
-        uint256 priceToPay = voucher.priceToPay;
-
         require(udaoc.exists(voucher.tokenId), "Content does not exist!");
         require(!IRM.isBanned(msg.sender), "You are banned");
         require(IRM.isKYCed(msg.sender), "You are not KYCed");
@@ -166,6 +164,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
             IVM.isValidated(voucher.tokenId),
             "Content is not validated yet"
         );
+        uint256 priceToPay = voucher.priceToPay;
         foundationBalance += (priceToPay * coachingFoundationCut) / 100000;
         governanceBalance += (priceToPay * coachingGovernancenCut) / 100000;
         coachingStructs[coachingIndex] = CoachingStruct({
