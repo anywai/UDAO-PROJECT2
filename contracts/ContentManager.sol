@@ -135,6 +135,9 @@ abstract contract ContentManager is EIP712, BasePlatform {
         udao.transferFrom(msg.sender, address(this), priceToPay);
     }
 
+    /// @notice triggered when coaching bought
+    event CoachingBought(address learner, uint tokenId, uint coachingId);
+
     /// @notice Allows users to buy coaching service.
     /// @param voucher voucher for the coaching purchase
     function buyCoaching(CoachingPurchaseVoucher calldata voucher) external {
@@ -178,7 +181,9 @@ abstract contract ContentManager is EIP712, BasePlatform {
                 governanceBalance),
             moneyLockDeadline: block.timestamp + 30 days
         });
+
         coachingIdsOfToken[voucher.tokenId].push(coachingIndex);
+        emit CoachingBought(msg.sender, voucher.tokenId, coachingIndex);
         coachingIndex++;
 
         udao.transferFrom(msg.sender, address(this), priceToPay);
@@ -188,16 +193,18 @@ abstract contract ContentManager is EIP712, BasePlatform {
     /// @notice Allows both parties to finalize coaching service.
     /// @param _coachingId The ID of the coaching service
     function finalizeCoaching(uint _coachingId) external {
+        require(_coachingId < coachingIndex, "Coaching id doesn't exist");
         CoachingStruct storage currentCoaching = coachingStructs[_coachingId];
-
         if (msg.sender == currentCoaching.coach) {
-            if ((block.timestamp > currentCoaching.moneyLockDeadline)) {
-                instructorBalance[currentCoaching.coach] += coachingStructs[
-                    _coachingId
-                ].coachingPaymentAmount;
+            require(
+                (block.timestamp > currentCoaching.moneyLockDeadline),
+                "Deadline is not met yet"
+            );
+            instructorBalance[currentCoaching.coach] += coachingStructs[
+                _coachingId
+            ].coachingPaymentAmount;
 
-                currentCoaching.isDone = 1;
-            }
+            currentCoaching.isDone = 1;
         } else if (msg.sender == currentCoaching.learner) {
             instructorBalance[currentCoaching.coach] += coachingStructs[
                 _coachingId
