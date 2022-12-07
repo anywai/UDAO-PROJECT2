@@ -139,6 +139,7 @@ contract UDAOStaker is RoleController, EIP712 {
         udao.transferFrom(msg.sender, address(this), tokenToExtract);
     }
 
+    /// @notice Allows validators to apply for super validator role
     function applyForSuperValidator() external {
         require(
             !IRM.hasRole(SUPER_VALIDATOR_ROLE, msg.sender),
@@ -162,6 +163,8 @@ contract UDAOStaker is RoleController, EIP712 {
         udao.transferFrom(msg.sender, address(this), superValidatorLockAmount);
     }
 
+    /// @notice Allows validators to add more rights to get validation work
+    /// @param validationAmount Amount of validation work to get
     function addMoreValidation(uint validationAmount)
         external
         onlyRole(VALIDATOR_ROLE)
@@ -180,7 +183,9 @@ contract UDAOStaker is RoleController, EIP712 {
         userInfo.expire = block.timestamp + validatorLockTime;
     }
 
-    function registerValidation() external onlyRole(VALIDATION_MANAGER) {
+    /// @notice Allows validators to accept the validation work
+    function registerValidation() external onlyRoles(validator_roles) {
+        /// @TODO Add voucher
         for (
             int i = int(latestStakeId[_msgSender()]);
             uint(i) < validatorLock[_msgSender()].length;
@@ -227,7 +232,6 @@ contract UDAOStaker is RoleController, EIP712 {
             userInfo.expire = block.timestamp + superValidatorLockTime;
         } else {
             IRM.grantRole(VALIDATOR_ROLE, voucher.redeemer);
-
             userInfo.expire = block.timestamp + validatorLockTime;
         }
         userInfo.amountPerValidation = validationApplication
@@ -237,6 +241,8 @@ contract UDAOStaker is RoleController, EIP712 {
         validationApplication.isFinished = true;
     }
 
+    /// @notice Allows backend to reject role assignment application
+    /// @param _applicant The address of the applicant
     function rejectApplication(address _applicant)
         external
         onlyRole(BACKEND_ROLE)
@@ -302,15 +308,16 @@ contract UDAOStaker is RoleController, EIP712 {
         udao.transfer(msg.sender, withdrawableBalance);
     }
 
+    /// @notice Returns the amount of token a validator could withdraw
     function withdrawableValidatorStake() public view returns (uint) {
-        uint withdrawableBalance;
+        uint withdrawableBalance;  
         uint validatorLockLength = validatorLock[msg.sender].length;
         uint validationLockLength = validationLocks[msg.sender].length;
         ValidationApplication
             storage validationApplication = validatorApplications[
                 validatorApplicationId[msg.sender]
             ];
-
+        
         if (IRM.hasRole(VALIDATOR_ROLE, msg.sender)) {
             for (int j; uint(j) < validatorLockLength; j++) {
                 StakeLock storage lock = validatorLock[msg.sender][uint(j)];
