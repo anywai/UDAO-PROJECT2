@@ -1,0 +1,11 @@
+// SPDX-License-Identifier: MIT
+/// @title Interface of validation manager
+pragma solidity ^0.8.4;
+
+interface IValidationManager {
+    function getIsValidated(uint tokenId) external view returns (bool);
+
+    function getValidatorScore(address _validator) external view returns (uint);
+
+    function getTotalValidationScore() external view returns (uint);
+}

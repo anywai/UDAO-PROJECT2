@@ -4,10 +4,9 @@ pragma solidity ^0.8.4;
 import "./BasePlatform.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
+import "./IVM.sol";
 
-interface IValidationManager {
-    function isValidated(uint tokenId) external view returns (bool);
-}
+
 
 abstract contract ContentManager is EIP712, BasePlatform {
     string private constant SIGNING_DOMAIN = "ContentManager";

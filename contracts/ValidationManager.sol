@@ -6,9 +6,6 @@ import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
 import "./RoleController.sol";
 import "./IUDAOC.sol";
 
-interface IStakingContract {
-    function registerValidation() external;
-}
 
 contract ValidationManager is RoleController, EIP712 {
     string private constant SIGNING_DOMAIN = "ValidationSetter";
@@ -16,7 +13,6 @@ contract ValidationManager is RoleController, EIP712 {
 
     // UDAO (ERC721) Token interface
     IUDAOC udaoc;
-    IStakingContract staker;
 
     constructor(address udaocAddress, address irmAddress)
         EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION)
@@ -30,8 +26,8 @@ contract ValidationManager is RoleController, EIP712 {
         uint256 tokenId;
         /// @notice Addresses of the validators
         address[] validators;
-        /// @notice Verdicts of validators
-        bool[] verdicts;
+        /// @notice Scores validators earned from this validation
+        uint[] validationScore;
         /// @notice Final verdict of the validation process
         bool isValidated;
         /// @notice the EIP-712 signature of all other fields in the ContentVoucher struct.
@@ -45,41 +41,10 @@ contract ValidationManager is RoleController, EIP712 {
     // validator => score
     mapping(address => uint256) public validatorScore;
 
-    struct Validation {
-        uint id;
-        uint tokenId;
-        uint8 validationCount;
-        address[] validators;
-        uint acceptVoteCount;
-        bool finalValidationResult;
-        mapping(address => bool) vote;
-        mapping(address => bool) isVoted;
-        uint resultDate;
-        uint validationScore;
-        uint validatorScore; // successfulValidation * validationScore
-    }
-
-    uint public requiredValidator;
-    uint public minRequiredAcceptVote;
-
-    Validation[] validations;
-
-    mapping(address => uint) validationCount;
-    mapping(address => uint) activeValidation;
-    mapping(address => bool) isInDispute;
-    mapping(address => uint) public successfulValidation;
-    mapping(address => uint) public unsuccessfulValidation;
-    uint public totalSuccessfulValidation;
+    uint public totalSuccessfulValidationScore;
 
     function setUDAOC(address udaocAddress) external onlyRole(FOUNDATION_ROLE) {
         udaoc = IUDAOC(udaocAddress);
-    }
-
-    function setStaker(address stakerAddress)
-        external
-        onlyRole(FOUNDATION_ROLE)
-    {
-        staker = IStakingContract(stakerAddress);
     }
 
     function setAsValidated(ValidationVoucher calldata voucher) external {
@@ -91,51 +56,28 @@ contract ValidationManager is RoleController, EIP712 {
         );
 
         isValidated[voucher.tokenId] = voucher.isValidated;
-        recordScores(voucher.validators, voucher.verdicts, voucher.isValidated);
+        _recordScores(voucher.validators, voucher.validationScore);
 
         emit ValidationEnded(voucher.tokenId, true);
     }
 
-    function recordScores(address[] calldata _validators, bool[] calldata _verdicts, bool _isValidated) internal {
+    function _recordScores(address[] calldata _validators, uint[] calldata _validationScores) internal {
         uint totalValidators = _validators.length;
 
         for (uint i; i < totalValidators; i++) {
-            if (_verdicts[i] == _isValidated) {
-                successfulValidation[_validators[i]] += 1;
-            } else {
-                unsuccessfulValidation[_validators[i]] -= 1;
-            }
+            validatorScore[_validators[i]] += _validationScores[i];
+            totalSuccessfulValidationScore += _validationScores[i];
         }
     }
 
 
-    function createValidation(uint tokenId, uint score)
-        external
-        onlyRole(BACKEND_ROLE)
-    {
-        /// @notice starts new validation for content
-        /// @param tokenId id of the content that will be validated
-        /// @param score validation score of the content
-        Validation storage validation = validations.push();
-        validation.id = validations.length;
-        validation.tokenId = tokenId;
-        validation.validationScore = score;
+    function getValidatorScore(address _validator) external view returns (uint) {
+        return validatorScore[_validator];
     }
 
-    function getValidationResults(address account)
-        external
-        view
-        returns (uint[2] memory results)
-    {
-        /// @notice returns successful and unsuccessful validation count of the account
-        /// @param account wallet address of the account that wanted to be checked
-        results[0] = successfulValidation[account];
-        results[1] = unsuccessfulValidation[account];
-    }
-
-    function getTotalValidation() external view returns (uint) {
+    function getTotalValidationScore() external view returns (uint) {
         /// @notice returns total successful validation count
-        return totalSuccessfulValidation;
+        return totalSuccessfulValidationScore;
     }
 
     function getIsValidated(uint tokenId) external view returns (bool) {
@@ -154,11 +96,11 @@ contract ValidationManager is RoleController, EIP712 {
                 keccak256(
                     abi.encode(
                         keccak256(
-                            "ValidationVoucher(uint256 tokenId,address[] validators,bool[] verdicts,bool isValidated)"
+                            "ValidationVoucher(uint256 tokenId,address[] validators,uint[] validationScore,bool isValidated)"
                         ),
                         voucher.tokenId,
                         keccak256(abi.encodePacked(voucher.validators)),
-                        keccak256(abi.encodePacked(voucher.verdicts)),
+                        keccak256(abi.encodePacked(voucher.validationScore)),
                         voucher.isValidated
                     )
                 )
