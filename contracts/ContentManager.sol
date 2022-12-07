@@ -4,9 +4,6 @@ pragma solidity ^0.8.4;
 import "./BasePlatform.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
-import "./IVM.sol";
-
-
 
 abstract contract ContentManager is EIP712, BasePlatform {
     string private constant SIGNING_DOMAIN = "ContentManager";
@@ -67,12 +64,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
     mapping(uint => CoachingStruct) public coachingStructs;
     uint private coachingIndex;
 
-    IValidationManager public IVM;
-
-    /// @param vmAddress The address of the deployed ValidationManager contract
-    constructor(address vmAddress) EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION) {
-        IVM = IValidationManager(vmAddress);
-    }
+    constructor() EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION) {}
 
     /// @notice Allows seting the address of the valdation manager contract
     /// @param vmAddress The address of the deployed ValidationManager contract
@@ -103,7 +95,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
         address instructor = udaoc.ownerOf(tokenId);
         require(IRM.isKYCed(instructor), "Instructor is not KYCed");
         require(!IRM.isBanned(instructor), "Instructor is banned");
-        require(IVM.isValidated(tokenId), "Content is not validated yet");
+        require(IVM.getIsValidated(tokenId), "Content is not validated yet");
         require(
             isTokenBought[msg.sender][tokenId][0] == false,
             "Full content is already bought"
@@ -160,7 +152,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
             "Coaching is not enabled for this content"
         );
         require(
-            IVM.isValidated(voucher.tokenId),
+            IVM.getIsValidated(voucher.tokenId),
             "Content is not validated yet"
         );
         uint256 priceToPay = voucher.priceToPay;
