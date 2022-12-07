@@ -6,7 +6,6 @@ import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
 import "./RoleController.sol";
 import "./IUDAOC.sol";
 
-
 contract ValidationManager is RoleController, EIP712 {
     string private constant SIGNING_DOMAIN = "ValidationSetter";
     string private constant SIGNATURE_VERSION = "1";
@@ -14,10 +13,10 @@ contract ValidationManager is RoleController, EIP712 {
     // UDAO (ERC721) Token interface
     IUDAOC udaoc;
 
-    constructor(address udaocAddress, address irmAddress)
-        EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION)
-        RoleController(irmAddress)
-    {
+    constructor(
+        address udaocAddress,
+        address irmAddress
+    ) EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION) RoleController(irmAddress) {
         udaoc = IUDAOC(udaocAddress);
     }
 
@@ -38,8 +37,10 @@ contract ValidationManager is RoleController, EIP712 {
 
     // tokenId => result
     mapping(uint => bool) public isValidated;
-    // validator => score
-    mapping(address => uint256) public validatorScore;
+    // validator => round => score
+    mapping(address => mapping(uint256 => uint)) public validatorScorePerRound;
+
+    uint public distributionRound;
 
     uint public totalSuccessfulValidationScore;
 
@@ -61,18 +62,25 @@ contract ValidationManager is RoleController, EIP712 {
         emit ValidationEnded(voucher.tokenId, true);
     }
 
-    function _recordScores(address[] calldata _validators, uint[] calldata _validationScores) internal {
+    function _recordScores(
+        address[] calldata _validators,
+        uint[] calldata _validationScores
+    ) internal {
         uint totalValidators = _validators.length;
 
         for (uint i; i < totalValidators; i++) {
-            validatorScore[_validators[i]] += _validationScores[i];
+            validatorScorePerRound[_validators[i]][
+                distributionRound
+            ] += _validationScores[i];
             totalSuccessfulValidationScore += _validationScores[i];
         }
     }
 
-
-    function getValidatorScore(address _validator) external view returns (uint) {
-        return validatorScore[_validator];
+    function getValidatorScore(
+        address _validator,
+        uint _round
+    ) external view returns (uint) {
+        return validatorScorePerRound[_validator][_round];
     }
 
     function getTotalValidationScore() external view returns (uint) {
@@ -84,13 +92,15 @@ contract ValidationManager is RoleController, EIP712 {
         return isValidated[tokenId];
     }
 
+    function nextRound() external onlyRole(TREASURY_CONTRACT) {
+        distributionRound++;
+    }
+
     /// @notice Returns a hash of the given ContentVoucher, prepared using EIP712 typed data hashing rules.
     /// @param voucher A ContentVoucher to hash.
-    function _hash(ValidationVoucher calldata voucher)
-        internal
-        view
-        returns (bytes32)
-    {
+    function _hash(
+        ValidationVoucher calldata voucher
+    ) internal view returns (bytes32) {
         return
             _hashTypedDataV4(
                 keccak256(
@@ -121,11 +131,9 @@ contract ValidationManager is RoleController, EIP712 {
     /// @notice Verifies the signature for a given ContentVoucher, returning the address of the signer.
     /// @dev Will revert if the signature is invalid. Does not verify that the signer is authorized to mint NFTs.
     /// @param voucher A ContentVoucher describing an unminted NFT.
-    function _verify(ValidationVoucher calldata voucher)
-        internal
-        view
-        returns (address)
-    {
+    function _verify(
+        ValidationVoucher calldata voucher
+    ) internal view returns (address) {
         bytes32 digest = _hash(voucher);
         return ECDSA.recover(digest, voucher.signature);
     }

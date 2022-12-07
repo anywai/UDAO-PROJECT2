@@ -9,7 +9,7 @@ import "./ContentManager.sol";
 contract PlatformTreasury is Pausable, ContentManager {
     string private constant SIGNING_DOMAIN = "ValidationScore";
     string private constant SIGNATURE_VERSION = "1";
-    
+
     /// @param udaoAddress The address of the deployed udao token contract
     /// @param udaocAddress The address of the deployed udao content token
     /// @param rmAddress The address of the deployed role manager
@@ -19,13 +19,7 @@ contract PlatformTreasury is Pausable, ContentManager {
         address udaocAddress,
         address rmAddress,
         address vmAddress
-    )
-        BasePlatform(udaoAddress, udaocAddress, rmAddress)
-        ContentManager(vmAddress)
-    {}
-
-    // validator => score
-    mapping(address => int256) validatorScore;
+    ) BasePlatform(udaoAddress, udaocAddress, rmAddress, vmAddress) {}
 
     /// @notice withdraws governance balance to governance treasury
     function withdrawGovernance() external onlyRole(GOVERNANCE_ROLE) {
@@ -39,15 +33,20 @@ contract PlatformTreasury is Pausable, ContentManager {
 
     /// @notice calculates validator earnings and withdraws calculated earning to validator wallet
     function withdrawValidator() external onlyRoles(validator_roles) {
-        /// @dev results[0] is successful validations
-        uint participation = IVM.getValidatorScore(msg.sender) / IVM.getTotalValidation();
-        uint earning = (participation * validatorBalance) / 100000;
-        udao.transfer(msg.sender, earning);
+        uint claimableRound = lastValidatorClaim[msg.sender];
+        uint withdrawableBalance = 0;
+        uint validatorScore = 0;
+        for (uint i = claimableRound; i < distributionRound; i++) {
+            validatorScore += IVM.getValidatorScore(msg.sender, claimableRound);
+            withdrawableBalance += (payPerValidationScore[claimableRound] *
+                validatorScore);
+        }
+        lastValidatorClaim[msg.sender] = distributionRound;
+        udao.transfer(msg.sender, withdrawableBalance);
     }
 
     /// @notice Allows instructers to withdraw individually.
     function withdrawInstructor() external {
         udao.transfer(msg.sender, instructorBalance[msg.sender]);
     }
-
 }

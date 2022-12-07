@@ -5,7 +5,12 @@ pragma solidity ^0.8.4;
 interface IValidationManager {
     function getIsValidated(uint tokenId) external view returns (bool);
 
-    function getValidatorScore(address _validator) external view returns (uint);
+    function getValidatorScore(
+        address _validator,
+        uint _round
+    ) external view returns (uint);
 
     function getTotalValidationScore() external view returns (uint);
+
+    function nextRound() external;
 }
