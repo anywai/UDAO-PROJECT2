@@ -24,33 +24,6 @@ contract JurorManager is RoleController, EIP712 {
     {
         udaoc = IUDAOC(udaocAddress);
     }
-
-    /// @notice Represents an un-minted NFT, which has not yet been recorded into the blockchain.
-    /// A signed voucher can be redeemed for a real NFT using the redeem function.
-    struct CaseVoucher {
-        /// @notice Address of the redeemer
-        address redeemer;
-        /// @notice the EIP-712 signature of all other fields in the ContentVoucher struct.
-        bytes signature;
-    }
-
-    // juror => score
-    mapping(address => uint256) jurorScore;
-
-    uint public totalJurorScore;
-
-    function addJurorPoint(CaseVoucher calldata voucher) external {
-        // make sure redeemer is redeeming
-        require(voucher.redeemer == msg.sender, "You are not the redeemer");
-        // make sure signature is valid and get the address of the signer
-        address signer = _verify(voucher);
-        require(
-            IRM.hasRole(BACKEND_ROLE, signer),
-            "Signature invalid or unauthorized"
-        );
-        jurorScore[voucher.redeemer]++;
-    }
-
     function setUDAOC(address udaocAddress) external onlyRole(FOUNDATION_ROLE) {
         udaoc = IUDAOC(udaocAddress);
     }
@@ -60,6 +33,54 @@ contract JurorManager is RoleController, EIP712 {
         onlyRole(FOUNDATION_ROLE)
     {
         staker = IStakingContract(stakerAddress);
+    }
+
+    struct CaseVoucher {
+        /// @notice Address of the redeemer
+        address redeemer;
+        /// @notice contract that will be modified
+        address contractAddress;
+        /// @notice 
+        address[] jurors;
+        /// @notice function that will be run
+        bytes _data;
+        /// @notice the EIP-712 signature of all other fields in the ContentVoucher struct.
+        bytes signature;
+    }
+
+    // juror => score
+    mapping(address => uint256) jurorScore;
+
+    uint public totalJurorScore;
+
+    function endDispute(CaseVoucher calldata voucher) external {
+        // make sure redeemer is redeeming
+        require(voucher.redeemer == msg.sender, "You are not the redeemer");
+        // make sure signature is valid and get the address of the signer
+        address signer = _verify(voucher);
+        require(
+            IRM.hasRole(BACKEND_ROLE, signer),
+            "Signature invalid or unauthorized"
+        );
+        
+        // Call a function from a contract
+        if(voucher.contractAddress != address(0x0)) {
+            (bool success, ) = voucher.contractAddress.delegatecall(voucher._data); 
+            /// _contract.delegatecall(abi.encodeWithSignature("setVars(uint256)", _num)
+            require(success, "Delegate call has failed");
+        }
+        _addJurorScores(voucher.jurors);
+    }
+    
+    /// @notice Adds scores of jurors that took a case
+    function _addJurorScores(address[] calldata _jurors) internal {
+        uint totalJurors = _jurors.length;
+
+        for(uint i; i < totalJurors; i++){
+            jurorScore[_jurors[i]]++;
+            // TODO This needs to be binded to round system
+            totalJurorScore++;
+        }
     }
 
     function getTotalJurorScore() external view returns (uint) {
