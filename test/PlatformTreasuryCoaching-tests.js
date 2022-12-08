@@ -129,10 +129,7 @@ async function deploy() {
     contractValidationManager.address
   );
 
-  // add staking contract to validation manager
-  await contractValidationManager
-    .connect(foundation)
-    .setStaker(contractUDAOStaker.address);
+
   // add staking contract to udao-vp
   await contractUDAOVp
     .connect(foundation)
