@@ -115,7 +115,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
 
         foundationBalance += (priceToPay * contentFoundationCut) / 100000;
         governanceBalance += (priceToPay * contentGovernancenCut) / 100000;
-        validatorBalance += (priceToPay * validatorBalance) / 100000;
+        validatorBalanceForRound += (priceToPay * validatorBalance) / 100000;
         jurorBalance += (priceToPay * contentJurorCut) / 100000;
         instructorBalance[instructor] +=
             priceToPay -
