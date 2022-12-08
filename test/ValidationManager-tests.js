@@ -126,7 +126,6 @@ async function deploy() {
     contractValidationManager.address
   );
 
-
   // add staking contract to udao-vp
   await contractUDAOVp
     .connect(foundation)
@@ -240,7 +239,9 @@ describe("Validation Manageer Contract", function () {
     });
     const voucher = await lazyValidation.createVoucher(
       1,
-      contentCreator.address
+      [validator.address],
+      [10],
+      true
     );
     await expect(
       contractValidationManager.connect(contentCreator).setAsValidated(voucher)
@@ -283,71 +284,12 @@ describe("Validation Manageer Contract", function () {
     });
     const voucher = await lazyValidation.createVoucher(
       1,
-      contentCreator.address
+      [validator.address],
+      [10],
+      true
     );
     await expect(
       contractValidationManager.connect(contentCreator).setAsValidated(voucher)
     ).to.revertedWith("ERC721: invalid token ID");
-  });
-
-  it("Should not validate content if redeemer is not owner of token", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      validatorCandidate,
-      validator,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractValidationManager,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-    } = await deploy();
-    await contractRoleManager.setKYC(contentCreator.address, true);
-
-    const tx_mint = await contractUDAOContent.getChainID();
-    const lazyMinter = new LazyMinter({
-      contract: contractUDAOContent,
-      signer: backend,
-    });
-    const udaoc_voucher = await lazyMinter.createVoucher(
-      1,
-      "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
-      contentCreator.address,
-      true,
-      "Content Name",
-      "Content Description"
-    );
-    await expect(
-      contractUDAOContent.connect(contentCreator).redeem(udaoc_voucher)
-    )
-      .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
-      .withArgs(
-        "0x0000000000000000000000000000000000000000",
-        contentCreator.address,
-        udaoc_voucher.tokenId
-      );
-
-    const tx = await contractValidationManager.getChainID();
-    const lazyValidation = new LazyValidation({
-      contract: contractValidationManager,
-      signer: backend,
-    });
-    const voucher = await lazyValidation.createVoucher(1, contentBuyer.address);
-    await expect(
-      contractValidationManager.connect(contentBuyer).setAsValidated(voucher)
-    ).to.revertedWith("Redeemer is not the owner of the token");
   });
 });

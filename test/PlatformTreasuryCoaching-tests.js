@@ -129,7 +129,6 @@ async function deploy() {
     contractValidationManager.address
   );
 
-
   // add staking contract to udao-vp
   await contractUDAOVp
     .connect(foundation)
@@ -222,8 +221,11 @@ describe("Platform Treasury Contract - Coaching", function () {
     });
     const voucher = await lazyValidation.createVoucher(
       1,
-      contentCreator.address
+      [validator.address],
+      [10],
+      true
     );
+
     await expect(
       contractValidationManager.connect(contentCreator).setAsValidated(voucher)
     )
@@ -321,7 +323,9 @@ describe("Platform Treasury Contract - Coaching", function () {
     });
     const voucher = await lazyValidation.createVoucher(
       1,
-      contentCreator.address
+      [validator.address],
+      [10],
+      true
     );
     await expect(
       contractValidationManager.connect(contentCreator).setAsValidated(voucher)
@@ -419,7 +423,9 @@ describe("Platform Treasury Contract - Coaching", function () {
     });
     const voucher = await lazyValidation.createVoucher(
       1,
-      contentCreator.address
+      [validator.address],
+      [10],
+      true
     );
     await expect(
       contractValidationManager.connect(contentCreator).setAsValidated(voucher)
@@ -518,7 +524,9 @@ describe("Platform Treasury Contract - Coaching", function () {
     });
     const voucher = await lazyValidation.createVoucher(
       1,
-      contentCreator.address
+      [validator.address],
+      [10],
+      true
     );
     await expect(
       contractValidationManager.connect(contentCreator).setAsValidated(voucher)
@@ -617,7 +625,9 @@ describe("Platform Treasury Contract - Coaching", function () {
     });
     const voucher = await lazyValidation.createVoucher(
       1,
-      contentCreator.address
+      [validator.address],
+      [10],
+      true
     );
     await expect(
       contractValidationManager.connect(contentCreator).setAsValidated(voucher)
@@ -798,7 +808,9 @@ describe("Platform Treasury Contract - Coaching", function () {
     });
     const voucher = await lazyValidation.createVoucher(
       1,
-      contentCreator.address
+      [validator.address],
+      [10],
+      true
     );
     await expect(
       contractValidationManager.connect(contentCreator).setAsValidated(voucher)
@@ -899,7 +911,9 @@ describe("Platform Treasury Contract - Coaching", function () {
     });
     const voucher = await lazyValidation.createVoucher(
       1,
-      contentCreator.address
+      [validator.address],
+      [10],
+      true
     );
     await expect(
       contractValidationManager.connect(contentCreator).setAsValidated(voucher)
@@ -1001,7 +1015,9 @@ describe("Platform Treasury Contract - Coaching", function () {
     });
     const voucher = await lazyValidation.createVoucher(
       1,
-      contentCreator.address
+      [validator.address],
+      [10],
+      true
     );
     await expect(
       contractValidationManager.connect(contentCreator).setAsValidated(voucher)
@@ -1104,7 +1120,9 @@ describe("Platform Treasury Contract - Coaching", function () {
     });
     const voucher = await lazyValidation.createVoucher(
       1,
-      contentCreator.address
+      [validator.address],
+      [10],
+      true
     );
     await expect(
       contractValidationManager.connect(contentCreator).setAsValidated(voucher)
@@ -1205,7 +1223,9 @@ describe("Platform Treasury Contract - Coaching", function () {
     });
     const voucher = await lazyValidation.createVoucher(
       1,
-      contentCreator.address
+      [validator.address],
+      [10],
+      true
     );
     await expect(
       contractValidationManager.connect(contentCreator).setAsValidated(voucher)
@@ -1309,7 +1329,9 @@ describe("Platform Treasury Contract - Coaching", function () {
     });
     const voucher = await lazyValidation.createVoucher(
       1,
-      contentCreator.address
+      [validator.address],
+      [10],
+      true
     );
     await expect(
       contractValidationManager.connect(contentCreator).setAsValidated(voucher)
@@ -1414,7 +1436,9 @@ describe("Platform Treasury Contract - Coaching", function () {
     });
     const voucher = await lazyValidation.createVoucher(
       1,
-      contentCreator.address
+      [validator.address],
+      [10],
+      true
     );
     await expect(
       contractValidationManager.connect(contentCreator).setAsValidated(voucher)
@@ -1517,7 +1541,9 @@ describe("Platform Treasury Contract - Coaching", function () {
     });
     const voucher = await lazyValidation.createVoucher(
       1,
-      contentCreator.address
+      [validator.address],
+      [10],
+      true
     );
     await expect(
       contractValidationManager.connect(contentCreator).setAsValidated(voucher)
@@ -1620,7 +1646,9 @@ describe("Platform Treasury Contract - Coaching", function () {
     });
     const voucher = await lazyValidation.createVoucher(
       1,
-      contentCreator.address
+      [validator.address],
+      [10],
+      true
     );
     await expect(
       contractValidationManager.connect(contentCreator).setAsValidated(voucher)
