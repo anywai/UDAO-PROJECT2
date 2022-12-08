@@ -35,6 +35,7 @@ contract JurorManager is RoleController, EIP712 {
         staker = IStakingContract(stakerAddress);
     }
 
+    // TODO Voucher hash function requires rework
     struct CaseVoucher {
         /// @notice Address of the redeemer
         address redeemer;

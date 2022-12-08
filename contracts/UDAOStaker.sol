@@ -20,13 +20,16 @@ contract UDAOStaker is RoleController, EIP712 {
     address platformTreasuryAddress;
 
     uint public payablePerValidation;
+    uint public payablePerJuror;
+    /// @notice the required duration to be a validator
+    uint public jurorLockTime = 30 days;
     /// @notice the required duration to be a validator
     uint public validatorLockTime = 90 days;
     /// @notice the required duration to be a super validator
     uint public superValidatorLockTime = 180 days;
     /// @notice Amount to deduct from super validator application
     uint superValidatorLockAmount = 150 ether;
-
+    
     struct StakeLock {
         uint256 maxValidationAmount;
         uint256 doneValidationAmount;
@@ -42,9 +45,18 @@ contract UDAOStaker is RoleController, EIP712 {
         uint256 expireDate;
     }
 
+    struct JurorStakeLock {
+        uint256 maxValidationAmount;
+        uint256 doneValidationAmount;
+        uint256 amountPerValidation;
+        uint256 expire;
+    }
+
+
     mapping(address => uint) validationBalanceOf;
     mapping(address => StakeLock[]) validatorLock;
     mapping(address => ValidationLock[]) validationLocks;
+    mapping(address => JurorStakeLock[]) jurorLocks;
     mapping(address => uint) latestStakeId;
     mapping(address => uint) latestValidationLockId;
 
@@ -70,7 +82,19 @@ contract UDAOStaker is RoleController, EIP712 {
 
     ValidationApplication[] public validatorApplications;
     mapping(address => uint) validatorApplicationId;
-    uint private applicationIndex;
+    uint private validationApplicationIndex;
+
+    struct JurorApplication {
+        address applicant;
+        bool isFinished;
+        uint256 maxCaseAmount;
+        uint256 amountPerCase;
+        uint256 expire;
+    }
+
+    JurorApplication[] public jurorApplications;
+    mapping(address => uint) jurorApplicationId;
+    uint private caseApplicationIndex;
 
     uint public totalVotingPower;
 
@@ -110,6 +134,8 @@ contract UDAOStaker is RoleController, EIP712 {
     struct RoleVoucher {
         /// @notice Address of the redeemer
         address redeemer;
+        /// @notice 0 validator, 1 juror
+        uint roleId;
         /// @notice the EIP-712 signature of all other fields in the ContentVoucher struct.
         bytes signature;
     }
@@ -130,11 +156,11 @@ contract UDAOStaker is RoleController, EIP712 {
         ValidationApplication
             storage validationApplication = validatorApplications.push();
         validationApplication.applicant = msg.sender;
-        validatorApplicationId[msg.sender] = applicationIndex;
+        validatorApplicationId[msg.sender] = validationApplicationIndex;
         validationApplication.amountPerValidation += payablePerValidation;
         validationApplication.maxValidationAmount += validationAmount;
         validationApplication.expire = block.timestamp + validatorLockTime;
-        applicationIndex++;
+        validationApplicationIndex++;
         validationBalanceOf[msg.sender] += tokenToExtract;
         udao.transferFrom(msg.sender, address(this), tokenToExtract);
     }
@@ -154,8 +180,8 @@ contract UDAOStaker is RoleController, EIP712 {
             storage validationApplication = validatorApplications.push();
         validationApplication.applicant = msg.sender;
         validationApplication.isSuper = true;
-        validatorApplicationId[msg.sender] = applicationIndex;
-        applicationIndex++;
+        validatorApplicationId[msg.sender] = validationApplicationIndex;
+        validationApplicationIndex++;
         validationApplication.amountPerValidation = superValidatorLockAmount;
         validationApplication.maxValidationAmount = 2**256 - 1;
         validationApplication.expire = block.timestamp + superValidatorLockTime;
@@ -208,7 +234,24 @@ contract UDAOStaker is RoleController, EIP712 {
         revert("You don't have empty validation slots");
     }
 
-    /// @notice Validators can use this function and assign validator role to themselves
+    /// @notice allows users to apply for juror role
+    /// @param caseAmount The amount of cases that a juror wants to do
+    function applyForJuror(uint caseAmount) external {
+        uint tokenToExtract = payablePerJuror* caseAmount;
+
+        JurorApplication
+            storage jurorApplication = jurorApplications.push();
+        jurorApplication.applicant = msg.sender;
+        jurorApplicationId[msg.sender] = caseApplicationIndex;
+        jurorApplication.amountPerCase= payablePerJuror;
+        jurorApplication.maxCaseAmount += caseAmount;
+        jurorApplication.expire = block.timestamp + jurorLockTime;
+        caseApplicationIndex++;
+        validationBalanceOf[msg.sender] += tokenToExtract;
+        udao.transferFrom(msg.sender, address(this), tokenToExtract);
+    }
+
+    /// @notice Users can use this function and assign validator or juror roles to themselves
     function getApproved(RoleVoucher calldata voucher) external {
         // make sure redeemer is redeeming
         require(voucher.redeemer == msg.sender, "You are not the redeemer");
@@ -221,7 +264,8 @@ contract UDAOStaker is RoleController, EIP712 {
             "Signature invalid or unauthorized"
         );
 
-        ValidationApplication
+        if(voucher.roleId == 0) {
+                    ValidationApplication
             storage validationApplication = validatorApplications[
                 validatorApplicationId[voucher.redeemer]
             ];
@@ -239,6 +283,27 @@ contract UDAOStaker is RoleController, EIP712 {
         userInfo.maxValidationAmount = validationApplication
             .maxValidationAmount;
         validationApplication.isFinished = true;
+        }
+        else if(voucher.roleId == 1) {
+            require(udaovp.balanceOf(voucher.redeemer) > 0, "You are not governance member");
+
+
+                                JurorApplication
+            storage jurorApplication = jurorApplications[
+                jurorApplicationId[voucher.redeemer]
+            ];
+        JurorStakeLock storage userInfo = jurorLocks[msg.sender].push();
+
+            IRM.grantRole(JUROR_ROLE, voucher.redeemer);
+            userInfo.expire = block.timestamp + validatorLockTime;
+        
+        userInfo.amountPerValidation = jurorApplication
+            .amountPerCase;
+        userInfo.maxValidationAmount = jurorApplication
+            .maxCaseAmount;
+        jurorApplication.isFinished = true;
+        }
+        else {revert("Undefined role ID!");}
     }
 
     /// @notice Allows backend to reject role assignment application
