@@ -55,7 +55,7 @@ contract ValidationManager is RoleController, EIP712 {
             IRM.hasRole(BACKEND_ROLE, signer),
             "Signature invalid or unauthorized"
         );
-
+        require(udaoc.exists(voucher.tokenId), "ERC721: invalid token ID");
         isValidated[voucher.tokenId] = voucher.isValidated;
         _recordScores(voucher.validators, voucher.validationScore);
 
@@ -106,7 +106,7 @@ contract ValidationManager is RoleController, EIP712 {
                 keccak256(
                     abi.encode(
                         keccak256(
-                            "ValidationVoucher(uint256 tokenId,address[] validators,uint[] validationScore,bool isValidated)"
+                            "ValidationVoucher(uint256 tokenId,address[] validators,uint256[] validationScore,bool isValidated)"
                         ),
                         voucher.tokenId,
                         keccak256(abi.encodePacked(voucher.validators)),
