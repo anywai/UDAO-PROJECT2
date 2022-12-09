@@ -5,10 +5,6 @@ import "./BasePlatform.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
 
-interface IValidationManager {
-    function isValidated(uint tokenId) external view returns (bool);
-}
-
 abstract contract ContentManager is EIP712, BasePlatform {
     string private constant SIGNING_DOMAIN = "ContentManager";
     string private constant SIGNATURE_VERSION = "1";
@@ -47,10 +43,8 @@ abstract contract ContentManager is EIP712, BasePlatform {
 
     // wallet => content token Ids
     mapping(address => uint[][]) ownedContents;
-    // tokenId => buyable
-    mapping(uint => bool) coachingEnabled;
     // tokenId => student addresses
-    mapping(uint => address[]) studentList;
+    mapping(uint => address[]) public studentList;
 
     struct CoachingStruct {
         address coach;
@@ -70,12 +64,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
     mapping(uint => CoachingStruct) public coachingStructs;
     uint private coachingIndex;
 
-    IValidationManager public IVM;
-
-    /// @param vmAddress The address of the deployed ValidationManager contract
-    constructor(address vmAddress) EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION) {
-        IVM = IValidationManager(vmAddress);
-    }
+    constructor() EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION) {}
 
     /// @notice Allows seting the address of the valdation manager contract
     /// @param vmAddress The address of the deployed ValidationManager contract
@@ -106,7 +95,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
         address instructor = udaoc.ownerOf(tokenId);
         require(IRM.isKYCed(instructor), "Instructor is not KYCed");
         require(!IRM.isBanned(instructor), "Instructor is banned");
-        require(IVM.isValidated(tokenId), "Content is not validated yet");
+        require(IVM.getIsValidated(tokenId), "Content is not validated yet");
         require(
             isTokenBought[msg.sender][tokenId][0] == false,
             "Full content is already bought"
@@ -126,7 +115,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
 
         foundationBalance += (priceToPay * contentFoundationCut) / 100000;
         governanceBalance += (priceToPay * contentGovernancenCut) / 100000;
-        validatorBalance += (priceToPay * validatorBalance) / 100000;
+        validatorBalanceForRound += (priceToPay * validatorBalance) / 100000;
         jurorBalance += (priceToPay * contentJurorCut) / 100000;
         instructorBalance[instructor] +=
             priceToPay -
@@ -137,27 +126,36 @@ abstract contract ContentManager is EIP712, BasePlatform {
         udao.transferFrom(msg.sender, address(this), priceToPay);
     }
 
+    /// @notice triggered when coaching bought
+    event CoachingBought(address learner, uint tokenId, uint coachingId);
+
     /// @notice Allows users to buy coaching service.
     /// @param voucher voucher for the coaching purchase
     function buyCoaching(CoachingPurchaseVoucher calldata voucher) external {
         // make sure signature is valid and get the address of the signer
         address signer = _verifyCoaching(voucher);
+
         require(
             IRM.hasRole(BACKEND_ROLE, signer),
             "Signature invalid or unauthorized"
         );
 
         require(voucher.validUntil >= block.timestamp, "Voucher has expired.");
-        uint256 priceToPay = voucher.priceToPay;
+        require(udaoc.exists(voucher.tokenId), "Content does not exist!");
+        require(!IRM.isBanned(msg.sender), "You are banned");
         require(IRM.isKYCed(msg.sender), "You are not KYCed");
         address instructor = udaoc.ownerOf(voucher.tokenId);
         require(IRM.isKYCed(instructor), "Instructor is not KYCed");
         require(!IRM.isBanned(instructor), "Instructor is banned");
         require(
-            IVM.isValidated(voucher.tokenId),
+            udaoc.isCoachingEnabled(voucher.tokenId),
+            "Coaching is not enabled for this content"
+        );
+        require(
+            IVM.getIsValidated(voucher.tokenId),
             "Content is not validated yet"
         );
-
+        uint256 priceToPay = voucher.priceToPay;
         foundationBalance += (priceToPay * coachingFoundationCut) / 100000;
         governanceBalance += (priceToPay * coachingGovernancenCut) / 100000;
         coachingStructs[coachingIndex] = CoachingStruct({
@@ -173,7 +171,9 @@ abstract contract ContentManager is EIP712, BasePlatform {
                 governanceBalance),
             moneyLockDeadline: block.timestamp + 30 days
         });
+
         coachingIdsOfToken[voucher.tokenId].push(coachingIndex);
+        emit CoachingBought(msg.sender, voucher.tokenId, coachingIndex);
         coachingIndex++;
 
         udao.transferFrom(msg.sender, address(this), priceToPay);
@@ -183,16 +183,18 @@ abstract contract ContentManager is EIP712, BasePlatform {
     /// @notice Allows both parties to finalize coaching service.
     /// @param _coachingId The ID of the coaching service
     function finalizeCoaching(uint _coachingId) external {
+        require(_coachingId < coachingIndex, "Coaching id doesn't exist");
         CoachingStruct storage currentCoaching = coachingStructs[_coachingId];
-
         if (msg.sender == currentCoaching.coach) {
-            if ((block.timestamp > currentCoaching.moneyLockDeadline)) {
-                instructorBalance[currentCoaching.coach] += coachingStructs[
-                    _coachingId
-                ].coachingPaymentAmount;
+            require(
+                (block.timestamp > currentCoaching.moneyLockDeadline),
+                "Deadline is not met yet"
+            );
+            instructorBalance[currentCoaching.coach] += coachingStructs[
+                _coachingId
+            ].coachingPaymentAmount;
 
-                currentCoaching.isDone = 1;
-            }
+            currentCoaching.isDone = 1;
         } else if (msg.sender == currentCoaching.learner) {
             instructorBalance[currentCoaching.coach] += coachingStructs[
                 _coachingId
@@ -334,32 +336,18 @@ abstract contract ContentManager is EIP712, BasePlatform {
         return coachingIdsOfToken[_tokenId];
     }
 
-    /// @notice Allows instructers' to enable coaching for a specific content
-    /// @param tokenId The content id
-    function enableCoaching(uint tokenId) external {
-        require(
-            udaoc.ownerOf(tokenId) == msg.sender,
-            "You are not the owner of token"
-        );
-        coachingEnabled[tokenId] = true;
-    }
-
-    /// @notice Allows instructers' to disable coaching for a specific content
-    /// @param tokenId tokenId of the content that will be not coached
-    function disableCoaching(uint tokenId) external {
-        require(
-            udaoc.ownerOf(tokenId) == msg.sender,
-            "You are not the owner of token"
-        );
-        coachingEnabled[tokenId] = false;
-    }
-
     /// @notice returns owned contents of the _owner
     /// @param _owner address of the user that will owned contents be returned
     function getOwnedContent(
         address _owner
     ) public view returns (uint[][] memory) {
         return (ownedContents[_owner]);
+    }
+
+    function getStudentListOfToken(
+        uint tokenId
+    ) public view returns (address[] memory) {
+        return studentList[tokenId];
     }
 
     /// @notice Returns a hash of the given PurchaseVoucher, prepared using EIP712 typed data hashing rules.

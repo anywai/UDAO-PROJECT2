@@ -6,32 +6,29 @@ import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
 import "./RoleController.sol";
 import "./IUDAOC.sol";
 
-interface IStakingContract {
-    function registerValidation() external;
-}
-
 contract ValidationManager is RoleController, EIP712 {
     string private constant SIGNING_DOMAIN = "ValidationSetter";
     string private constant SIGNATURE_VERSION = "1";
 
     // UDAO (ERC721) Token interface
     IUDAOC udaoc;
-    IStakingContract staker;
 
-    constructor(address udaocAddress, address irmAddress)
-        EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION)
-        RoleController(irmAddress)
-    {
+    constructor(
+        address udaocAddress,
+        address irmAddress
+    ) EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION) RoleController(irmAddress) {
         udaoc = IUDAOC(udaocAddress);
     }
 
-    /// @notice Represents an un-minted NFT, which has not yet been recorded into the blockchain.
-    /// A signed voucher can be redeemed for a real NFT using the redeem function.
     struct ValidationVoucher {
         /// @notice The id of the token to be redeemed.
         uint256 tokenId;
-        /// @notice Address of the redeemer
-        address redeemer;
+        /// @notice Addresses of the validators
+        address[] validators;
+        /// @notice Scores validators earned from this validation
+        uint[] validationScore;
+        /// @notice Final verdict of the validation process
+        bool isValidated;
         /// @notice the EIP-712 signature of all other fields in the ContentVoucher struct.
         bytes signature;
     }
@@ -40,110 +37,81 @@ contract ValidationManager is RoleController, EIP712 {
 
     // tokenId => result
     mapping(uint => bool) public isValidated;
-    // validator => score
-    mapping(address => uint256) public validatorScore;
+    // validator => round => score
+    mapping(address => mapping(uint256 => uint)) public validatorScorePerRound;
 
-    struct Validation {
-        uint id;
-        uint tokenId;
-        uint8 validationCount;
-        address[] validators;
-        uint acceptVoteCount;
-        bool finalValidationResult;
-        mapping(address => bool) vote;
-        mapping(address => bool) isVoted;
-        uint resultDate;
-        uint validationScore;
-        uint validatorScore; // successfulValidation * validationScore
+    uint public distributionRound;
+
+    uint public totalSuccessfulValidationScore;
+
+    function setUDAOC(address udaocAddress) external onlyRole(FOUNDATION_ROLE) {
+        udaoc = IUDAOC(udaocAddress);
     }
 
-    uint public requiredValidator;
-    uint public minRequiredAcceptVote;
-
-    Validation[] validations;
-
-    mapping(address => uint) validationCount;
-    mapping(address => uint) activeValidation;
-    mapping(address => bool) isInDispute;
-    mapping(address => uint) public successfulValidation;
-    mapping(address => uint) public unsuccessfulValidation;
-    uint public totalSuccessfulValidation;
-
     function setAsValidated(ValidationVoucher calldata voucher) external {
-
-        require(udaoc.ownerOf(voucher.tokenId) == voucher.redeemer , "Redeemer is not the owner of the token");
-        // make sure redeemer is redeeming
-        require(voucher.redeemer == msg.sender, "You are not the redeemer");
         // make sure signature is valid and get the address of the signer
         address signer = _verify(voucher);
         require(
             IRM.hasRole(BACKEND_ROLE, signer),
             "Signature invalid or unauthorized"
         );
-        isValidated[voucher.tokenId] = true;
+        require(udaoc.exists(voucher.tokenId), "ERC721: invalid token ID");
+        isValidated[voucher.tokenId] = voucher.isValidated;
+        _recordScores(voucher.validators, voucher.validationScore);
+
         emit ValidationEnded(voucher.tokenId, true);
     }
 
-    function setUDAOC(address udaocAddress) external onlyRole(FOUNDATION_ROLE) {
-        udaoc = IUDAOC(udaocAddress);
+    function _recordScores(
+        address[] calldata _validators,
+        uint[] calldata _validationScores
+    ) internal {
+        uint totalValidators = _validators.length;
+
+        for (uint i; i < totalValidators; i++) {
+            validatorScorePerRound[_validators[i]][
+                distributionRound
+            ] += _validationScores[i];
+            totalSuccessfulValidationScore += _validationScores[i];
+        }
     }
 
-    function setStaker(address stakerAddress)
-        external
-        onlyRole(FOUNDATION_ROLE)
-    {
-        staker = IStakingContract(stakerAddress);
+    function getValidatorScore(
+        address _validator,
+        uint _round
+    ) external view returns (uint) {
+        return validatorScorePerRound[_validator][_round];
     }
 
-    function createValidation(uint tokenId, uint score)
-        external
-        onlyRole(BACKEND_ROLE)
-    {
-        /// @notice starts new validation for content
-        /// @param tokenId id of the content that will be validated
-        /// @param score validation score of the content
-        Validation storage validation = validations.push();
-        validation.id = validations.length;
-        validation.tokenId = tokenId;
-        validation.validationScore = score;
-    }
-
-    function getValidationResults(address account)
-        external
-        view
-        returns (uint[2] memory results)
-    {
-        /// @notice returns successful and unsuccessful validation count of the account
-        /// @param account wallet address of the account that wanted to be checked
-        results[0] = successfulValidation[account];
-        results[1] = unsuccessfulValidation[account];
-    }
-
-    function getTotalValidation() external view returns (uint) {
+    function getTotalValidationScore() external view returns (uint) {
         /// @notice returns total successful validation count
-        return totalSuccessfulValidation;
+        return totalSuccessfulValidationScore;
     }
 
     function getIsValidated(uint tokenId) external view returns (bool) {
         return isValidated[tokenId];
     }
 
+    function nextRound() external onlyRole(TREASURY_CONTRACT) {
+        distributionRound++;
+    }
+
     /// @notice Returns a hash of the given ContentVoucher, prepared using EIP712 typed data hashing rules.
     /// @param voucher A ContentVoucher to hash.
-    function _hash(ValidationVoucher calldata voucher)
-        internal
-        view
-        returns (bytes32)
-    {
+    function _hash(
+        ValidationVoucher calldata voucher
+    ) internal view returns (bytes32) {
         return
             _hashTypedDataV4(
                 keccak256(
                     abi.encode(
                         keccak256(
-                            "ValidationVoucher(uint256 tokenId,address redeemer)"
+                            "ValidationVoucher(uint256 tokenId,address[] validators,uint256[] validationScore,bool isValidated)"
                         ),
                         voucher.tokenId,
-                        voucher.redeemer
+                        keccak256(abi.encodePacked(voucher.validators)),
+                        keccak256(abi.encodePacked(voucher.validationScore)),
+                        voucher.isValidated
                     )
                 )
             );
@@ -163,11 +131,9 @@ contract ValidationManager is RoleController, EIP712 {
     /// @notice Verifies the signature for a given ContentVoucher, returning the address of the signer.
     /// @dev Will revert if the signature is invalid. Does not verify that the signer is authorized to mint NFTs.
     /// @param voucher A ContentVoucher describing an unminted NFT.
-    function _verify(ValidationVoucher calldata voucher)
-        internal
-        view
-        returns (address)
-    {
+    function _verify(
+        ValidationVoucher calldata voucher
+    ) internal view returns (address) {
         bytes32 digest = _hash(voucher);
         return ECDSA.recover(digest, voucher.signature);
     }

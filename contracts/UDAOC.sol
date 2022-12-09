@@ -31,6 +31,8 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
         string uri;
         /// @notice Address of the redeemer
         address redeemer;
+        /// @notice Whether learner can buy coaching or not
+        bool isCoachingEnabled;
         /// @notice The name of the NFT
         string name;
         /// @notice The descriptiom of the NFT
@@ -38,6 +40,9 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
         /// @notice the EIP-712 signature of all other fields in the ContentVoucher struct.
         bytes signature;
     }
+
+    // tokenId => buyable
+    mapping(uint => bool) coachingEnabled;
 
     /// @notice Redeems a ContentVoucher for an actual NFT, creating it in the process.
     /// @param voucher A signed ContentVoucher that describes the NFT to be redeemed.
@@ -55,9 +60,33 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
             IRM.hasRole(BACKEND_ROLE, signer),
             "Signature invalid or unauthorized"
         );
-
+        coachingEnabled[voucher.tokenId] = voucher.isCoachingEnabled;
         _mint(voucher.redeemer, voucher.tokenId);
         _setTokenURI(voucher.tokenId, voucher.uri);
+    }
+
+    /// @notice Allows instructers' to enable coaching for a specific content
+    /// @param tokenId The content id
+    function enableCoaching(uint tokenId) external {
+        require(
+            ownerOf(tokenId) == msg.sender,
+            "You are not the owner of token"
+        );
+        coachingEnabled[tokenId] = true;
+    }
+
+    /// @notice Allows instructers' to disable coaching for a specific content
+    /// @param tokenId tokenId of the content that will be not coached
+    function disableCoaching(uint tokenId) external {
+        require(
+            ownerOf(tokenId) == msg.sender,
+            "You are not the owner of token"
+        );
+        coachingEnabled[tokenId] = false;
+    }
+
+    function isCoachingEnabled(uint tokenId) external view returns (bool) {
+        return coachingEnabled[tokenId];
     }
 
     /// @notice Returns a hash of the given ContentVoucher, prepared using EIP712 typed data hashing rules.
@@ -70,11 +99,12 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
                 keccak256(
                     abi.encode(
                         keccak256(
-                            "ContentVoucher(uint256 tokenId,string uri,address redeemer,string name,string description)"
+                            "ContentVoucher(uint256 tokenId,string uri,address redeemer,bool isCoachingEnabled,string name,string description)"
                         ),
                         voucher.tokenId,
                         keccak256(bytes(voucher.uri)),
                         voucher.redeemer,
+                        voucher.isCoachingEnabled,
                         keccak256(bytes(voucher.name)),
                         keccak256(bytes(voucher.description))
                     )

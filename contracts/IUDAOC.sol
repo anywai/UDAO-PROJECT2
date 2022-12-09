@@ -17,4 +17,6 @@ interface IUDAOC is IERC721 {
     function getTotalValidation() external view returns (uint);
 
     function exists(uint tokenId) external view returns (bool);
+
+    function isCoachingEnabled(uint tokenId) external view returns (bool);
 }

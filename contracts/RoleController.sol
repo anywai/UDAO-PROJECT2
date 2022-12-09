@@ -16,6 +16,7 @@ abstract contract RoleController is Context, Pausable {
     bytes32 public constant GOVERNANCE_ROLE = keccak256("GOVERNANCE_ROLE");
     bytes32 public constant JUROR_ROLE = keccak256("JUROR_ROLE");
     bytes32 public constant JUROR_CONTRACT = keccak256("JUROR_CONTRACT");
+    bytes32 public constant TREASURY_CONTRACT = keccak256("TREASURY_CONTRACT");
     bytes32 public constant VALIDATION_MANAGER =
         keccak256("VALIDATION_MANAGER");
 
@@ -42,6 +43,7 @@ abstract contract RoleController is Context, Pausable {
         IRM.checkRoles(roles, _msgSender());
         _;
     }
+
     /// @param rmAddress The address of the deployed role manager
     constructor(address rmAddress) {
         IRM = IRoleManager(rmAddress);

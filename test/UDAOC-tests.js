@@ -134,10 +134,7 @@ async function deploy() {
     contractUDAOTimelockController.address
   );
 
-  // add staking contract to validation manager
-  await contractValidationManager
-    .connect(foundation)
-    .setStaker(contractUDAOStaker.address);
+
   // add staking contract to udao-vp
   await contractUDAOVp
     .connect(foundation)
@@ -270,6 +267,7 @@ describe("UDAOC Contract", function () {
       1,
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
+      true,
       "Content Name",
       "Content Description"
     );
@@ -318,6 +316,7 @@ describe("UDAOC Contract", function () {
       1,
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
+      true,
       "Content Name",
       "Content Description"
     );
@@ -362,6 +361,7 @@ describe("UDAOC Contract", function () {
       1,
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
+      true,
       "Content Name",
       "Content Description"
     );
@@ -406,6 +406,7 @@ describe("UDAOC Contract", function () {
       1,
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
+      true,
       "Content Name",
       "Content Description"
     );
@@ -458,6 +459,7 @@ describe("UDAOC Contract", function () {
       1,
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
+      true,
       "Content Name",
       "Content Description"
     );
@@ -513,6 +515,7 @@ describe("UDAOC Contract", function () {
       1,
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
+      true,
       "Content Name",
       "Content Description"
     );
@@ -568,6 +571,7 @@ describe("UDAOC Contract", function () {
       1,
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
+      true,
       "Content Name",
       "Content Description"
     );
@@ -621,6 +625,7 @@ describe("UDAOC Contract", function () {
       1,
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
+      true,
       "Content Name",
       "Content Description"
     );
@@ -677,6 +682,7 @@ describe("UDAOC Contract", function () {
       1,
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
+      true,
       "Content Name",
       "Content Description"
     );
@@ -734,6 +740,7 @@ describe("UDAOC Contract", function () {
       1,
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
+      true,
       "Content Name",
       "Content Description"
     );
@@ -792,6 +799,7 @@ describe("UDAOC Contract", function () {
       1,
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
+      true,
       "Content Name",
       "Content Description"
     );
@@ -844,5 +852,211 @@ describe("UDAOC Contract", function () {
     expect(await contractUDAOContent.supportsInterface("0x80ac58cd")).to.eql(
       true
     );
+  });
+
+  it("Should enable coaching for content", async function () {
+    const {
+      backend,
+      contentCreator,
+      contentBuyer,
+      validatorCandidate,
+      validator,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+    } = await deploy();
+    await contractRoleManager.setKYC(contentCreator.address, true);
+
+    const tx = await contractUDAOContent.getChainID();
+    const lazyMinter = new LazyMinter({
+      contract: contractUDAOContent,
+      signer: backend,
+    });
+    const voucher = await lazyMinter.createVoucher(
+      1,
+      "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
+      contentCreator.address,
+      false,
+      "Content Name",
+      "Content Description"
+    );
+    await expect(contractUDAOContent.connect(contentCreator).redeem(voucher))
+      .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
+      .withArgs(
+        "0x0000000000000000000000000000000000000000",
+        contentCreator.address,
+        voucher.tokenId
+      );
+    await contractUDAOContent.connect(contentCreator).enableCoaching(1);
+    expect(await contractUDAOContent.isCoachingEnabled(1)).to.be.eql(true);
+  });
+
+  it("Should disable coaching for content", async function () {
+    const {
+      backend,
+      contentCreator,
+      contentBuyer,
+      validatorCandidate,
+      validator,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+    } = await deploy();
+    await contractRoleManager.setKYC(contentCreator.address, true);
+
+    const tx = await contractUDAOContent.getChainID();
+    const lazyMinter = new LazyMinter({
+      contract: contractUDAOContent,
+      signer: backend,
+    });
+    const voucher = await lazyMinter.createVoucher(
+      1,
+      "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
+      contentCreator.address,
+      true,
+      "Content Name",
+      "Content Description"
+    );
+    await expect(contractUDAOContent.connect(contentCreator).redeem(voucher))
+      .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
+      .withArgs(
+        "0x0000000000000000000000000000000000000000",
+        contentCreator.address,
+        voucher.tokenId
+      );
+    await contractUDAOContent.connect(contentCreator).disableCoaching(1);
+    expect(await contractUDAOContent.isCoachingEnabled(1)).to.be.eql(false);
+  });
+
+  it("Should fail to enable coaching for content if not owner", async function () {
+    const {
+      backend,
+      contentCreator,
+      contentBuyer,
+      validatorCandidate,
+      validator,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+    } = await deploy();
+    await contractRoleManager.setKYC(contentCreator.address, true);
+
+    const tx = await contractUDAOContent.getChainID();
+    const lazyMinter = new LazyMinter({
+      contract: contractUDAOContent,
+      signer: backend,
+    });
+    const voucher = await lazyMinter.createVoucher(
+      1,
+      "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
+      contentCreator.address,
+      false,
+      "Content Name",
+      "Content Description"
+    );
+    await expect(contractUDAOContent.connect(contentCreator).redeem(voucher))
+      .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
+      .withArgs(
+        "0x0000000000000000000000000000000000000000",
+        contentCreator.address,
+        voucher.tokenId
+      );
+    await expect(
+      contractUDAOContent.connect(contentBuyer).enableCoaching(1)
+    ).to.revertedWith("You are not the owner of token");
+  });
+
+  it("Should fail to disable coaching for content if not owner", async function () {
+    const {
+      backend,
+      contentCreator,
+      contentBuyer,
+      validatorCandidate,
+      validator,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+    } = await deploy();
+    await contractRoleManager.setKYC(contentCreator.address, true);
+
+    const tx = await contractUDAOContent.getChainID();
+    const lazyMinter = new LazyMinter({
+      contract: contractUDAOContent,
+      signer: backend,
+    });
+    const voucher = await lazyMinter.createVoucher(
+      1,
+      "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
+      contentCreator.address,
+      true,
+      "Content Name",
+      "Content Description"
+    );
+    await expect(contractUDAOContent.connect(contentCreator).redeem(voucher))
+      .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
+      .withArgs(
+        "0x0000000000000000000000000000000000000000",
+        contentCreator.address,
+        voucher.tokenId
+      );
+    await expect(
+      contractUDAOContent.connect(contentBuyer).disableCoaching(1)
+    ).to.revertedWith("You are not the owner of token");
   });
 });

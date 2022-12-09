@@ -6,10 +6,11 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "./IUDAOC.sol";
 import "./RoleController.sol";
+import "./IVM.sol";
 
 abstract contract BasePlatform is Pausable, RoleController {
     // content id => content balance
-    mapping(address => uint) instructorBalance;
+    mapping(address => uint) public instructorBalance;
 
     // user address => content id => content owned by the user
     mapping(address => mapping(uint => mapping(uint => bool))) isTokenBought;
@@ -29,6 +30,21 @@ abstract contract BasePlatform is Pausable, RoleController {
     // balance to be used for validator rewards
     uint public validatorBalance;
 
+    // balance accumulated for current round
+    uint public validatorBalanceForRound;
+
+    // active distribution round
+    uint public distributionRound;
+
+    // round => pay per point for validation score
+    mapping(uint => uint) payPerValidationScore;
+
+    // round => pay per juror since there won't be a juror point
+    mapping(uint => uint) payPerJuror;
+
+    // validator => last claimed round
+    mapping(address => uint) lastValidatorClaim;
+
     // UDAO (ERC20) Token interface
     IERC20 udao;
 
@@ -37,30 +53,32 @@ abstract contract BasePlatform is Pausable, RoleController {
 
     // 100000 -> 100% | 5000 -> 5%
     // cut for foundation from coaching
-    uint public coachingFoundationCut;
+    uint public coachingFoundationCut = 4000;
     // cut for governance from coaching
-    uint public coachingGovernancenCut;
+    uint public coachingGovernancenCut = 700;
     // cut for foundation from content
-    uint public contentFoundationCut;
+    uint public contentFoundationCut = 4000;
     // cut for governance from content
-    uint public contentGovernancenCut;
+    uint public contentGovernancenCut = 700;
     // cut for juror pool from content
-    uint public contentJurorCut;
+    uint public contentJurorCut = 100;
     // cut for validator pool from content
-    uint public contentValidatorCut;
+    uint public contentValidatorCut = 200;
 
     address public governanceTreasury;
     address public foundationWallet;
 
-    // ITreasury treasury;
+    IValidationManager public IVM;
 
     constructor(
         address udaoAddress,
         address udaocAddress,
-        address rmAddress
+        address rmAddress,
+        address vmAddress
     ) RoleController(rmAddress) {
         udao = IERC20(udaoAddress);
         udaoc = IUDAOC(udaocAddress);
+        IVM = IValidationManager(vmAddress);
     }
 
     // SETTERS
@@ -109,5 +127,21 @@ abstract contract BasePlatform is Pausable, RoleController {
         uint _cut
     ) external onlyRole(GOVERNANCE_ROLE) {
         contentValidatorCut = _cut;
+    }
+
+    /**
+     * @notice distributes rewards for round
+     * Gets balance accumulated this round and distributes it per point
+     * for validators to claim it later.
+     *
+     */
+    function distributeRewards() external onlyRoles(administrator_roles) {
+        payPerValidationScore[distributionRound] =
+            validatorBalanceForRound /
+            IVM.getTotalValidationScore();
+        IVM.nextRound();
+        distributionRound++;
+        validatorBalanceForRound = 0;
+        /// @TODO add juror distribution here too
     }
 }
