@@ -103,7 +103,7 @@ contract JurorManager is RoleController, EIP712 {
                         voucher.redeemer,
                         voucher.contractAddress,
                         keccak256(abi.encodePacked(voucher.jurors)),
-                        keccak256(abi.encodePacked(voucher._data))
+                        voucher._data
                     )
                 )
             );
