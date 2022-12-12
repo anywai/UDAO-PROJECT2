@@ -35,7 +35,6 @@ contract JurorManager is RoleController, EIP712 {
         staker = IStakingContract(stakerAddress);
     }
 
-    // TODO Voucher hash function requires rework
     struct CaseVoucher {
         /// @notice Address of the redeemer
         address redeemer;
@@ -100,8 +99,11 @@ contract JurorManager is RoleController, EIP712 {
             _hashTypedDataV4(
                 keccak256(
                     abi.encode(
-                        keccak256("CaseVoucher(address redeemer)"),
-                        voucher.redeemer
+                        keccak256("CaseVoucher(address redeemer,address contractAddress,address[] jurors,bytes _data)"),
+                        voucher.redeemer,
+                        voucher.contractAddress,
+                        keccak256(abi.encodePacked(voucher.jurors)),
+                        keccak256(abi.encodePacked(voucher._data))
                     )
                 )
             );
