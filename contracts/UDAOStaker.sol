@@ -29,7 +29,7 @@ contract UDAOStaker is RoleController, EIP712 {
     uint public superValidatorLockTime = 180 days;
     /// @notice Amount to deduct from super validator application
     uint superValidatorLockAmount = 150 ether;
-    
+
     struct StakeLock {
         uint256 maxValidationAmount;
         uint256 doneValidationAmount;
@@ -51,7 +51,6 @@ contract UDAOStaker is RoleController, EIP712 {
         uint256 amountPerValidation;
         uint256 expire;
     }
-
 
     mapping(address => uint) validationBalanceOf;
     mapping(address => StakeLock[]) validatorLock;
@@ -109,24 +108,21 @@ contract UDAOStaker is RoleController, EIP712 {
         platformTreasuryAddress = _platformTreasuryAddress;
     }
 
-    function setSuperValidatorLockAmount(uint _amount)
-        external
-        onlyRoles(administrator_roles)
-    {
+    function setSuperValidatorLockAmount(
+        uint _amount
+    ) external onlyRoles(administrator_roles) {
         superValidatorLockAmount = _amount;
     }
 
-    function setVoteReward(uint _reward)
-        external
-        onlyRoles(administrator_roles)
-    {
+    function setVoteReward(
+        uint _reward
+    ) external onlyRoles(administrator_roles) {
         voteReward = _reward;
     }
 
-    function setPlatformTreasuryAddress(address _platformTreasuryAddress)
-        external
-        onlyRoles(administrator_roles)
-    {
+    function setPlatformTreasuryAddress(
+        address _platformTreasuryAddress
+    ) external onlyRoles(administrator_roles) {
         platformTreasuryAddress = _platformTreasuryAddress;
     }
 
@@ -143,6 +139,10 @@ contract UDAOStaker is RoleController, EIP712 {
     /// @notice allows users to apply for validator role
     /// @param validationAmount The amount of validations that a validator wants to do
     function applyForValidator(uint validationAmount) external {
+        require(
+            udaovp.balanceOf(msg.sender) > 0,
+            "You have to be governance member to apply"
+        );
         require(
             !IRM.hasRole(SUPER_VALIDATOR_ROLE, msg.sender),
             "Address is a Super Validator"
@@ -168,6 +168,10 @@ contract UDAOStaker is RoleController, EIP712 {
     /// @notice Allows validators to apply for super validator role
     function applyForSuperValidator() external {
         require(
+            udaovp.balanceOf(msg.sender) > 0,
+            "You have to be governance member to apply"
+        );
+        require(
             !IRM.hasRole(SUPER_VALIDATOR_ROLE, msg.sender),
             "Address is a Super Validator"
         );
@@ -183,7 +187,7 @@ contract UDAOStaker is RoleController, EIP712 {
         validatorApplicationId[msg.sender] = validationApplicationIndex;
         validationApplicationIndex++;
         validationApplication.amountPerValidation = superValidatorLockAmount;
-        validationApplication.maxValidationAmount = 2**256 - 1;
+        validationApplication.maxValidationAmount = 2 ** 256 - 1;
         validationApplication.expire = block.timestamp + superValidatorLockTime;
         validationBalanceOf[msg.sender] += superValidatorLockAmount;
         udao.transferFrom(msg.sender, address(this), superValidatorLockAmount);
@@ -191,10 +195,9 @@ contract UDAOStaker is RoleController, EIP712 {
 
     /// @notice Allows validators to add more rights to get validation work
     /// @param validationAmount Amount of validation work to get
-    function addMoreValidation(uint validationAmount)
-        external
-        onlyRole(VALIDATOR_ROLE)
-    {
+    function addMoreValidation(
+        uint validationAmount
+    ) external onlyRole(VALIDATOR_ROLE) {
         require(
             !IRM.hasRole(SUPER_VALIDATOR_ROLE, msg.sender),
             "Address is a Super Validator"
@@ -237,13 +240,16 @@ contract UDAOStaker is RoleController, EIP712 {
     /// @notice allows users to apply for juror role
     /// @param caseAmount The amount of cases that a juror wants to do
     function applyForJuror(uint caseAmount) external {
-        uint tokenToExtract = payablePerJuror* caseAmount;
+        require(
+            udaovp.balanceOf(msg.sender) > 0,
+            "You have to be governance member to apply"
+        );
+        uint tokenToExtract = payablePerJuror * caseAmount;
 
-        JurorApplication
-            storage jurorApplication = jurorApplications.push();
+        JurorApplication storage jurorApplication = jurorApplications.push();
         jurorApplication.applicant = msg.sender;
         jurorApplicationId[msg.sender] = caseApplicationIndex;
-        jurorApplication.amountPerCase= payablePerJuror;
+        jurorApplication.amountPerCase = payablePerJuror;
         jurorApplication.maxCaseAmount += caseAmount;
         jurorApplication.expire = block.timestamp + jurorLockTime;
         caseApplicationIndex++;
@@ -264,54 +270,52 @@ contract UDAOStaker is RoleController, EIP712 {
             "Signature invalid or unauthorized"
         );
 
-        if(voucher.roleId == 0) {
-                    ValidationApplication
-            storage validationApplication = validatorApplications[
-                validatorApplicationId[voucher.redeemer]
-            ];
-        StakeLock storage userInfo = validatorLock[msg.sender].push();
+        if (voucher.roleId == 0) {
+            ValidationApplication
+                storage validationApplication = validatorApplications[
+                    validatorApplicationId[voucher.redeemer]
+                ];
+            StakeLock storage userInfo = validatorLock[msg.sender].push();
 
-        if (validationApplication.isSuper) {
-            IRM.grantRole(SUPER_VALIDATOR_ROLE, voucher.redeemer);
-            userInfo.expire = block.timestamp + superValidatorLockTime;
-        } else {
-            IRM.grantRole(VALIDATOR_ROLE, voucher.redeemer);
-            userInfo.expire = block.timestamp + validatorLockTime;
-        }
-        userInfo.amountPerValidation = validationApplication
-            .amountPerValidation;
-        userInfo.maxValidationAmount = validationApplication
-            .maxValidationAmount;
-        validationApplication.isFinished = true;
-        }
-        else if(voucher.roleId == 1) {
-            require(udaovp.balanceOf(voucher.redeemer) > 0, "You are not governance member");
+            if (validationApplication.isSuper) {
+                IRM.grantRole(SUPER_VALIDATOR_ROLE, voucher.redeemer);
+                userInfo.expire = block.timestamp + superValidatorLockTime;
+            } else {
+                IRM.grantRole(VALIDATOR_ROLE, voucher.redeemer);
+                userInfo.expire = block.timestamp + validatorLockTime;
+            }
+            userInfo.amountPerValidation = validationApplication
+                .amountPerValidation;
+            userInfo.maxValidationAmount = validationApplication
+                .maxValidationAmount;
+            validationApplication.isFinished = true;
+        } else if (voucher.roleId == 1) {
+            require(
+                udaovp.balanceOf(voucher.redeemer) > 0,
+                "You are not governance member"
+            );
 
-
-                                JurorApplication
-            storage jurorApplication = jurorApplications[
+            JurorApplication storage jurorApplication = jurorApplications[
                 jurorApplicationId[voucher.redeemer]
             ];
-        JurorStakeLock storage userInfo = jurorLocks[msg.sender].push();
+            JurorStakeLock storage userInfo = jurorLocks[msg.sender].push();
 
             IRM.grantRole(JUROR_ROLE, voucher.redeemer);
             userInfo.expire = block.timestamp + validatorLockTime;
-        
-        userInfo.amountPerValidation = jurorApplication
-            .amountPerCase;
-        userInfo.maxValidationAmount = jurorApplication
-            .maxCaseAmount;
-        jurorApplication.isFinished = true;
+
+            userInfo.amountPerValidation = jurorApplication.amountPerCase;
+            userInfo.maxValidationAmount = jurorApplication.maxCaseAmount;
+            jurorApplication.isFinished = true;
+        } else {
+            revert("Undefined role ID!");
         }
-        else {revert("Undefined role ID!");}
     }
 
     /// @notice Allows backend to reject role assignment application
     /// @param _applicant The address of the applicant
-    function rejectApplication(address _applicant)
-        external
-        onlyRole(BACKEND_ROLE)
-    {
+    function rejectApplication(
+        address _applicant
+    ) external onlyRole(BACKEND_ROLE) {
         ValidationApplication
             storage validationApplication = validatorApplications[
                 validatorApplicationId[_applicant]
@@ -375,14 +379,14 @@ contract UDAOStaker is RoleController, EIP712 {
 
     /// @notice Returns the amount of token a validator could withdraw
     function withdrawableValidatorStake() public view returns (uint) {
-        uint withdrawableBalance;  
+        uint withdrawableBalance;
         uint validatorLockLength = validatorLock[msg.sender].length;
         uint validationLockLength = validationLocks[msg.sender].length;
         ValidationApplication
             storage validationApplication = validatorApplications[
                 validatorApplicationId[msg.sender]
             ];
-        
+
         if (IRM.hasRole(VALIDATOR_ROLE, msg.sender)) {
             for (int j; uint(j) < validatorLockLength; j++) {
                 StakeLock storage lock = validatorLock[msg.sender][uint(j)];
@@ -482,11 +486,9 @@ contract UDAOStaker is RoleController, EIP712 {
 
     /// @notice Returns a hash of the given ContentVoucher, prepared using EIP712 typed data hashing rules.
     /// @param voucher A ContentVoucher to hash.
-    function _hash(RoleVoucher calldata voucher)
-        internal
-        view
-        returns (bytes32)
-    {
+    function _hash(
+        RoleVoucher calldata voucher
+    ) internal view returns (bytes32) {
         return
             _hashTypedDataV4(
                 keccak256(
@@ -512,11 +514,9 @@ contract UDAOStaker is RoleController, EIP712 {
     /// @notice Verifies the signature for a given ContentVoucher, returning the address of the signer.
     /// @dev Will revert if the signature is invalid. Does not verify that the signer is authorized to mint NFTs.
     /// @param voucher A ContentVoucher describing an unminted NFT.
-    function _verify(RoleVoucher calldata voucher)
-        internal
-        view
-        returns (address)
-    {
+    function _verify(
+        RoleVoucher calldata voucher
+    ) internal view returns (address) {
         bytes32 digest = _hash(voucher);
         return ECDSA.recover(digest, voucher.signature);
     }
