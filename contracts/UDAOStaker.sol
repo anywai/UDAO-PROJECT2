@@ -214,27 +214,21 @@ contract UDAOStaker is RoleController, EIP712 {
 
     /// @notice Allows validators to accept the validation work
     function registerValidation() external onlyRoles(validator_roles) {
-        /// @TODO Add voucher
-        for (
-            int i = int(latestStakeId[_msgSender()]);
-            uint(i) < validatorLock[_msgSender()].length;
-            i++
-        ) {
-            StakeLock storage stakeLock = validatorLock[_msgSender()][uint(i)];
-            if (
-                stakeLock.doneValidationAmount < stakeLock.maxValidationAmount
-            ) {
-                ValidationLock storage lock = validationLocks[_msgSender()]
-                    .push();
-                lock.expireDate = block.timestamp + validatorLockTime;
-                lock.validationDate = block.timestamp;
-                lock.lockAmount = uint128(payablePerValidation);
-                stakeLock.doneValidationAmount++;
-                latestStakeId[_msgSender()] = uint(i);
-                return;
-            }
+        StakeLock storage stakeLock = validatorLock[_msgSender()][
+            latestStakeId[_msgSender()]
+        ];
+        require(
+            stakeLock.doneValidationAmount < stakeLock.maxValidationAmount,
+            "You don't have empty validation slots"
+        );
+        ValidationLock storage lock = validationLocks[_msgSender()].push();
+        lock.expireDate = block.timestamp + validatorLockTime;
+        lock.validationDate = block.timestamp;
+        lock.lockAmount = uint128(payablePerValidation);
+        stakeLock.doneValidationAmount++;
+        if (stakeLock.doneValidationAmount == stakeLock.maxValidationAmount) {
+            latestStakeId[_msgSender()]++;
         }
-        revert("You don't have empty validation slots");
     }
 
     /// @notice allows users to apply for juror role
