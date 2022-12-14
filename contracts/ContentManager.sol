@@ -49,13 +49,11 @@ abstract contract ContentManager is EIP712, BasePlatform {
     struct CoachingStruct {
         address coach;
         address learner;
-        bool isLearnerVerified;
-        bool isCoachVerified;
-        uint8 isDone; // 0 not done, 1 done, 2 refunded
-        bool isRefundable;
-        uint totalPaymentAmount;
-        uint coachingPaymentAmount;
         uint moneyLockDeadline;
+        uint coachingPaymentAmount;
+        uint8 isDone; // 0 not done, 1 done, 2 refunded
+        uint totalPaymentAmount;
+        bool isRefundable;
     }
 
     // tokenId => coachingId[]  which tokens have which coachings
@@ -161,8 +159,6 @@ abstract contract ContentManager is EIP712, BasePlatform {
         coachingStructs[coachingIndex] = CoachingStruct({
             coach: instructor,
             learner: voucher.redeemer,
-            isLearnerVerified: false,
-            isCoachVerified: false,
             isDone: 0,
             isRefundable: voucher.isRefundable,
             totalPaymentAmount: priceToPay,
