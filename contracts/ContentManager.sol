@@ -112,17 +112,21 @@ abstract contract ContentManager is EIP712, BasePlatform {
             isTokenBought[msg.sender][tokenId][purchasedParts[i]] = true;
             ownedContents[msg.sender].push([tokenId, purchasedParts[i]]);
         }
+        uint256 foundationCalc = (priceToPay * contentFoundationCut) / 100000;
+        uint256 governanceCalc = (priceToPay * contentGovernancenCut) / 100000;
+        uint256 validatorCalc = (priceToPay * validatorBalance) / 100000;
+        uint256 jurorCalc = (priceToPay * contentJurorCut) / 100000;
 
-        foundationBalance += (priceToPay * contentFoundationCut) / 100000;
-        governanceBalance += (priceToPay * contentGovernancenCut) / 100000;
-        validatorBalanceForRound += (priceToPay * validatorBalance) / 100000;
-        jurorBalance += (priceToPay * contentJurorCut) / 100000;
+        foundationBalance += foundationCalc;
+        governanceBalance += governanceCalc;
+        validatorBalanceForRound += validatorCalc;
+        jurorBalance += jurorCalc;
         instructorBalance[instructor] +=
             priceToPay -
-            ((priceToPay * contentFoundationCut) / 100000) -
-            ((priceToPay * contentGovernancenCut) / 100000) -
-            ((priceToPay * validatorBalance) / 100000) -
-            ((priceToPay * contentGovernancenCut) / 100000);
+            (foundationCalc) -
+            (governanceCalc) -
+            (validatorCalc) -
+            (jurorCalc);
         udao.transferFrom(msg.sender, address(this), priceToPay);
     }
 
