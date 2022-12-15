@@ -54,7 +54,7 @@ contract JurorManager is RoleController, EIP712 {
     /// @notice Ends a dispute, executes actions based on the result.
     function endDispute(
         CaseVoucher calldata voucher
-    ) external onlyrole(JUROR_ROLE) {
+    ) external onlyRole(JUROR_ROLE) {
         // make sure signature is valid and get the address of the signer
         address signer = _verify(voucher);
         require(
@@ -76,15 +76,15 @@ contract JurorManager is RoleController, EIP712 {
 
     /// @notice Checks if the caller is a juror participated in a certain case.
     /// @param _jurors list of jurors contained in voucher
-    function _checkJuror(address[] memory jurors) internal {
+    function _checkJuror(address[] memory _jurors) internal view {
         /// Check if the caller is juror recorded for this case
-        uint8 jurorsNum = jurors.length;
+        uint256 jurorsNum = _jurors.length;
         for (uint i = 0; i < jurorsNum; i++) {
-            if (msg.sender == jurors[i]) {
-                index++;
+            if (msg.sender == _jurors[i]) {
+                return;
             }
         }
-        require("Sender is not in juror list");
+        revert("Sender is not in juror list");
     }
 
     /// @notice Adds scores of jurors that took a case
@@ -114,9 +114,8 @@ contract JurorManager is RoleController, EIP712 {
                 keccak256(
                     abi.encode(
                         keccak256(
-                            "CaseVoucher(address redeemer,address contractAddress,address[] jurors,bytes _data)"
+                            "CaseVoucher(address contractAddress,address[] jurors,bytes _data)"
                         ),
-                        voucher.redeemer,
                         voucher.contractAddress,
                         keccak256(abi.encodePacked(voucher.jurors)),
                         voucher._data
