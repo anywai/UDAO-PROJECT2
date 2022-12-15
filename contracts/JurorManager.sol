@@ -66,11 +66,12 @@ contract JurorManager is RoleController, EIP712 {
         _checkJuror(voucher.jurors);
 
         // Call a function from a contract
-        if(voucher.contractAddress != address(0x0)) {
-            (bool success, ) = voucher.contractAddress.delegatecall(voucher._data); 
-            /// _contract.delegatecall(abi.encodeWithSignature("setVars(uint256)", _num)
-            require(success, "Delegate call has failed");
+        if (voucher.contractAddress != address(0x0)) {
+            (bool success, ) = voucher.contractAddress.call(voucher._data);
+            /// _contract.call(abi.encodeWithSignature("setVars(uint256)", _num)
+            require(success, "Call has failed");
         }
+
         _addJurorScores(voucher.jurors);
     }
     
