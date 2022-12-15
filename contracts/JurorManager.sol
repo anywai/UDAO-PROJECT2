@@ -63,6 +63,8 @@ contract JurorManager is RoleController, EIP712 {
             "Signature invalid or unauthorized"
         );
         
+        _checkJuror(voucher.jurors);
+
         // Call a function from a contract
         if(voucher.contractAddress != address(0x0)) {
             (bool success, ) = voucher.contractAddress.delegatecall(voucher._data); 
@@ -72,6 +74,19 @@ contract JurorManager is RoleController, EIP712 {
         _addJurorScores(voucher.jurors);
     }
     
+    /// @notice Checks if the caller is a juror participated in a certain case.
+    /// @param _jurors list of jurors contained in voucher
+    function _checkJuror(address[] memory jurors) internal {
+        /// Check if the caller is juror recorded for this case
+        uint8 jurorsNum = jurors.length;
+        for (uint i = 0; i < jurorsNum; i++) {
+            if (msg.sender == jurors[i]) {
+                index++;
+            }
+        }
+        require("Sender is not in juror list");
+    }
+
     /// @notice Adds scores of jurors that took a case
     function _addJurorScores(address[] calldata _jurors) internal {
         uint totalJurors = _jurors.length;
