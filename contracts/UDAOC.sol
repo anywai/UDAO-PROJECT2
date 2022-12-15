@@ -35,7 +35,7 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
         bool isCoachingEnabled;
         /// @notice The name of the NFT
         string name;
-        /// @notice The descriptiom of the NFT
+        /// @notice The description of the NFT
         string description;
         /// @notice the EIP-712 signature of all other fields in the ContentVoucher struct.
         bytes signature;
