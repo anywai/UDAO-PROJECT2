@@ -21,15 +21,15 @@ contract ValidationManager is RoleController, EIP712 {
     }
 
     struct ValidationVoucher {
-        /// @notice The id of the token to be redeemed.
+        /// @notice The id of the token to record validation status.
         uint256 tokenId;
         /// @notice Addresses of the validators
         address[] validators;
         /// @notice Scores validators earned from this validation
-        uint[] validationScore;
+        uint256[] validationScore;
         /// @notice Final verdict of the validation process
         bool isValidated;
-        /// @notice the EIP-712 signature of all other fields in the ContentVoucher struct.
+        /// @notice the EIP-712 signature of all other fields in the ValidationVoucher struct.
         bytes signature;
     }
 
