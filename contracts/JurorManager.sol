@@ -18,33 +18,31 @@ contract JurorManager is RoleController, EIP712 {
     IUDAOC udaoc;
     IStakingContract staker;
 
-    constructor(address udaocAddress, address rmAddress)
-        EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION)
-        RoleController(rmAddress)
-    {
+    constructor(
+        address udaocAddress,
+        address rmAddress
+    ) EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION) RoleController(rmAddress) {
         udaoc = IUDAOC(udaocAddress);
     }
+
     function setUDAOC(address udaocAddress) external onlyRole(FOUNDATION_ROLE) {
         udaoc = IUDAOC(udaocAddress);
     }
 
-    function setStaker(address stakerAddress)
-        external
-        onlyRole(FOUNDATION_ROLE)
-    {
+    function setStaker(
+        address stakerAddress
+    ) external onlyRole(FOUNDATION_ROLE) {
         staker = IStakingContract(stakerAddress);
     }
 
     struct CaseVoucher {
-        /// @notice Address of the redeemer
-        address redeemer;
         /// @notice contract that will be modified
         address contractAddress;
-        /// @notice 
+        /// @notice List of jurors who participated in the dispute
         address[] jurors;
-        /// @notice function that will be run
+        /// @notice The data required to make calls to the contract that will be modified.
         bytes _data;
-        /// @notice the EIP-712 signature of all other fields in the ContentVoucher struct.
+        /// @notice the EIP-712 signature of all other fields in the CaseVoucher struct.
         bytes signature;
     }
 
@@ -53,16 +51,17 @@ contract JurorManager is RoleController, EIP712 {
 
     uint public totalJurorScore;
 
-    function endDispute(CaseVoucher calldata voucher) external {
-        // make sure redeemer is redeeming
-        require(voucher.redeemer == msg.sender, "You are not the redeemer");
+    /// @notice Ends a dispute, executes actions based on the result.
+    function endDispute(
+        CaseVoucher calldata voucher
+    ) external onlyrole(JUROR_ROLE) {
         // make sure signature is valid and get the address of the signer
         address signer = _verify(voucher);
         require(
             IRM.hasRole(BACKEND_ROLE, signer),
             "Signature invalid or unauthorized"
         );
-        
+
         _checkJuror(voucher.jurors);
 
         // Call a function from a contract
@@ -74,7 +73,7 @@ contract JurorManager is RoleController, EIP712 {
 
         _addJurorScores(voucher.jurors);
     }
-    
+
     /// @notice Checks if the caller is a juror participated in a certain case.
     /// @param _jurors list of jurors contained in voucher
     function _checkJuror(address[] memory jurors) internal {
@@ -89,10 +88,11 @@ contract JurorManager is RoleController, EIP712 {
     }
 
     /// @notice Adds scores of jurors that took a case
+    /// @param _jurors list of jurors contained in voucher
     function _addJurorScores(address[] calldata _jurors) internal {
         uint totalJurors = _jurors.length;
 
-        for(uint i; i < totalJurors; i++){
+        for (uint i; i < totalJurors; i++) {
             jurorScore[_jurors[i]]++;
             // TODO This needs to be binded to round system
             totalJurorScore++;
@@ -106,16 +106,16 @@ contract JurorManager is RoleController, EIP712 {
 
     /// @notice Returns a hash of the given ContentVoucher, prepared using EIP712 typed data hashing rules.
     /// @param voucher A ContentVoucher to hash.
-    function _hash(CaseVoucher calldata voucher)
-        internal
-        view
-        returns (bytes32)
-    {
+    function _hash(
+        CaseVoucher calldata voucher
+    ) internal view returns (bytes32) {
         return
             _hashTypedDataV4(
                 keccak256(
                     abi.encode(
-                        keccak256("CaseVoucher(address redeemer,address contractAddress,address[] jurors,bytes _data)"),
+                        keccak256(
+                            "CaseVoucher(address redeemer,address contractAddress,address[] jurors,bytes _data)"
+                        ),
                         voucher.redeemer,
                         voucher.contractAddress,
                         keccak256(abi.encodePacked(voucher.jurors)),
@@ -139,11 +139,9 @@ contract JurorManager is RoleController, EIP712 {
     /// @notice Verifies the signature for a given ContentVoucher, returning the address of the signer.
     /// @dev Will revert if the signature is invalid. Does not verify that the signer is authorized to mint NFTs.
     /// @param voucher A ContentVoucher describing an unminted NFT.
-    function _verify(CaseVoucher calldata voucher)
-        internal
-        view
-        returns (address)
-    {
+    function _verify(
+        CaseVoucher calldata voucher
+    ) internal view returns (address) {
         bytes32 digest = _hash(voucher);
         return ECDSA.recover(digest, voucher.signature);
     }
