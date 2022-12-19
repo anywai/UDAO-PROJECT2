@@ -18,6 +18,13 @@ contract JurorManager is RoleController, EIP712 {
     IUDAOC udaoc;
     IStakingContract staker;
 
+    // juror => round => score
+    mapping(address => mapping(uint256 => uint)) public jurorScorePerRound;
+
+    uint public distributionRound;
+
+    uint public totalCaseScore;
+
     constructor(
         address udaocAddress,
         address rmAddress
@@ -46,8 +53,6 @@ contract JurorManager is RoleController, EIP712 {
         bytes signature;
     }
 
-    // juror => score
-    mapping(address => uint256) jurorScore;
 
     uint public totalJurorScore;
 
@@ -93,10 +98,13 @@ contract JurorManager is RoleController, EIP712 {
         uint totalJurors = _jurors.length;
 
         for (uint i; i < totalJurors; i++) {
-            jurorScore[_jurors[i]]++;
-            // TODO This needs to be binded to round system
+            jurorScorePerRound[_jurors[i]][distributionRound]++;
             totalJurorScore++;
         }
+    }
+
+    function nextRound() external onlyRole(TREASURY_CONTRACT) {
+        distributionRound++;
     }
 
     function getTotalJurorScore() external view returns (uint) {

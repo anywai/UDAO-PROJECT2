@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/utils/Counters.sol";
 import "./IUDAOC.sol";
 import "./RoleController.sol";
 import "./IVM.sol";
+import "./IJM.sol";
 
 abstract contract BasePlatform is Pausable, RoleController {
     // content id => content balance
@@ -26,6 +27,9 @@ abstract contract BasePlatform is Pausable, RoleController {
 
     // balance to be used for juror rewards
     uint public jurorBalance;
+
+    // balance accumulated for current round
+    uint public jurorBalanceForRound;
 
     // balance to be used for validator rewards
     uint public validatorBalance;
@@ -69,16 +73,19 @@ abstract contract BasePlatform is Pausable, RoleController {
     address public foundationWallet;
 
     IValidationManager public IVM;
+    IJurorManager public IJM;
 
     constructor(
         address udaoAddress,
         address udaocAddress,
         address rmAddress,
-        address vmAddress
+        address vmAddress,
+        address jmAddress
     ) RoleController(rmAddress) {
         udao = IERC20(udaoAddress);
         udaoc = IUDAOC(udaocAddress);
         IVM = IValidationManager(vmAddress);
+        IJM = IJurorManager(jmAddress);
     }
 
     // SETTERS
@@ -142,6 +149,12 @@ abstract contract BasePlatform is Pausable, RoleController {
         IVM.nextRound();
         distributionRound++;
         validatorBalanceForRound = 0;
+
+        payPerJuror[distributionRound] =
+            jurorBalanceForRound /
         /// @TODO add juror distribution here too
+            IJM.getTotalJurorScore();
+        IJM.nextRound();
+        jurorBalanceForRound = 0;
     }
 }
