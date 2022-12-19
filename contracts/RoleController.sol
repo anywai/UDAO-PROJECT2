@@ -19,6 +19,8 @@ abstract contract RoleController is Context, Pausable {
     bytes32 public constant TREASURY_CONTRACT = keccak256("TREASURY_CONTRACT");
     bytes32 public constant VALIDATION_MANAGER =
         keccak256("VALIDATION_MANAGER");
+    bytes32 public constant CORPORATE_ROLE =
+        keccak256("CORPORATE_ROLE");
 
     /// Role group for validators
     bytes32[] validator_roles;
