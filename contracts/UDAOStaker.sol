@@ -130,7 +130,7 @@ contract UDAOStaker is RoleController, EIP712 {
     struct RoleVoucher {
         /// @notice Address of the redeemer
         address redeemer;
-        /// @notice 0 validator, 1 juror
+        /// @notice 0 validator, 1 juror, 2 corporate 
         uint roleId;
         /// @notice the EIP-712 signature of all other fields in the ContentVoucher struct.
         bytes signature;
@@ -300,7 +300,10 @@ contract UDAOStaker is RoleController, EIP712 {
             userInfo.amountPerValidation = jurorApplication.amountPerCase;
             userInfo.maxValidationAmount = jurorApplication.maxCaseAmount;
             jurorApplication.isFinished = true;
-        } else {
+        } else if (voucher.roleId == 2) {
+            IRM.grantRole(CORPORATE_ROLE, voucher.redeemer);
+        }
+        else {
             revert("Undefined role ID!");
         }
     }
