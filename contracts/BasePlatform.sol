@@ -143,6 +143,7 @@ abstract contract BasePlatform is Pausable, RoleController {
      *
      */
     function distributeRewards() external onlyRoles(administrator_roles) {
+        // Validator reward distribution
         payPerValidationScore[distributionRound] =
             validatorBalanceForRound /
             IVM.getTotalValidationScore();
@@ -150,9 +151,9 @@ abstract contract BasePlatform is Pausable, RoleController {
         distributionRound++;
         validatorBalanceForRound = 0;
 
+        // Juror reward distribution
         payPerJuror[distributionRound] =
             jurorBalanceForRound /
-        /// @TODO add juror distribution here too
             IJM.getTotalJurorScore();
         IJM.nextRound();
         jurorBalanceForRound = 0;

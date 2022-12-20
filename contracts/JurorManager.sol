@@ -53,7 +53,6 @@ contract JurorManager is RoleController, EIP712 {
         bytes signature;
     }
 
-
     uint public totalJurorScore;
 
     /// @notice Ends a dispute, executes actions based on the result.
