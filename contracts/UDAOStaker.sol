@@ -30,6 +30,17 @@ contract UDAOStaker is RoleController, EIP712 {
     /// @notice Amount to deduct from super validator application
     uint superValidatorLockAmount = 150 ether;
 
+    event StakeForJobListing(
+        address corporateAddress,
+        uint256 amount,
+        uint256 stakePerListing
+    );
+
+    event UnstakeForJobListing(
+        address corporateAddress,
+        uint256 amount
+    )
+
     struct StakeLock {
         uint256 maxValidationAmount;
         uint256 doneValidationAmount;
@@ -58,6 +69,9 @@ contract UDAOStaker is RoleController, EIP712 {
     mapping(address => JurorStakeLock[]) jurorLocks;
     mapping(address => uint) latestStakeId;
     mapping(address => uint) latestValidationLockId;
+
+    uint256 public corporateStakePerListing = 500 ether; //setter getter, decider=adminler
+    mapping(address => uint) corporateStaked;
 
     struct GovernanceLock {
         uint256 expire;
@@ -130,7 +144,7 @@ contract UDAOStaker is RoleController, EIP712 {
     struct RoleVoucher {
         /// @notice Address of the redeemer
         address redeemer;
-        /// @notice 0 validator, 1 juror, 2 corporate 
+        /// @notice 0 validator, 1 juror, 2 corporate
         uint roleId;
         /// @notice the EIP-712 signature of all other fields in the ContentVoucher struct.
         bytes signature;
@@ -302,8 +316,7 @@ contract UDAOStaker is RoleController, EIP712 {
             jurorApplication.isFinished = true;
         } else if (voucher.roleId == 2) {
             IRM.grantRole(CORPORATE_ROLE, voucher.redeemer);
-        }
-        else {
+        } else {
             revert("Undefined role ID!");
         }
     }
@@ -479,6 +492,34 @@ contract UDAOStaker is RoleController, EIP712 {
         uint voteRewards = rewardBalanceOf[msg.sender];
         rewardBalanceOf[msg.sender] = 0;
         udao.transferFrom(platformTreasuryAddress, msg.sender, voteRewards);
+    }
+
+   
+
+    /// @notice Allows corporate accounts to stake. Staker and staked amount returned with event.  
+    /// @param amount The amount of stake
+    function stakeForJobListing(uint256 amount) external onlyRole(CORPORATE_ROLE) {
+        require(amount > 0, "Zero amount");
+        require(
+            amount % corporateStakePerListing,
+            "Sent UDAO must be multiples of " +
+                abi.encodePacked(corporateStakePerListing) +
+                " UDAO"
+        );
+        corporateStaked[msg.sender] += amount;
+        udao.transferFrom(msg.sender, address(this), amount);
+        emit StakeForJobListing(msg.sender, amount, corporateStakePerListing);
+    }
+
+    /// @notice Allows corporate accounts to unstake. Staker and unstaked amount returned with event.
+    /// @param amount The unstaked amount.
+    function unstakeForJobListing(
+        uint amount
+    ) external onlyRole(CORPORATE_ROLE) {
+        require(amount > 0, "Zero amount");
+        corporateStaked[msg.sender] -= amount;
+        udao.transferFrom(address(this), msg.sender, amount);
+        emit UnstakeForJobListing(msg.sender, amount);
     }
 
     /// @notice Returns a hash of the given ContentVoucher, prepared using EIP712 typed data hashing rules.
