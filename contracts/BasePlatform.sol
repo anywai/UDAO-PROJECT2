@@ -75,6 +75,21 @@ abstract contract BasePlatform is Pausable, RoleController {
     IValidationManager public IVM;
     IJurorManager public IJM;
 
+    event RewardsDistributed(
+        uint payPerValidationScore,
+        uint payPerJurorPoint,
+        uint newRoundId
+    );
+
+    event CutsUpdated(
+        uint coachFnd,
+        uint coachGov,
+        uint contentFnd,
+        uint contentGov,
+        uint contentJuror,
+        uint contentValid
+    );
+
     constructor(
         address udaoAddress,
         address udaocAddress,
@@ -96,6 +111,14 @@ abstract contract BasePlatform is Pausable, RoleController {
         uint _cut
     ) external onlyRole(GOVERNANCE_ROLE) {
         coachingFoundationCut = _cut;
+        emit CutsUpdated(
+            coachingFoundationCut,
+            coachingGovernancenCut,
+            contentFoundationCut,
+            contentGovernancenCut,
+            contentJurorCut,
+            contentValidatorCut
+        );
     }
 
     /// @notice changes cut from coaching for governance
@@ -104,6 +127,14 @@ abstract contract BasePlatform is Pausable, RoleController {
         uint _cut
     ) external onlyRole(GOVERNANCE_ROLE) {
         coachingGovernancenCut = _cut;
+        emit CutsUpdated(
+            coachingFoundationCut,
+            coachingGovernancenCut,
+            contentFoundationCut,
+            contentGovernancenCut,
+            contentJurorCut,
+            contentValidatorCut
+        );
     }
 
     /// @notice changes cut from content for foundation
@@ -112,6 +143,14 @@ abstract contract BasePlatform is Pausable, RoleController {
         uint _cut
     ) external onlyRole(GOVERNANCE_ROLE) {
         contentFoundationCut = _cut;
+        emit CutsUpdated(
+            coachingFoundationCut,
+            coachingGovernancenCut,
+            contentFoundationCut,
+            contentGovernancenCut,
+            contentJurorCut,
+            contentValidatorCut
+        );
     }
 
     /// @notice changes cut from content for governance
@@ -120,12 +159,28 @@ abstract contract BasePlatform is Pausable, RoleController {
         uint _cut
     ) external onlyRole(GOVERNANCE_ROLE) {
         contentGovernancenCut = _cut;
+        emit CutsUpdated(
+            coachingFoundationCut,
+            coachingGovernancenCut,
+            contentFoundationCut,
+            contentGovernancenCut,
+            contentJurorCut,
+            contentValidatorCut
+        );
     }
 
     /// @notice changes cut from content for juror pool
     /// @param _cut new cut (100000 -> 100% | 5000 -> 5%)
     function setContentJurorCut(uint _cut) external onlyRole(GOVERNANCE_ROLE) {
         contentJurorCut = _cut;
+        emit CutsUpdated(
+            coachingFoundationCut,
+            coachingGovernancenCut,
+            contentFoundationCut,
+            contentGovernancenCut,
+            contentJurorCut,
+            contentValidatorCut
+        );
     }
 
     /// @notice changes cut from content for validator pool
@@ -134,6 +189,14 @@ abstract contract BasePlatform is Pausable, RoleController {
         uint _cut
     ) external onlyRole(GOVERNANCE_ROLE) {
         contentValidatorCut = _cut;
+        emit CutsUpdated(
+            coachingFoundationCut,
+            coachingGovernancenCut,
+            contentFoundationCut,
+            contentGovernancenCut,
+            contentJurorCut,
+            contentValidatorCut
+        );
     }
 
     /**
@@ -148,7 +211,6 @@ abstract contract BasePlatform is Pausable, RoleController {
             validatorBalanceForRound /
             IVM.getTotalValidationScore();
         IVM.nextRound();
-        distributionRound++;
         validatorBalanceForRound = 0;
 
         // Juror reward distribution
@@ -157,5 +219,12 @@ abstract contract BasePlatform is Pausable, RoleController {
             IJM.getTotalJurorScore();
         IJM.nextRound();
         jurorBalanceForRound = 0;
+        distributionRound++;
+
+        emit RewardsDistributed(
+            payPerValidationScore[distributionRound - 1],
+            payPerJuror[distributionRound - 1],
+            distributionRound
+        );
     }
 }
