@@ -18,12 +18,14 @@ contract JurorManager is RoleController, EIP712 {
     IUDAOC udaoc;
     IStakingContract staker;
 
+    event EndDispute(uint256 caseId, address[] jurors, uint256 totalJurorScore);
+
     // juror => round => score
-    mapping(address => mapping(uint256 => uint)) public jurorScorePerRound;
+    mapping(address => mapping(uint256 => uint256)) public jurorScorePerRound;
 
-    uint public distributionRound;
+    uint256 public distributionRound;
 
-    uint public totalCaseScore;
+    uint256 public totalCaseScore;
 
     constructor(
         address udaocAddress,
@@ -43,6 +45,8 @@ contract JurorManager is RoleController, EIP712 {
     }
 
     struct CaseVoucher {
+        /// @notice The off-chain id of the case
+        uint256 caseId;
         /// @notice contract that will be modified
         address contractAddress;
         /// @notice List of jurors who participated in the dispute
@@ -53,7 +57,7 @@ contract JurorManager is RoleController, EIP712 {
         bytes signature;
     }
 
-    uint public totalJurorScore;
+    uint256 public totalJurorScore;
 
     /// @notice Ends a dispute, executes actions based on the result.
     function endDispute(
@@ -76,6 +80,7 @@ contract JurorManager is RoleController, EIP712 {
         }
 
         _addJurorScores(voucher.jurors);
+        emit EndDispute(voucher.caseId, voucher.jurors, totalJurorScore);
     }
 
     /// @notice Checks if the caller is a juror participated in a certain case.
@@ -121,8 +126,9 @@ contract JurorManager is RoleController, EIP712 {
                 keccak256(
                     abi.encode(
                         keccak256(
-                            "CaseVoucher(address contractAddress,address[] jurors,bytes _data)"
+                            "CaseVoucher(uint256 caseId,address contractAddress,address[] jurors,bytes _data)"
                         ),
+                        voucher.caseId,
                         voucher.contractAddress,
                         keccak256(abi.encodePacked(voucher.jurors)),
                         voucher._data
