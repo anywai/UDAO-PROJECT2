@@ -62,6 +62,19 @@ abstract contract ContentManager is EIP712, BasePlatform {
     mapping(uint => CoachingStruct) public coachingStructs;
     uint private coachingIndex;
 
+    /// @notice triggered when content bought
+    event ContentBought(
+        uint tokenId,
+        uint[] parts,
+        uint pricePaid,
+        address buyer
+    );
+
+    /// @notice triggered when coaching bought
+    event CoachingBought(address learner, uint tokenId, uint coachingId);
+
+    event CoachingFinalized(uint coachingId, address coach, address learner);
+
     constructor() EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION) {}
 
     /// @notice Allows seting the address of the valdation manager contract
@@ -126,10 +139,8 @@ abstract contract ContentManager is EIP712, BasePlatform {
             (validatorCalc) -
             (jurorCalc);
         udao.transferFrom(msg.sender, address(this), priceToPay);
+        emit ContentBought(tokenId, purchasedParts, priceToPay, msg.sender);
     }
-
-    /// @notice triggered when coaching bought
-    event CoachingBought(address learner, uint tokenId, uint coachingId);
 
     /// @notice Allows users to buy coaching service.
     /// @param voucher voucher for the coaching purchase
@@ -195,12 +206,22 @@ abstract contract ContentManager is EIP712, BasePlatform {
             ].coachingPaymentAmount;
 
             currentCoaching.isDone = 1;
+            CoachingFinalized(
+                _coachingId,
+                currentCoaching.coach,
+                currentCoaching.learner
+            );
         } else if (msg.sender == currentCoaching.learner) {
             instructorBalance[currentCoaching.coach] += coachingStructs[
                 _coachingId
             ].coachingPaymentAmount;
 
             currentCoaching.isDone = 1;
+            CoachingFinalized(
+                _coachingId,
+                currentCoaching.coach,
+                currentCoaching.learner
+            );
         } else {
             revert("You are not learner neither coach");
         }
