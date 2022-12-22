@@ -75,6 +75,16 @@ abstract contract BasePlatform is Pausable, RoleController {
     IValidationManager public IVM;
     IJurorManager public IJM;
 
+    modifier checkCoachingCuts() {
+        require(coachingFoundationCut +coachingGovernancenCut < 100000, "Cuts cant be higher than %100");
+        _;
+    }
+
+    modifier checkContentCuts() {
+        require(contentFoundationCut+contentGovernancenCut+contentJurorCut+contentValidatorCut < 10000, "Cuts cant be higher than %100");
+        _;
+    }
+
     event RewardsDistributed(
         uint payPerValidationScore,
         uint payPerJurorPoint,
@@ -109,7 +119,7 @@ abstract contract BasePlatform is Pausable, RoleController {
     /// @param _cut new cut (100000 -> 100% | 5000 -> 5%)
     function setCoachingFoundationCut(
         uint _cut
-    ) external onlyRole(GOVERNANCE_ROLE) {
+    ) external onlyRole(GOVERNANCE_ROLE) checkCoachingCuts {
         coachingFoundationCut = _cut;
         emit CutsUpdated(
             coachingFoundationCut,
@@ -125,7 +135,7 @@ abstract contract BasePlatform is Pausable, RoleController {
     /// @param _cut new cut (100000 -> 100% | 5000 -> 5%)
     function setCoachingGovernanceCut(
         uint _cut
-    ) external onlyRole(GOVERNANCE_ROLE) {
+    ) external onlyRole(GOVERNANCE_ROLE) checkCoachingCuts {
         coachingGovernancenCut = _cut;
         emit CutsUpdated(
             coachingFoundationCut,
@@ -141,7 +151,7 @@ abstract contract BasePlatform is Pausable, RoleController {
     /// @param _cut new cut (100000 -> 100% | 5000 -> 5%)
     function setContentFoundationCut(
         uint _cut
-    ) external onlyRole(GOVERNANCE_ROLE) {
+    ) external onlyRole(GOVERNANCE_ROLE) checkContentCuts {
         contentFoundationCut = _cut;
         emit CutsUpdated(
             coachingFoundationCut,
@@ -157,7 +167,7 @@ abstract contract BasePlatform is Pausable, RoleController {
     /// @param _cut new cut (100000 -> 100% | 5000 -> 5%)
     function setContentGovernanceCut(
         uint _cut
-    ) external onlyRole(GOVERNANCE_ROLE) {
+    ) external onlyRole(GOVERNANCE_ROLE) checkContentCuts {
         contentGovernancenCut = _cut;
         emit CutsUpdated(
             coachingFoundationCut,
@@ -171,7 +181,7 @@ abstract contract BasePlatform is Pausable, RoleController {
 
     /// @notice changes cut from content for juror pool
     /// @param _cut new cut (100000 -> 100% | 5000 -> 5%)
-    function setContentJurorCut(uint _cut) external onlyRole(GOVERNANCE_ROLE) {
+    function setContentJurorCut(uint _cut) external onlyRole(GOVERNANCE_ROLE) checkContentCuts {
         contentJurorCut = _cut;
         emit CutsUpdated(
             coachingFoundationCut,
@@ -187,7 +197,7 @@ abstract contract BasePlatform is Pausable, RoleController {
     /// @param _cut new cut (100000 -> 100% | 5000 -> 5%)
     function setContentValidatorCut(
         uint _cut
-    ) external onlyRole(GOVERNANCE_ROLE) {
+    ) external onlyRole(GOVERNANCE_ROLE) checkContentCuts {
         contentValidatorCut = _cut;
         emit CutsUpdated(
             coachingFoundationCut,
