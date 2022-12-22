@@ -39,7 +39,7 @@ contract UDAOStaker is RoleController, EIP712 {
     event UnstakeForJobListing(
         address corporateAddress,
         uint256 amount
-    )
+    );
 
     struct StakeLock {
         uint256 maxValidationAmount;
@@ -500,12 +500,7 @@ contract UDAOStaker is RoleController, EIP712 {
     /// @param amount The amount of stake
     function stakeForJobListing(uint256 amount) external onlyRole(CORPORATE_ROLE) {
         require(amount > 0, "Zero amount");
-        require(
-            amount % corporateStakePerListing,
-            "Sent UDAO must be multiples of " +
-                abi.encodePacked(corporateStakePerListing) +
-                " UDAO"
-        );
+        require(amount % corporateStakePerListing == 0,string(abi.encodePacked("Sent UDAO must be multiples of ", Strings.toHexString(corporateStakePerListing)," UDAO")));
         corporateStaked[msg.sender] += amount;
         udao.transferFrom(msg.sender, address(this), amount);
         emit StakeForJobListing(msg.sender, amount, corporateStakePerListing);
