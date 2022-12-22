@@ -9,10 +9,20 @@ abstract contract ContentManager is EIP712, BasePlatform {
     string private constant SIGNING_DOMAIN = "ContentManager";
     string private constant SIGNATURE_VERSION = "1";
 
-    event ServiceBought(uint256 tokenId, uint256 purchasedParts, bool isCoaching, address instructor, address buyer);
     event ForcedPayment(uint256 _coachingId, address forcedBy);
+    /// @notice triggered when any kind of refund is done
     event Refund(uint256 _coachingId, address forcedBy, uint256 totalPaymentAmount);
-
+    /// @notice triggered when coaching bought
+    event CoachingBought(address learner, uint tokenId, uint coachingId);
+    event CoachingFinalized(uint coachingId, address coach, address learner);
+    /// @notice triggered when content bought
+    event ContentBought(
+        uint tokenId,
+        uint[] parts,
+        uint pricePaid,
+        address buyer
+    );
+    
     /// @notice Represents usage rights for a content (or part)
     struct ContentPurchaseVoucher {
         /// @notice The id of the token (content) to be redeemed.
@@ -65,19 +75,6 @@ abstract contract ContentManager is EIP712, BasePlatform {
     // coachinId => coachingStruct  Coaching details
     mapping(uint => CoachingStruct) public coachingStructs;
     uint private coachingIndex;
-
-    /// @notice triggered when content bought
-    event ContentBought(
-        uint tokenId,
-        uint[] parts,
-        uint pricePaid,
-        address buyer
-    );
-
-    /// @notice triggered when coaching bought
-    event CoachingBought(address learner, uint tokenId, uint coachingId);
-
-    event CoachingFinalized(uint coachingId, address coach, address learner);
 
     constructor() EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION) {}
 
@@ -191,8 +188,8 @@ abstract contract ContentManager is EIP712, BasePlatform {
         emit CoachingBought(msg.sender, voucher.tokenId, coachingIndex);
         coachingIndex++;
 
-        udao.transferFrom(msg.sender, address(this), priceToPay);
         studentList[voucher.tokenId].push(voucher.redeemer);
+        udao.transferFrom(msg.sender, address(this), priceToPay);
     }
 
     /// @notice Allows both parties to finalize coaching service.
@@ -210,7 +207,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
             ].coachingPaymentAmount;
 
             currentCoaching.isDone = 1;
-            CoachingFinalized(
+            emit CoachingFinalized(
                 _coachingId,
                 currentCoaching.coach,
                 currentCoaching.learner
@@ -221,7 +218,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
             ].coachingPaymentAmount;
 
             currentCoaching.isDone = 1;
-            CoachingFinalized(
+            emit CoachingFinalized(
                 _coachingId,
                 currentCoaching.coach,
                 currentCoaching.learner
