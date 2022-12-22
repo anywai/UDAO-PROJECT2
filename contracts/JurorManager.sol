@@ -4,7 +4,7 @@ pragma solidity ^0.8.4;
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
 import "./RoleController.sol";
-import "./IUDAOC.sol";
+
 
 interface IStakingContract {
     function registerValidation() external;
@@ -14,8 +14,7 @@ contract JurorManager is RoleController, EIP712 {
     string private constant SIGNING_DOMAIN = "JurorSetter";
     string private constant SIGNATURE_VERSION = "1";
 
-    // UDAO (ERC721) Token interface
-    IUDAOC udaoc;
+
     IStakingContract staker;
 
     event EndDispute(uint256 caseId, address[] jurors, uint256 totalJurorScore);
@@ -28,15 +27,10 @@ contract JurorManager is RoleController, EIP712 {
     uint256 public totalCaseScore;
 
     constructor(
-        address udaocAddress,
         address rmAddress
     ) EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION) RoleController(rmAddress) {
-        udaoc = IUDAOC(udaocAddress);
     }
 
-    function setUDAOC(address udaocAddress) external onlyRole(FOUNDATION_ROLE) {
-        udaoc = IUDAOC(udaocAddress);
-    }
 
     function setStaker(
         address stakerAddress
