@@ -42,6 +42,9 @@ async function deploy() {
   let factoryValidationManager = await ethers.getContractFactory(
     "ValidationManager"
   );
+  let factoryJurorManager = await ethers.getContractFactory(
+    "JurorManager"
+  );
   let factoryUDAOContent = await ethers.getContractFactory("UDAOContent");
   let factoryPlatformTreasury = await ethers.getContractFactory(
     "PlatformTreasury"
@@ -61,11 +64,15 @@ async function deploy() {
     contractUDAOContent.address,
     contractRoleManager.address
   );
+  const contractJurorManager = await factoryJurorManager.deploy(
+    contractRoleManager.address
+  );
   const contractPlatformTreasury = await factoryPlatformTreasury.deploy(
     contractUDAO.address,
     contractUDAOContent.address,
     contractRoleManager.address,
-    contractValidationManager.address
+    contractValidationManager.address,
+    contractJurorManager.address
   );
   const contractUDAOVp = await factoryUDAOVp.deploy(
     contractRoleManager.address
