@@ -4,7 +4,7 @@ pragma solidity ^0.8.4;
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
 import "./RoleController.sol";
-import "./IUDAOC.sol";
+
 
 interface IStakingContract {
     function registerValidation() external;
@@ -14,20 +14,23 @@ contract JurorManager is RoleController, EIP712 {
     string private constant SIGNING_DOMAIN = "JurorSetter";
     string private constant SIGNATURE_VERSION = "1";
 
-    // UDAO (ERC721) Token interface
-    IUDAOC udaoc;
+
     IStakingContract staker;
 
+    event EndDispute(uint256 caseId, address[] jurors, uint256 totalJurorScore);
+
+    // juror => round => score
+    mapping(address => mapping(uint256 => uint256)) public jurorScorePerRound;
+
+    uint256 public distributionRound;
+
+    uint256 public totalCaseScore;
+
     constructor(
-        address udaocAddress,
         address rmAddress
     ) EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION) RoleController(rmAddress) {
-        udaoc = IUDAOC(udaocAddress);
     }
 
-    function setUDAOC(address udaocAddress) external onlyRole(FOUNDATION_ROLE) {
-        udaoc = IUDAOC(udaocAddress);
-    }
 
     function setStaker(
         address stakerAddress
@@ -36,6 +39,8 @@ contract JurorManager is RoleController, EIP712 {
     }
 
     struct CaseVoucher {
+        /// @notice The off-chain id of the case
+        uint256 caseId;
         /// @notice contract that will be modified
         address contractAddress;
         /// @notice List of jurors who participated in the dispute
@@ -46,10 +51,7 @@ contract JurorManager is RoleController, EIP712 {
         bytes signature;
     }
 
-    // juror => score
-    mapping(address => uint256) jurorScore;
-
-    uint public totalJurorScore;
+    uint256 public totalJurorScore;
 
     /// @notice Ends a dispute, executes actions based on the result.
     function endDispute(
@@ -72,6 +74,7 @@ contract JurorManager is RoleController, EIP712 {
         }
 
         _addJurorScores(voucher.jurors);
+        emit EndDispute(voucher.caseId, voucher.jurors, totalJurorScore);
     }
 
     /// @notice Checks if the caller is a juror participated in a certain case.
@@ -93,10 +96,13 @@ contract JurorManager is RoleController, EIP712 {
         uint totalJurors = _jurors.length;
 
         for (uint i; i < totalJurors; i++) {
-            jurorScore[_jurors[i]]++;
-            // TODO This needs to be binded to round system
+            jurorScorePerRound[_jurors[i]][distributionRound]++;
             totalJurorScore++;
         }
+    }
+
+    function nextRound() external onlyRole(TREASURY_CONTRACT) {
+        distributionRound++;
     }
 
     function getTotalJurorScore() external view returns (uint) {
@@ -114,8 +120,9 @@ contract JurorManager is RoleController, EIP712 {
                 keccak256(
                     abi.encode(
                         keccak256(
-                            "CaseVoucher(address contractAddress,address[] jurors,bytes _data)"
+                            "CaseVoucher(uint256 caseId,address contractAddress,address[] jurors,bytes _data)"
                         ),
+                        voucher.caseId,
                         voucher.contractAddress,
                         keccak256(abi.encodePacked(voucher.jurors)),
                         voucher._data

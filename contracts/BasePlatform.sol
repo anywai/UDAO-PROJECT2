@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/utils/Counters.sol";
 import "./IUDAOC.sol";
 import "./RoleController.sol";
 import "./IVM.sol";
+import "./IJM.sol";
 
 abstract contract BasePlatform is Pausable, RoleController {
     // content id => content balance
@@ -26,6 +27,9 @@ abstract contract BasePlatform is Pausable, RoleController {
 
     // balance to be used for juror rewards
     uint public jurorBalance;
+
+    // balance accumulated for current round
+    uint public jurorBalanceForRound;
 
     // balance to be used for validator rewards
     uint public validatorBalance;
@@ -69,16 +73,44 @@ abstract contract BasePlatform is Pausable, RoleController {
     address public foundationWallet;
 
     IValidationManager public IVM;
+    IJurorManager public IJM;
+
+    modifier checkCoachingCuts() {
+        require(coachingFoundationCut +coachingGovernancenCut < 100000, "Cuts cant be higher than %100");
+        _;
+    }
+
+    modifier checkContentCuts() {
+        require(contentFoundationCut+contentGovernancenCut+contentJurorCut+contentValidatorCut < 10000, "Cuts cant be higher than %100");
+        _;
+    }
+
+    event RewardsDistributed(
+        uint payPerValidationScore,
+        uint payPerJurorPoint,
+        uint newRoundId
+    );
+
+    event CutsUpdated(
+        uint coachFnd,
+        uint coachGov,
+        uint contentFnd,
+        uint contentGov,
+        uint contentJuror,
+        uint contentValid
+    );
 
     constructor(
         address udaoAddress,
         address udaocAddress,
         address rmAddress,
-        address vmAddress
+        address vmAddress,
+        address jmAddress
     ) RoleController(rmAddress) {
         udao = IERC20(udaoAddress);
         udaoc = IUDAOC(udaocAddress);
         IVM = IValidationManager(vmAddress);
+        IJM = IJurorManager(jmAddress);
     }
 
     // SETTERS
@@ -87,46 +119,94 @@ abstract contract BasePlatform is Pausable, RoleController {
     /// @param _cut new cut (100000 -> 100% | 5000 -> 5%)
     function setCoachingFoundationCut(
         uint _cut
-    ) external onlyRole(GOVERNANCE_ROLE) {
+    ) external onlyRole(GOVERNANCE_ROLE) checkCoachingCuts {
         coachingFoundationCut = _cut;
+        emit CutsUpdated(
+            coachingFoundationCut,
+            coachingGovernancenCut,
+            contentFoundationCut,
+            contentGovernancenCut,
+            contentJurorCut,
+            contentValidatorCut
+        );
     }
 
     /// @notice changes cut from coaching for governance
     /// @param _cut new cut (100000 -> 100% | 5000 -> 5%)
     function setCoachingGovernanceCut(
         uint _cut
-    ) external onlyRole(GOVERNANCE_ROLE) {
+    ) external onlyRole(GOVERNANCE_ROLE) checkCoachingCuts {
         coachingGovernancenCut = _cut;
+        emit CutsUpdated(
+            coachingFoundationCut,
+            coachingGovernancenCut,
+            contentFoundationCut,
+            contentGovernancenCut,
+            contentJurorCut,
+            contentValidatorCut
+        );
     }
 
     /// @notice changes cut from content for foundation
     /// @param _cut new cut (100000 -> 100% | 5000 -> 5%)
     function setContentFoundationCut(
         uint _cut
-    ) external onlyRole(GOVERNANCE_ROLE) {
+    ) external onlyRole(GOVERNANCE_ROLE) checkContentCuts {
         contentFoundationCut = _cut;
+        emit CutsUpdated(
+            coachingFoundationCut,
+            coachingGovernancenCut,
+            contentFoundationCut,
+            contentGovernancenCut,
+            contentJurorCut,
+            contentValidatorCut
+        );
     }
 
     /// @notice changes cut from content for governance
     /// @param _cut new cut (100000 -> 100% | 5000 -> 5%)
     function setContentGovernanceCut(
         uint _cut
-    ) external onlyRole(GOVERNANCE_ROLE) {
+    ) external onlyRole(GOVERNANCE_ROLE) checkContentCuts {
         contentGovernancenCut = _cut;
+        emit CutsUpdated(
+            coachingFoundationCut,
+            coachingGovernancenCut,
+            contentFoundationCut,
+            contentGovernancenCut,
+            contentJurorCut,
+            contentValidatorCut
+        );
     }
 
     /// @notice changes cut from content for juror pool
     /// @param _cut new cut (100000 -> 100% | 5000 -> 5%)
-    function setContentJurorCut(uint _cut) external onlyRole(GOVERNANCE_ROLE) {
+    function setContentJurorCut(uint _cut) external onlyRole(GOVERNANCE_ROLE) checkContentCuts {
         contentJurorCut = _cut;
+        emit CutsUpdated(
+            coachingFoundationCut,
+            coachingGovernancenCut,
+            contentFoundationCut,
+            contentGovernancenCut,
+            contentJurorCut,
+            contentValidatorCut
+        );
     }
 
     /// @notice changes cut from content for validator pool
     /// @param _cut new cut (100000 -> 100% | 5000 -> 5%)
     function setContentValidatorCut(
         uint _cut
-    ) external onlyRole(GOVERNANCE_ROLE) {
+    ) external onlyRole(GOVERNANCE_ROLE) checkContentCuts {
         contentValidatorCut = _cut;
+        emit CutsUpdated(
+            coachingFoundationCut,
+            coachingGovernancenCut,
+            contentFoundationCut,
+            contentGovernancenCut,
+            contentJurorCut,
+            contentValidatorCut
+        );
     }
 
     /**
@@ -136,12 +216,25 @@ abstract contract BasePlatform is Pausable, RoleController {
      *
      */
     function distributeRewards() external onlyRoles(administrator_roles) {
+        // Validator reward distribution
         payPerValidationScore[distributionRound] =
             validatorBalanceForRound /
             IVM.getTotalValidationScore();
         IVM.nextRound();
-        distributionRound++;
         validatorBalanceForRound = 0;
-        /// @TODO add juror distribution here too
+
+        // Juror reward distribution
+        payPerJuror[distributionRound] =
+            jurorBalanceForRound /
+            IJM.getTotalJurorScore();
+        IJM.nextRound();
+        jurorBalanceForRound = 0;
+        distributionRound++;
+
+        emit RewardsDistributed(
+            payPerValidationScore[distributionRound - 1],
+            payPerJuror[distributionRound - 1],
+            distributionRound
+        );
     }
 }

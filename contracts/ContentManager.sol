@@ -9,6 +9,20 @@ abstract contract ContentManager is EIP712, BasePlatform {
     string private constant SIGNING_DOMAIN = "ContentManager";
     string private constant SIGNATURE_VERSION = "1";
 
+    event ForcedPayment(uint256 _coachingId, address forcedBy);
+    /// @notice triggered when any kind of refund is done
+    event Refund(uint256 _coachingId, address forcedBy, uint256 totalPaymentAmount);
+    /// @notice triggered when coaching bought
+    event CoachingBought(address learner, uint tokenId, uint coachingId);
+    event CoachingFinalized(uint coachingId, address coach, address learner);
+    /// @notice triggered when content bought
+    event ContentBought(
+        uint tokenId,
+        uint[] parts,
+        uint pricePaid,
+        address buyer
+    );
+    
     /// @notice Represents usage rights for a content (or part)
     struct ContentPurchaseVoucher {
         /// @notice The id of the token (content) to be redeemed.
@@ -126,10 +140,8 @@ abstract contract ContentManager is EIP712, BasePlatform {
             (validatorCalc) -
             (jurorCalc);
         udao.transferFrom(msg.sender, address(this), priceToPay);
+        emit ContentBought(tokenId, purchasedParts, priceToPay, msg.sender);
     }
-
-    /// @notice triggered when coaching bought
-    event CoachingBought(address learner, uint tokenId, uint coachingId);
 
     /// @notice Allows users to buy coaching service.
     /// @param voucher voucher for the coaching purchase
@@ -176,8 +188,8 @@ abstract contract ContentManager is EIP712, BasePlatform {
         emit CoachingBought(msg.sender, voucher.tokenId, coachingIndex);
         coachingIndex++;
 
-        udao.transferFrom(msg.sender, address(this), priceToPay);
         studentList[voucher.tokenId].push(voucher.redeemer);
+        udao.transferFrom(msg.sender, address(this), priceToPay);
     }
 
     /// @notice Allows both parties to finalize coaching service.
@@ -195,12 +207,22 @@ abstract contract ContentManager is EIP712, BasePlatform {
             ].coachingPaymentAmount;
 
             currentCoaching.isDone = 1;
+            emit CoachingFinalized(
+                _coachingId,
+                currentCoaching.coach,
+                currentCoaching.learner
+            );
         } else if (msg.sender == currentCoaching.learner) {
             instructorBalance[currentCoaching.coach] += coachingStructs[
                 _coachingId
             ].coachingPaymentAmount;
 
             currentCoaching.isDone = 1;
+            emit CoachingFinalized(
+                _coachingId,
+                currentCoaching.coach,
+                currentCoaching.learner
+            );
         } else {
             revert("You are not learner neither coach");
         }
@@ -225,16 +247,18 @@ abstract contract ContentManager is EIP712, BasePlatform {
         coachingStructs[_coachingId].moneyLockDeadline += 7 days;
     }
 
+    
     /// @notice Payment and coaching service can be forcefully done by administrator_roles
     /// @param _coachingId id of the coaching service
     function forcedPayment(
-        uint _coachingId
+        uint256 _coachingId
     ) external onlyRoles(administrator_roles) {
         CoachingStruct storage currentCoaching = coachingStructs[_coachingId];
         instructorBalance[currentCoaching.coach] += coachingStructs[_coachingId]
             .coachingPaymentAmount;
 
         currentCoaching.isDone = 1;
+        emit ForcedPayment(_coachingId, msg.sender);
     }
 
     /// @notice Payment and coaching service can be forcefully done by jurors
@@ -247,28 +271,33 @@ abstract contract ContentManager is EIP712, BasePlatform {
             .coachingPaymentAmount;
 
         currentCoaching.isDone = 1;
+        emit ForcedPayment(_coachingId, msg.sender);
     }
 
+    
     /// @notice refunds the coaching service callable by coach
     /// @param _coachingId id of the coaching service
-    function refund(uint _coachingId) external {
+    function refund(uint256 _coachingId) external {
         CoachingStruct storage currentCoaching = coachingStructs[_coachingId];
+        uint256 totalPaymentAmount = currentCoaching.totalPaymentAmount;
         require(msg.sender == currentCoaching.coach, "Your are not the coach");
         foundationBalance -=
-            (currentCoaching.totalPaymentAmount * coachingFoundationCut) /
+            (totalPaymentAmount * coachingFoundationCut) /
             100000;
         governanceBalance -=
-            (currentCoaching.totalPaymentAmount * coachingGovernancenCut) /
+            (totalPaymentAmount * coachingGovernancenCut) /
             100000;
 
         currentCoaching.isDone = 2;
         udao.transferFrom(
             address(this),
             currentCoaching.learner,
-            currentCoaching.totalPaymentAmount
+            totalPaymentAmount
         );
-    }
 
+        emit Refund(_coachingId, msg.sender, totalPaymentAmount);
+    }
+    
     /// @notice forces refund of coaching service only be callable by administrator_role (FOUNDATION_ROLE, GOVERNANCE_ROLE)
     /// @param _coachingId id of the coaching service
     function forcedRefundAdmin(
@@ -276,28 +305,33 @@ abstract contract ContentManager is EIP712, BasePlatform {
     ) external onlyRoles(administrator_roles) {
         uint256 startGas = gasleft();
         CoachingStruct storage currentCoaching = coachingStructs[_coachingId];
+        uint256 totalPaymentAmount = currentCoaching.totalPaymentAmount;
+
         require(currentCoaching.isRefundable, "Coaching is not refundable");
         foundationBalance -=
-            (currentCoaching.totalPaymentAmount * coachingFoundationCut) /
+            (totalPaymentAmount * coachingFoundationCut) /
             100000;
         governanceBalance -=
-            (currentCoaching.totalPaymentAmount * coachingGovernancenCut) /
+            (totalPaymentAmount * coachingGovernancenCut) /
             100000;
 
         currentCoaching.isDone = 2;
         udao.transferFrom(
             address(this),
             currentCoaching.learner,
-            currentCoaching.totalPaymentAmount
+            totalPaymentAmount
         );
 
+        // TODO explain below
         uint gasUsed = startGas - gasleft();
-
+        
         if (
             instructorBalance[currentCoaching.coach] >= (gasUsed * tx.gasprice)
         ) {
             instructorBalance[currentCoaching.coach] -= gasUsed * tx.gasprice;
         }
+
+        emit Refund(_coachingId, msg.sender, totalPaymentAmount);
     }
 
     /// @notice Jurors can force refund of a coaching service
@@ -307,27 +341,31 @@ abstract contract ContentManager is EIP712, BasePlatform {
     ) external onlyRole(JUROR_CONTRACT) {
         uint256 startGas = gasleft();
         CoachingStruct storage currentCoaching = coachingStructs[_coachingId];
+        uint256 totalPaymentAmount = currentCoaching.totalPaymentAmount;
+
         require(currentCoaching.isRefundable, "Coaching is not refundable");
         foundationBalance -=
-            (currentCoaching.totalPaymentAmount * coachingFoundationCut) /
+            (totalPaymentAmount * coachingFoundationCut) /
             100000;
         governanceBalance -=
-            (currentCoaching.totalPaymentAmount * coachingGovernancenCut) /
+            (totalPaymentAmount * coachingGovernancenCut) /
             100000;
 
         currentCoaching.isDone = 2;
         udao.transferFrom(
             address(this),
             currentCoaching.learner,
-            currentCoaching.totalPaymentAmount
+            totalPaymentAmount
         );
 
+        // TODO explain below
         uint gasUsed = startGas - gasleft();
         if (
             instructorBalance[currentCoaching.coach] >= (gasUsed * tx.gasprice)
         ) {
             instructorBalance[currentCoaching.coach] -= gasUsed * tx.gasprice;
         }
+        emit Refund(_coachingId, msg.sender, totalPaymentAmount);
     }
 
     /// @notice returns coaching informations of token

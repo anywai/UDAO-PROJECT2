@@ -18,8 +18,9 @@ contract PlatformTreasury is Pausable, ContentManager {
         address udaoAddress,
         address udaocAddress,
         address rmAddress,
-        address vmAddress
-    ) BasePlatform(udaoAddress, udaocAddress, rmAddress, vmAddress) {}
+        address vmAddress,
+        address jmAddress
+    ) BasePlatform(udaoAddress, udaocAddress, rmAddress, vmAddress, jmAddress) {}
 
     /// @notice withdraws governance balance to governance treasury
     function withdrawGovernance() external onlyRole(GOVERNANCE_ROLE) {
