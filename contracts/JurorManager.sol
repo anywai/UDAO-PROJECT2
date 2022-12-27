@@ -37,6 +37,8 @@ contract JurorManager is RoleController, EIP712 {
     struct CaseVoucher {
         /// @notice The off-chain id of the case
         uint256 caseId;
+        /// @notice The date until the voucher is valid
+        uint256 validUntil;
         /// @notice contract that will be modified
         address contractAddress;
         /// @notice List of jurors who participated in the dispute
@@ -59,7 +61,7 @@ contract JurorManager is RoleController, EIP712 {
             IRM.hasRole(BACKEND_ROLE, signer),
             "Signature invalid or unauthorized"
         );
-
+        require(voucher.validUntil >= block.timestamp, "Voucher has expired.");
         _checkJuror(voucher.jurors);
 
         // Call a function from a contract
@@ -123,9 +125,10 @@ contract JurorManager is RoleController, EIP712 {
                 keccak256(
                     abi.encode(
                         keccak256(
-                            "CaseVoucher(uint256 caseId,address contractAddress,address[] jurors,bytes _data)"
+                            "CaseVoucher(uint256 caseId,uint256 validUntil,address contractAddress,address[] jurors,bytes _data)"
                         ),
                         voucher.caseId,
+                        voucher.validUntil,
                         voucher.contractAddress,
                         keccak256(abi.encodePacked(voucher.jurors)),
                         voucher._data
