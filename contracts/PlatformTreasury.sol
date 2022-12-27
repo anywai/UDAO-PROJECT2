@@ -24,12 +24,16 @@ contract PlatformTreasury is Pausable, ContentManager {
 
     /// @notice withdraws governance balance to governance treasury
     function withdrawGovernance() external onlyRole(GOVERNANCE_ROLE) {
-        udao.transfer(governanceTreasury, governanceBalance);
+        uint withdrawableBalance = governanceBalance;
+        governanceBalance = 0;
+        udao.transfer(governanceTreasury, withdrawableBalance);
     }
 
     /// @notice withdraws foundation balance to foundation wallet
     function withdrawFoundation() external onlyRole(FOUNDATION_ROLE) {
-        udao.transfer(foundationWallet, foundationBalance);
+        uint withdrawableBalance = foundationBalance;
+        foundationBalance = 0;
+        udao.transfer(foundationWallet, withdrawableBalance);
     }
 
     /// @notice calculates validator earnings and withdraws calculated earning to validator wallet
@@ -60,6 +64,8 @@ contract PlatformTreasury is Pausable, ContentManager {
 
     /// @notice Allows instructers to withdraw individually.
     function withdrawInstructor() external {
-        udao.transfer(msg.sender, instructorBalance[msg.sender]);
+        uint withdrawableBalnce = instructorBalance[msg.sender];
+        instructorBalance[msg.sender] = 0;
+        udao.transfer(msg.sender, withdrawableBalnce);
     }
 }
