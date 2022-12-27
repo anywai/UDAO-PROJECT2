@@ -49,6 +49,9 @@ abstract contract BasePlatform is Pausable, RoleController {
     // validator => last claimed round
     mapping(address => uint) lastValidatorClaim;
 
+    // juror => last claimed round
+    mapping(address => uint) lastJurorClaim;
+
     // UDAO (ERC20) Token interface
     IERC20 udao;
 
@@ -76,12 +79,22 @@ abstract contract BasePlatform is Pausable, RoleController {
     IJurorManager public IJM;
 
     modifier checkCoachingCuts() {
-        require(coachingFoundationCut +coachingGovernancenCut < 100000, "Cuts cant be higher than %100");
+        require(
+            coachingFoundationCut + coachingGovernancenCut < 100000,
+            "Cuts cant be higher than %100"
+        );
         _;
     }
 
     modifier checkContentCuts() {
-        require(contentFoundationCut+contentGovernancenCut+contentJurorCut+contentValidatorCut < 10000, "Cuts cant be higher than %100");
+        require(
+            contentFoundationCut +
+                contentGovernancenCut +
+                contentJurorCut +
+                contentValidatorCut <
+                10000,
+            "Cuts cant be higher than %100"
+        );
         _;
     }
 
@@ -181,7 +194,9 @@ abstract contract BasePlatform is Pausable, RoleController {
 
     /// @notice changes cut from content for juror pool
     /// @param _cut new cut (100000 -> 100% | 5000 -> 5%)
-    function setContentJurorCut(uint _cut) external onlyRole(GOVERNANCE_ROLE) checkContentCuts {
+    function setContentJurorCut(
+        uint _cut
+    ) external onlyRole(GOVERNANCE_ROLE) checkContentCuts {
         contentJurorCut = _cut;
         emit CutsUpdated(
             coachingFoundationCut,
