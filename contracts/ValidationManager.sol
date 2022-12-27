@@ -33,7 +33,9 @@ contract ValidationManager is RoleController, EIP712 {
         bytes signature;
     }
 
-    event ValidationEnded(uint tokenId, bool result);
+    event SetUDAOC(address newAddress);
+
+    event NextRound(uint newRoundId);
 
     // tokenId => result
     mapping(uint => bool) public isValidated;
@@ -94,6 +96,7 @@ contract ValidationManager is RoleController, EIP712 {
 
     function nextRound() external onlyRole(TREASURY_CONTRACT) {
         distributionRound++;
+        emit NextRound(distributionRound);
     }
 
     /// @notice Returns a hash of the given ContentVoucher, prepared using EIP712 typed data hashing rules.
