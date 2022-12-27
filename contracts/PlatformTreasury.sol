@@ -10,6 +10,12 @@ contract PlatformTreasury is Pausable, ContentManager {
     string private constant SIGNING_DOMAIN = "ValidationScore";
     string private constant SIGNATURE_VERSION = "1";
 
+    event GovernanceWithdrawn(uint amount);
+    event FoundationWithdrawn(uint amount);
+    event ValidatorWithdrawn(address validator, uint amount);
+    event JurorWithdrawn(address juror, uint amount);
+    event InstructorWithdrawn(address instructor, uint amount);
+
     /// @param udaoAddress The address of the deployed udao token contract
     /// @param udaocAddress The address of the deployed udao content token
     /// @param rmAddress The address of the deployed role manager
@@ -20,13 +26,16 @@ contract PlatformTreasury is Pausable, ContentManager {
         address rmAddress,
         address vmAddress,
         address jmAddress
-    ) BasePlatform(udaoAddress, udaocAddress, rmAddress, vmAddress, jmAddress) {}
+    )
+        BasePlatform(udaoAddress, udaocAddress, rmAddress, vmAddress, jmAddress)
+    {}
 
     /// @notice withdraws governance balance to governance treasury
     function withdrawGovernance() external onlyRole(GOVERNANCE_ROLE) {
         uint withdrawableBalance = governanceBalance;
         governanceBalance = 0;
         udao.transfer(governanceTreasury, withdrawableBalance);
+        emit GovernanceWithdrawn(withdrawableBalance);
     }
 
     /// @notice withdraws foundation balance to foundation wallet
@@ -34,6 +43,7 @@ contract PlatformTreasury is Pausable, ContentManager {
         uint withdrawableBalance = foundationBalance;
         foundationBalance = 0;
         udao.transfer(foundationWallet, withdrawableBalance);
+        emit FoundationWithdrawn(withdrawableBalance);
     }
 
     /// @notice calculates validator earnings and withdraws calculated earning to validator wallet
@@ -48,6 +58,7 @@ contract PlatformTreasury is Pausable, ContentManager {
         }
         lastValidatorClaim[msg.sender] = distributionRound;
         udao.transfer(msg.sender, withdrawableBalance);
+        emit ValidatorWithdrawn(msg.sender, withdrawableBalance);
     }
 
     function withdrawJuror() external onlyRole(JUROR_ROLE) {
@@ -60,6 +71,7 @@ contract PlatformTreasury is Pausable, ContentManager {
         }
         lastJurorClaim[msg.sender] = distributionRound;
         udao.transfer(msg.sender, withdrawableBalance);
+        emit JurorWithdrawn(msg.sender, withdrawableBalance);
     }
 
     /// @notice Allows instructers to withdraw individually.
@@ -67,5 +79,6 @@ contract PlatformTreasury is Pausable, ContentManager {
         uint withdrawableBalnce = instructorBalance[msg.sender];
         instructorBalance[msg.sender] = 0;
         udao.transfer(msg.sender, withdrawableBalnce);
+        emit InstructorWithdrawn(msg.sender, withdrawableBalnce);
     }
 }
