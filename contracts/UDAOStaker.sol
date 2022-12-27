@@ -166,8 +166,10 @@ contract UDAOStaker is RoleController, EIP712 {
     struct RoleVoucher {
         /// @notice Address of the redeemer
         address redeemer;
+        /// @notice The date until the voucher is valid
+        uint256 validUntil;
         /// @notice 0 validator, 1 juror, 2 corporate, 3 super validator
-        uint roleId;
+        uint256 roleId;
         /// @notice the EIP-712 signature of all other fields in the ContentVoucher struct.
         bytes signature;
     }
@@ -316,6 +318,7 @@ contract UDAOStaker is RoleController, EIP712 {
         require(IRM.isKYCed(msg.sender), "You are not KYCed");
         // make sure signature is valid and get the address of the signer
         address signer = _verify(voucher);
+        require(voucher.validUntil >= block.timestamp, "Voucher has expired.");
         require(
             IRM.hasRole(BACKEND_ROLE, signer),
             "Signature invalid or unauthorized"
@@ -615,8 +618,10 @@ contract UDAOStaker is RoleController, EIP712 {
             _hashTypedDataV4(
                 keccak256(
                     abi.encode(
-                        keccak256("UDAOStaker(address redeemer)"),
-                        voucher.redeemer
+                        keccak256("UDAOStaker(address redeemer,uint256 validUntil,uint256 roleId)"),
+                        voucher.redeemer,
+                        voucher.validUntil,
+                        voucher.roleId
                     )
                 )
             );
