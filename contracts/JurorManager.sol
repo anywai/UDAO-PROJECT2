@@ -5,7 +5,6 @@ import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
 import "./RoleController.sol";
 
-
 interface IStakingContract {
     function registerValidation() external;
 }
@@ -13,7 +12,6 @@ interface IStakingContract {
 contract JurorManager is RoleController, EIP712 {
     string private constant SIGNING_DOMAIN = "JurorSetter";
     string private constant SIGNATURE_VERSION = "1";
-
 
     IStakingContract staker;
 
@@ -28,9 +26,7 @@ contract JurorManager is RoleController, EIP712 {
 
     constructor(
         address rmAddress
-    ) EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION) RoleController(rmAddress) {
-    }
-
+    ) EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION) RoleController(rmAddress) {}
 
     function setStaker(
         address stakerAddress
@@ -103,6 +99,13 @@ contract JurorManager is RoleController, EIP712 {
 
     function nextRound() external onlyRole(TREASURY_CONTRACT) {
         distributionRound++;
+    }
+
+    function getJurorScore(
+        address _juror,
+        uint _round
+    ) external view returns (uint) {
+        return jurorScorePerRound[_juror][_round];
     }
 
     function getTotalJurorScore() external view returns (uint) {

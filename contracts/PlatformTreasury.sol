@@ -46,6 +46,18 @@ contract PlatformTreasury is Pausable, ContentManager {
         udao.transfer(msg.sender, withdrawableBalance);
     }
 
+    function withdrawJuror() external onlyRole(JUROR_ROLE) {
+        uint claimableRound = lastJurorClaim[msg.sender];
+        uint withdrawableBalance = 0;
+        uint jurorScore = 0;
+        for (uint i = claimableRound; i < distributionRound; i++) {
+            jurorScore += IJM.getJurorScore(msg.sender, claimableRound);
+            withdrawableBalance += (payPerJuror[claimableRound] * jurorScore);
+        }
+        lastJurorClaim[msg.sender] = distributionRound;
+        udao.transfer(msg.sender, withdrawableBalance);
+    }
+
     /// @notice Allows instructers to withdraw individually.
     function withdrawInstructor() external {
         udao.transfer(msg.sender, instructorBalance[msg.sender]);
