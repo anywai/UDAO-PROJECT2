@@ -332,6 +332,7 @@ describe("Platform Treasury Contract - Content", function () {
     });
     const voucher = await lazyValidation.createVoucher(
       1,
+      Date.now() + 999999999,
       [validator.address],
       [10],
       true
@@ -435,6 +436,7 @@ describe("Platform Treasury Contract - Content", function () {
     });
     const voucher = await lazyValidation.createVoucher(
       1,
+      Date.now() + 999999999,
       [validator.address],
       [10],
       true
@@ -542,6 +544,7 @@ describe("Platform Treasury Contract - Content", function () {
     });
     const voucher = await lazyValidation.createVoucher(
       1,
+      Date.now() + 999999999,
       [validator.address],
       [10],
       true
@@ -642,6 +645,7 @@ describe("Platform Treasury Contract - Content", function () {
     });
     const voucher = await lazyValidation.createVoucher(
       1,
+      Date.now() + 999999999,
       [validator.address],
       [10],
       true
@@ -742,6 +746,7 @@ describe("Platform Treasury Contract - Content", function () {
     });
     const voucher = await lazyValidation.createVoucher(
       1,
+      Date.now() + 999999999,
       [validator.address],
       [10],
       true
@@ -857,6 +862,7 @@ describe("Platform Treasury Contract - Content", function () {
     });
     const voucher = await lazyValidation.createVoucher(
       1,
+      Date.now() + 999999999,
       [validator.address],
       [10],
       true
@@ -1043,6 +1049,7 @@ describe("Platform Treasury Contract - Content", function () {
     });
     const voucher = await lazyValidation.createVoucher(
       1,
+      Date.now() + 999999999,
       [validator.address],
       [10],
       true
@@ -1143,6 +1150,7 @@ describe("Platform Treasury Contract - Content", function () {
     });
     const voucher = await lazyValidation.createVoucher(
       1,
+      Date.now() + 999999999,
       [validator.address],
       [10],
       true
@@ -1247,6 +1255,7 @@ describe("Platform Treasury Contract - Content", function () {
     });
     const voucher = await lazyValidation.createVoucher(
       1,
+      Date.now() + 999999999,
       [validator.address],
       [10],
       true
@@ -1352,6 +1361,7 @@ describe("Platform Treasury Contract - Content", function () {
     });
     const voucher = await lazyValidation.createVoucher(
       1,
+      Date.now() + 999999999,
       [validator.address],
       [10],
       true
@@ -1455,6 +1465,7 @@ describe("Platform Treasury Contract - Content", function () {
     });
     const voucher = await lazyValidation.createVoucher(
       1,
+      Date.now() + 999999999,
       [validator.address],
       [10],
       true
@@ -1570,6 +1581,7 @@ describe("Platform Treasury Contract - Content", function () {
     });
     const voucher = await lazyValidation.createVoucher(
       1,
+      Date.now() + 999999999,
       [validator.address],
       [10],
       true
