@@ -31,11 +31,12 @@ abstract contract ContentManager is EIP712, BasePlatform {
     );
 
     /// @notice Represents usage rights for a content (or part)
+    /// FIXME FIX THE HASH FUNCTION!! tokenId and purchasedParts has been changed!
     struct ContentPurchaseVoucher {
         /// @notice The id of the token (content) to be redeemed.
-        uint256 tokenId;
+        uint256[] tokenId;
         /// @notice Purchased parts, whole content purchased if first index is 0
-        uint256[] purchasedParts;
+        uint256[][] purchasedParts;
         /// @notice The price to deduct from buyer
         uint256 priceToPay;
         /// @notice The date until the voucher is valid
@@ -96,6 +97,9 @@ abstract contract ContentManager is EIP712, BasePlatform {
     /// @notice allows KYCed users to purchase a content
     /// @param voucher voucher for the content purchase
     function buyContent(ContentPurchaseVoucher calldata voucher) external {
+        require(!IRM.isBanned(msg.sender), "You are banned");
+        require(IRM.isKYCed(msg.sender), "You are not KYCed");
+
         // make sure signature is valid and get the address of the signer
         address signer = _verifyContent(voucher);
         require(
@@ -104,13 +108,40 @@ abstract contract ContentManager is EIP712, BasePlatform {
         );
 
         require(voucher.validUntil >= block.timestamp, "Voucher has expired.");
-        uint256 tokenId = voucher.tokenId;
-        uint256[] memory purchasedParts = voucher.purchasedParts;
-        uint priceToPay = voucher.priceToPay;
 
+        if(voucher.tokenId.length == 1){
+            _buySingleContent(voucher.tokenId[0], voucher.purchasedParts[0]);
+        }else{
+            _buyMultipleContents(voucher.tokenId, voucher.purchasedParts);
+        }
+
+        uint priceToPay = voucher.priceToPay;
+        uint256 foundationCalc = (priceToPay * contentFoundationCut) / 100000;
+        uint256 governanceCalc = (priceToPay * contentGovernancenCut) / 100000;
+        uint256 validatorCalc = (priceToPay * validatorBalance) / 100000;
+        uint256 jurorCalc = (priceToPay * contentJurorCut) / 100000;
+
+        foundationBalance += foundationCalc;
+        governanceBalance += governanceCalc;
+        validatorBalanceForRound += validatorCalc;
+        jurorBalance += jurorCalc;
+
+        /// FIXME HOW CAN WE DISTRIBUTE MONEY TO INSTRUCTER IF MULTIPURCHASE?
+        instructorBalance[instructor] +=
+            priceToPay -
+            (foundationCalc) -
+            (governanceCalc) -
+            (validatorCalc) -
+            (jurorCalc);
+        udao.transferFrom(msg.sender, address(this), priceToPay);
+
+        /// FIXME FIX THE EVENT FOR MULTIPLE CONTENT PURCHASE!
+        emit ContentBought(tokenId, purchasedParts, priceToPay, msg.sender);
+    }
+
+    function _buySingleContent(uint256 tokenId, uint256[] memory purchasedParts) internal{
         require(udaoc.exists(tokenId), "Content does not exist!");
-        require(!IRM.isBanned(msg.sender), "You are banned");
-        require(IRM.isKYCed(msg.sender), "You are not KYCed");
+        
         address instructor = udaoc.ownerOf(tokenId);
         require(IRM.isKYCed(instructor), "Instructor is not KYCed");
         require(!IRM.isBanned(instructor), "Instructor is banned");
@@ -131,23 +162,14 @@ abstract contract ContentManager is EIP712, BasePlatform {
             isTokenBought[msg.sender][tokenId][purchasedParts[i]] = true;
             ownedContents[msg.sender].push([tokenId, purchasedParts[i]]);
         }
-        uint256 foundationCalc = (priceToPay * contentFoundationCut) / 100000;
-        uint256 governanceCalc = (priceToPay * contentGovernancenCut) / 100000;
-        uint256 validatorCalc = (priceToPay * validatorBalance) / 100000;
-        uint256 jurorCalc = (priceToPay * contentJurorCut) / 100000;
+    }
 
-        foundationBalance += foundationCalc;
-        governanceBalance += governanceCalc;
-        validatorBalanceForRound += validatorCalc;
-        jurorBalance += jurorCalc;
-        instructorBalance[instructor] +=
-            priceToPay -
-            (foundationCalc) -
-            (governanceCalc) -
-            (validatorCalc) -
-            (jurorCalc);
-        udao.transferFrom(msg.sender, address(this), priceToPay);
-        emit ContentBought(tokenId, purchasedParts, priceToPay, msg.sender);
+    function _buyMultipleContents(uint256[] memory tokenIds, uint256[][] memory purchasedParts) internal{
+        uint tokenIdLength = tokenIds.length;
+
+        for (uint i; i< tokenIdLength; i++) {
+            _buySingleContent(tokenIds[i], purchasedParts[i]);
+        }
     }
 
     /// @notice Allows users to buy coaching service.
