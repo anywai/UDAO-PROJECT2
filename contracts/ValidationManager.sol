@@ -23,6 +23,8 @@ contract ValidationManager is RoleController, EIP712 {
     struct ValidationVoucher {
         /// @notice The id of the token to record validation status.
         uint256 tokenId;
+        /// @notice The date until the voucher is valid
+        uint256 validUntil;
         /// @notice Addresses of the validators
         address[] validators;
         /// @notice Scores validators earned from this validation
@@ -34,6 +36,7 @@ contract ValidationManager is RoleController, EIP712 {
     }
 
     event ValidationEnded(uint tokenId, bool result);
+    event NextRound(uint newRoundId);
 
     // tokenId => result
     mapping(uint => bool) public isValidated;
@@ -51,6 +54,7 @@ contract ValidationManager is RoleController, EIP712 {
     function setAsValidated(ValidationVoucher calldata voucher) external {
         // make sure signature is valid and get the address of the signer
         address signer = _verify(voucher);
+        require(voucher.validUntil >= block.timestamp, "Voucher has expired.");
         require(
             IRM.hasRole(BACKEND_ROLE, signer),
             "Signature invalid or unauthorized"
@@ -94,6 +98,7 @@ contract ValidationManager is RoleController, EIP712 {
 
     function nextRound() external onlyRole(TREASURY_CONTRACT) {
         distributionRound++;
+        emit NextRound(distributionRound);
     }
 
     /// @notice Returns a hash of the given ContentVoucher, prepared using EIP712 typed data hashing rules.
@@ -106,9 +111,10 @@ contract ValidationManager is RoleController, EIP712 {
                 keccak256(
                     abi.encode(
                         keccak256(
-                            "ValidationVoucher(uint256 tokenId,address[] validators,uint256[] validationScore,bool isValidated)"
+                            "ValidationVoucher(uint256 tokenId,uint256 validUntil,address[] validators,uint256[] validationScore,bool isValidated)"
                         ),
                         voucher.tokenId,
+                        voucher.validUntil,
                         keccak256(abi.encodePacked(voucher.validators)),
                         keccak256(abi.encodePacked(voucher.validationScore)),
                         voucher.isValidated

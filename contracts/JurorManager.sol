@@ -5,7 +5,6 @@ import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
 import "./RoleController.sol";
 
-
 interface IStakingContract {
     function registerValidation() external;
 }
@@ -13,7 +12,6 @@ interface IStakingContract {
 contract JurorManager is RoleController, EIP712 {
     string private constant SIGNING_DOMAIN = "JurorSetter";
     string private constant SIGNATURE_VERSION = "1";
-
 
     IStakingContract staker;
 
@@ -28,9 +26,7 @@ contract JurorManager is RoleController, EIP712 {
 
     constructor(
         address rmAddress
-    ) EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION) RoleController(rmAddress) {
-    }
-
+    ) EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION) RoleController(rmAddress) {}
 
     function setStaker(
         address stakerAddress
@@ -41,6 +37,8 @@ contract JurorManager is RoleController, EIP712 {
     struct CaseVoucher {
         /// @notice The off-chain id of the case
         uint256 caseId;
+        /// @notice The date until the voucher is valid
+        uint256 validUntil;
         /// @notice contract that will be modified
         address contractAddress;
         /// @notice List of jurors who participated in the dispute
@@ -63,7 +61,7 @@ contract JurorManager is RoleController, EIP712 {
             IRM.hasRole(BACKEND_ROLE, signer),
             "Signature invalid or unauthorized"
         );
-
+        require(voucher.validUntil >= block.timestamp, "Voucher has expired.");
         _checkJuror(voucher.jurors);
 
         // Call a function from a contract
@@ -105,6 +103,13 @@ contract JurorManager is RoleController, EIP712 {
         distributionRound++;
     }
 
+    function getJurorScore(
+        address _juror,
+        uint _round
+    ) external view returns (uint) {
+        return jurorScorePerRound[_juror][_round];
+    }
+
     function getTotalJurorScore() external view returns (uint) {
         /// @notice returns total successful validation count
         return totalJurorScore;
@@ -120,9 +125,10 @@ contract JurorManager is RoleController, EIP712 {
                 keccak256(
                     abi.encode(
                         keccak256(
-                            "CaseVoucher(uint256 caseId,address contractAddress,address[] jurors,bytes _data)"
+                            "CaseVoucher(uint256 caseId,uint256 validUntil,address contractAddress,address[] jurors,bytes _data)"
                         ),
                         voucher.caseId,
+                        voucher.validUntil,
                         voucher.contractAddress,
                         keccak256(abi.encodePacked(voucher.jurors)),
                         voucher._data

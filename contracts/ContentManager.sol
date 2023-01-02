@@ -11,10 +11,17 @@ abstract contract ContentManager is EIP712, BasePlatform {
 
     event ForcedPayment(uint256 _coachingId, address forcedBy);
     /// @notice triggered when any kind of refund is done
-    event Refund(uint256 _coachingId, address forcedBy, uint256 totalPaymentAmount);
+    event Refund(
+        uint256 _coachingId,
+        address forcedBy,
+        uint256 totalPaymentAmount
+    );
     /// @notice triggered when coaching bought
     event CoachingBought(address learner, uint tokenId, uint coachingId);
+    /// @notice triggered when coaching finalized
     event CoachingFinalized(uint coachingId, address coach, address learner);
+    /// @notice triggered when coaching deadline delayed
+    event DeadlineDelayed(uint coachingId, uint newDeadline);
     /// @notice triggered when content bought
     event ContentBought(
         uint tokenId,
@@ -22,7 +29,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
         uint pricePaid,
         address buyer
     );
-    
+
     /// @notice Represents usage rights for a content (or part)
     struct ContentPurchaseVoucher {
         /// @notice The id of the token (content) to be redeemed.
@@ -245,9 +252,12 @@ abstract contract ContentManager is EIP712, BasePlatform {
             "Only can be delayed in last 3 days"
         );
         coachingStructs[_coachingId].moneyLockDeadline += 7 days;
+        emit DeadlineDelayed(
+            _coachingId,
+            coachingStructs[_coachingId].moneyLockDeadline
+        );
     }
 
-    
     /// @notice Payment and coaching service can be forcefully done by administrator_roles
     /// @param _coachingId id of the coaching service
     function forcedPayment(
@@ -258,7 +268,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
             .coachingPaymentAmount;
 
         currentCoaching.isDone = 1;
-        emit ForcedPayment(_coachingId, msg.sender);
+        emit ForcedPayment(_coachingId, currentCoaching.coach);
     }
 
     /// @notice Payment and coaching service can be forcefully done by jurors
@@ -274,7 +284,6 @@ abstract contract ContentManager is EIP712, BasePlatform {
         emit ForcedPayment(_coachingId, msg.sender);
     }
 
-    
     /// @notice refunds the coaching service callable by coach
     /// @param _coachingId id of the coaching service
     function refund(uint256 _coachingId) external {
@@ -289,15 +298,11 @@ abstract contract ContentManager is EIP712, BasePlatform {
             100000;
 
         currentCoaching.isDone = 2;
-        udao.transferFrom(
-            address(this),
-            currentCoaching.learner,
-            totalPaymentAmount
-        );
+        udao.transfer(currentCoaching.learner, totalPaymentAmount);
 
-        emit Refund(_coachingId, msg.sender, totalPaymentAmount);
+        emit Refund(_coachingId, currentCoaching.learner, totalPaymentAmount);
     }
-    
+
     /// @notice forces refund of coaching service only be callable by administrator_role (FOUNDATION_ROLE, GOVERNANCE_ROLE)
     /// @param _coachingId id of the coaching service
     function forcedRefundAdmin(
@@ -316,22 +321,20 @@ abstract contract ContentManager is EIP712, BasePlatform {
             100000;
 
         currentCoaching.isDone = 2;
-        udao.transferFrom(
-            address(this),
-            currentCoaching.learner,
-            totalPaymentAmount
-        );
+        udao.transfer(currentCoaching.learner, totalPaymentAmount);
 
         // TODO explain below
         uint gasUsed = startGas - gasleft();
-        
+
         if (
             instructorBalance[currentCoaching.coach] >= (gasUsed * tx.gasprice)
         ) {
             instructorBalance[currentCoaching.coach] -= gasUsed * tx.gasprice;
+        } else {
+            instructorBalance[currentCoaching.coach] = 0;
         }
 
-        emit Refund(_coachingId, msg.sender, totalPaymentAmount);
+        emit Refund(_coachingId, currentCoaching.learner, totalPaymentAmount);
     }
 
     /// @notice Jurors can force refund of a coaching service
@@ -352,11 +355,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
             100000;
 
         currentCoaching.isDone = 2;
-        udao.transferFrom(
-            address(this),
-            currentCoaching.learner,
-            totalPaymentAmount
-        );
+        udao.transfer(currentCoaching.learner, totalPaymentAmount);
 
         // TODO explain below
         uint gasUsed = startGas - gasleft();
@@ -364,6 +363,8 @@ abstract contract ContentManager is EIP712, BasePlatform {
             instructorBalance[currentCoaching.coach] >= (gasUsed * tx.gasprice)
         ) {
             instructorBalance[currentCoaching.coach] -= gasUsed * tx.gasprice;
+        } else {
+            instructorBalance[currentCoaching.coach] = 0;
         }
         emit Refund(_coachingId, msg.sender, totalPaymentAmount);
     }

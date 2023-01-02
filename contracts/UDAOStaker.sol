@@ -30,18 +30,37 @@ contract UDAOStaker is RoleController, EIP712 {
     /// @notice Amount to deduct from super validator application
     uint superValidatorLockAmount = 150 ether;
 
+    event SetSuperValidatorLockAmount(uint _newAmount);
+    event SetVoteReward(uint _newAmount);
+    event SetPlatformTreasuryAddress(address _newAddress);
+    event RoleApplied(uint _roleId, address _user, uint _jobAmount);
+    event RoleApproved(uint _roleId, address _user);
+    event RoleRejected(uint _roleId, address _user);
+    event ValidationAdded(uint _amount);
+    event ValidationRegistered(address _validator, uint _validationId);
+    event ValidatorStakeWithdrawn(address _validator, uint _amount);
+
+    // @TODO Juror staking eklendiğinde kullanılacak
+
+    event JurorStakeWithdrawn(address _juror, uint _amount);
+    event GovernanceStake(address _member, uint _stakeAmount, uint _vpAmount);
+    event GovernanceStakeWithdraw(
+        address _member,
+        uint _unstakeAmount,
+        uint _vpAmount
+    );
+    event VoteRewardAdded(address _rewardee, uint _amount);
+    event VoteRewardsWithdrawn(address _rewardee, uint _amount);
+
     event StakeForJobListing(
         address corporateAddress,
         uint256 amount,
         uint256 stakePerListing
     );
 
-    event UnstakeForJobListing(
-        address corporateAddress,
-        uint256 amount
-    );
+    event UnstakeForJobListing(address corporateAddress, uint256 amount);
 
-    struct StakeLock {
+    struct ValidatorStakeLock {
         uint256 maxValidationAmount;
         uint256 doneValidationAmount;
         uint256 amountPerValidation;
@@ -64,7 +83,7 @@ contract UDAOStaker is RoleController, EIP712 {
     }
 
     mapping(address => uint) validationBalanceOf;
-    mapping(address => StakeLock[]) validatorLock;
+    mapping(address => ValidatorStakeLock[]) validatorLock;
     mapping(address => ValidationLock[]) validationLocks;
     mapping(address => JurorStakeLock[]) jurorLocks;
     mapping(address => uint) latestStakeId;
@@ -126,26 +145,31 @@ contract UDAOStaker is RoleController, EIP712 {
         uint _amount
     ) external onlyRoles(administrator_roles) {
         superValidatorLockAmount = _amount;
+        emit SetSuperValidatorLockAmount(_amount);
     }
 
     function setVoteReward(
         uint _reward
     ) external onlyRoles(administrator_roles) {
         voteReward = _reward;
+        emit SetVoteReward(_reward);
     }
 
     function setPlatformTreasuryAddress(
         address _platformTreasuryAddress
     ) external onlyRoles(administrator_roles) {
         platformTreasuryAddress = _platformTreasuryAddress;
+        emit SetPlatformTreasuryAddress(_platformTreasuryAddress);
     }
 
     /// @notice Represents the right to get a role
     struct RoleVoucher {
         /// @notice Address of the redeemer
         address redeemer;
-        /// @notice 0 validator, 1 juror, 2 corporate
-        uint roleId;
+        /// @notice The date until the voucher is valid
+        uint256 validUntil;
+        /// @notice 0 validator, 1 juror, 2 corporate, 3 super validator
+        uint256 roleId;
         /// @notice the EIP-712 signature of all other fields in the ContentVoucher struct.
         bytes signature;
     }
@@ -177,6 +201,8 @@ contract UDAOStaker is RoleController, EIP712 {
         validationApplicationIndex++;
         validationBalanceOf[msg.sender] += tokenToExtract;
         udao.transferFrom(msg.sender, address(this), tokenToExtract);
+
+        emit RoleApplied(0, msg.sender, validationAmount);
     }
 
     /// @notice Allows validators to apply for super validator role
@@ -205,6 +231,8 @@ contract UDAOStaker is RoleController, EIP712 {
         validationApplication.expire = block.timestamp + superValidatorLockTime;
         validationBalanceOf[msg.sender] += superValidatorLockAmount;
         udao.transferFrom(msg.sender, address(this), superValidatorLockAmount);
+
+        emit RoleApplied(3, msg.sender, 0);
     }
 
     /// @notice Allows validators to add more rights to get validation work
@@ -220,15 +248,28 @@ contract UDAOStaker is RoleController, EIP712 {
 
         udao.transferFrom(msg.sender, address(this), tokenToExtract);
 
-        StakeLock storage userInfo = validatorLock[msg.sender].push();
+        ValidatorStakeLock storage userInfo = validatorLock[msg.sender].push();
         userInfo.amountPerValidation = tokenToExtract;
         userInfo.maxValidationAmount = validationAmount;
         userInfo.expire = block.timestamp + validatorLockTime;
+
+        emit ValidationAdded(validationAmount);
+    }
+
+    // TODO add voucher system, below is the initial struct for it
+    // Adamın biri gelip kafasına göre validasyon işi yaratmasın
+    // Belki voucher içine storage'da tutulan bişilerde eklenebilir?
+    // BT-93
+    struct RegisterValidation {
+        uint validationId;
+        bytes32 signature;
     }
 
     /// @notice Allows validators to accept the validation work
-    function registerValidation() external onlyRoles(validator_roles) {
-        StakeLock storage stakeLock = validatorLock[_msgSender()][
+    function registerValidation(
+        uint validationId
+    ) external onlyRoles(validator_roles) {
+        ValidatorStakeLock storage stakeLock = validatorLock[_msgSender()][
             latestStakeId[_msgSender()]
         ];
         require(
@@ -243,6 +284,8 @@ contract UDAOStaker is RoleController, EIP712 {
         if (stakeLock.doneValidationAmount == stakeLock.maxValidationAmount) {
             latestStakeId[_msgSender()]++;
         }
+
+        emit ValidationRegistered(msg.sender, validationId);
     }
 
     /// @notice allows users to apply for juror role
@@ -263,6 +306,8 @@ contract UDAOStaker is RoleController, EIP712 {
         caseApplicationIndex++;
         validationBalanceOf[msg.sender] += tokenToExtract;
         udao.transferFrom(msg.sender, address(this), tokenToExtract);
+
+        emit RoleApplied(1, msg.sender, caseAmount);
     }
 
     /// @notice Users can use this function and assign validator or juror roles to themselves
@@ -273,21 +318,26 @@ contract UDAOStaker is RoleController, EIP712 {
         require(IRM.isKYCed(msg.sender), "You are not KYCed");
         // make sure signature is valid and get the address of the signer
         address signer = _verify(voucher);
+        require(voucher.validUntil >= block.timestamp, "Voucher has expired.");
         require(
             IRM.hasRole(BACKEND_ROLE, signer),
             "Signature invalid or unauthorized"
         );
 
-        if (voucher.roleId == 0) {
+        uint roleId = voucher.roleId;
+
+        if (roleId == 0) {
             ValidationApplication
                 storage validationApplication = validatorApplications[
                     validatorApplicationId[voucher.redeemer]
                 ];
-            StakeLock storage userInfo = validatorLock[msg.sender].push();
+            ValidatorStakeLock storage userInfo = validatorLock[msg.sender]
+                .push();
 
             if (validationApplication.isSuper) {
                 IRM.grantRole(SUPER_VALIDATOR_ROLE, voucher.redeemer);
                 userInfo.expire = block.timestamp + superValidatorLockTime;
+                roleId = 3; // supervalidator
             } else {
                 IRM.grantRole(VALIDATOR_ROLE, voucher.redeemer);
                 userInfo.expire = block.timestamp + validatorLockTime;
@@ -297,7 +347,7 @@ contract UDAOStaker is RoleController, EIP712 {
             userInfo.maxValidationAmount = validationApplication
                 .maxValidationAmount;
             validationApplication.isFinished = true;
-        } else if (voucher.roleId == 1) {
+        } else if (roleId == 1) {
             require(
                 udaovp.balanceOf(voucher.redeemer) > 0,
                 "You are not governance member"
@@ -314,24 +364,39 @@ contract UDAOStaker is RoleController, EIP712 {
             userInfo.amountPerValidation = jurorApplication.amountPerCase;
             userInfo.maxValidationAmount = jurorApplication.maxCaseAmount;
             jurorApplication.isFinished = true;
-        } else if (voucher.roleId == 2) {
+        } else if (roleId == 2) {
             IRM.grantRole(CORPORATE_ROLE, voucher.redeemer);
         } else {
             revert("Undefined role ID!");
         }
+
+        emit RoleApproved(roleId, msg.sender);
     }
 
     /// @notice Allows backend to reject role assignment application
     /// @param _applicant The address of the applicant
     function rejectApplication(
-        address _applicant
+        address _applicant,
+        uint roleId
     ) external onlyRole(BACKEND_ROLE) {
-        ValidationApplication
-            storage validationApplication = validatorApplications[
-                validatorApplicationId[_applicant]
+        if (roleId == 0 || roleId == 3) {
+            ValidationApplication
+                storage validationApplication = validatorApplications[
+                    validatorApplicationId[_applicant]
+                ];
+            validationApplication.expire = 0;
+            validationApplication.isFinished = true;
+        } else if (roleId == 1) {
+            JurorApplication storage jurorApplication = jurorApplications[
+                jurorApplicationId[_applicant]
             ];
-        validationApplication.expire = 0;
-        validationApplication.isFinished = true;
+            jurorApplication.expire = 0;
+            jurorApplication.isFinished = true;
+        } else {
+            revert("Role Id does not exist!");
+        }
+
+        emit RoleRejected(roleId, _applicant);
     }
 
     /// @notice allows validators to withdraw their staked tokens
@@ -345,7 +410,9 @@ contract UDAOStaker is RoleController, EIP712 {
 
         if (IRM.hasRole(VALIDATOR_ROLE, msg.sender)) {
             for (int j; uint(j) < validatorLockLength; j++) {
-                StakeLock storage lock = validatorLock[msg.sender][uint(j)];
+                ValidatorStakeLock storage lock = validatorLock[msg.sender][
+                    uint(j)
+                ];
                 if (lock.expire < block.timestamp) {
                     withdrawableBalance +=
                         lock.amountPerValidation *
@@ -367,7 +434,9 @@ contract UDAOStaker is RoleController, EIP712 {
             }
         } else if (IRM.hasRole(SUPER_VALIDATOR_ROLE, msg.sender)) {
             for (int j; uint(j) < validatorLockLength; j++) {
-                StakeLock storage lock = validatorLock[msg.sender][uint(j)];
+                ValidatorStakeLock storage lock = validatorLock[msg.sender][
+                    uint(j)
+                ];
                 if (lock.expire < block.timestamp) {
                     withdrawableBalance +=
                         lock.amountPerValidation *
@@ -385,6 +454,7 @@ contract UDAOStaker is RoleController, EIP712 {
             "You don't have enough balance"
         );
         udao.transfer(msg.sender, withdrawableBalance);
+        emit ValidatorStakeWithdrawn(msg.sender, withdrawableBalance);
     }
 
     /// @notice Returns the amount of token a validator could withdraw
@@ -399,7 +469,9 @@ contract UDAOStaker is RoleController, EIP712 {
 
         if (IRM.hasRole(VALIDATOR_ROLE, msg.sender)) {
             for (int j; uint(j) < validatorLockLength; j++) {
-                StakeLock storage lock = validatorLock[msg.sender][uint(j)];
+                ValidatorStakeLock storage lock = validatorLock[msg.sender][
+                    uint(j)
+                ];
                 if (lock.expire < block.timestamp) {
                     withdrawableBalance +=
                         lock.amountPerValidation *
@@ -416,7 +488,9 @@ contract UDAOStaker is RoleController, EIP712 {
             }
         } else if (IRM.hasRole(SUPER_VALIDATOR_ROLE, msg.sender)) {
             for (int j; uint(j) < validatorLockLength; j++) {
-                StakeLock storage lock = validatorLock[msg.sender][uint(j)];
+                ValidatorStakeLock storage lock = validatorLock[msg.sender][
+                    uint(j)
+                ];
                 if (lock.expire < block.timestamp) {
                     withdrawableBalance +=
                         lock.amountPerValidation *
@@ -444,6 +518,7 @@ contract UDAOStaker is RoleController, EIP712 {
         lock.vpamount = _amount * _days;
         totalVotingPower += lock.vpamount;
         udaovp.transfer(msg.sender, lock.vpamount);
+        emit GovernanceStake(msg.sender, _amount, lock.vpamount);
     }
 
     function withdrawGovernanceStake(uint _amount) public {
@@ -466,6 +541,12 @@ contract UDAOStaker is RoleController, EIP712 {
                     totalVotingPower -= vpBalance;
                     udaovp.transferFrom(msg.sender, address(0x0), vpBalance);
                     udao.transfer(msg.sender, _amount);
+                    emit GovernanceStakeWithdraw(
+                        msg.sender,
+                        _amount,
+                        vpBalance
+                    );
+                    return;
                 }
                 withdrawableBalance += lock.amount;
                 vpBalance += lock.vpamount;
@@ -482,6 +563,7 @@ contract UDAOStaker is RoleController, EIP712 {
         uint votingPowerRatio = (udaovp.balanceOf(voter) * 10000) /
             totalVotingPower;
         rewardBalanceOf[voter] += votingPowerRatio * voteReward;
+        emit VoteRewardAdded(voter, votingPowerRatio * voteReward);
     }
 
     function withdrawRewards() external {
@@ -492,15 +574,25 @@ contract UDAOStaker is RoleController, EIP712 {
         uint voteRewards = rewardBalanceOf[msg.sender];
         rewardBalanceOf[msg.sender] = 0;
         udao.transferFrom(platformTreasuryAddress, msg.sender, voteRewards);
+        emit VoteRewardsWithdrawn(msg.sender, voteRewards);
     }
 
-   
-
-    /// @notice Allows corporate accounts to stake. Staker and staked amount returned with event.  
+    /// @notice Allows corporate accounts to stake. Staker and staked amount returned with event.
     /// @param amount The amount of stake
-    function stakeForJobListing(uint256 amount) external onlyRole(CORPORATE_ROLE) {
+    function stakeForJobListing(
+        uint256 amount
+    ) external onlyRole(CORPORATE_ROLE) {
         require(amount > 0, "Zero amount");
-        require(amount % corporateStakePerListing == 0,string(abi.encodePacked("Sent UDAO must be multiples of ", Strings.toHexString(corporateStakePerListing)," UDAO")));
+        require(
+            amount % corporateStakePerListing == 0,
+            string(
+                abi.encodePacked(
+                    "Sent UDAO must be multiples of ",
+                    Strings.toHexString(corporateStakePerListing),
+                    " UDAO"
+                )
+            )
+        );
         corporateStaked[msg.sender] += amount;
         udao.transferFrom(msg.sender, address(this), amount);
         emit StakeForJobListing(msg.sender, amount, corporateStakePerListing);
@@ -526,8 +618,10 @@ contract UDAOStaker is RoleController, EIP712 {
             _hashTypedDataV4(
                 keccak256(
                     abi.encode(
-                        keccak256("UDAOStaker(address redeemer)"),
-                        voucher.redeemer
+                        keccak256("UDAOStaker(address redeemer,uint256 validUntil,uint256 roleId)"),
+                        voucher.redeemer,
+                        voucher.validUntil,
+                        voucher.roleId
                     )
                 )
             );
