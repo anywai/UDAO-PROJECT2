@@ -17,16 +17,16 @@ abstract contract ContentManager is EIP712, BasePlatform {
         uint256 totalPaymentAmount
     );
     /// @notice triggered when coaching bought
-    event CoachingBought(address learner, uint tokenId, uint coachingId);
+    event CoachingBought(address learner, uint256 tokenId, uint256 coachingId);
     /// @notice triggered when coaching finalized
-    event CoachingFinalized(uint coachingId, address coach, address learner);
+    event CoachingFinalized(uint256 coachingId, address coach, address learner);
     /// @notice triggered when coaching deadline delayed
-    event DeadlineDelayed(uint coachingId, uint newDeadline);
+    event DeadlineDelayed(uint256 coachingId, uint256 newDeadline);
     /// @notice triggered when content bought
     event ContentBought(
-        uint tokenId,
-        uint[] parts,
-        uint pricePaid,
+        uint256 tokenId,
+        uint256[] parts,
+        uint256 pricePaid,
         address buyer
     );
 
@@ -34,9 +34,9 @@ abstract contract ContentManager is EIP712, BasePlatform {
     /// FIXME FIX THE HASH FUNCTION!! tokenId and purchasedParts has been changed!
     struct ContentPurchaseVoucher {
         /// @notice The id of the token (content) to be redeemed.
-        uint256[] tokenId;
+        uint256 tokenId;
         /// @notice Purchased parts, whole content purchased if first index is 0
-        uint256[][] purchasedParts;
+        uint256[] purchasedParts;
         /// @notice The price to deduct from buyer
         uint256 priceToPay;
         /// @notice The date until the voucher is valid
@@ -64,111 +64,124 @@ abstract contract ContentManager is EIP712, BasePlatform {
     }
 
     // wallet => content token Ids
-    mapping(address => uint[][]) ownedContents;
+    mapping(address => uint256[][]) ownedContents;
     // tokenId => student addresses
-    mapping(uint => address[]) public studentList;
+    mapping(uint256 => address[]) public studentList;
 
     struct CoachingStruct {
         address coach;
         address learner;
-        uint moneyLockDeadline;
-        uint coachingPaymentAmount;
+        uint256 moneyLockDeadline;
+        uint256 coachingPaymentAmount;
         uint8 isDone; // 0 not done, 1 done, 2 refunded
-        uint totalPaymentAmount;
+        uint256 totalPaymentAmount;
         bool isRefundable;
     }
 
     // tokenId => coachingId[]  which tokens have which coachings
-    mapping(uint => uint[]) coachingIdsOfToken;
+    mapping(uint256 => uint256[]) coachingIdsOfToken;
     // coachinId => coachingStruct  Coaching details
-    mapping(uint => CoachingStruct) public coachingStructs;
-    uint private coachingIndex;
+    mapping(uint256 => CoachingStruct) public coachingStructs;
+    uint256 private coachingIndex;
 
     constructor() EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION) {}
 
     /// @notice Allows seting the address of the valdation manager contract
     /// @param vmAddress The address of the deployed ValidationManager contract
-    function setValidationManager(
-        address vmAddress
-    ) external onlyRole(FOUNDATION_ROLE) {
+    function setValidationManager(address vmAddress)
+        external
+        onlyRole(FOUNDATION_ROLE)
+    {
         IVM = IValidationManager(vmAddress);
     }
 
     /// @notice allows KYCed users to purchase a content
-    /// @param voucher voucher for the content purchase
-    function buyContent(ContentPurchaseVoucher calldata voucher) external {
+    /// @param vouchers voucher for the content purchase
+    function buyContent(ContentPurchaseVoucher[] calldata vouchers) external {
         require(!IRM.isBanned(msg.sender), "You are banned");
-        require(IRM.isKYCed(msg.sender), "You are not KYCed");
 
-        // make sure signature is valid and get the address of the signer
-        address signer = _verifyContent(voucher);
-        require(
-            IRM.hasRole(BACKEND_ROLE, signer),
-            "Signature invalid or unauthorized"
-        );
+        uint256 voucherLength = vouchers.length;
+        for (uint256 i = 0; i < voucherLength; voucherLength++) {
+            uint256 tokenId = vouchers[i].tokenId;
+            uint256 priceToPay = vouchers[i].priceToPay;
 
-        require(voucher.validUntil >= block.timestamp, "Voucher has expired.");
-
-        if(voucher.tokenId.length == 1){
-            _buySingleContent(voucher.tokenId[0], voucher.purchasedParts[0]);
-        }else{
-            _buyMultipleContents(voucher.tokenId, voucher.purchasedParts);
-        }
-
-        uint priceToPay = voucher.priceToPay;
-        uint256 foundationCalc = (priceToPay * contentFoundationCut) / 100000;
-        uint256 governanceCalc = (priceToPay * contentGovernancenCut) / 100000;
-        uint256 validatorCalc = (priceToPay * validatorBalance) / 100000;
-        uint256 jurorCalc = (priceToPay * contentJurorCut) / 100000;
-
-        foundationBalance += foundationCalc;
-        governanceBalance += governanceCalc;
-        validatorBalanceForRound += validatorCalc;
-        jurorBalance += jurorCalc;
-
-        /// FIXME HOW CAN WE DISTRIBUTE MONEY TO INSTRUCTER IF MULTIPURCHASE?
-        instructorBalance[instructor] +=
-            priceToPay -
-            (foundationCalc) -
-            (governanceCalc) -
-            (validatorCalc) -
-            (jurorCalc);
-        udao.transferFrom(msg.sender, address(this), priceToPay);
-
-        /// FIXME FIX THE EVENT FOR MULTIPLE CONTENT PURCHASE!
-        emit ContentBought(tokenId, purchasedParts, priceToPay, msg.sender);
-    }
-
-    function _buySingleContent(uint256 tokenId, uint256[] memory purchasedParts) internal{
-        require(udaoc.exists(tokenId), "Content does not exist!");
-        
-        address instructor = udaoc.ownerOf(tokenId);
-        require(IRM.isKYCed(instructor), "Instructor is not KYCed");
-        require(!IRM.isBanned(instructor), "Instructor is banned");
-        require(IVM.getIsValidated(tokenId), "Content is not validated yet");
-        require(
-            isTokenBought[msg.sender][tokenId][0] == false,
-            "Full content is already bought"
-        );
-
-        uint partIdLength = purchasedParts.length;
-
-        for (uint i; i < partIdLength; i++) {
+            // make sure signature is valid and get the address of the signer
+            address signer = _verifyContent(vouchers[i]);
             require(
-                isTokenBought[msg.sender][tokenId][purchasedParts[i]] == false,
-                "Content part is already bought"
+                IRM.hasRole(BACKEND_ROLE, signer),
+                "Signature invalid or unauthorized"
             );
 
-            isTokenBought[msg.sender][tokenId][purchasedParts[i]] = true;
-            ownedContents[msg.sender].push([tokenId, purchasedParts[i]]);
-        }
-    }
+            require(
+                vouchers[i].validUntil >= block.timestamp,
+                "Voucher has expired."
+            );
+            require(
+                msg.sender == vouchers[i].redeemer,
+                "You are not redeemer."
+            );
 
-    function _buyMultipleContents(uint256[] memory tokenIds, uint256[][] memory purchasedParts) internal{
-        uint tokenIdLength = tokenIds.length;
+            require(udaoc.exists(tokenId), "Content does not exist!");
+            address instructor = udaoc.ownerOf(tokenId);
+            require(!IRM.isBanned(instructor), "Instructor is banned");
+            require(
+                IVM.getIsValidated(tokenId),
+                "Content is not validated yet"
+            );
+            require(
+                isTokenBought[msg.sender][tokenId][0] == false,
+                "Full content is already bought"
+            );
 
-        for (uint i; i< tokenIdLength; i++) {
-            _buySingleContent(tokenIds[i], purchasedParts[i]);
+            uint256 partIdLength = vouchers[i].purchasedParts.length;
+
+            for (uint256 j; i < partIdLength; i++) {
+                require(
+                    isTokenBought[msg.sender][tokenId][
+                        vouchers[i].purchasedParts[j]
+                    ] == false,
+                    "Content part is already bought"
+                );
+
+                isTokenBought[msg.sender][tokenId][
+                    vouchers[i].purchasedParts[j]
+                ] = true;
+                ownedContents[msg.sender].push(
+                    [tokenId, vouchers[i].purchasedParts[j]]
+                );
+            }
+
+            uint256 foundationCalc = (priceToPay * contentFoundationCut) /
+                100000;
+            uint256 governanceCalc = (priceToPay * contentGovernancenCut) /
+                100000;
+            uint256 validatorCalc = (priceToPay * validatorBalance) / 100000;
+            uint256 jurorCalc = (priceToPay * contentJurorCut) / 100000;
+
+            foundationBalance += foundationCalc;
+            governanceBalance += governanceCalc;
+            validatorBalanceForRound += validatorCalc;
+            jurorBalance += jurorCalc;
+
+            instructorBalance[instructor] +=
+                priceToPay -
+                (foundationCalc) -
+                (governanceCalc) -
+                (validatorCalc) -
+                (jurorCalc);
+
+            udao.transferFrom(
+                msg.sender,
+                address(this),
+                vouchers[i].priceToPay
+            );
+
+            emit ContentBought(
+                vouchers[i].tokenId,
+                vouchers[i].purchasedParts,
+                vouchers[i].priceToPay,
+                msg.sender
+            );
         }
     }
 
@@ -223,7 +236,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
 
     /// @notice Allows both parties to finalize coaching service.
     /// @param _coachingId The ID of the coaching service
-    function finalizeCoaching(uint _coachingId) external {
+    function finalizeCoaching(uint256 _coachingId) external {
         require(_coachingId < coachingIndex, "Coaching id doesn't exist");
         CoachingStruct storage currentCoaching = coachingStructs[_coachingId];
         if (msg.sender == currentCoaching.coach) {
@@ -262,7 +275,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
      *  deadline in the last 3 days of the deadline
      *  @param _coachingId id of the coaching service
      */
-    function delayDeadline(uint _coachingId) external {
+    function delayDeadline(uint256 _coachingId) external {
         require(
             msg.sender == coachingStructs[_coachingId].coach ||
                 msg.sender == coachingStructs[_coachingId].learner,
@@ -282,9 +295,10 @@ abstract contract ContentManager is EIP712, BasePlatform {
 
     /// @notice Payment and coaching service can be forcefully done by administrator_roles
     /// @param _coachingId id of the coaching service
-    function forcedPayment(
-        uint256 _coachingId
-    ) external onlyRoles(administrator_roles) {
+    function forcedPayment(uint256 _coachingId)
+        external
+        onlyRoles(administrator_roles)
+    {
         CoachingStruct storage currentCoaching = coachingStructs[_coachingId];
         instructorBalance[currentCoaching.coach] += coachingStructs[_coachingId]
             .coachingPaymentAmount;
@@ -295,9 +309,10 @@ abstract contract ContentManager is EIP712, BasePlatform {
 
     /// @notice Payment and coaching service can be forcefully done by jurors
     /// @param _coachingId id of the coaching service
-    function forcedPaymentJuror(
-        uint _coachingId
-    ) external onlyRole(JUROR_CONTRACT) {
+    function forcedPaymentJuror(uint256 _coachingId)
+        external
+        onlyRole(JUROR_CONTRACT)
+    {
         CoachingStruct storage currentCoaching = coachingStructs[_coachingId];
         instructorBalance[currentCoaching.coach] += coachingStructs[_coachingId]
             .coachingPaymentAmount;
@@ -327,9 +342,10 @@ abstract contract ContentManager is EIP712, BasePlatform {
 
     /// @notice forces refund of coaching service only be callable by administrator_role (FOUNDATION_ROLE, GOVERNANCE_ROLE)
     /// @param _coachingId id of the coaching service
-    function forcedRefundAdmin(
-        uint _coachingId
-    ) external onlyRoles(administrator_roles) {
+    function forcedRefundAdmin(uint256 _coachingId)
+        external
+        onlyRoles(administrator_roles)
+    {
         uint256 startGas = gasleft();
         CoachingStruct storage currentCoaching = coachingStructs[_coachingId];
         uint256 totalPaymentAmount = currentCoaching.totalPaymentAmount;
@@ -346,7 +362,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
         udao.transfer(currentCoaching.learner, totalPaymentAmount);
 
         // TODO explain below
-        uint gasUsed = startGas - gasleft();
+        uint256 gasUsed = startGas - gasleft();
 
         if (
             instructorBalance[currentCoaching.coach] >= (gasUsed * tx.gasprice)
@@ -361,9 +377,10 @@ abstract contract ContentManager is EIP712, BasePlatform {
 
     /// @notice Jurors can force refund of a coaching service
     /// @param _coachingId The ID of the coaching service
-    function forcedRefundJuror(
-        uint _coachingId
-    ) external onlyRole(JUROR_CONTRACT) {
+    function forcedRefundJuror(uint256 _coachingId)
+        external
+        onlyRole(JUROR_CONTRACT)
+    {
         uint256 startGas = gasleft();
         CoachingStruct storage currentCoaching = coachingStructs[_coachingId];
         uint256 totalPaymentAmount = currentCoaching.totalPaymentAmount;
@@ -380,7 +397,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
         udao.transfer(currentCoaching.learner, totalPaymentAmount);
 
         // TODO explain below
-        uint gasUsed = startGas - gasleft();
+        uint256 gasUsed = startGas - gasleft();
         if (
             instructorBalance[currentCoaching.coach] >= (gasUsed * tx.gasprice)
         ) {
@@ -393,29 +410,39 @@ abstract contract ContentManager is EIP712, BasePlatform {
 
     /// @notice returns coaching informations of token
     /// @param _tokenId id of token that coaching will be returned
-    function getCoachings(uint _tokenId) external view returns (uint[] memory) {
+    function getCoachings(uint256 _tokenId)
+        external
+        view
+        returns (uint256[] memory)
+    {
         return coachingIdsOfToken[_tokenId];
     }
 
     /// @notice returns owned contents of the _owner
     /// @param _owner address of the user that will owned contents be returned
-    function getOwnedContent(
-        address _owner
-    ) public view returns (uint[][] memory) {
+    function getOwnedContent(address _owner)
+        public
+        view
+        returns (uint256[][] memory)
+    {
         return (ownedContents[_owner]);
     }
 
-    function getStudentListOfToken(
-        uint tokenId
-    ) public view returns (address[] memory) {
+    function getStudentListOfToken(uint256 tokenId)
+        public
+        view
+        returns (address[] memory)
+    {
         return studentList[tokenId];
     }
 
     /// @notice Returns a hash of the given PurchaseVoucher, prepared using EIP712 typed data hashing rules.
     /// @param voucher A PurchaseVoucher to hash.
-    function _hashContent(
-        ContentPurchaseVoucher calldata voucher
-    ) internal view returns (bytes32) {
+    function _hashContent(ContentPurchaseVoucher calldata voucher)
+        internal
+        view
+        returns (bytes32)
+    {
         return
             _hashTypedDataV4(
                 keccak256(
@@ -435,9 +462,11 @@ abstract contract ContentManager is EIP712, BasePlatform {
 
     /// @notice Returns a hash of the given CoachingPurchaseVoucher, prepared using EIP712 typed data hashing rules.
     /// @param voucher A CoachingPurchaseVoucher to hash.
-    function _hashCoaching(
-        CoachingPurchaseVoucher calldata voucher
-    ) internal view returns (bytes32) {
+    function _hashCoaching(CoachingPurchaseVoucher calldata voucher)
+        internal
+        view
+        returns (bytes32)
+    {
         return
             _hashTypedDataV4(
                 keccak256(
@@ -469,9 +498,11 @@ abstract contract ContentManager is EIP712, BasePlatform {
     /// @notice Verifies the signature for a given ContentPurchaseVoucher, returning the address of the signer.
     /// @dev Will revert if the signature is invalid.
     /// @param voucher A ContentPurchaseVoucher describing a content access rights.
-    function _verifyContent(
-        ContentPurchaseVoucher calldata voucher
-    ) internal view returns (address) {
+    function _verifyContent(ContentPurchaseVoucher calldata voucher)
+        internal
+        view
+        returns (address)
+    {
         bytes32 digest = _hashContent(voucher);
         return ECDSA.recover(digest, voucher.signature);
     }
@@ -479,9 +510,11 @@ abstract contract ContentManager is EIP712, BasePlatform {
     /// @notice Verifies the signature for a given CoachingPurchaseVoucher, returning the address of the signer.
     /// @dev Will revert if the signature is invalid.
     /// @param voucher A CoachingPurchaseVoucher describing a coaching se
-    function _verifyCoaching(
-        CoachingPurchaseVoucher calldata voucher
-    ) internal view returns (address) {
+    function _verifyCoaching(CoachingPurchaseVoucher calldata voucher)
+        internal
+        view
+        returns (address)
+    {
         bytes32 digest = _hashCoaching(voucher);
         return ECDSA.recover(digest, voucher.signature);
     }
