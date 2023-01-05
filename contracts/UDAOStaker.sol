@@ -23,6 +23,8 @@ contract UDAOStaker is RoleController, EIP712 {
     uint256 public payablePerCase;
     /// @notice the required duration to be a validator
     uint256 public jurorLockTime = 30 days;
+    /// @notice the required duration for listing a job
+    uint256 public corporateLockTime = 30 days;
     /// @notice the required duration to be a validator
     uint256 public validatorLockTime = 90 days;
     /// @notice the required duration to be a super validator
@@ -80,6 +82,11 @@ contract UDAOStaker is RoleController, EIP712 {
         uint256 validationDate;
         uint256 expireDate;
     }
+    
+    struct CorporateStakeLock {
+        uint256 lockAmount;
+        uint256 expire;
+    }
 
     struct JurorStakeLock {
         uint256 maxCaseAmount;
@@ -107,7 +114,7 @@ contract UDAOStaker is RoleController, EIP712 {
     mapping(address => uint256) latestValidationLockId;
 
     uint256 public corporateStakePerListing = 500 ether; //setter getter, decider=adminler
-    mapping(address => uint256) corporateStaked;
+    mapping(address => CorporateStakeLock[]) corporateLocks;
 
     struct GovernanceLock {
         uint256 expire;
@@ -475,6 +482,12 @@ contract UDAOStaker is RoleController, EIP712 {
                     withdrawableBalance +=
                         lock.amountPerValidation *
                         (lock.maxValidationAmount - lock.doneValidationAmount);
+                    /// @dev Remove the unstaked struct
+                    validatorLock[msg.sender][uint256(j)] = validatorLock[
+                        msg.sender
+                    ][validatorLock[msg.sender].length - 1];
+                    validatorLock[msg.sender].pop();
+                    j--;
                 }
             }
             for (
@@ -487,6 +500,7 @@ contract UDAOStaker is RoleController, EIP712 {
                 ][uint256(i)];
                 if (block.timestamp >= (validationLock.expireDate)) {
                     withdrawableBalance += validationLock.lockAmount;
+                    /// @dev Remove the unstaked struct
                     validationLocks[msg.sender][uint256(i)] = validationLocks[
                         msg.sender
                     ][validationLocks[msg.sender].length - 1];
@@ -503,6 +517,13 @@ contract UDAOStaker is RoleController, EIP712 {
                     withdrawableBalance +=
                         lock.amountPerValidation *
                         (lock.maxValidationAmount - lock.doneValidationAmount);
+                        
+                    /// @dev Remove the unstaked struct
+                    validatorLock[msg.sender][uint256(j)] = validatorLock[
+                        msg.sender
+                    ][validatorLock[msg.sender].length - 1];
+                    validatorLock[msg.sender].pop();
+                    j--;
                 }
             }
         } else {
@@ -537,6 +558,11 @@ contract UDAOStaker is RoleController, EIP712 {
                     withdrawableBalance +=
                         lock.amountPerCase *
                         (lock.maxCaseAmount - lock.doneCaseAmount);
+                    jurorLocks[msg.sender][uint256(j)] = jurorLocks[
+                        msg.sender
+                    ][jurorLocks[msg.sender].length - 1];
+                    jurorLocks[msg.sender].pop();
+                    j--;
                 }
             }
             for (int256 i; uint256(i) < jurorLocks[msg.sender].length; i++) {
@@ -709,7 +735,10 @@ contract UDAOStaker is RoleController, EIP712 {
                 )
             )
         );
-        corporateStaked[msg.sender] += amount;
+        CorporateStakeLock storage userInfo = corporateLocks[msg.sender].push();
+        userInfo.lockAmount = amount;
+        userInfo.expire = block.timestamp + corporateLockTime;
+
         udao.transferFrom(msg.sender, address(this), amount);
         emit StakeForJobListing(msg.sender, amount, corporateStakePerListing);
     }
@@ -721,7 +750,21 @@ contract UDAOStaker is RoleController, EIP712 {
         onlyRole(CORPORATE_ROLE)
     {
         require(amount > 0, "Zero amount");
-        corporateStaked[msg.sender] -= amount;
+        
+        uint256 withdrawableBalance;
+        uint256 corporateLockLength = corporateLocks[msg.sender].length;
+
+        if (IRM.hasRole(CORPORATE_ROLE, msg.sender)) {
+            for (int256 j; uint256(j) < corporateLockLength; j++) {
+                CorporateStakeLock storage lock = corporateLocks[msg.sender][
+                    uint256(j)
+                ];
+                if (lock.expire < block.timestamp) {
+                    withdrawableBalance += lock.lockAmount;
+                }
+            }
+        }
+        
         udao.transferFrom(address(this), msg.sender, amount);
         emit UnstakeForJobListing(msg.sender, amount);
     }
