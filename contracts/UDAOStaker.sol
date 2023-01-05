@@ -465,7 +465,7 @@ contract UDAOStaker is RoleController, EIP712 {
     }
 
     /// @notice allows validators to withdraw their staked tokens
-    function withdrawValidatorStake() public {
+    function withdrawValidatorStake(uint amount) public {
         uint256 withdrawableBalance;
         uint256 validatorLockLength = validatorLock[msg.sender].length;
         ValidationApplication
@@ -488,6 +488,10 @@ contract UDAOStaker is RoleController, EIP712 {
                     ][validatorLock[msg.sender].length - 1];
                     validatorLock[msg.sender].pop();
                     j--;
+                    if(withdrawableBalance > amount){
+                        _withdrawValidator(msg.sender, withdrawableBalance);
+                        return;
+                    }
                 }
             }
             for (
@@ -506,6 +510,10 @@ contract UDAOStaker is RoleController, EIP712 {
                     ][validationLocks[msg.sender].length - 1];
                     validationLocks[msg.sender].pop();
                     i--;
+                    if(withdrawableBalance > amount){
+                        _withdrawValidator(msg.sender, withdrawableBalance);
+                        return;
+                    }
                 }
             }
         } else if (IRM.hasRole(SUPER_VALIDATOR_ROLE, msg.sender)) {
@@ -524,6 +532,10 @@ contract UDAOStaker is RoleController, EIP712 {
                     ][validatorLock[msg.sender].length - 1];
                     validatorLock[msg.sender].pop();
                     j--;
+                    if(withdrawableBalance > amount){
+                        _withdrawValidator(msg.sender, withdrawableBalance);
+                        return;
+                    }
                 }
             }
         } else {
@@ -532,13 +544,18 @@ contract UDAOStaker is RoleController, EIP712 {
                 withdrawableBalance = validationBalanceOf[msg.sender];
             }
         }
+        _withdrawValidator(msg.sender, withdrawableBalance);
+    }
+
+    /// @notice Withdraws desired amounts of tokens to "to" address 
+    function _withdrawValidator(address to, uint withdrawableBalance) internal {
         require(withdrawableBalance > 0, "You don't have withdrawable token");
         require(
             withdrawableBalance < validationBalanceOf[msg.sender],
             "You don't have enough balance"
         );
-        udao.transfer(msg.sender, withdrawableBalance);
-        emit ValidatorStakeWithdrawn(msg.sender, withdrawableBalance);
+        udao.transfer(to, withdrawableBalance);
+        emit ValidatorStakeWithdrawn(to, withdrawableBalance);
     }
 
     /// @notice allows jurors to withdraw their staked tokens
@@ -578,6 +595,7 @@ contract UDAOStaker is RoleController, EIP712 {
                     ];
                     caseLocks[msg.sender].pop();
                     i--;
+                    /// @dev We cannot split rewards
                     if(withdrawableBalance > amount) {
                         _withdrawJuror(msg.sender, withdrawableBalance);
                         return;
@@ -590,13 +608,12 @@ contract UDAOStaker is RoleController, EIP712 {
                 withdrawableBalance = jurorBalanceOf[msg.sender];
             }
         }
-        if(withdrawableBalance > amount) {
-            _withdrawJuror(msg.sender, withdrawableBalance);
-            return;
-        }
+        _withdrawJuror(msg.sender, withdrawableBalance);
+        return;
     }
 
-    function _withdrawJuror(address to,uint withdrawableBalance) internal {
+    /// @notice Withdraws desired amounts of tokens to "to" address 
+    function _withdrawJuror(address to, uint withdrawableBalance) internal {
         require(withdrawableBalance > 0, "You don't have withdrawable token");
         require(
             withdrawableBalance < jurorBalanceOf[to],
