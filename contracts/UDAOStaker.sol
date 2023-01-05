@@ -369,7 +369,7 @@ contract UDAOStaker is RoleController, EIP712 {
         jurorApplication.maxCaseAmount += caseAmount;
         jurorApplication.expire = block.timestamp + jurorLockTime;
         caseApplicationIndex++;
-        validationBalanceOf[msg.sender] += tokenToExtract;
+        jurorBalanceOf[msg.sender] += tokenToExtract;
         udao.transferFrom(msg.sender, address(this), tokenToExtract);
 
         emit RoleApplied(1, msg.sender, caseAmount);
@@ -382,7 +382,7 @@ contract UDAOStaker is RoleController, EIP712 {
         //make sure redeemer is kyced
         require(IRM.isKYCed(msg.sender), "You are not KYCed");
         // make sure signature is valid and get the address of the signer
-        address signer = _verify(voucher);
+        address signer = _verifyRole(voucher);
         require(voucher.validUntil >= block.timestamp, "Voucher has expired.");
         require(
             IRM.hasRole(BACKEND_ROLE, signer),
@@ -488,7 +488,7 @@ contract UDAOStaker is RoleController, EIP712 {
                     ][validatorLock[msg.sender].length - 1];
                     validatorLock[msg.sender].pop();
                     j--;
-                    if(withdrawableBalance > amount){
+                    if(withdrawableBalance >= amount){
                         _withdrawValidator(msg.sender, withdrawableBalance);
                         return;
                     }
@@ -510,7 +510,7 @@ contract UDAOStaker is RoleController, EIP712 {
                     ][validationLocks[msg.sender].length - 1];
                     validationLocks[msg.sender].pop();
                     i--;
-                    if(withdrawableBalance > amount){
+                    if(withdrawableBalance >= amount){
                         _withdrawValidator(msg.sender, withdrawableBalance);
                         return;
                     }
@@ -532,7 +532,7 @@ contract UDAOStaker is RoleController, EIP712 {
                     ][validatorLock[msg.sender].length - 1];
                     validatorLock[msg.sender].pop();
                     j--;
-                    if(withdrawableBalance > amount){
+                    if(withdrawableBalance >= amount){
                         _withdrawValidator(msg.sender, withdrawableBalance);
                         return;
                     }
@@ -550,10 +550,6 @@ contract UDAOStaker is RoleController, EIP712 {
     /// @notice Withdraws desired amounts of tokens to "to" address 
     function _withdrawValidator(address to, uint withdrawableBalance) internal {
         require(withdrawableBalance > 0, "You don't have withdrawable token");
-        require(
-            withdrawableBalance < validationBalanceOf[msg.sender],
-            "You don't have enough balance"
-        );
         udao.transfer(to, withdrawableBalance);
         emit ValidatorStakeWithdrawn(to, withdrawableBalance);
     }
@@ -580,7 +576,7 @@ contract UDAOStaker is RoleController, EIP712 {
                     ][jurorLocks[msg.sender].length - 1];
                     jurorLocks[msg.sender].pop();
                     j--;
-                    if(withdrawableBalance > amount) {
+                    if(withdrawableBalance >= amount) {
                         _withdrawJuror(msg.sender, withdrawableBalance);
                         return;
                     }
@@ -596,7 +592,7 @@ contract UDAOStaker is RoleController, EIP712 {
                     caseLocks[msg.sender].pop();
                     i--;
                     /// @dev We cannot split rewards
-                    if(withdrawableBalance > amount) {
+                    if(withdrawableBalance >= amount) {
                         _withdrawJuror(msg.sender, withdrawableBalance);
                         return;
                     }
@@ -615,10 +611,6 @@ contract UDAOStaker is RoleController, EIP712 {
     /// @notice Withdraws desired amounts of tokens to "to" address 
     function _withdrawJuror(address to, uint withdrawableBalance) internal {
         require(withdrawableBalance > 0, "You don't have withdrawable token");
-        require(
-            withdrawableBalance < jurorBalanceOf[to],
-            "You don't have enough balance"
-        );
         udao.transfer(to, withdrawableBalance);
         emit ValidatorStakeWithdrawn(to, withdrawableBalance);
     }
@@ -756,7 +748,7 @@ contract UDAOStaker is RoleController, EIP712 {
         external
         onlyRole(CORPORATE_ROLE)
     {
-        require(amount > 0, "Zero amount");
+        require(amount > 0, "Cannot unstake zero tokens");
         require(
             amount % corporateStakePerListing == 0,
             string(
@@ -767,13 +759,56 @@ contract UDAOStaker is RoleController, EIP712 {
                 )
             )
         );
-        CorporateStakeLock storage userInfo = corporateLocks[msg.sender].push();
-        userInfo.lockAmount = amount;
-        userInfo.expire = block.timestamp + corporateLockTime;
+        CorporateStakeLock storage stakeLock = corporateLocks[msg.sender].push();
+        stakeLock.lockAmount = amount;
+        stakeLock.expire = block.timestamp + corporateLockTime;
 
         udao.transferFrom(msg.sender, address(this), amount);
         emit StakeForJobListing(msg.sender, amount, corporateStakePerListing);
     }
+
+    struct CorporateWithdrawVoucher {
+        address redeemer;
+        uint amount;
+        bytes signature;
+    }
+
+
+    /// @notice Allows corporate accounts to unstake if they've found employee for job listing 
+    /// before staking lock duration. 
+    function unstakeForJobListing(CorporateWithdrawVoucher calldata voucher)
+        external
+        onlyRole(CORPORATE_ROLE)
+    {
+        
+        uint256 withdrawableBalance;
+        uint256 corporateLockLength = corporateLocks[msg.sender].length;
+
+        address signer = _verifyCorporate(voucher);
+        require(
+            IRM.hasRole(BACKEND_ROLE, signer),
+            "Signature invalid or unauthorized"
+        );
+
+        for (int256 j; uint256(j) < corporateLockLength; j++) {
+            CorporateStakeLock storage lock = corporateLocks[msg.sender][
+                uint256(j)
+            ];
+            withdrawableBalance += lock.lockAmount;
+
+            corporateLocks[msg.sender][uint256(j)] = corporateLocks[
+                msg.sender
+            ][corporateLocks[msg.sender].length - 1];
+            corporateLocks[msg.sender].pop();
+            j--;
+            if(withdrawableBalance >= voucher.amount) {
+                _withdrawCorporate(msg.sender, withdrawableBalance);
+                return;
+            }
+            
+        }
+    }
+
 
     /// @notice Allows corporate accounts to unstake. Staker and unstaked amount returned with event.
     /// @param amount The unstaked amount.
@@ -781,24 +816,34 @@ contract UDAOStaker is RoleController, EIP712 {
         external
         onlyRole(CORPORATE_ROLE)
     {
-        require(amount > 0, "Zero amount");
+        require(amount > 0, "Cannot unstake zero tokens");
         
         uint256 withdrawableBalance;
         uint256 corporateLockLength = corporateLocks[msg.sender].length;
 
-        if (IRM.hasRole(CORPORATE_ROLE, msg.sender)) {
-            for (int256 j; uint256(j) < corporateLockLength; j++) {
-                CorporateStakeLock storage lock = corporateLocks[msg.sender][
-                    uint256(j)
-                ];
-                if (lock.expire < block.timestamp) {
-                    withdrawableBalance += lock.lockAmount;
+        for (int256 j; uint256(j) < corporateLockLength; j++) {
+            CorporateStakeLock storage lock = corporateLocks[msg.sender][
+                uint256(j)
+            ];
+            if (lock.expire <= block.timestamp) {
+                withdrawableBalance += lock.lockAmount;
+
+                corporateLocks[msg.sender][uint256(j)] = corporateLocks[
+                    msg.sender
+                ][corporateLocks[msg.sender].length - 1];
+                corporateLocks[msg.sender].pop();
+                j--;
+                if(withdrawableBalance >= amount) {
+                    _withdrawCorporate(msg.sender, withdrawableBalance);
+                    return;
                 }
             }
         }
-        
-        udao.transferFrom(address(this), msg.sender, amount);
-        emit UnstakeForJobListing(msg.sender, amount);
+    }
+
+    function _withdrawCorporate(address to, uint withdrawableBalance) internal {
+        udao.transferFrom(address(this), to, withdrawableBalance);
+        emit UnstakeForJobListing(to, withdrawableBalance);
     }
 
     /// @notice Returns a hash of the given ContentVoucher, prepared using EIP712 typed data hashing rules.
@@ -823,6 +868,25 @@ contract UDAOStaker is RoleController, EIP712 {
             );
     }
 
+    function _hashCorporate(CorporateWithdrawVoucher calldata voucher)
+        internal
+        view
+        returns (bytes32)
+    {
+        return
+            _hashTypedDataV4(
+                keccak256(
+                    abi.encode(
+                        keccak256(
+                            "UDAOStaker(address redeemer,uint256 amount)"
+                        ),
+                        voucher.redeemer,
+                        voucher.amount
+                    )
+                )
+            );
+    }
+
     /// @notice Returns the chain id of the current blockchain.
     /// @dev This is used to workaround an issue with ganache returning different values from the on-chain chainid() function and
     ///  the eth_chainId RPC method. See https://github.com/protocol/nft-website/issues/121 for context.
@@ -837,12 +901,24 @@ contract UDAOStaker is RoleController, EIP712 {
     /// @notice Verifies the signature for a given ContentVoucher, returning the address of the signer.
     /// @dev Will revert if the signature is invalid. Does not verify that the signer is authorized to mint NFTs.
     /// @param voucher A ContentVoucher describing an unminted NFT.
-    function _verify(RoleVoucher calldata voucher)
+    function _verifyRole(RoleVoucher calldata voucher)
         internal
         view
         returns (address)
     {
         bytes32 digest = _hash(voucher);
+        return ECDSA.recover(digest, voucher.signature);
+    }
+
+    /// @notice Verifies the signature for a given CorporateWithdrawVoucher, returning the address of the signer.
+    /// @dev Will revert if the signature is invalid. Does not verify that the signer is authorized to mint NFTs.
+    /// @param voucher A CorporateWithdrawVoucher describing an unminted NFT.
+    function _verifyCorporate(CorporateWithdrawVoucher calldata voucher)
+        internal
+        view
+        returns (address)
+    {
+        bytes32 digest = _hashCorporate(voucher);
         return ECDSA.recover(digest, voucher.signature);
     }
 }
