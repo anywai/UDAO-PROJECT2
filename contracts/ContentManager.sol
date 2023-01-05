@@ -239,35 +239,24 @@ abstract contract ContentManager is EIP712, BasePlatform {
     function finalizeCoaching(uint256 _coachingId) external {
         require(_coachingId < coachingIndex, "Coaching id doesn't exist");
         CoachingStruct storage currentCoaching = coachingStructs[_coachingId];
+        require((msg.sender == currentCoaching.coach) || (msg.sender == currentCoaching.learner), "You are not learner neither coach");
         if (msg.sender == currentCoaching.coach) {
             require(
                 (block.timestamp > currentCoaching.moneyLockDeadline),
                 "Deadline is not met yet"
             );
-            instructorBalance[currentCoaching.coach] += coachingStructs[
-                _coachingId
-            ].coachingPaymentAmount;
-
-            currentCoaching.isDone = 1;
-            emit CoachingFinalized(
-                _coachingId,
-                currentCoaching.coach,
-                currentCoaching.learner
-            );
-        } else if (msg.sender == currentCoaching.learner) {
-            instructorBalance[currentCoaching.coach] += coachingStructs[
-                _coachingId
-            ].coachingPaymentAmount;
-
-            currentCoaching.isDone = 1;
-            emit CoachingFinalized(
-                _coachingId,
-                currentCoaching.coach,
-                currentCoaching.learner
-            );
-        } else {
-            revert("You are not learner neither coach");
         }
+        instructorBalance[currentCoaching.coach] += coachingStructs[
+            _coachingId
+        ].coachingPaymentAmount;
+
+        currentCoaching.isDone = 1;
+        emit CoachingFinalized(
+            _coachingId,
+            currentCoaching.coach,
+            currentCoaching.learner
+        );
+   
     }
 
     /**
