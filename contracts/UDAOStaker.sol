@@ -542,7 +542,7 @@ contract UDAOStaker is RoleController, EIP712 {
     }
 
     /// @notice allows jurors to withdraw their staked tokens
-    function withdrawJurorStake() public {
+    function withdrawJurorStake(uint amount) public {
         uint256 withdrawableBalance;
         uint256 jurorLockLength = jurorLocks[msg.sender].length;
         JurorApplication storage jurorApplication = jurorApplications[
@@ -563,6 +563,10 @@ contract UDAOStaker is RoleController, EIP712 {
                     ][jurorLocks[msg.sender].length - 1];
                     jurorLocks[msg.sender].pop();
                     j--;
+                    if(withdrawableBalance > amount) {
+                        _withdrawJuror(msg.sender, withdrawableBalance);
+                        return;
+                    }
                 }
             }
             for (int256 i; uint256(i) < jurorLocks[msg.sender].length; i++) {
@@ -574,6 +578,10 @@ contract UDAOStaker is RoleController, EIP712 {
                     ];
                     caseLocks[msg.sender].pop();
                     i--;
+                    if(withdrawableBalance > amount) {
+                        _withdrawJuror(msg.sender, withdrawableBalance);
+                        return;
+                    }
                 }
             }
         } else {
@@ -582,13 +590,20 @@ contract UDAOStaker is RoleController, EIP712 {
                 withdrawableBalance = jurorBalanceOf[msg.sender];
             }
         }
+        if(withdrawableBalance > amount) {
+            _withdrawJuror(msg.sender, withdrawableBalance);
+            return;
+        }
+    }
+
+    function _withdrawJuror(address to,uint withdrawableBalance) internal {
         require(withdrawableBalance > 0, "You don't have withdrawable token");
         require(
-            withdrawableBalance < jurorBalanceOf[msg.sender],
+            withdrawableBalance < jurorBalanceOf[to],
             "You don't have enough balance"
         );
-        udao.transfer(msg.sender, withdrawableBalance);
-        emit ValidatorStakeWithdrawn(msg.sender, withdrawableBalance);
+        udao.transfer(to, withdrawableBalance);
+        emit ValidatorStakeWithdrawn(to, withdrawableBalance);
     }
 
     /// @notice Returns the amount of token a validator could withdraw
