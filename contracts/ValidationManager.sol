@@ -13,10 +13,10 @@ contract ValidationManager is RoleController, EIP712 {
     // UDAO (ERC721) Token interface
     IUDAOC udaoc;
 
-    constructor(
-        address udaocAddress,
-        address irmAddress
-    ) EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION) RoleController(irmAddress) {
+    constructor(address udaocAddress, address irmAddress)
+        EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION)
+        RoleController(irmAddress)
+    {
         udaoc = IUDAOC(udaocAddress);
     }
 
@@ -35,22 +35,25 @@ contract ValidationManager is RoleController, EIP712 {
         bytes signature;
     }
 
-    event ValidationEnded(uint tokenId, bool result);
-    event NextRound(uint newRoundId);
+    event ValidationEnded(uint256 tokenId, bool result);
+    event NextRound(uint256 newRoundId);
 
     // tokenId => result
-    mapping(uint => bool) public isValidated;
+    mapping(uint256 => bool) public isValidated;
     // validator => round => score
-    mapping(address => mapping(uint256 => uint)) public validatorScorePerRound;
+    mapping(address => mapping(uint256 => uint256))
+        public validatorScorePerRound;
 
-    uint public distributionRound;
+    uint256 public distributionRound;
 
-    uint public totalSuccessfulValidationScore;
+    uint256 public totalSuccessfulValidationScore;
 
     function setUDAOC(address udaocAddress) external onlyRole(FOUNDATION_ROLE) {
         udaoc = IUDAOC(udaocAddress);
     }
 
+    /// @notice writes validation result to blockchain
+    /// @param voucher voucher that contains the signed validation data
     function setAsValidated(ValidationVoucher calldata voucher) external {
         // make sure signature is valid and get the address of the signer
         address signer = _verify(voucher);
@@ -68,11 +71,11 @@ contract ValidationManager is RoleController, EIP712 {
 
     function _recordScores(
         address[] calldata _validators,
-        uint[] calldata _validationScores
+        uint256[] calldata _validationScores
     ) internal {
-        uint totalValidators = _validators.length;
+        uint256 totalValidators = _validators.length;
 
-        for (uint i; i < totalValidators; i++) {
+        for (uint256 i; i < totalValidators; i++) {
             validatorScorePerRound[_validators[i]][
                 distributionRound
             ] += _validationScores[i];
@@ -80,19 +83,20 @@ contract ValidationManager is RoleController, EIP712 {
         }
     }
 
-    function getValidatorScore(
-        address _validator,
-        uint _round
-    ) external view returns (uint) {
+    function getValidatorScore(address _validator, uint256 _round)
+        external
+        view
+        returns (uint256)
+    {
         return validatorScorePerRound[_validator][_round];
     }
 
-    function getTotalValidationScore() external view returns (uint) {
+    function getTotalValidationScore() external view returns (uint256) {
         /// @notice returns total successful validation count
         return totalSuccessfulValidationScore;
     }
 
-    function getIsValidated(uint tokenId) external view returns (bool) {
+    function getIsValidated(uint256 tokenId) external view returns (bool) {
         return isValidated[tokenId];
     }
 
@@ -103,9 +107,11 @@ contract ValidationManager is RoleController, EIP712 {
 
     /// @notice Returns a hash of the given ContentVoucher, prepared using EIP712 typed data hashing rules.
     /// @param voucher A ContentVoucher to hash.
-    function _hash(
-        ValidationVoucher calldata voucher
-    ) internal view returns (bytes32) {
+    function _hash(ValidationVoucher calldata voucher)
+        internal
+        view
+        returns (bytes32)
+    {
         return
             _hashTypedDataV4(
                 keccak256(
@@ -137,9 +143,11 @@ contract ValidationManager is RoleController, EIP712 {
     /// @notice Verifies the signature for a given ContentVoucher, returning the address of the signer.
     /// @dev Will revert if the signature is invalid. Does not verify that the signer is authorized to mint NFTs.
     /// @param voucher A ContentVoucher describing an unminted NFT.
-    function _verify(
-        ValidationVoucher calldata voucher
-    ) internal view returns (address) {
+    function _verify(ValidationVoucher calldata voucher)
+        internal
+        view
+        returns (address)
+    {
         bytes32 digest = _hash(voucher);
         return ECDSA.recover(digest, voucher.signature);
     }
