@@ -206,7 +206,7 @@ contract UDAOStaker is RoleController, EIP712 {
         /// @notice The off-chain ID of the validation work
         uint256 validationId;
         /// @notice the EIP-712 signature of all other fields in the RegisterValidationVoucher struct.
-        bytes32 signature;
+        bytes signature;
     }
 
     /// @notice allows users to apply for validator role
@@ -336,7 +336,7 @@ contract UDAOStaker is RoleController, EIP712 {
             latestValidatorStakeId[_msgSender()]++;
         }
 
-        emit ValidationRegistered(msg.sender, validationId);
+        emit ValidationRegistered(msg.sender, voucher.validationId);
     }
 
     /// @notice Allows jurors to accept the cases
