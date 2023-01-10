@@ -197,8 +197,16 @@ contract UDAOStaker is RoleController, EIP712 {
         uint256 validUntil;
         /// @notice 0 validator, 1 juror, 2 corporate, 3 super validator
         uint256 roleId;
-        /// @notice the EIP-712 signature of all other fields in the ContentVoucher struct.
+        /// @notice the EIP-712 signature of all other fields in the RoleVoucher struct.
         bytes signature;
+    }
+
+    /// @notice Validation work registered to onchain with this
+    struct RegisterValidationVoucher {
+        /// @notice The off-chain ID of the validation work
+        uint256 validationId;
+        /// @notice the EIP-712 signature of all other fields in the RegisterValidationVoucher struct.
+        bytes32 signature;
     }
 
     /// @notice allows users to apply for validator role
@@ -298,21 +306,20 @@ contract UDAOStaker is RoleController, EIP712 {
 
         emit CaseAdded(caseAmount);
     }
-
-    // TODO add voucher system, below is the initial struct for it
-    // Adamın biri gelip kafasına göre validasyon işi yaratmasın
-    // Belki voucher içine storage'da tutulan bişilerde eklenebilir?
-    // BT-93
-    struct RegisterValidation {
-        uint256 validationId;
-        bytes32 signature;
-    }
+    
 
     /// @notice Allows validators to accept the validation work
-    function registerValidation(uint256 validationId)
+    function registerValidation(RegisterValidationVoucher calldata voucher)
         external
         onlyRoles(validator_roles)
     {
+        address signer = _verifyValidation(voucher);
+
+        require(
+            IRM.hasRole(BACKEND_ROLE, signer),
+            "Signature invalid or unauthorized"
+        );
+        
         ValidatorStakeLock storage stakeLock = validatorLock[_msgSender()][
             latestValidatorStakeId[_msgSender()]
         ];
@@ -848,7 +855,7 @@ contract UDAOStaker is RoleController, EIP712 {
 
     /// @notice Returns a hash of the given ContentVoucher, prepared using EIP712 typed data hashing rules.
     /// @param voucher A ContentVoucher to hash.
-    function _hash(RoleVoucher calldata voucher)
+    function _hashRole(RoleVoucher calldata voucher)
         internal
         view
         returns (bytes32)
@@ -887,6 +894,24 @@ contract UDAOStaker is RoleController, EIP712 {
             );
     }
 
+    function _hashValidation(RegisterValidationVoucher calldata voucher)
+        internal
+        view
+        returns (bytes32)
+    {
+        return
+            _hashTypedDataV4(
+                keccak256(
+                    abi.encode(
+                        keccak256(
+                            "UDAOStaker(uint256 validationId)"
+                        ),
+                        voucher.validationId
+                    )
+                )
+            );
+    }
+
     /// @notice Returns the chain id of the current blockchain.
     /// @dev This is used to workaround an issue with ganache returning different values from the on-chain chainid() function and
     ///  the eth_chainId RPC method. See https://github.com/protocol/nft-website/issues/121 for context.
@@ -906,7 +931,7 @@ contract UDAOStaker is RoleController, EIP712 {
         view
         returns (address)
     {
-        bytes32 digest = _hash(voucher);
+        bytes32 digest = _hashRole(voucher);
         return ECDSA.recover(digest, voucher.signature);
     }
 
@@ -919,6 +944,18 @@ contract UDAOStaker is RoleController, EIP712 {
         returns (address)
     {
         bytes32 digest = _hashCorporate(voucher);
+        return ECDSA.recover(digest, voucher.signature);
+    }
+
+    /// @notice Verifies the signature for a given RegisterValidationVoucher, returning the address of the signer.
+    /// @dev Will revert if the signature is invalid. Does not verify that the signer is authorized to mint NFTs.
+    /// @param voucher A RegisterValidationVoucher describing an unminted NFT.
+    function _verifyValidation(RegisterValidationVoucher calldata voucher)
+        internal
+        view
+        returns (address)
+    {
+        bytes32 digest = _hashValidation(voucher);
         return ECDSA.recover(digest, voucher.signature);
     }
 }
