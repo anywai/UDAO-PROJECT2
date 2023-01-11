@@ -102,22 +102,27 @@ abstract contract ContentManager is EIP712, BasePlatform {
 
         uint256 voucherLength = vouchers.length;
         for (uint256 i = 0; i < voucherLength; voucherLength++) {
-            uint256 tokenId = vouchers[i].tokenId;
-            uint256 priceToPay = vouchers[i].priceToPay;
+            _buyContent(vouchers[i]);
+        }
+    }
+
+    function _buyContent(ContentPurchaseVoucher calldata voucher) internal {
+              uint256 tokenId = voucher.tokenId;
+            uint256 priceToPay = voucher.priceToPay;
 
             // make sure signature is valid and get the address of the signer
-            address signer = _verifyContent(vouchers[i]);
+            address signer = _verifyContent(voucher);
             require(
                 IRM.hasRole(BACKEND_ROLE, signer),
                 "Signature invalid or unauthorized"
             );
 
             require(
-                vouchers[i].validUntil >= block.timestamp,
+                voucher.validUntil >= block.timestamp,
                 "Voucher has expired."
             );
             require(
-                msg.sender == vouchers[i].redeemer,
+                msg.sender == voucher.redeemer,
                 "You are not redeemer."
             );
 
@@ -133,22 +138,10 @@ abstract contract ContentManager is EIP712, BasePlatform {
                 "Full content is already bought"
             );
 
-            uint256 partIdLength = vouchers[i].purchasedParts.length;
+            uint256 partIdLength = voucher.purchasedParts.length;
 
-            for (uint256 j; i < partIdLength; i++) {
-                require(
-                    isTokenBought[msg.sender][tokenId][
-                        vouchers[i].purchasedParts[j]
-                    ] == false,
-                    "Content part is already bought"
-                );
-
-                isTokenBought[msg.sender][tokenId][
-                    vouchers[i].purchasedParts[j]
-                ] = true;
-                ownedContents[msg.sender].push(
-                    [tokenId, vouchers[i].purchasedParts[j]]
-                );
+            for (uint256 j; j < partIdLength; j++) {
+                _updateOwned(tokenId, voucher.purchasedParts[j]);
             }
 
             uint256 foundationCalc = (priceToPay * contentFoundationCut) /
@@ -173,16 +166,31 @@ abstract contract ContentManager is EIP712, BasePlatform {
             udao.transferFrom(
                 msg.sender,
                 address(this),
-                vouchers[i].priceToPay
+                voucher.priceToPay
             );
 
             emit ContentBought(
-                vouchers[i].tokenId,
-                vouchers[i].purchasedParts,
-                vouchers[i].priceToPay,
+                voucher.tokenId,
+                voucher.purchasedParts,
+                voucher.priceToPay,
                 msg.sender
             );
-        }
+    }
+
+    function _updateOwned(uint tokenId, uint purchasedPart) internal {
+                  require(
+                    isTokenBought[msg.sender][tokenId][
+                        purchasedPart
+                    ] == false,
+                    "Content part is already bought"
+                );
+
+                isTokenBought[msg.sender][tokenId][
+                   purchasedPart
+                ] = true;
+                ownedContents[msg.sender].push(
+                    [tokenId, purchasedPart]
+                );
     }
 
     /// @notice Allows users to buy coaching service.
