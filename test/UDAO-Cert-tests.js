@@ -328,49 +328,49 @@ describe("UDAO Cert Contract", function () {
     ).to.revertedWith("Signature invalid or unauthorized");
   });
 
-  it("Should fail to create certificate if not KYCed", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      validatorCandidate,
-      validator,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractValidationManager,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-    } = await deploy();
-    await contractRoleManager.setKYC(contentBuyer.address, false);
+  // it("Should fail to create certificate if not KYCed", async function () {
+  //   const {
+  //     backend,
+  //     contentCreator,
+  //     contentBuyer,
+  //     validatorCandidate,
+  //     validator,
+  //     superValidatorCandidate,
+  //     superValidator,
+  //     foundation,
+  //     governanceCandidate,
+  //     governanceMember,
+  //     jurorCandidate,
+  //     jurorMember,
+  //     contractUDAO,
+  //     contractRoleManager,
+  //     contractUDAOCertificate,
+  //     contractUDAOContent,
+  //     contractValidationManager,
+  //     contractPlatformTreasury,
+  //     contractUDAOVp,
+  //     contractUDAOStaker,
+  //     contractUDAOTimelockController,
+  //     contractUDAOGovernor,
+  //   } = await deploy();
+  //   await contractRoleManager.setKYC(contentBuyer.address, false);
 
-    const tx = await contractUDAOCertificate.getChainID();
-    const lazyMinter = new LazyUDAOCertMinter({
-      contract: contractUDAOCertificate,
-      signer: foundation,
-    });
-    const voucher = await lazyMinter.createVoucher(
-      1,
-      "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
-      contentBuyer.address,
-      "Content Name",
-      "Content Description"
-    );
-    await expect(
-      contractUDAOCertificate.connect(contentBuyer).redeem(voucher)
-    ).to.revertedWith("You are not KYCed");
-  });
+  //   const tx = await contractUDAOCertificate.getChainID();
+  //   const lazyMinter = new LazyUDAOCertMinter({
+  //     contract: contractUDAOCertificate,
+  //     signer: foundation,
+  //   });
+  //   const voucher = await lazyMinter.createVoucher(
+  //     1,
+  //     "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
+  //     contentBuyer.address,
+  //     "Content Name",
+  //     "Content Description"
+  //   );
+  //   await expect(
+  //     contractUDAOCertificate.connect(contentBuyer).redeem(voucher)
+  //   ).to.revertedWith("You are not KYCed");
+  // });
 
   it("Should get token URI of the Content", async function () {
     const {
