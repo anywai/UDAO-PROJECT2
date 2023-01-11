@@ -199,9 +199,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
         require(voucher.validUntil >= block.timestamp, "Voucher has expired.");
         require(udaoc.exists(voucher.tokenId), "Content does not exist!");
         require(!IRM.isBanned(msg.sender), "You are banned");
-        require(IRM.isKYCed(msg.sender), "You are not KYCed");
         address instructor = udaoc.ownerOf(voucher.tokenId);
-        require(IRM.isKYCed(instructor), "Instructor is not KYCed");
         require(!IRM.isBanned(instructor), "Instructor is banned");
         require(
             udaoc.isCoachingEnabled(voucher.tokenId),

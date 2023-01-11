@@ -50,10 +50,6 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
         // make sure redeemer is redeeming
         require(voucher.redeemer == msg.sender, "You are not the redeemer");
 
-        /// @dev KYC control is already done at transfer
-        //make sure redeemer is kyced
-        // require(irm.getKYC(msg.sender), "You are not KYCed");
-
         // make sure signature is valid and get the address of the signer
         address signer = _verify(voucher);
         require(
