@@ -5,6 +5,7 @@ import "./BasePlatform.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
 
+
 abstract contract ContentManager is EIP712, BasePlatform {
     string private constant SIGNING_DOMAIN = "ContentManager";
     string private constant SIGNATURE_VERSION = "1";
@@ -101,13 +102,15 @@ abstract contract ContentManager is EIP712, BasePlatform {
         require(!IRM.isBanned(msg.sender), "You are banned");
 
         uint256 voucherLength = vouchers.length;
-        for (uint256 i = 0; i < voucherLength; voucherLength++) {
+        // console.log("Voucher length is", voucherLength);
+        for (uint256 i = 0; i < voucherLength; i++) {
+            // console.log("Buying ", i);
             _buyContent(vouchers[i]);
         }
     }
 
     function _buyContent(ContentPurchaseVoucher calldata voucher) internal {
-              uint256 tokenId = voucher.tokenId;
+            uint256 tokenId = voucher.tokenId;
             uint256 priceToPay = voucher.priceToPay;
 
             // make sure signature is valid and get the address of the signer
@@ -133,6 +136,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
                 IVM.getIsValidated(tokenId),
                 "Content is not validated yet"
             );
+            // console.log("Buying");
             require(
                 isTokenBought[msg.sender][tokenId][0] == false,
                 "Full content is already bought"
