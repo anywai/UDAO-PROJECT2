@@ -32,6 +32,7 @@ contract UDAOVp is
         onlyRole(STAKING_CONTRACT)
     {
         _mint(to, amount);
+        /// @dev Staking contract requires allowence when user wants to unstake
         _approve(
             to,
             stakingContractAddress,
@@ -48,7 +49,9 @@ contract UDAOVp is
         stakingContractAddress = _newStakingContract;
     }
 
-    /// @notice returns allowans of an account for another account
+    /// @notice returns allowance of an account for another account
+    /// @param owner Owner of the tokens
+    /// @param spender Address of the user with allownece rights
     function allowance(address owner, address spender)
         public
         view
