@@ -102,9 +102,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
         require(!IRM.isBanned(msg.sender), "You are banned");
 
         uint256 voucherLength = vouchers.length;
-        // console.log("Voucher length is", voucherLength);
         for (uint256 i = 0; i < voucherLength; i++) {
-            // console.log("Buying ", i);
             _buyContent(vouchers[i]);
         }
     }
