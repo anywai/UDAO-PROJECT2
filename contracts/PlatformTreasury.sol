@@ -33,7 +33,7 @@ contract PlatformTreasury is Pausable, ContentManager {
     /// @notice withdraws governance balance to governance treasury
     function withdrawGovernance() external onlyRole(GOVERNANCE_ROLE) {
         uint withdrawableBalance = governanceBalance;
-        governanceBalance = 0;
+        governanceBalance = 0;  /// @dev zeroing before the actual withdraw
         udao.transfer(governanceTreasury, withdrawableBalance);
         emit GovernanceWithdrawn(withdrawableBalance);
     }
@@ -41,12 +41,12 @@ contract PlatformTreasury is Pausable, ContentManager {
     /// @notice withdraws foundation balance to foundation wallet
     function withdrawFoundation() external onlyRole(FOUNDATION_ROLE) {
         uint withdrawableBalance = foundationBalance;
-        foundationBalance = 0;
+        foundationBalance = 0;  /// @dev zeroing before the actual withdraw
         udao.transfer(foundationWallet, withdrawableBalance);
         emit FoundationWithdrawn(withdrawableBalance);
     }
 
-    /// @notice calculates validator earnings and withdraws calculated earning to validator wallet
+    /// @notice calculates validator earnings and withdraws calculated earning to validator's wallet
     function withdrawValidator() external onlyRoles(validator_roles) {
         uint claimableRound = lastValidatorClaim[msg.sender];
         uint withdrawableBalance = 0;
@@ -61,6 +61,7 @@ contract PlatformTreasury is Pausable, ContentManager {
         emit ValidatorWithdrawn(msg.sender, withdrawableBalance);
     }
 
+    /// @notice calculates juror earnings and withdraws calculated earning to juror's wallet
     function withdrawJuror() external onlyRole(JUROR_ROLE) {
         uint claimableRound = lastJurorClaim[msg.sender];
         uint withdrawableBalance = 0;
