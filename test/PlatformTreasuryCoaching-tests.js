@@ -5,7 +5,6 @@ const chai = require("chai");
 const BN = require("bn.js");
 const { LazyMinter } = require("../lib/LazyMinter");
 const { LazyRole } = require("../lib/LazyRole");
-const { LazyScore } = require("../lib/LazyScore");
 const { LazyValidation } = require("../lib/LazyValidation");
 const { LazyUDAOCertMinter } = require("../lib/LazyUDAOCertMinter");
 const { LazyPurchase } = require("../lib/LazyPurchase");

@@ -5,7 +5,6 @@ const chai = require("chai");
 const BN = require("bn.js");
 const { LazyMinter } = require("../lib/LazyMinter");
 const { LazyRole } = require("../lib/LazyRole");
-const { LazyScore } = require("../lib/LazyScore");
 const { LazyValidation } = require("../lib/LazyValidation");
 const { LazyUDAOCertMinter } = require("../lib/LazyUDAOCertMinter");
 
@@ -42,9 +41,7 @@ async function deploy() {
   let factoryValidationManager = await ethers.getContractFactory(
     "ValidationManager"
   );
-  let factoryJurorManager = await ethers.getContractFactory(
-    "JurorManager"
-  );
+  let factoryJurorManager = await ethers.getContractFactory("JurorManager");
   let factoryUDAOContent = await ethers.getContractFactory("UDAOContent");
   let factoryPlatformTreasury = await ethers.getContractFactory(
     "PlatformTreasury"
@@ -140,7 +137,6 @@ async function deploy() {
     DEFAULT_ADMIN_ROLE,
     contractUDAOTimelockController.address
   );
-
 
   // add staking contract to udao-vp
   await contractUDAOVp

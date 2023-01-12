@@ -5,7 +5,6 @@ const chai = require("chai");
 const BN = require("bn.js");
 const { LazyMinter } = require("../lib/LazyMinter");
 const { LazyRole } = require("../lib/LazyRole");
-const { LazyScore } = require("../lib/LazyScore");
 const { LazyValidation } = require("../lib/LazyValidation");
 const { LazyUDAOCertMinter } = require("../lib/LazyUDAOCertMinter");
 const { LazyPurchase } = require("../lib/LazyPurchase");
@@ -43,9 +42,7 @@ async function deploy() {
   let factoryValidationManager = await ethers.getContractFactory(
     "ValidationManager"
   );
-  let factoryJurorManager = await ethers.getContractFactory(
-    "JurorManager"
-  );
+  let factoryJurorManager = await ethers.getContractFactory("JurorManager");
   let factoryUDAOContent = await ethers.getContractFactory("UDAOContent");
   let factoryPlatformTreasury = await ethers.getContractFactory(
     "PlatformTreasury"
@@ -436,15 +433,15 @@ describe("Platform Treasury Contract - Content", function () {
         contentCreator.address,
         udaoc_voucher.tokenId
       );
-      await expect(
-        contractUDAOContent.connect(contentCreator).redeem(udaoc_voucher2)
-      )
-        .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
-        .withArgs(
-          "0x0000000000000000000000000000000000000000",
-          contentCreator.address,
-          udaoc_voucher2.tokenId
-        );
+    await expect(
+      contractUDAOContent.connect(contentCreator).redeem(udaoc_voucher2)
+    )
+      .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
+      .withArgs(
+        "0x0000000000000000000000000000000000000000",
+        contentCreator.address,
+        udaoc_voucher2.tokenId
+      );
 
     /// Validate content with voucher
     const lazyValidation = new LazyValidation({
@@ -470,11 +467,11 @@ describe("Platform Treasury Contract - Content", function () {
     )
       .to.emit(contractValidationManager, "ValidationEnded")
       .withArgs(voucher.tokenId, true);
-      await expect(
-        contractValidationManager.connect(contentCreator).setAsValidated(voucher2)
-      )
-        .to.emit(contractValidationManager, "ValidationEnded")
-        .withArgs(voucher2.tokenId, true);
+    await expect(
+      contractValidationManager.connect(contentCreator).setAsValidated(voucher2)
+    )
+      .to.emit(contractValidationManager, "ValidationEnded")
+      .withArgs(voucher2.tokenId, true);
 
     /// Send UDAO to the buyer's wallet
     await contractUDAO.transfer(
@@ -508,12 +505,15 @@ describe("Platform Treasury Contract - Content", function () {
     );
     await contractPlatformTreasury
       .connect(contentBuyer)
-      .buyContent([purchase_udaoc_voucher,purchase_udaoc_voucher2]);
+      .buyContent([purchase_udaoc_voucher, purchase_udaoc_voucher2]);
     const result = await contractPlatformTreasury
       .connect(contentBuyer)
       .getOwnedContent(contentBuyer.address);
     const numArray = result.map((x) => x.map((y) => y.toNumber()));
-    expect(numArray).to.eql([[1, 0],[2,0]]);
+    expect(numArray).to.eql([
+      [1, 0],
+      [2, 0],
+    ]);
   });
 
   it("Should a user able to buy parts of a content", async function () {
