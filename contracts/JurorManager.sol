@@ -24,6 +24,9 @@ contract JurorManager is RoleController, EIP712 {
 
     uint256 public totalCaseScore;
 
+    /**
+     * @param rmAddress address of the role manager contract
+     */
     constructor(
         address rmAddress
     ) EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION) RoleController(rmAddress) {}
@@ -52,8 +55,10 @@ contract JurorManager is RoleController, EIP712 {
     }
 
     uint256 public totalJurorScore;
-
-    /// @notice Ends a dispute, executes actions based on the result.
+    /**
+     * @notice Ends a dispute, executes actions based on the result.
+     * @param voucher voucher required to end a dispute
+     */
     function endDispute(
         CaseVoucher calldata voucher
     ) external onlyRole(JUROR_ROLE) {

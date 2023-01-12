@@ -117,6 +117,13 @@ abstract contract BasePlatform is Pausable, RoleController {
         uint contentValid
     );
 
+    /**
+     * @param udaoAddress address of the UDAO ERC20 token
+     * @param udaocAddress address of the UDAOC ERC721 token
+     * @param rmAddress address of the role manager contract
+     * @param vmAddress address of the validation manager contract
+     * @param jmAddress address of the juror manager contract
+     */
     constructor(
         address udaoAddress,
         address udaocAddress,

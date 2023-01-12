@@ -45,8 +45,9 @@ contract UDAOStaker is RoleController, EIP712 {
     event ValidatorStakeWithdrawn(address _validator, uint256 _amount);
 
     // @TODO Juror staking eklendiğinde kullanılacak
-
     event JurorStakeWithdrawn(address _juror, uint256 _amount);
+
+
     event GovernanceStake(
         address _member,
         uint256 _stakeAmount,
@@ -154,17 +155,27 @@ contract UDAOStaker is RoleController, EIP712 {
 
     uint256 public totalVotingPower;
 
+    /**
+     * @param udaovpAddress address of the UDAO-vp ERC20 token
+     * @param udaoAddress address of the UDAO ERC20 token
+     * @param _platformTreasuryAddress address of the platform treasury contract
+     * @param rmAddress address of the role manager contract
+     */
     constructor(
         address udaovpAddress,
         address udaoAddress,
         address _platformTreasuryAddress,
-        address irmAddress
-    ) EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION) RoleController(irmAddress) {
+        address rmAddress
+    ) EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION) RoleController(rmAddress) {
         udao = IERC20(udaoAddress);
         udaovp = IUDAOVP(udaovpAddress);
         platformTreasuryAddress = _platformTreasuryAddress;
     }
 
+    /**
+     * @notice set the required lock amount for super validators
+     * @param _amount new amount that requried to be locked
+     */
     function setSuperValidatorLockAmount(uint256 _amount)
         external
         onlyRoles(administrator_roles)
@@ -173,6 +184,10 @@ contract UDAOStaker is RoleController, EIP712 {
         emit SetSuperValidatorLockAmount(_amount);
     }
 
+    /**
+     * @notice sets the vote reward given when governance member votes
+     * @param _reward new amount of reward
+     */
     function setVoteReward(uint256 _reward)
         external
         onlyRoles(administrator_roles)
@@ -181,6 +196,10 @@ contract UDAOStaker is RoleController, EIP712 {
         emit SetVoteReward(_reward);
     }
 
+    /**
+     * @notice sets the platform treasury address
+     * @param _platformTreasuryAddress the address of the new platform treasury
+     */
     function setPlatformTreasuryAddress(address _platformTreasuryAddress)
         external
         onlyRoles(administrator_roles)
@@ -308,7 +327,10 @@ contract UDAOStaker is RoleController, EIP712 {
     }
     
 
-    /// @notice Allows validators to accept the validation work
+    /**
+     * @notice Allows validators to accept the validation work
+     * @param voucher validation registration voucher
+     */
     function registerValidation(RegisterValidationVoucher calldata voucher)
         external
         onlyRoles(validator_roles)
@@ -339,7 +361,10 @@ contract UDAOStaker is RoleController, EIP712 {
         emit ValidationRegistered(msg.sender, voucher.validationId);
     }
 
-    /// @notice Allows jurors to accept the cases
+    /**
+     * @notice Allows jurors to accept the cases
+     * @param caseId id of the case
+     */
     function registerCase(uint256 caseId) external onlyRole(JUROR_ROLE) {
         JurorStakeLock storage stakeLock = jurorLocks[_msgSender()][
             latestJurorStakeId[_msgSender()]
@@ -469,7 +494,10 @@ contract UDAOStaker is RoleController, EIP712 {
         emit RoleRejected(roleId, _applicant);
     }
 
-    /// @notice allows validators to withdraw their staked tokens
+    /**
+     * @notice allows validators to withdraw their staked tokens
+     * @param amount amount that will be withdrawn
+     */
     function withdrawValidatorStake(uint amount) public {
         uint256 withdrawableBalance;
         uint256 validatorLockLength = validatorLock[msg.sender].length;
@@ -552,14 +580,21 @@ contract UDAOStaker is RoleController, EIP712 {
         _withdrawValidator(msg.sender, withdrawableBalance);
     }
 
-    /// @notice Withdraws desired amounts of tokens to "to" address 
+    /**
+     * @notice Withdraws desired amounts of tokens to "to" address 
+     * @param to address of the redeemer of the tokens
+     * @param withdrawableBalance amount of tokens that will be withdrawn
+     */
     function _withdrawValidator(address to, uint withdrawableBalance) internal {
         require(withdrawableBalance > 0, "You don't have withdrawable token");
         udao.transfer(to, withdrawableBalance);
         emit ValidatorStakeWithdrawn(to, withdrawableBalance);
     }
 
-    /// @notice allows jurors to withdraw their staked tokens
+    /**
+     * @notice allows jurors to withdraw their staked tokens
+     * @param amount amount of tokens that will be withdrawn
+     */
     function withdrawJurorStake(uint amount) public {
         uint256 withdrawableBalance;
         uint256 jurorLockLength = jurorLocks[msg.sender].length;
@@ -612,12 +647,15 @@ contract UDAOStaker is RoleController, EIP712 {
         _withdrawJuror(msg.sender, withdrawableBalance);
         return;
     }
-
-    /// @notice Withdraws desired amounts of tokens to "to" address 
+    /**
+     * @notice Withdraws desired amounts of tokens to "to" address 
+     * @param to address of the redeemer of the tokens
+     * @param withdrawableBalance amount of tokens that will be withdrawn
+     */
     function _withdrawJuror(address to, uint withdrawableBalance) internal {
         require(withdrawableBalance > 0, "You don't have withdrawable token");
         udao.transfer(to, withdrawableBalance);
-        emit ValidatorStakeWithdrawn(to, withdrawableBalance);
+        emit JurorStakeWithdrawn(to, withdrawableBalance);
     }
 
     /// @notice Returns the amount of token a validator could withdraw
@@ -729,6 +767,10 @@ contract UDAOStaker is RoleController, EIP712 {
         }
     }
 
+    /**
+     * @notice add vote rewward to voters reward count
+     * @param voter address of the voter
+     */
     function addVoteRewards(address voter) external onlyRole(GOVERNANCE_ROLE) {
         uint256 votingPowerRatio = (udaovp.balanceOf(voter) * 10000) /
             totalVotingPower;
@@ -736,6 +778,9 @@ contract UDAOStaker is RoleController, EIP712 {
         emit VoteRewardAdded(voter, votingPowerRatio * voteReward);
     }
 
+    /**
+     * @notice withdraws reward earned from voting
+     */
     function withdrawRewards() external {
         require(
             rewardBalanceOf[msg.sender] > 0,
@@ -781,6 +826,7 @@ contract UDAOStaker is RoleController, EIP712 {
 
     /// @notice Allows corporate accounts to unstake if they've found employee for job listing 
     /// before staking lock duration. 
+    /// @param voucher voucher for corporate withdraw before deadline
     function unstakeForJobListing(CorporateWithdrawVoucher calldata voucher)
         external
         onlyRole(CORPORATE_ROLE)
@@ -846,6 +892,11 @@ contract UDAOStaker is RoleController, EIP712 {
         }
     }
 
+    /**
+     * @notice an internal function executes transfer
+     * @param to address that will be tokens sent to
+     * @param withdrawableBalance amount of tokens that will be withdrawn
+     */
     function _withdrawCorporate(address to, uint withdrawableBalance) internal {
         udao.transferFrom(address(this), to, withdrawableBalance);
         emit UnstakeForJobListing(to, withdrawableBalance);

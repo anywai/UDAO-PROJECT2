@@ -47,6 +47,10 @@ contract ValidationManager is RoleController, EIP712 {
     /// TODO Bu next round jurorlarınkiyle aynı değil mi?
     /// Tek bir next roundla her ikisini yeni rounda geçiremez miyiz?
     /// Ve tek bir "distributionRound" değişkeni olamaz mı?
+
+    /// CEVAP: Zaten tek fonksiyon ile çağrılıyor (PlatformTreasury içinden) ama round ilerletme daha 
+    /// az çağırılacak bundan dolayı external call sayısını azaltmak için juror ve validator içine ayrı
+    /// round bilgisi ekledim 
     uint256 public distributionRound;
 
     /// @dev is used during the calculation of a validator score

@@ -69,6 +69,16 @@ abstract contract ContentManager is EIP712, BasePlatform {
     // tokenId => student addresses
     mapping(uint256 => address[]) public studentList;
 
+    /**
+     * @notice struct to hold coaching information
+     * @param coach address of the coach
+     * @param learner address of the learner
+     * @param moneyLockDeadline deadline of the money locked
+     * @param coachingPaymentAmount amount of token that coach is going to get
+     * @param isDone status of the coaching
+     * @param totalPaymentAmount total payment amount to buy coaching (includes cuts for platform)
+     * @param isRefundable is coaching refundable
+     */
     struct CoachingStruct {
         address coach;
         address learner;
@@ -97,7 +107,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
     }
 
     /// @notice allows users to purchase a content
-    /// @param vouchers voucher for the content purchase
+    /// @param vouchers vouchers for the content purchase
     function buyContent(ContentPurchaseVoucher[] calldata vouchers) external {
         require(!IRM.isBanned(msg.sender), "You are banned");
 
@@ -108,6 +118,10 @@ abstract contract ContentManager is EIP712, BasePlatform {
         }
     }
 
+    /**
+     * @notice internal function that executes required functions to buy content
+     * @param voucher a single voucher to buy content
+     */
     function _buyContent(ContentPurchaseVoucher calldata voucher) internal {
             uint256 tokenId = voucher.tokenId;
             uint256 priceToPay = voucher.priceToPay;
@@ -184,6 +198,11 @@ abstract contract ContentManager is EIP712, BasePlatform {
             );
     }
 
+    /** 
+     * @notice an internal function to update owned contents of the user
+     * @param tokenId id of the token that bought (completely of partially)
+     * @param purchasedPart purchased part of the content (all of the content if 0)
+     */
     function _updateOwned(uint tokenId, uint purchasedPart) internal {
                   require(
                     isTokenBought[msg.sender][tokenId][
@@ -363,7 +382,15 @@ abstract contract ContentManager is EIP712, BasePlatform {
         currentCoaching.isDone = 2;
         udao.transfer(currentCoaching.learner, totalPaymentAmount);
 
-        // TODO explain below with @dev Burak please
+        /**
+         * @dev this function checks the gas used since the start of the function using the global 
+         * function `gasleft()`, then checks if instructor balance has more tokens than required gas
+         * to pay for this function. If instructos has enough balance, gas cost of this function is
+         * deducted from instructors balance, if instructor does not have enough balance, insturctor 
+         * balance deducts to 0. 
+         * 
+         * @TODO we can add a instructor debt  
+         */
         uint256 gasUsed = startGas - gasleft();
 
         if (
