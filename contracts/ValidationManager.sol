@@ -38,21 +38,31 @@ contract ValidationManager is RoleController, EIP712 {
     event ValidationEnded(uint256 tokenId, bool result);
     event NextRound(uint256 newRoundId);
 
-    // tokenId => result
+    // tokenId => if a content validated or not
     mapping(uint256 => bool) public isValidated;
     // validator => round => score
     mapping(address => mapping(uint256 => uint256))
         public validatorScorePerRound;
 
+    /// TODO Bu next round jurorlarınkiyle aynı değil mi?
+    /// Tek bir next roundla her ikisini yeni rounda geçiremez miyiz?
+    /// Ve tek bir "distributionRound" değişkeni olamaz mı?
+
+    /// CEVAP: Zaten tek fonksiyon ile çağrılıyor (PlatformTreasury içinden) ama round ilerletme daha 
+    /// az çağırılacak bundan dolayı external call sayısını azaltmak için juror ve validator içine ayrı
+    /// round bilgisi ekledim 
     uint256 public distributionRound;
 
+    /// @dev is used during the calculation of a validator score
     uint256 public totalSuccessfulValidationScore;
 
+    /// @notice Allows to set the address of content contract address
+    /// TODO Check if every "set" contract address has the same role requirement
     function setUDAOC(address udaocAddress) external onlyRole(FOUNDATION_ROLE) {
         udaoc = IUDAOC(udaocAddress);
     }
 
-    /// @notice writes validation result to blockchain
+    /// @notice Writes validation result to blockchain
     /// @param voucher voucher that contains the signed validation data
     function setAsValidated(ValidationVoucher calldata voucher) external {
         // make sure signature is valid and get the address of the signer
@@ -69,12 +79,16 @@ contract ValidationManager is RoleController, EIP712 {
         emit ValidationEnded(voucher.tokenId, true);
     }
 
+    /// @notice Records the scores of validators for a specific validation work
+    /// @param _validators Validator address of whom did the validation work
+    /// @param _validationScores Scores of the validators 
     function _recordScores(
         address[] calldata _validators,
         uint256[] calldata _validationScores
     ) internal {
         uint256 totalValidators = _validators.length;
 
+        /// @dev loop validators and record their scores
         for (uint256 i; i < totalValidators; i++) {
             validatorScorePerRound[_validators[i]][
                 distributionRound
@@ -83,6 +97,9 @@ contract ValidationManager is RoleController, EIP712 {
         }
     }
 
+    /// @notice Returns the score of a validator for a specific round
+    /// @param _validator The address of the validator
+    /// @param _round Reward round ID
     function getValidatorScore(address _validator, uint256 _round)
         external
         view
@@ -91,15 +108,17 @@ contract ValidationManager is RoleController, EIP712 {
         return validatorScorePerRound[_validator][_round];
     }
 
+    /// @notice Returns total successful validation count and is used for reward calculation
     function getTotalValidationScore() external view returns (uint256) {
-        /// @notice returns total successful validation count
         return totalSuccessfulValidationScore;
     }
 
+    /// @notice Returns if a content is validated or not. Used as a check before service purchases
     function getIsValidated(uint256 tokenId) external view returns (bool) {
         return isValidated[tokenId];
     }
 
+    /// @notice Starts the new reward round
     function nextRound() external onlyRole(TREASURY_CONTRACT) {
         distributionRound++;
         emit NextRound(distributionRound);

@@ -78,6 +78,7 @@ abstract contract BasePlatform is Pausable, RoleController {
     IValidationManager public IVM;
     IJurorManager public IJM;
 
+    /// @notice Ensures the cut won't exceed %100
     modifier checkCoachingCuts() {
         require(
             coachingFoundationCut + coachingGovernancenCut < 100000,
@@ -86,6 +87,7 @@ abstract contract BasePlatform is Pausable, RoleController {
         _;
     }
 
+    /// @notice Ensures the cut won't exceed %100
     modifier checkContentCuts() {
         require(
             contentFoundationCut +
@@ -98,12 +100,14 @@ abstract contract BasePlatform is Pausable, RoleController {
         _;
     }
 
+    /// @notice Triggered after every round is finalized and rewards are distributed 
     event RewardsDistributed(
         uint payPerValidationScore,
         uint payPerJurorPoint,
         uint newRoundId
     );
 
+    /// @notice This event is triggered if a cut is updated.
     event CutsUpdated(
         uint coachFnd,
         uint coachGov,
@@ -113,6 +117,13 @@ abstract contract BasePlatform is Pausable, RoleController {
         uint contentValid
     );
 
+    /**
+     * @param udaoAddress address of the UDAO ERC20 token
+     * @param udaocAddress address of the UDAOC ERC721 token
+     * @param rmAddress address of the role manager contract
+     * @param vmAddress address of the validation manager contract
+     * @param jmAddress address of the juror manager contract
+     */
     constructor(
         address udaoAddress,
         address udaocAddress,

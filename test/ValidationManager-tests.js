@@ -5,7 +5,6 @@ const chai = require("chai");
 const BN = require("bn.js");
 const { LazyMinter } = require("../lib/LazyMinter");
 const { LazyRole } = require("../lib/LazyRole");
-const { LazyScore } = require("../lib/LazyScore");
 const { LazyValidation } = require("../lib/LazyValidation");
 const { LazyUDAOCertMinter } = require("../lib/LazyUDAOCertMinter");
 
@@ -397,9 +396,9 @@ describe("Validation Manageer Contract", function () {
       .to.emit(contractValidationManager, "ValidationEnded")
       .withArgs(voucher.tokenId, true);
 
-    expect(
-      await contractValidationManager.getTotalValidationScore()
-    ).to.eql(ethers.BigNumber.from(10));
+    expect(await contractValidationManager.getTotalValidationScore()).to.eql(
+      ethers.BigNumber.from(10)
+    );
   });
 
   it("Should not validate content if not exist", async function () {

@@ -24,10 +24,15 @@ contract JurorManager is RoleController, EIP712 {
 
     uint256 public totalCaseScore;
 
+    /**
+     * @param rmAddress address of the role manager contract
+     */
     constructor(
         address rmAddress
     ) EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION) RoleController(rmAddress) {}
 
+    /// @notice Sets the address of the staking contract
+    /// @param stakerAddress Address of the staking contract
     function setStaker(
         address stakerAddress
     ) external onlyRole(FOUNDATION_ROLE) {
@@ -50,8 +55,10 @@ contract JurorManager is RoleController, EIP712 {
     }
 
     uint256 public totalJurorScore;
-
-    /// @notice Ends a dispute, executes actions based on the result.
+    /**
+     * @notice Ends a dispute, executes actions based on the result.
+     * @param voucher voucher required to end a dispute
+     */
     function endDispute(
         CaseVoucher calldata voucher
     ) external onlyRole(JUROR_ROLE) {
@@ -75,7 +82,7 @@ contract JurorManager is RoleController, EIP712 {
         emit EndDispute(voucher.caseId, voucher.jurors, totalJurorScore);
     }
 
-    /// @notice Checks if the caller is a juror participated in a certain case.
+    /// @notice Makes sure if the end dispute caller is a juror participated in a certain case.
     /// @param _jurors list of jurors contained in voucher
     function _checkJuror(address[] memory _jurors) internal view {
         /// Check if the caller is juror recorded for this case
@@ -99,10 +106,12 @@ contract JurorManager is RoleController, EIP712 {
         }
     }
 
+    /// @notice Starts the new reward round
     function nextRound() external onlyRole(TREASURY_CONTRACT) {
         distributionRound++;
     }
 
+    /// @notice Returns the score of a juror for a speficied round
     function getJurorScore(
         address _juror,
         uint _round
@@ -110,13 +119,13 @@ contract JurorManager is RoleController, EIP712 {
         return jurorScorePerRound[_juror][_round];
     }
 
+    /// @notice returns total juror scores
     function getTotalJurorScore() external view returns (uint) {
-        /// @notice returns total successful validation count
         return totalJurorScore;
     }
 
-    /// @notice Returns a hash of the given ContentVoucher, prepared using EIP712 typed data hashing rules.
-    /// @param voucher A ContentVoucher to hash.
+    /// @notice Returns a hash of the given CaseVoucher, prepared using EIP712 typed data hashing rules.
+    /// @param voucher A CaseVoucher to hash.
     function _hash(
         CaseVoucher calldata voucher
     ) internal view returns (bytes32) {
@@ -148,9 +157,9 @@ contract JurorManager is RoleController, EIP712 {
         return id;
     }
 
-    /// @notice Verifies the signature for a given ContentVoucher, returning the address of the signer.
+    /// @notice Verifies the signature for a given CaseVoucher, returning the address of the signer.
     /// @dev Will revert if the signature is invalid. Does not verify that the signer is authorized to mint NFTs.
-    /// @param voucher A ContentVoucher describing an unminted NFT.
+    /// @param voucher A CaseVoucher describing an unminted NFT.
     function _verify(
         CaseVoucher calldata voucher
     ) internal view returns (address) {

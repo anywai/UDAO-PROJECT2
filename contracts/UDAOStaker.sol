@@ -45,8 +45,9 @@ contract UDAOStaker is RoleController, EIP712 {
     event ValidatorStakeWithdrawn(address _validator, uint256 _amount);
 
     // @TODO Juror staking eklendiğinde kullanılacak
-
     event JurorStakeWithdrawn(address _juror, uint256 _amount);
+
+
     event GovernanceStake(
         address _member,
         uint256 _stakeAmount,
@@ -154,17 +155,27 @@ contract UDAOStaker is RoleController, EIP712 {
 
     uint256 public totalVotingPower;
 
+    /**
+     * @param udaovpAddress address of the UDAO-vp ERC20 token
+     * @param udaoAddress address of the UDAO ERC20 token
+     * @param _platformTreasuryAddress address of the platform treasury contract
+     * @param rmAddress address of the role manager contract
+     */
     constructor(
         address udaovpAddress,
         address udaoAddress,
         address _platformTreasuryAddress,
-        address irmAddress
-    ) EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION) RoleController(irmAddress) {
+        address rmAddress
+    ) EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION) RoleController(rmAddress) {
         udao = IERC20(udaoAddress);
         udaovp = IUDAOVP(udaovpAddress);
         platformTreasuryAddress = _platformTreasuryAddress;
     }
 
+    /**
+     * @notice set the required lock amount for super validators
+     * @param _amount new amount that requried to be locked
+     */
     function setSuperValidatorLockAmount(uint256 _amount)
         external
         onlyRoles(administrator_roles)
@@ -173,6 +184,10 @@ contract UDAOStaker is RoleController, EIP712 {
         emit SetSuperValidatorLockAmount(_amount);
     }
 
+    /**
+     * @notice sets the vote reward given when governance member votes
+     * @param _reward new amount of reward
+     */
     function setVoteReward(uint256 _reward)
         external
         onlyRoles(administrator_roles)
@@ -181,6 +196,10 @@ contract UDAOStaker is RoleController, EIP712 {
         emit SetVoteReward(_reward);
     }
 
+    /**
+     * @notice sets the platform treasury address
+     * @param _platformTreasuryAddress the address of the new platform treasury
+     */
     function setPlatformTreasuryAddress(address _platformTreasuryAddress)
         external
         onlyRoles(administrator_roles)
@@ -197,7 +216,15 @@ contract UDAOStaker is RoleController, EIP712 {
         uint256 validUntil;
         /// @notice 0 validator, 1 juror, 2 corporate, 3 super validator
         uint256 roleId;
-        /// @notice the EIP-712 signature of all other fields in the ContentVoucher struct.
+        /// @notice the EIP-712 signature of all other fields in the RoleVoucher struct.
+        bytes signature;
+    }
+
+    /// @notice Validation work registered to onchain with this
+    struct RegisterValidationVoucher {
+        /// @notice The off-chain ID of the validation work
+        uint256 validationId;
+        /// @notice the EIP-712 signature of all other fields in the RegisterValidationVoucher struct.
         bytes signature;
     }
 
@@ -298,21 +325,23 @@ contract UDAOStaker is RoleController, EIP712 {
 
         emit CaseAdded(caseAmount);
     }
+    
 
-    // TODO add voucher system, below is the initial struct for it
-    // Adamın biri gelip kafasına göre validasyon işi yaratmasın
-    // Belki voucher içine storage'da tutulan bişilerde eklenebilir?
-    // BT-93
-    struct RegisterValidation {
-        uint256 validationId;
-        bytes32 signature;
-    }
-
-    /// @notice Allows validators to accept the validation work
-    function registerValidation(uint256 validationId)
+    /**
+     * @notice Allows validators to accept the validation work
+     * @param voucher validation registration voucher
+     */
+    function registerValidation(RegisterValidationVoucher calldata voucher)
         external
         onlyRoles(validator_roles)
     {
+        address signer = _verifyValidation(voucher);
+
+        require(
+            IRM.hasRole(BACKEND_ROLE, signer),
+            "Signature invalid or unauthorized"
+        );
+        
         ValidatorStakeLock storage stakeLock = validatorLock[_msgSender()][
             latestValidatorStakeId[_msgSender()]
         ];
@@ -329,10 +358,13 @@ contract UDAOStaker is RoleController, EIP712 {
             latestValidatorStakeId[_msgSender()]++;
         }
 
-        emit ValidationRegistered(msg.sender, validationId);
+        emit ValidationRegistered(msg.sender, voucher.validationId);
     }
 
-    /// @notice Allows jurors to accept the cases
+    /**
+     * @notice Allows jurors to accept the cases
+     * @param caseId id of the case
+     */
     function registerCase(uint256 caseId) external onlyRole(JUROR_ROLE) {
         JurorStakeLock storage stakeLock = jurorLocks[_msgSender()][
             latestJurorStakeId[_msgSender()]
@@ -379,8 +411,6 @@ contract UDAOStaker is RoleController, EIP712 {
     function getApproved(RoleVoucher calldata voucher) external {
         // make sure redeemer is redeeming
         require(voucher.redeemer == msg.sender, "You are not the redeemer");
-        //make sure redeemer is kyced
-        require(IRM.isKYCed(msg.sender), "You are not KYCed");
         // make sure signature is valid and get the address of the signer
         address signer = _verifyRole(voucher);
         require(voucher.validUntil >= block.timestamp, "Voucher has expired.");
@@ -464,7 +494,10 @@ contract UDAOStaker is RoleController, EIP712 {
         emit RoleRejected(roleId, _applicant);
     }
 
-    /// @notice allows validators to withdraw their staked tokens
+    /**
+     * @notice allows validators to withdraw their staked tokens
+     * @param amount amount that will be withdrawn
+     */
     function withdrawValidatorStake(uint amount) public {
         uint256 withdrawableBalance;
         uint256 validatorLockLength = validatorLock[msg.sender].length;
@@ -547,14 +580,21 @@ contract UDAOStaker is RoleController, EIP712 {
         _withdrawValidator(msg.sender, withdrawableBalance);
     }
 
-    /// @notice Withdraws desired amounts of tokens to "to" address 
+    /**
+     * @notice Withdraws desired amounts of tokens to "to" address 
+     * @param to address of the redeemer of the tokens
+     * @param withdrawableBalance amount of tokens that will be withdrawn
+     */
     function _withdrawValidator(address to, uint withdrawableBalance) internal {
         require(withdrawableBalance > 0, "You don't have withdrawable token");
         udao.transfer(to, withdrawableBalance);
         emit ValidatorStakeWithdrawn(to, withdrawableBalance);
     }
 
-    /// @notice allows jurors to withdraw their staked tokens
+    /**
+     * @notice allows jurors to withdraw their staked tokens
+     * @param amount amount of tokens that will be withdrawn
+     */
     function withdrawJurorStake(uint amount) public {
         uint256 withdrawableBalance;
         uint256 jurorLockLength = jurorLocks[msg.sender].length;
@@ -607,12 +647,15 @@ contract UDAOStaker is RoleController, EIP712 {
         _withdrawJuror(msg.sender, withdrawableBalance);
         return;
     }
-
-    /// @notice Withdraws desired amounts of tokens to "to" address 
+    /**
+     * @notice Withdraws desired amounts of tokens to "to" address 
+     * @param to address of the redeemer of the tokens
+     * @param withdrawableBalance amount of tokens that will be withdrawn
+     */
     function _withdrawJuror(address to, uint withdrawableBalance) internal {
         require(withdrawableBalance > 0, "You don't have withdrawable token");
         udao.transfer(to, withdrawableBalance);
-        emit ValidatorStakeWithdrawn(to, withdrawableBalance);
+        emit JurorStakeWithdrawn(to, withdrawableBalance);
     }
 
     /// @notice Returns the amount of token a validator could withdraw
@@ -724,6 +767,10 @@ contract UDAOStaker is RoleController, EIP712 {
         }
     }
 
+    /**
+     * @notice add vote rewward to voters reward count
+     * @param voter address of the voter
+     */
     function addVoteRewards(address voter) external onlyRole(GOVERNANCE_ROLE) {
         uint256 votingPowerRatio = (udaovp.balanceOf(voter) * 10000) /
             totalVotingPower;
@@ -731,6 +778,9 @@ contract UDAOStaker is RoleController, EIP712 {
         emit VoteRewardAdded(voter, votingPowerRatio * voteReward);
     }
 
+    /**
+     * @notice withdraws reward earned from voting
+     */
     function withdrawRewards() external {
         require(
             rewardBalanceOf[msg.sender] > 0,
@@ -776,6 +826,7 @@ contract UDAOStaker is RoleController, EIP712 {
 
     /// @notice Allows corporate accounts to unstake if they've found employee for job listing 
     /// before staking lock duration. 
+    /// @param voucher voucher for corporate withdraw before deadline
     function unstakeForJobListing(CorporateWithdrawVoucher calldata voucher)
         external
         onlyRole(CORPORATE_ROLE)
@@ -841,6 +892,11 @@ contract UDAOStaker is RoleController, EIP712 {
         }
     }
 
+    /**
+     * @notice an internal function executes transfer
+     * @param to address that will be tokens sent to
+     * @param withdrawableBalance amount of tokens that will be withdrawn
+     */
     function _withdrawCorporate(address to, uint withdrawableBalance) internal {
         udao.transferFrom(address(this), to, withdrawableBalance);
         emit UnstakeForJobListing(to, withdrawableBalance);
@@ -848,7 +904,7 @@ contract UDAOStaker is RoleController, EIP712 {
 
     /// @notice Returns a hash of the given ContentVoucher, prepared using EIP712 typed data hashing rules.
     /// @param voucher A ContentVoucher to hash.
-    function _hash(RoleVoucher calldata voucher)
+    function _hashRole(RoleVoucher calldata voucher)
         internal
         view
         returns (bytes32)
@@ -887,6 +943,24 @@ contract UDAOStaker is RoleController, EIP712 {
             );
     }
 
+    function _hashValidation(RegisterValidationVoucher calldata voucher)
+        internal
+        view
+        returns (bytes32)
+    {
+        return
+            _hashTypedDataV4(
+                keccak256(
+                    abi.encode(
+                        keccak256(
+                            "UDAOStaker(uint256 validationId)"
+                        ),
+                        voucher.validationId
+                    )
+                )
+            );
+    }
+
     /// @notice Returns the chain id of the current blockchain.
     /// @dev This is used to workaround an issue with ganache returning different values from the on-chain chainid() function and
     ///  the eth_chainId RPC method. See https://github.com/protocol/nft-website/issues/121 for context.
@@ -906,7 +980,7 @@ contract UDAOStaker is RoleController, EIP712 {
         view
         returns (address)
     {
-        bytes32 digest = _hash(voucher);
+        bytes32 digest = _hashRole(voucher);
         return ECDSA.recover(digest, voucher.signature);
     }
 
@@ -919,6 +993,18 @@ contract UDAOStaker is RoleController, EIP712 {
         returns (address)
     {
         bytes32 digest = _hashCorporate(voucher);
+        return ECDSA.recover(digest, voucher.signature);
+    }
+
+    /// @notice Verifies the signature for a given RegisterValidationVoucher, returning the address of the signer.
+    /// @dev Will revert if the signature is invalid. Does not verify that the signer is authorized to mint NFTs.
+    /// @param voucher A RegisterValidationVoucher describing an unminted NFT.
+    function _verifyValidation(RegisterValidationVoucher calldata voucher)
+        internal
+        view
+        returns (address)
+    {
+        bytes32 digest = _hashValidation(voucher);
         return ECDSA.recover(digest, voucher.signature);
     }
 }

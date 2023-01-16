@@ -48,12 +48,10 @@ contract UDAOCertificate is
     }
 
     /// @notice Redeems a CertificateVoucher for an actual NFT, creating it in the process.
-    /// @param voucher A signed NFTVoucher that describes the NFT to be redeemed.
+    /// @param voucher A signed CertificateVoucher that describes the NFT to be redeemed.
     function redeem(CertificateVoucher calldata voucher) public {
         // make sure redeemer is redeeming
         require(voucher.redeemer == msg.sender, "You are not the redeemer");
-        //make sure redeemer is kyced
-        require(IRM.isKYCed(msg.sender), "You are not KYCed");
         // make sure signature is valid and get the address of the signer
         address signer = _verify(voucher);
         require(
@@ -134,6 +132,7 @@ contract UDAOCertificate is
     /// @param from The current token owner
     /// @param to Token to send to
     /// @param tokenId The id of the token to transfer
+    /// TODO Bunu test ettik mi? 
     function emergencyTransfer(
         address from,
         address to,

@@ -3,8 +3,9 @@
 pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
+import "./IRoleManager.sol";
 
-contract RoleManager is AccessControl {
+contract RoleManager is AccessControl, IRoleManager {
     bytes32 public constant BACKEND_ROLE = keccak256("BACKEND_ROLE");
 
     mapping(address => bool) KYCList;

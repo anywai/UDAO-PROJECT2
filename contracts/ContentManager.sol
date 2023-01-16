@@ -5,10 +5,12 @@ import "./BasePlatform.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
 
+
 abstract contract ContentManager is EIP712, BasePlatform {
     string private constant SIGNING_DOMAIN = "ContentManager";
     string private constant SIGNATURE_VERSION = "1";
 
+    /// @notice  triggered if coaching service payment to the instructor is forced 
     event ForcedPayment(uint256 _coachingId, address forcedBy);
     /// @notice triggered when any kind of refund is done
     event Refund(
@@ -31,7 +33,6 @@ abstract contract ContentManager is EIP712, BasePlatform {
     );
 
     /// @notice Represents usage rights for a content (or part)
-    /// FIXME FIX THE HASH FUNCTION!! tokenId and purchasedParts has been changed!
     struct ContentPurchaseVoucher {
         /// @notice The id of the token (content) to be redeemed.
         uint256 tokenId;
@@ -68,6 +69,16 @@ abstract contract ContentManager is EIP712, BasePlatform {
     // tokenId => student addresses
     mapping(uint256 => address[]) public studentList;
 
+    /**
+     * @notice struct to hold coaching information
+     * @param coach address of the coach
+     * @param learner address of the learner
+     * @param moneyLockDeadline deadline of the money locked
+     * @param coachingPaymentAmount amount of token that coach is going to get
+     * @param isDone status of the coaching
+     * @param totalPaymentAmount total payment amount to buy coaching (includes cuts for platform)
+     * @param isRefundable is coaching refundable
+     */
     struct CoachingStruct {
         address coach;
         address learner;
@@ -95,29 +106,39 @@ abstract contract ContentManager is EIP712, BasePlatform {
         IVM = IValidationManager(vmAddress);
     }
 
-    /// @notice allows KYCed users to purchase a content
-    /// @param vouchers voucher for the content purchase
+    /// @notice allows users to purchase a content
+    /// @param vouchers vouchers for the content purchase
     function buyContent(ContentPurchaseVoucher[] calldata vouchers) external {
         require(!IRM.isBanned(msg.sender), "You are banned");
 
+        /// @dev If a user buys multiple contents, user receives multiple vouchers
         uint256 voucherLength = vouchers.length;
-        for (uint256 i = 0; i < voucherLength; voucherLength++) {
-            uint256 tokenId = vouchers[i].tokenId;
-            uint256 priceToPay = vouchers[i].priceToPay;
+        for (uint256 i = 0; i < voucherLength; i++) {
+            _buyContent(vouchers[i]);
+        }
+    }
+
+    /**
+     * @notice internal function that executes required functions to buy content
+     * @param voucher a single voucher to buy content
+     */
+    function _buyContent(ContentPurchaseVoucher calldata voucher) internal {
+            uint256 tokenId = voucher.tokenId;
+            uint256 priceToPay = voucher.priceToPay;
 
             // make sure signature is valid and get the address of the signer
-            address signer = _verifyContent(vouchers[i]);
+            address signer = _verifyContent(voucher);
             require(
                 IRM.hasRole(BACKEND_ROLE, signer),
                 "Signature invalid or unauthorized"
             );
 
             require(
-                vouchers[i].validUntil >= block.timestamp,
+                voucher.validUntil >= block.timestamp,
                 "Voucher has expired."
             );
             require(
-                msg.sender == vouchers[i].redeemer,
+                msg.sender == voucher.redeemer,
                 "You are not redeemer."
             );
 
@@ -133,24 +154,14 @@ abstract contract ContentManager is EIP712, BasePlatform {
                 "Full content is already bought"
             );
 
-            uint256 partIdLength = vouchers[i].purchasedParts.length;
+            uint256 partIdLength = voucher.purchasedParts.length;
 
-            for (uint256 j; i < partIdLength; i++) {
-                require(
-                    isTokenBought[msg.sender][tokenId][
-                        vouchers[i].purchasedParts[j]
-                    ] == false,
-                    "Content part is already bought"
-                );
-
-                isTokenBought[msg.sender][tokenId][
-                    vouchers[i].purchasedParts[j]
-                ] = true;
-                ownedContents[msg.sender].push(
-                    [tokenId, vouchers[i].purchasedParts[j]]
-                );
+            /// @dev Assign every purchased content part to user
+            for (uint256 j; j < partIdLength; j++) {
+                _updateOwned(tokenId, voucher.purchasedParts[j]);
             }
 
+            /// @dev Calculate and assing the cuts
             uint256 foundationCalc = (priceToPay * contentFoundationCut) /
                 100000;
             uint256 governanceCalc = (priceToPay * contentGovernancenCut) /
@@ -169,20 +180,43 @@ abstract contract ContentManager is EIP712, BasePlatform {
                 (governanceCalc) -
                 (validatorCalc) -
                 (jurorCalc);
-
+            
+            /// @dev transfer the tokens from buyer to contract
+            /// FIXME Abi adamın gönderdiği tokenlar burada toplanıyor.
+            /// ama burada withdraw yok? address(this) ==? content manager değil mi?
             udao.transferFrom(
                 msg.sender,
                 address(this),
-                vouchers[i].priceToPay
+                voucher.priceToPay
             );
 
             emit ContentBought(
-                vouchers[i].tokenId,
-                vouchers[i].purchasedParts,
-                vouchers[i].priceToPay,
+                voucher.tokenId,
+                voucher.purchasedParts,
+                voucher.priceToPay,
                 msg.sender
             );
-        }
+    }
+
+    /** 
+     * @notice an internal function to update owned contents of the user
+     * @param tokenId id of the token that bought (completely of partially)
+     * @param purchasedPart purchased part of the content (all of the content if 0)
+     */
+    function _updateOwned(uint tokenId, uint purchasedPart) internal {
+                  require(
+                    isTokenBought[msg.sender][tokenId][
+                        purchasedPart
+                    ] == false,
+                    "Content part is already bought"
+                );
+
+                isTokenBought[msg.sender][tokenId][
+                   purchasedPart
+                ] = true;
+                ownedContents[msg.sender].push(
+                    [tokenId, purchasedPart]
+                );
     }
 
     /// @notice Allows users to buy coaching service.
@@ -199,9 +233,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
         require(voucher.validUntil >= block.timestamp, "Voucher has expired.");
         require(udaoc.exists(voucher.tokenId), "Content does not exist!");
         require(!IRM.isBanned(msg.sender), "You are banned");
-        require(IRM.isKYCed(msg.sender), "You are not KYCed");
         address instructor = udaoc.ownerOf(voucher.tokenId);
-        require(IRM.isKYCed(instructor), "Instructor is not KYCed");
         require(!IRM.isBanned(instructor), "Instructor is banned");
         require(
             udaoc.isCoachingEnabled(voucher.tokenId),
@@ -350,7 +382,15 @@ abstract contract ContentManager is EIP712, BasePlatform {
         currentCoaching.isDone = 2;
         udao.transfer(currentCoaching.learner, totalPaymentAmount);
 
-        // TODO explain below
+        /**
+         * @dev this function checks the gas used since the start of the function using the global 
+         * function `gasleft()`, then checks if instructor balance has more tokens than required gas
+         * to pay for this function. If instructos has enough balance, gas cost of this function is
+         * deducted from instructors balance, if instructor does not have enough balance, insturctor 
+         * balance deducts to 0. 
+         * 
+         * @TODO we can add a instructor debt  
+         */
         uint256 gasUsed = startGas - gasleft();
 
         if (
@@ -385,7 +425,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
         currentCoaching.isDone = 2;
         udao.transfer(currentCoaching.learner, totalPaymentAmount);
 
-        // TODO explain below
+        // TODO explain below with @dev Burak please
         uint256 gasUsed = startGas - gasleft();
         if (
             instructorBalance[currentCoaching.coach] >= (gasUsed * tx.gasprice)
@@ -417,6 +457,8 @@ abstract contract ContentManager is EIP712, BasePlatform {
         return (ownedContents[_owner]);
     }
 
+    /// @notice Returns the buyers of a coaching service for a token
+    /// @param tokenId The token ID of a course of a coaching service
     function getStudentListOfToken(uint256 tokenId)
         public
         view
@@ -425,8 +467,8 @@ abstract contract ContentManager is EIP712, BasePlatform {
         return studentList[tokenId];
     }
 
-    /// @notice Returns a hash of the given PurchaseVoucher, prepared using EIP712 typed data hashing rules.
-    /// @param voucher A PurchaseVoucher to hash.
+    /// @notice Returns a hash of the given ContentPurchaseVoucher, prepared using EIP712 typed data hashing rules.
+    /// @param voucher A ContentPurchaseVoucher to hash.
     function _hashContent(ContentPurchaseVoucher calldata voucher)
         internal
         view

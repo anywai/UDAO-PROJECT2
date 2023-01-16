@@ -41,7 +41,7 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
         bytes signature;
     }
 
-    // tokenId => buyable
+    // tokenId => is coaching service buyable
     mapping(uint => bool) coachingEnabled;
 
     /// @notice Redeems a ContentVoucher for an actual NFT, creating it in the process.
@@ -49,10 +49,6 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
     function redeem(ContentVoucher calldata voucher) public {
         // make sure redeemer is redeeming
         require(voucher.redeemer == msg.sender, "You are not the redeemer");
-
-        /// @dev KYC control is already done at transfer
-        //make sure redeemer is kyced
-        // require(irm.getKYC(msg.sender), "You are not KYCed");
 
         // make sure signature is valid and get the address of the signer
         address signer = _verify(voucher);
@@ -133,6 +129,9 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
         return ECDSA.recover(digest, voucher.signature);
     }
 
+    /// @notice A content can be completely removed if it is against our terms of policy
+    /// @param tokenId The token ID of a content
+    /// TODO Bunu administrator roller yerine juror'lara mı versek. Bilmiyorum çok fazla güç onlar içinde sanki. Karasız kaldım.
     function burn(uint256 tokenId) external onlyRoles(administrator_roles) {
         _burn(tokenId);
     }
@@ -149,6 +148,7 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
         uint256 tokenId
     ) internal virtual override {
         /// @notice make sure the transfer is made to a KYCed wallet
+        /// TODO Removing KYC from here could be a problem.
         super._beforeTokenTransfer(from, to, tokenId);
         if (to != address(0)) {
             require(IRM.isKYCed(to), "Receiver is not KYCed!");
@@ -160,6 +160,7 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
         }
     }
 
+    /// @notice Allows off-chain check if a token(content) exists
     function exists(uint tokenId) external view returns (bool) {
         return _exists(tokenId);
     }
