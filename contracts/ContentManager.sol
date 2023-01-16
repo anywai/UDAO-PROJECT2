@@ -425,7 +425,13 @@ abstract contract ContentManager is EIP712, BasePlatform {
         currentCoaching.isDone = 2;
         udao.transfer(currentCoaching.learner, totalPaymentAmount);
 
-        // TODO explain below with @dev Burak please
+        /**
+         * @dev this function checks the gas used since the start of the function using the global 
+         * function `gasleft()`, then checks if instructor balance has more tokens than required gas
+         * to pay for this function. If instructos has enough balance, gas cost of this function is
+         * deducted from instructors balance, if instructor does not have enough balance, insturctor 
+         * balance deducts to 0. 
+         */
         uint256 gasUsed = startGas - gasleft();
         if (
             instructorBalance[currentCoaching.coach] >= (gasUsed * tx.gasprice)
