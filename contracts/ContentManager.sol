@@ -172,7 +172,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
             foundationBalance += foundationCalc;
             governanceBalance += governanceCalc;
             validatorBalanceForRound += validatorCalc;
-            jurorBalance += jurorCalc;
+            jurorBalanceForRound += jurorCalc;
 
             instructorBalance[instructor] +=
                 priceToPay -
