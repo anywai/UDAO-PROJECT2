@@ -19,8 +19,10 @@ contract UDAOStaker is RoleController, EIP712 {
     IUDAOVP public udaovp;
     address platformTreasuryAddress;
 
+    /// TODO Below two variables are zero?
     uint256 public payablePerValidation;
     uint256 public payablePerCase;
+    
     /// @notice the required duration to be a validator
     uint256 public jurorLockTime = 30 days;
     /// @notice the required duration for listing a job
