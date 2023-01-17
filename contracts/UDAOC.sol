@@ -129,10 +129,13 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
         return ECDSA.recover(digest, voucher.signature);
     }
 
-    /// @notice A content can be completely removed if it is against our terms of policy
+    /// @notice A content can be completely removed by the owner
     /// @param tokenId The token ID of a content
-    /// TODO Bunu administrator roller yerine juror'lara mı versek. Bilmiyorum çok fazla güç onlar içinde sanki. Karasız kaldım.
-    function burn(uint256 tokenId) external onlyRoles(administrator_roles) {
+    function burn(uint256 tokenId) external {
+        require(
+            ownerOf(tokenId) == msg.sender,
+            "You are not the owner of token"
+        );
         _burn(tokenId);
     }
 
