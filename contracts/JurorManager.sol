@@ -33,6 +33,7 @@ contract JurorManager is RoleController, EIP712 {
 
     /// @notice Sets the address of the staking contract
     /// @param stakerAddress Address of the staking contract
+    /// TODO We haven't used the staker???!
     function setStaker(
         address stakerAddress
     ) external onlyRole(FOUNDATION_ROLE) {
