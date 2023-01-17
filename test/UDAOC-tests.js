@@ -706,7 +706,7 @@ describe("UDAOC Contract", function () {
     ).to.revertedWith("Sender is banned!");
   });
 
-  it("Should burn token if administrator role", async function () {
+  it("Should burn token if token owner", async function () {
     const {
       backend,
       contentCreator,
@@ -756,7 +756,7 @@ describe("UDAOC Contract", function () {
         voucher.tokenId
       );
 
-    await expect(contractUDAOContent.connect(foundation).burn(1))
+    await expect(contractUDAOContent.connect(contentCreator).burn(1))
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
         contentCreator.address,
@@ -765,7 +765,7 @@ describe("UDAOC Contract", function () {
       );
   });
 
-  it("Should fail to burn token if not administrator role", async function () {
+  it("Should fail to burn token if not token owner", async function () {
     const {
       backend,
       contentCreator,
@@ -818,9 +818,7 @@ describe("UDAOC Contract", function () {
     await expect(
       contractUDAOContent.connect(contentBuyer).burn(1)
     ).to.revertedWith(
-      "AccessControl: account " +
-        contentBuyer.address.toLowerCase() +
-        " is missing role"
+      "You are not the owner of token"
     );
   });
 
