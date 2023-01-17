@@ -22,7 +22,7 @@ contract UDAOStaker is RoleController, EIP712 {
     /// TODO Below two variables are zero?
     uint256 public payablePerValidation;
     uint256 public payablePerCase;
-    
+
     /// @notice the required duration to be a validator
     uint256 public jurorLockTime = 30 days;
     /// @notice the required duration for listing a job
@@ -373,7 +373,7 @@ contract UDAOStaker is RoleController, EIP712 {
         ];
         require(
             stakeLock.doneCaseAmount < stakeLock.maxCaseAmount,
-            "You don't have empty validation slots"
+            "You don't have empty case slots"
         );
         CaseLock storage lock = caseLocks[_msgSender()].push();
         lock.expireDate = block.timestamp + jurorLockTime;
