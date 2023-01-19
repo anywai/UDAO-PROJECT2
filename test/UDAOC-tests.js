@@ -466,6 +466,13 @@ describe("UDAOC Contract", function () {
       "Content Name",
       "Content Description"
     );
+
+    const voucherTransfer = await lazyMinter.createTransferVoucher(
+      1,
+      contentCreator.address,
+      contentBuyer.address
+    );
+
     await expect(contractUDAOContent.connect(contentCreator).redeem(voucher))
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
@@ -476,64 +483,10 @@ describe("UDAOC Contract", function () {
     await expect(
       contractUDAOContent
         .connect(contentCreator)
-        .transferFrom(contentCreator.address, contentBuyer.address, 1)
+        .voucherTransferFrom(voucherTransfer)
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(contentCreator.address, contentBuyer.address, 1);
-  });
-
-  it("Should fail to transfer token if receiver is not KYCed", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      validatorCandidate,
-      validator,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractValidationManager,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-    } = await deploy();
-    await contractRoleManager.setKYC(contentCreator.address, true);
-
-    const tx = await contractUDAOContent.getChainID();
-    const lazyMinter = new LazyMinter({
-      contract: contractUDAOContent,
-      signer: backend,
-    });
-    const voucher = await lazyMinter.createVoucher(
-      1,
-      "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
-      contentCreator.address,
-      true,
-      "Content Name",
-      "Content Description"
-    );
-    await expect(contractUDAOContent.connect(contentCreator).redeem(voucher))
-      .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
-      .withArgs(
-        "0x0000000000000000000000000000000000000000",
-        contentCreator.address,
-        voucher.tokenId
-      );
-    await expect(
-      contractUDAOContent
-        .connect(contentCreator)
-        .transferFrom(contentCreator.address, contentBuyer.address, 1)
-    ).to.revertedWith("Receiver is not KYCed!");
   });
 
   it("Should fail to transfer token if receiver is banned", async function () {
@@ -578,60 +531,13 @@ describe("UDAOC Contract", function () {
       "Content Name",
       "Content Description"
     );
-    await expect(contractUDAOContent.connect(contentCreator).redeem(voucher))
-      .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
-      .withArgs(
-        "0x0000000000000000000000000000000000000000",
-        contentCreator.address,
-        voucher.tokenId
-      );
-    await expect(
-      contractUDAOContent
-        .connect(contentCreator)
-        .transferFrom(contentCreator.address, contentBuyer.address, 1)
-    ).to.revertedWith("Receiver is banned!");
-  });
-  it("Should fail to transfer token if sender is not KYCed", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      validatorCandidate,
-      validator,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractValidationManager,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-    } = await deploy();
-    await contractRoleManager.setKYC(contentCreator.address, true);
-    await contractRoleManager.setKYC(contentBuyer.address, true);
 
-    const tx = await contractUDAOContent.getChainID();
-    const lazyMinter = new LazyMinter({
-      contract: contractUDAOContent,
-      signer: backend,
-    });
-    const voucher = await lazyMinter.createVoucher(
+    const voucherTransfer = await lazyMinter.createTransferVoucher(
       1,
-      "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
-      true,
-      "Content Name",
-      "Content Description"
+      contentBuyer.address
     );
+
     await expect(contractUDAOContent.connect(contentCreator).redeem(voucher))
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
@@ -639,13 +545,11 @@ describe("UDAOC Contract", function () {
         contentCreator.address,
         voucher.tokenId
       );
-    await contractRoleManager.setKYC(contentCreator.address, false);
-
     await expect(
       contractUDAOContent
         .connect(contentCreator)
-        .transferFrom(contentCreator.address, contentBuyer.address, 1)
-    ).to.revertedWith("Sender is not KYCed!");
+        .voucherTransferFrom(voucherTransfer)
+    ).to.revertedWith("Receiver is banned");
   });
 
   it("Should fail to transfer token if sender is banned", async function () {
@@ -690,6 +594,12 @@ describe("UDAOC Contract", function () {
       "Content Description"
     );
 
+    const voucherTransfer = await lazyMinter.createTransferVoucher(
+      1,
+      contentCreator.address,
+      contentBuyer.address
+    );
+
     await expect(contractUDAOContent.connect(contentCreator).redeem(voucher))
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
@@ -702,8 +612,8 @@ describe("UDAOC Contract", function () {
     await expect(
       contractUDAOContent
         .connect(contentCreator)
-        .transferFrom(contentCreator.address, contentBuyer.address, 1)
-    ).to.revertedWith("Sender is banned!");
+        .voucherTransferFrom(voucherTransfer)
+    ).to.revertedWith("Sender is banned");
   });
 
   it("Should burn token if token owner", async function () {
@@ -755,7 +665,6 @@ describe("UDAOC Contract", function () {
         contentCreator.address,
         voucher.tokenId
       );
-
     await expect(contractUDAOContent.connect(contentCreator).burn(1))
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
