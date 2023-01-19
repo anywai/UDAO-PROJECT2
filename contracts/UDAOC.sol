@@ -83,7 +83,7 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
 
     /// @notice Redeems a ContentVoucher for an actual NFT, creating it in the process.
     /// @param voucher A signed ContentVoucher that describes the NFT to be redeemed.
-    function redeem(ContentVoucher calldata voucher) public {
+    function redeem(ContentVoucher calldata voucher) public whenNotPaused {
         // make sure redeemer is redeeming
         require(voucher.redeemer == msg.sender, "You are not the redeemer");
 
@@ -102,7 +102,7 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
 
     /// @notice Allows instructers' to enable coaching for a specific content
     /// @param tokenId The content id
-    function enableCoaching(uint tokenId) external {
+    function enableCoaching(uint tokenId) external whenNotPaused {
         require(
             ownerOf(tokenId) == msg.sender,
             "You are not the owner of token"
@@ -112,7 +112,7 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
 
     /// @notice Allows instructers' to disable coaching for a specific content
     /// @param tokenId tokenId of the content that will be not coached
-    function disableCoaching(uint tokenId) external {
+    function disableCoaching(uint tokenId) external whenNotPaused {
         require(
             ownerOf(tokenId) == msg.sender,
             "You are not the owner of token"
@@ -132,7 +132,7 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
     }
 
     /// @notice ERC721 transferFrom with a voucher
-    function voucherTransferFrom(TransferVoucher calldata voucher) public {
+    function voucherTransferFrom(TransferVoucher calldata voucher) public whenNotPaused {
         address signer = _verifyTransfer(voucher);
         require(
                 voucher.validUntil >= block.timestamp,
@@ -148,7 +148,7 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
     }
 
     /// @notice ERC721 safeTransferFrom with a voucher
-    function voucherSafeTransferFrom(TransferVoucher calldata voucher) public {
+    function voucherSafeTransferFrom(TransferVoucher calldata voucher) public whenNotPaused {
         address signer = _verifyTransfer(voucher);
         require(
                 voucher.validUntil >= block.timestamp,
@@ -164,7 +164,7 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
     }
 
     /// @notice ERC721 safeTransferFrom with data variable with a voucher
-    function voucherSafeTransferFrom(TransferVoucherData calldata voucher) public {
+    function voucherSafeTransferFrom(TransferVoucherData calldata voucher) public whenNotPaused {
         address signer = _verifyTransferData(voucher);
         require(
                 voucher.validUntil >= block.timestamp,
@@ -288,7 +288,7 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
 
     /// @notice A content can be completely removed by the owner
     /// @param tokenId The token ID of a content
-    function burn(uint256 tokenId) external {
+    function burn(uint256 tokenId) external whenNotPaused {
         require(
             ownerOf(tokenId) == msg.sender,
             "You are not the owner of token"

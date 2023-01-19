@@ -108,7 +108,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
 
     /// @notice allows users to purchase a content
     /// @param vouchers vouchers for the content purchase
-    function buyContent(ContentPurchaseVoucher[] calldata vouchers) external {
+    function buyContent(ContentPurchaseVoucher[] calldata vouchers) external whenNotPaused {
         require(!IRM.isBanned(msg.sender), "You are banned");
 
         /// @dev If a user buys multiple contents, user receives multiple vouchers
@@ -221,7 +221,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
 
     /// @notice Allows users to buy coaching service.
     /// @param voucher voucher for the coaching purchase
-    function buyCoaching(CoachingPurchaseVoucher calldata voucher) external {
+    function buyCoaching(CoachingPurchaseVoucher calldata voucher) external whenNotPaused {
         // make sure signature is valid and get the address of the signer
         address signer = _verifyCoaching(voucher);
 
@@ -318,7 +318,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
     /// @param _coachingId id of the coaching service
     function forcedPayment(uint256 _coachingId)
         external
-        onlyRoles(administrator_roles)
+        onlyRoles(administrator_roles) 
     {
         CoachingStruct storage currentCoaching = coachingStructs[_coachingId];
         instructorBalance[currentCoaching.coach] += coachingStructs[_coachingId]
@@ -365,7 +365,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
     /// @param _coachingId id of the coaching service
     function forcedRefundAdmin(uint256 _coachingId)
         external
-        onlyRoles(administrator_roles)
+        onlyRoles(administrator_roles) 
     {
         uint256 startGas = gasleft();
         CoachingStruct storage currentCoaching = coachingStructs[_coachingId];
