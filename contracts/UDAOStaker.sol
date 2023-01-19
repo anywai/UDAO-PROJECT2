@@ -230,6 +230,16 @@ contract UDAOStaker is RoleController, EIP712 {
         bytes signature;
     }
 
+    /// @notice Allows corporate accounts to unstake before lock time
+    struct CorporateWithdrawVoucher {
+        /// @notice Address of the corporate account
+        address redeemer;
+        /// @notice Amount of tokens they want to unstake
+        uint256 amount;
+        /// @notice the EIP-712 signature of all other fields in the CorporateWithdrawVoucher struct.
+        bytes signature;
+    }
+
     /// @notice allows users to apply for validator role
     /// @param validationAmount The amount of validations that a validator wants to do
     function applyForValidator(uint256 validationAmount) external {
@@ -514,6 +524,8 @@ contract UDAOStaker is RoleController, EIP712 {
                     uint256(j)
                 ];
                 if (lock.expire < block.timestamp) {
+                    // TODO Burada adam zaten expire olmuş stakelerini çekiyor
+                    // Neden lock.maxValidationAmount - lock.doneValidationAmount?
                     withdrawableBalance +=
                         lock.amountPerValidation *
                         (lock.maxValidationAmount - lock.doneValidationAmount);
@@ -818,13 +830,6 @@ contract UDAOStaker is RoleController, EIP712 {
         udao.transferFrom(msg.sender, address(this), amount);
         emit StakeForJobListing(msg.sender, amount, corporateStakePerListing);
     }
-
-    struct CorporateWithdrawVoucher {
-        address redeemer;
-        uint amount;
-        bytes signature;
-    }
-
 
     /// @notice Allows corporate accounts to unstake if they've found employee for job listing 
     /// before staking lock duration. 
