@@ -443,11 +443,11 @@ contract UDAOStaker is RoleController, EIP712 {
                 .push();
 
             if (validationApplication.isSuper) {
-                IRM.grantRole(SUPER_VALIDATOR_ROLE, voucher.redeemer);
+                IRM.grantRoleStaker(SUPER_VALIDATOR_ROLE, voucher.redeemer);
                 userInfo.expire = block.timestamp + superValidatorLockTime;
                 roleId = 3; // supervalidator
             } else {
-                IRM.grantRole(VALIDATOR_ROLE, voucher.redeemer);
+                IRM.grantRoleStaker(VALIDATOR_ROLE, voucher.redeemer);
                 userInfo.expire = block.timestamp + validatorLockTime;
             }
             userInfo.amountPerValidation = validationApplication
@@ -466,14 +466,14 @@ contract UDAOStaker is RoleController, EIP712 {
             ];
             JurorStakeLock storage userInfo = jurorLocks[msg.sender].push();
 
-            IRM.grantRole(JUROR_ROLE, voucher.redeemer);
+            IRM.grantRoleStaker(JUROR_ROLE, voucher.redeemer);
             userInfo.expire = block.timestamp + validatorLockTime;
 
             userInfo.amountPerCase = jurorApplication.amountPerCase;
             userInfo.maxCaseAmount = jurorApplication.maxCaseAmount;
             jurorApplication.isFinished = true;
         } else if (roleId == 2) {
-            IRM.grantRole(CORPORATE_ROLE, voucher.redeemer);
+            IRM.grantRoleStaker(CORPORATE_ROLE, voucher.redeemer);
         } else {
             revert("Undefined role ID!");
         }
