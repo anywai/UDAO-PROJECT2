@@ -90,7 +90,9 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
             "Signature invalid or unauthorized"
         );
         coachingEnabled[voucher.tokenId] = voucher.isCoachingEnabled;
+        _is_voucher = _VOUCHER;
         _mint(voucher.redeemer, voucher.tokenId);
+        _is_voucher = _NOT_VOUCHER;
         _setTokenURI(voucher.tokenId, voucher.uri);
     }
 
