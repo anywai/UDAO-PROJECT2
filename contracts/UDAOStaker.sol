@@ -9,7 +9,9 @@ import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
 import "./RoleController.sol";
 
-interface IUDAOVP is IVotes, IERC20 {}
+interface IUDAOVP is IVotes, IERC20 {
+    function mint(address to, uint256 amount) external;
+}
 
 contract UDAOStaker is RoleController, EIP712 {
     string private constant SIGNING_DOMAIN = "UDAOStaker";
@@ -735,7 +737,7 @@ contract UDAOStaker is RoleController, EIP712 {
         lock.expire = block.timestamp + (_days * (1 days));
         lock.vpamount = _amount * _days;
         totalVotingPower += lock.vpamount;
-        udaovp.transfer(msg.sender, lock.vpamount);
+        udaovp.mint(msg.sender, lock.vpamount);
         emit GovernanceStake(msg.sender, _amount, lock.vpamount);
     }
 
