@@ -19,11 +19,10 @@ contract UDAOStaker is RoleController, EIP712 {
 
     IERC20 public udao;
     IUDAOVP public udaovp;
-    address platformTreasuryAddress;
+    address public platformTreasuryAddress;
 
-    /// TODO Below two variables are zero?
-    uint256 public payablePerValidation;
-    uint256 public payablePerCase;
+    uint256 public payablePerValidation = 1 ether;
+    uint256 public payablePerCase = 1 ether;
 
     /// @notice the required duration to be a validator
     uint256 public jurorLockTime = 30 days;
@@ -34,7 +33,7 @@ contract UDAOStaker is RoleController, EIP712 {
     /// @notice the required duration to be a super validator
     uint256 public superValidatorLockTime = 180 days;
     /// @notice Amount to deduct from super validator application
-    uint256 superValidatorLockAmount = 150 ether;
+    uint256 public superValidatorLockAmount = 150 ether;
 
     event SetSuperValidatorLockAmount(uint256 _newAmount);
     event SetVoteReward(uint256 _newAmount);
