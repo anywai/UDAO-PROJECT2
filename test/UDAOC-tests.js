@@ -470,7 +470,8 @@ describe("UDAOC Contract", function () {
     const voucherTransfer = await lazyMinter.createTransferVoucher(
       1,
       contentCreator.address,
-      contentBuyer.address
+      contentBuyer.address,
+      Date.now() + 999999999
     );
 
     await expect(contractUDAOContent.connect(contentCreator).redeem(voucher))
@@ -535,7 +536,8 @@ describe("UDAOC Contract", function () {
     const voucherTransfer = await lazyMinter.createTransferVoucher(
       1,
       contentCreator.address,
-      contentBuyer.address
+      contentBuyer.address,
+      Date.now() + 999999999
     );
 
     await expect(contractUDAOContent.connect(contentCreator).redeem(voucher))
@@ -597,7 +599,8 @@ describe("UDAOC Contract", function () {
     const voucherTransfer = await lazyMinter.createTransferVoucher(
       1,
       contentCreator.address,
-      contentBuyer.address
+      contentBuyer.address,
+      Date.now() + 999999999
     );
 
     await expect(contractUDAOContent.connect(contentCreator).redeem(voucher))

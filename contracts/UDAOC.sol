@@ -53,6 +53,8 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
         address from;
         /// @notice Address of the redeemer
         address to;
+        /// @notice The date until the voucher is valid
+        uint256 validUntil;
         /// @notice the EIP-712 signature of all other fields in the ContentVoucher struct.
         bytes signature;
     }
@@ -67,6 +69,8 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
         address to;
         /// @notice Data variable in "safeTransferFrom"
         bytes data;
+        /// @notice The date until the voucher is valid
+        uint256 validUntil;
         /// @notice the EIP-712 signature of all other fields in the ContentVoucher struct.
         bytes signature;
     }
@@ -131,6 +135,10 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
     function voucherTransferFrom(TransferVoucher calldata voucher) public {
         address signer = _verifyTransfer(voucher);
         require(
+                voucher.validUntil >= block.timestamp,
+                "Voucher has expired."
+            );
+        require(
             IRM.hasRole(BACKEND_ROLE, signer),
             "Signature invalid or unauthorized"
         );
@@ -143,6 +151,10 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
     function voucherSafeTransferFrom(TransferVoucher calldata voucher) public {
         address signer = _verifyTransfer(voucher);
         require(
+                voucher.validUntil >= block.timestamp,
+                "Voucher has expired."
+            );
+        require(
             IRM.hasRole(BACKEND_ROLE, signer),
             "Signature invalid or unauthorized"
         );
@@ -154,6 +166,10 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
     /// @notice ERC721 safeTransferFrom with data variable with a voucher
     function voucherSafeTransferFrom(TransferVoucherData calldata voucher) public {
         address signer = _verifyTransferData(voucher);
+        require(
+                voucher.validUntil >= block.timestamp,
+                "Voucher has expired."
+            );
         require(
             IRM.hasRole(BACKEND_ROLE, signer),
             "Signature invalid or unauthorized"
@@ -196,11 +212,12 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
                 keccak256(
                     abi.encode(
                         keccak256(
-                            "TransferVoucher(uint256 tokenId,address from,address to)"
+                            "TransferVoucher(uint256 tokenId,address from,address to,uint256 validUntil)"
                         ),
                         voucher.tokenId,
                         voucher.from,
-                        voucher.to
+                        voucher.to,
+                        voucher.validUntil
                     )
                 )
             );
@@ -216,12 +233,13 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
                 keccak256(
                     abi.encode(
                         keccak256(
-                            "TransferVoucherData(uint256 tokenId,address from,address to,bytes data)"
+                            "TransferVoucherData(uint256 tokenId,address from,address to,bytes data,uint256 validUntil)"
                         ),
                         voucher.tokenId,
                         voucher.from,
                         voucher.to,
-                        voucher.data
+                        voucher.data,
+                        voucher.validUntil
                     )
                 )
             );
