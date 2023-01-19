@@ -275,7 +275,9 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
             ownerOf(tokenId) == msg.sender,
             "You are not the owner of token"
         );
+        _is_voucher = _VOUCHER;
         _burn(tokenId);
+        _is_voucher = _NOT_VOUCHER;
     }
 
     function _burn(
@@ -292,6 +294,8 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
         super._beforeTokenTransfer(from, to, tokenId);
         if(isKycChecked) { /// @notice if KYC check is active with vouchers
             require(_is_voucher == _VOUCHER, "Non voucher transfers are not allowed");
+            require(IRM.isBanned(from)==false, "Sender is banned");
+            require(IRM.isBanned(to)==false, "Receiver is banned");
         } 
     }
 

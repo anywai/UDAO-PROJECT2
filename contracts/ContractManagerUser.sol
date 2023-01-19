@@ -16,7 +16,7 @@ contract C {
     constructor(address _ContractManager) public {
         contractManager = ContractManager(_ContractManager);
         address ivmAddress = contractManager.IVMAddress();
-        address stakerAddress = contractManager.StakerAddress();
+        address stakerAddress = contractManager.IStakingContractAddress();
 
         IVM = IValidationManager(ivmAddress);
         staker = IStakingContract(stakerAddress);
@@ -25,7 +25,7 @@ contract C {
     /// @notice Get the updated addresses from a central location
     function updateAddresses() external{
         address ivmAddress = contractManager.IVMAddress();
-        address stakerAddress = contractManager.StakerAddress();
+        address stakerAddress = contractManager.IStakingContractAddress();
 
         IVM = IValidationManager(ivmAddress);
         staker = IStakingContract(stakerAddress);

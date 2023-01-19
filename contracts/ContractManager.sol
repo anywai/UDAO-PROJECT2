@@ -4,13 +4,17 @@
 pragma solidity ^0.8.0;
 
 contract ContractManager {
-    address public IVMAddress;
-    address public StakerAddress;
+    address public IVMAddress; // validation interface address
+    address public IStakingContractAddress; //staking interface address
+    address public IJMAddress;  // juror interface manager
+    address public UdaoAddress;  // udao token address
+    address public UdaocAddress;  // content token address
+    address public RmAddress;  // role manager address
 
     constructor(address _vmAddress, address _stakerAddress) public {
         // Set the initial addresses of contracts A and B
         IVMAddress = address(_vmAddress);
-        StakerAddress = address(_stakerAddress);
+        IStakingContractAddress = address(_stakerAddress);
     }
 
     function setAddressIVM(address _vmAddress) public {
@@ -18,6 +22,6 @@ contract ContractManager {
     }
 
     function setAddressStaker(address _stakerAddress) public {
-        StakerAddress = _stakerAddress;
+        IStakingContractAddress = _stakerAddress;
     }
 }
