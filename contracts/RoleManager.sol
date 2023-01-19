@@ -7,6 +7,8 @@ import "./IRoleManager.sol";
 
 contract RoleManager is AccessControl, IRoleManager {
     bytes32 public constant BACKEND_ROLE = keccak256("BACKEND_ROLE");
+    bytes32 public constant STAKING_CONTRACT = keccak256("STAKING_CONTRACT");
+
 
     mapping(address => bool) KYCList;
     mapping(address => bool) BanList;
@@ -90,5 +92,9 @@ contract RoleManager is AccessControl, IRoleManager {
     /// @param _address wallet that ban result will be sent
     function isBanned(address _address) external view returns (bool) {
         return BanList[_address];
+    }
+
+    function grantRoleStaker(bytes32 role, address user) external onlyRole(STAKING_CONTRACT) {
+        _grantRole(role, user);
     }
 }

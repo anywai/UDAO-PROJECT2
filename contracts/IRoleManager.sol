@@ -12,4 +12,6 @@ interface IRoleManager is IAccessControl {
     function isKYCed(address _address) external view returns (bool);
 
     function isBanned(address _address) external view returns (bool);
+
+    function grantRoleStaker(bytes32 role, address user) external;
 }
