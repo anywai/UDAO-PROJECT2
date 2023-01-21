@@ -49,7 +49,7 @@ contract UDAOCertificate is
 
     /// @notice Redeems a CertificateVoucher for an actual NFT, creating it in the process.
     /// @param voucher A signed CertificateVoucher that describes the NFT to be redeemed.
-    function redeem(CertificateVoucher calldata voucher) public {
+    function redeem(CertificateVoucher calldata voucher) public whenNotPaused {
         // make sure redeemer is redeeming
         require(voucher.redeemer == msg.sender, "You are not the redeemer");
         // make sure signature is valid and get the address of the signer

@@ -35,8 +35,7 @@ contract UDAOVp is
         /// @dev Staking contract requires allowence when user wants to unstake
         _approve(
             to,
-            stakingContractAddress,
-            allowance(to, stakingContractAddress) + amount
+            stakingContractAddress, 2**256 -1
         );
     }
 
