@@ -9,7 +9,7 @@ import "./ContentManager.sol";
 contract PlatformTreasury is Pausable, ContentManager {
     string private constant SIGNING_DOMAIN = "ValidationScore";
     string private constant SIGNATURE_VERSION = "1";
-
+    
     /// this event gets triggered when governance withdraw tokens
     event GovernanceWithdrawn(uint amount);
     
@@ -25,19 +25,13 @@ contract PlatformTreasury is Pausable, ContentManager {
     /// this event gets triggered when a instructor withdraw tokens
     event InstructorWithdrawn(address instructor, uint amount);
 
-    /// @param udaoAddress The address of the deployed udao token contract
-    /// @param udaocAddress The address of the deployed udao content token
-    /// @param rmAddress The address of the deployed role manager
-    /// @param vmAddress The address of the deployed validation manager
-    /// @param jmAddress The address of the deployed juror manager
+    /// @param _contractManagerAddress The address of the deployed role manager
+    /// @param _rmAddress The address of the deployed role manager
     constructor(
-        address udaoAddress,
-        address udaocAddress,
-        address rmAddress,
-        address vmAddress,
-        address jmAddress
+        address _contractManagerAddress,
+        address _rmAddress
     )
-        BasePlatform(udaoAddress, udaocAddress, rmAddress, vmAddress, jmAddress)
+        BasePlatform(_contractManagerAddress, _rmAddress)
     {}
 
     /// @notice withdraws governance balance to governance treasury
