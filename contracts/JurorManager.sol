@@ -14,6 +14,7 @@ contract JurorManager is RoleController, EIP712 {
     string private constant SIGNATURE_VERSION = "1";
 
     event EndDispute(uint256 caseId, address[] jurors, uint256 totalJurorScore);
+    event NextRound(uint256 newRoundId);
 
     // juror => round => score
     mapping(address => mapping(uint256 => uint256)) public jurorScorePerRound;
@@ -100,6 +101,7 @@ contract JurorManager is RoleController, EIP712 {
     /// @notice Starts the new reward round
     function nextRound() external onlyRole(TREASURY_CONTRACT) {
         distributionRound++;
+        emit NextRound(distributionRound);
     }
 
     /// @notice Returns the score of a juror for a speficied round
