@@ -7,6 +7,8 @@ const { LazyMinter } = require("../lib/LazyMinter");
 const { LazyRole } = require("../lib/LazyRole");
 const { LazyValidation } = require("../lib/LazyValidation");
 const { LazyUDAOCertMinter } = require("../lib/LazyUDAOCertMinter");
+const { LazyGovernanceStake } = require("../lib/LazyGovernanceStake");
+
 
 // Enable and inject BN dependency
 chai.use(require("chai-bn")(BN));
@@ -335,11 +337,23 @@ describe("UDAOStaker Contract", function () {
         contractUDAOStaker.address,
         ethers.utils.parseEther("999999999999.0")
       );
+      
+      // Generate governance stake voucher
+      const lazyGovernance = new LazyGovernanceStake({
+        contract: contractUDAOStaker,
+        signer: backend,
+      });
+      const staking_voucher = await lazyGovernance.createVoucher(
+        governanceCandidate.address,
+        ethers.utils.parseEther("10"),
+        30,
+        Date.now() + 999999999
+      );
 
     await expect(
       contractUDAOStaker
         .connect(governanceCandidate)
-        .stakeForGovernance(ethers.utils.parseEther("10"), "30")
+        .stakeForGovernance(staking_voucher)
     )
       .to.emit(contractUDAOStaker, "GovernanceStake") // transfer from null address to minter
       .withArgs(
@@ -385,11 +399,23 @@ describe("UDAOStaker Contract", function () {
         contractUDAOStaker.address,
         ethers.utils.parseEther("999999999999.0")
       );
+      
+      // Generate governance stake voucher
+      const lazyGovernance = new LazyGovernanceStake({
+        contract: contractUDAOStaker,
+        signer: backend,
+      });
+      const staking_voucher = await lazyGovernance.createVoucher(
+        validatorCandidate.address,
+        ethers.utils.parseEther("10"),
+        30,
+        Date.now() + 999999999
+      );
 
     await expect(
       contractUDAOStaker
         .connect(validatorCandidate)
-        .stakeForGovernance(ethers.utils.parseEther("10"), "30")
+        .stakeForGovernance(staking_voucher)
     )
       .to.emit(contractUDAOStaker, "GovernanceStake") // transfer from null address to minter
       .withArgs(
@@ -440,11 +466,24 @@ describe("UDAOStaker Contract", function () {
         contractUDAOStaker.address,
         ethers.utils.parseEther("999999999999.0")
       );
-
+    
+    // Generate governance stake voucher
+    const lazyGovernance = new LazyGovernanceStake({
+      contract: contractUDAOStaker,
+      signer: backend,
+    });
+    const staking_voucher = await lazyGovernance.createVoucher(
+      validatorCandidate.address,
+      ethers.utils.parseEther("10"),
+      30,
+      Date.now() + 999999999
+    );
+    
+    // Staking
     await expect(
       contractUDAOStaker
         .connect(validatorCandidate)
-        .stakeForGovernance(ethers.utils.parseEther("10"), "30")
+        .stakeForGovernance(staking_voucher)
     )
       .to.emit(contractUDAOStaker, "GovernanceStake") // transfer from null address to minter
       .withArgs(
