@@ -13,8 +13,6 @@ contract JurorManager is RoleController, EIP712 {
     string private constant SIGNING_DOMAIN = "JurorSetter";
     string private constant SIGNATURE_VERSION = "1";
 
-    IStakingContract staker;
-
     event EndDispute(uint256 caseId, address[] jurors, uint256 totalJurorScore);
 
     // juror => round => score
@@ -31,14 +29,6 @@ contract JurorManager is RoleController, EIP712 {
         address rmAddress
     ) EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION) RoleController(rmAddress) {}
 
-    /// @notice Sets the address of the staking contract
-    /// @param stakerAddress Address of the staking contract
-    /// TODO We haven't used the staker???!
-    function setStaker(
-        address stakerAddress
-    ) external onlyRole(FOUNDATION_ROLE) {
-        staker = IStakingContract(stakerAddress);
-    }
 
     struct CaseVoucher {
         /// @notice The off-chain id of the case
