@@ -241,6 +241,20 @@ contract UDAOStaker is RoleController, EIP712 {
         bytes signature;
     }
 
+    /// @notice Allows people to stake for governance (kyc)
+    struct GovernanceStakeVoucher {
+         /// @notice Address of the governance staker
+        address staker;
+        /// @notice Amount of UDAO token that will be staked
+        uint256 amount;
+        /// @notice Amount of days UDAO token that will be staked for
+        uint256 _days;
+        /// @notice The date until the voucher is valid
+        uint256 validUntil;
+        /// @notice the EIP-712 signature of all other fields in the CorporateWithdrawVoucher struct.
+        bytes signature;
+    }
+
     /// @notice allows users to apply for validator role
     /// @param validationAmount The amount of validations that a validator wants to do
     function applyForValidator(uint256 validationAmount) external whenNotPaused {
@@ -721,23 +735,21 @@ contract UDAOStaker is RoleController, EIP712 {
         return withdrawableBalance;
     }
 
+    
+    
     /// @notice staking function to become a governance member
-    /// @param _amount amount of UDAO token that will be staked
-    /// @param _days amount of days UDAO token that will be staked for
-    function stakeForGovernance(uint256 _amount, uint256 _days) public whenNotPaused {
-        require(_amount > 0, "Stake amount can't be 0");
-        require(_days >= 7, "Minimum lock duration is 7 days");
-        require(IRM.isKYCed(msg.sender), "Address is not KYCed");
+    function stakeForGovernance(GovernanceStakeVoucher calldata voucher) public whenNotPaused {
+        require(voucher.validUntil >= block.timestamp, "Voucher has expired.");
         require(!IRM.isBanned(msg.sender), "Address is banned");
-        udao.transferFrom(msg.sender, address(this), _amount);
+        udao.transferFrom(msg.sender, address(this), voucher.amount);
 
         GovernanceLock storage lock = governanceStakes[msg.sender].push();
-        lock.amount = _amount;
-        lock.expire = block.timestamp + (_days * (1 days));
-        lock.vpamount = _amount * _days;
+        lock.amount = voucher.amount;
+        lock.expire = block.timestamp + (voucher._days * (1 days));
+        lock.vpamount = voucher.amount * voucher._days;
         totalVotingPower += lock.vpamount;
         udaovp.mint(msg.sender, lock.vpamount);
-        emit GovernanceStake(msg.sender, _amount, lock.vpamount);
+        emit GovernanceStake(msg.sender, voucher.amount, lock.vpamount);
     }
 
     /// @notice withdraw function for released UDAO tokens
@@ -969,6 +981,27 @@ contract UDAOStaker is RoleController, EIP712 {
             );
     }
 
+    function _hashGovernance(GovernanceStakeVoucher calldata voucher)
+        internal
+        view
+        returns (bytes32)
+    {
+        return
+            _hashTypedDataV4(
+                keccak256(
+                    abi.encode(
+                        keccak256(
+                            "UDAOStaker(address staker,uint256 amount,uint256 _days,uint256 validUntil)"
+                        ),
+                        voucher.staker,
+                        voucher.amount,
+                        voucher._days,
+                        voucher.validUntil
+                    )
+                )
+            );
+    }
+
     /// @notice Returns the chain id of the current blockchain.
     /// @dev This is used to workaround an issue with ganache returning different values from the on-chain chainid() function and
     ///  the eth_chainId RPC method. See https://github.com/protocol/nft-website/issues/121 for context.
@@ -1013,6 +1046,18 @@ contract UDAOStaker is RoleController, EIP712 {
         returns (address)
     {
         bytes32 digest = _hashValidation(voucher);
+        return ECDSA.recover(digest, voucher.signature);
+    }
+
+    /// @notice Verifies the signature for a given GovernanceStakeVoucher, returning the address of the signer.
+    /// @dev Will revert if the signature is invalid. Does not verify that the signer is authorized to mint NFTs.
+    /// @param voucher A GovernanceStakeVoucher describing an unminted NFT.
+    function _verifyGovernanceStake(GovernanceStakeVoucher calldata voucher)
+        internal
+        view
+        returns (address)
+    {
+        bytes32 digest = _hashGovernance(voucher);
         return ECDSA.recover(digest, voucher.signature);
     }
 }
