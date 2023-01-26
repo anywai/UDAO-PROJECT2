@@ -398,7 +398,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
         ) {
             instructorBalance[currentCoaching.coach] -= gasUsed * tx.gasprice;
         } else {
-            instructorBalance[currentCoaching.coach] = 0;
+            instructorDebt[currentCoaching.coach] += gasUsed * tx.gasprice;
         }
 
         emit Refund(_coachingId, currentCoaching.learner, totalPaymentAmount);
@@ -438,7 +438,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
         ) {
             instructorBalance[currentCoaching.coach] -= gasUsed * tx.gasprice;
         } else {
-            instructorBalance[currentCoaching.coach] = 0;
+            instructorDebt[currentCoaching.coach] += gasUsed * tx.gasprice;
         }
         emit Refund(_coachingId, msg.sender, totalPaymentAmount);
     }

@@ -81,8 +81,10 @@ contract PlatformTreasury is Pausable, ContentManager {
 
     /// @notice Allows instructers to withdraw individually.
     function withdrawInstructor() external {
-        uint withdrawableBalnce = instructorBalance[msg.sender];
+        require(instructorBalance[msg.sender]>=instructorDebt[msg.sender], "Debt is larger than balance");
+        uint withdrawableBalnce = instructorBalance[msg.sender] - instructorDebt[msg.sender];
         instructorBalance[msg.sender] = 0;
+        instructorDebt[msg.sender] = 0;
         udao.transfer(msg.sender, withdrawableBalnce);
         emit InstructorWithdrawn(msg.sender, withdrawableBalnce);
     }

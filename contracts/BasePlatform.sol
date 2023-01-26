@@ -16,6 +16,7 @@ abstract contract BasePlatform is Pausable, RoleController {
 
     // content id => content balance
     mapping(address => uint) public instructorBalance;
+    mapping(address => uint) public instructorDebt;
 
     // user address => content id => content owned by the user
     mapping(address => mapping(uint => mapping(uint => bool))) isTokenBought;
