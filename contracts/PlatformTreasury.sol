@@ -25,6 +25,9 @@ contract PlatformTreasury is Pausable, ContentManager {
     /// this event gets triggered when a instructor withdraw tokens
     event InstructorWithdrawn(address instructor, uint amount);
 
+    /// this event gets triggered when a instructor withdraw tokens and if has debt
+    event InstructorWithdrawnWithDebt(address instructor, uint amount, uint debtAmount);
+
     /// @param _contractManagerAddress The address of the deployed role manager
     /// @param _rmAddress The address of the deployed role manager
     constructor(
@@ -82,10 +85,16 @@ contract PlatformTreasury is Pausable, ContentManager {
     /// @notice Allows instructers to withdraw individually.
     function withdrawInstructor() external {
         require(instructorBalance[msg.sender]>=instructorDebt[msg.sender], "Debt is larger than balance");
-        uint withdrawableBalnce = instructorBalance[msg.sender] - instructorDebt[msg.sender];
+        uint debtAmount = 0;
+        if(instructorDebt[msg.sender] > 0) {
+            debtAmount = instructorDebt[msg.sender];
+        }
+        uint withdrawableBalance = instructorBalance[msg.sender] - instructorDebt[msg.sender];
         instructorBalance[msg.sender] = 0;
         instructorDebt[msg.sender] = 0;
-        udao.transfer(msg.sender, withdrawableBalnce);
-        emit InstructorWithdrawn(msg.sender, withdrawableBalnce);
+        udao.transfer(msg.sender, withdrawableBalance);
+        if(debtAmount > 0) {
+            emit InstructorWithdrawnWithDebt(msg.sender, withdrawableBalance, debtAmount);
+        } else {emit InstructorWithdrawn(msg.sender, withdrawableBalance);}
     }
 }
