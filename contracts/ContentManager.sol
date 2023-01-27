@@ -389,7 +389,6 @@ abstract contract ContentManager is EIP712, BasePlatform {
          * deducted from instructors balance, if instructor does not have enough balance, insturctor 
          * balance deducts to 0. 
          * 
-         * @TODO we can add a instructor debt  
          */
         uint256 gasUsed = startGas - gasleft();
 
