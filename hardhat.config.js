@@ -31,8 +31,7 @@ module.exports = {
     coinmarketcap: "9b067bab-555e-4a2e-8b46-3ddbf5254166",
     token: "MATIC",
     gasPriceApi:
-      "https://api.polygonscan.com/api?module=proxy&action=eth_gasPrice",
-    outputFile: "./output.txt",
+      "https://api.polygonscan.com/api?module=proxy&action=eth_gasPrice"
   },
   solidity: {
     version: "0.8.17",
