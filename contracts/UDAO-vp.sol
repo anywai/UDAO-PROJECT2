@@ -28,7 +28,7 @@ contract UDAOVp is
     /// @param to The address of the vp token recipient
     /// @param amount of the vp token
     function mint(address to, uint256 amount)
-        public
+        public whenNotPaused
         onlyRole(STAKING_CONTRACT)
     {
         _mint(to, amount);
@@ -53,6 +53,7 @@ contract UDAOVp is
     /// @param spender Address of the user with allownece rights
     function allowance(address owner, address spender)
         public
+        whenNotPaused
         view
         virtual
         override(ERC20)
