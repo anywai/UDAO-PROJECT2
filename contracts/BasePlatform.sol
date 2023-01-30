@@ -149,6 +149,7 @@ abstract contract BasePlatform is Pausable, RoleController {
         udaoc = IUDAOC(contractManager.UdaocAddress());
         IVM = IValidationManager(contractManager.IVMAddress());
         IJM = IJurorManager(contractManager.IJMAddress());
+        IRM = IRoleManager(contractManager.IrmAddress());
     }
 
     /// @notice changes cut from coaching for foundation
