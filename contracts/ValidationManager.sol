@@ -64,7 +64,7 @@ contract ValidationManager is RoleController, EIP712 {
 
     /// @notice Writes validation result to blockchain
     /// @param voucher voucher that contains the signed validation data
-    function setAsValidated(ValidationVoucher calldata voucher) external {
+    function setAsValidated(ValidationVoucher calldata voucher) external whenNotPaused{
         // make sure signature is valid and get the address of the signer
         address signer = _verify(voucher);
         require(voucher.validUntil >= block.timestamp, "Voucher has expired.");
@@ -119,7 +119,7 @@ contract ValidationManager is RoleController, EIP712 {
     }
 
     /// @notice Starts the new reward round
-    function nextRound() external onlyRole(TREASURY_CONTRACT) {
+    function nextRound() external whenNotPaused onlyRole(TREASURY_CONTRACT) {
         distributionRound++;
         emit NextRound(distributionRound);
     }
