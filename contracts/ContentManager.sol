@@ -97,15 +97,6 @@ abstract contract ContentManager is EIP712, BasePlatform {
 
     constructor() EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION) {}
 
-    /// @notice Allows seting the address of the valdation manager contract
-    /// @param vmAddress The address of the deployed ValidationManager contract
-    function setValidationManager(address vmAddress)
-        external
-        onlyRole(FOUNDATION_ROLE)
-    {
-        IVM = IValidationManager(vmAddress);
-    }
-
     /// @notice allows users to purchase a content
     /// @param vouchers vouchers for the content purchase
     function buyContent(ContentPurchaseVoucher[] calldata vouchers) external whenNotPaused {
