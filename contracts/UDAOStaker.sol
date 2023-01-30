@@ -525,7 +525,7 @@ contract UDAOStaker is RoleController, EIP712 {
      * @notice allows validators to withdraw their staked tokens
      * @param amount amount that will be withdrawn
      */
-    function withdrawValidatorStake(uint amount) public {
+    function withdrawValidatorStake(uint amount) public whenNotPaused{
         uint256 withdrawableBalance;
         uint256 validatorLockLength = validatorLock[msg.sender].length;
         ValidationApplication
@@ -624,7 +624,7 @@ contract UDAOStaker is RoleController, EIP712 {
      * @notice allows jurors to withdraw their staked tokens
      * @param amount amount of tokens that will be withdrawn
      */
-    function withdrawJurorStake(uint amount) public {
+    function withdrawJurorStake(uint amount) public whenNotPaused {
         uint256 withdrawableBalance;
         uint256 jurorLockLength = jurorLocks[msg.sender].length;
         JurorApplication storage jurorApplication = jurorApplications[
@@ -754,7 +754,7 @@ contract UDAOStaker is RoleController, EIP712 {
 
     /// @notice withdraw function for released UDAO tokens
     /// @param _amount amount of UDAO token that will be unstaked
-    function withdrawGovernanceStake(uint256 _amount) public {
+    function withdrawGovernanceStake(uint256 _amount) public whenNotPaused {
         require(_amount > 0, "Stake amount can't be 0");
         uint256 withdrawableBalance;
         uint256 vpBalance;
@@ -795,10 +795,10 @@ contract UDAOStaker is RoleController, EIP712 {
     }
 
     /**
-     * @notice add vote rewward to voters reward count
+     * @notice add vote reward to voters reward count
      * @param voter address of the voter
      */
-    function addVoteRewards(address voter) external onlyRole(GOVERNANCE_ROLE) {
+    function addVoteRewards(address voter) external whenNotPaused onlyRole(GOVERNANCE_ROLE) {
         uint256 votingPowerRatio = (udaovp.balanceOf(voter) * 10000) /
             totalVotingPower;
         rewardBalanceOf[voter] += votingPowerRatio * voteReward;
@@ -808,7 +808,7 @@ contract UDAOStaker is RoleController, EIP712 {
     /**
      * @notice withdraws reward earned from voting
      */
-    function withdrawRewards() external {
+    function withdrawRewards() external whenNotPaused {
         require(
             rewardBalanceOf[msg.sender] > 0,
             "You don't have any reward balance"
@@ -848,7 +848,7 @@ contract UDAOStaker is RoleController, EIP712 {
     /// before staking lock duration. 
     /// @param voucher voucher for corporate withdraw before deadline
     function unstakeForJobListing(CorporateWithdrawVoucher calldata voucher)
-        external
+        external whenNotPaused
         onlyRole(CORPORATE_ROLE) 
     {
         
@@ -884,7 +884,7 @@ contract UDAOStaker is RoleController, EIP712 {
     /// @notice Allows corporate accounts to unstake. Staker and unstaked amount returned with event.
     /// @param amount The unstaked amount.
     function unstakeForJobListing(uint256 amount)
-        external
+        external whenNotPaused
         onlyRole(CORPORATE_ROLE)
     {
         require(amount > 0, "Cannot unstake zero tokens");
