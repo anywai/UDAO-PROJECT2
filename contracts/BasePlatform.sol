@@ -4,14 +4,19 @@ pragma solidity ^0.8.4;
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
+import "./ContractManager.sol";
 import "./IUDAOC.sol";
 import "./RoleController.sol";
 import "./IVM.sol";
 import "./IJM.sol";
 
 abstract contract BasePlatform is Pausable, RoleController {
+
+    ContractManager public contractManager;
+
     // content id => content balance
     mapping(address => uint) public instructorBalance;
+    mapping(address => uint) public instructorDebt;
 
     // user address => content id => content owned by the user
     mapping(address => mapping(uint => mapping(uint => bool))) isTokenBought;
@@ -118,26 +123,33 @@ abstract contract BasePlatform is Pausable, RoleController {
     );
 
     /**
-     * @param udaoAddress address of the UDAO ERC20 token
-     * @param udaocAddress address of the UDAOC ERC721 token
-     * @param rmAddress address of the role manager contract
-     * @param vmAddress address of the validation manager contract
-     * @param jmAddress address of the juror manager contract
+
      */
     constructor(
-        address udaoAddress,
-        address udaocAddress,
-        address rmAddress,
-        address vmAddress,
-        address jmAddress
-    ) RoleController(rmAddress) {
-        udao = IERC20(udaoAddress);
-        udaoc = IUDAOC(udaocAddress);
-        IVM = IValidationManager(vmAddress);
-        IJM = IJurorManager(jmAddress);
+        address _contractManager, address _rmAddress
+    ) RoleController(_rmAddress) {
+        contractManager = ContractManager(_contractManager);
+        udao = IERC20(contractManager.UdaoAddress());
+        udaoc = IUDAOC(contractManager.UdaocAddress());
+        IVM = IValidationManager(contractManager.IVMAddress());
+        IJM = IJurorManager(contractManager.IJMAddress());
     }
 
     // SETTERS
+
+    /// @notice Sets the address of the contract manager
+    /// @param _newAddress New address of the contract manager
+    function setContractManagerAddress(address _newAddress) external onlyRole(BACKEND_ROLE){
+        contractManager = ContractManager(_newAddress);
+    }
+
+    /// @notice Get the updated addresses from contract manager
+    function updateAddresses() external onlyRole(BACKEND_ROLE){        
+        udao = IERC20(contractManager.UdaoAddress());
+        udaoc = IUDAOC(contractManager.UdaocAddress());
+        IVM = IValidationManager(contractManager.IVMAddress());
+        IJM = IJurorManager(contractManager.IJMAddress());
+    }
 
     /// @notice changes cut from coaching for foundation
     /// @param _cut new cut (100000 -> 100% | 5000 -> 5%)
