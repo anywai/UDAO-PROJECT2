@@ -132,7 +132,6 @@ contract UDAOCertificate is
     /// @param from The current token owner
     /// @param to Token to send to
     /// @param tokenId The id of the token to transfer
-    /// TODO Bunu test ettik mi? 
     function emergencyTransfer(
         address from,
         address to,
