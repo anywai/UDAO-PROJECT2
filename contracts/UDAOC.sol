@@ -127,7 +127,7 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
 
 
     /// @notice Allows backend to either to force or not the KYC check before transfers 
-    function setIsKycChecked(bool _isKycChecked) external onlyRole(FOUNDATION_ROLE){
+    function setIsKycChecked(bool _isKycChecked) external onlyRole(BACKEND_ROLE){
         isKycChecked = _isKycChecked;
     }
 
