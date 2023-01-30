@@ -254,7 +254,7 @@ abstract contract BasePlatform is Pausable, RoleController {
      * for validators to claim it later.
      *
      */
-    function distributeRewards() external onlyRoles(administrator_roles) {
+    function distributeRewards() external whenNotPaused onlyRoles(administrator_roles) {
         // Validator reward distribution
         payPerValidationScore[distributionRound] =
             validatorBalanceForRound /
