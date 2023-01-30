@@ -3,7 +3,6 @@ pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
-import "./RoleController.sol";
 import "./ContentManager.sol";
 
 contract PlatformTreasury is Pausable, ContentManager {
