@@ -8,6 +8,8 @@ import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
 import "./RoleController.sol";
+import "./ContractManager.sol";
+
 
 interface IUDAOVP is IVotes, IERC20 {
     function mint(address to, uint256 amount) external;
@@ -19,6 +21,7 @@ contract UDAOStaker is RoleController, EIP712 {
 
     IERC20 public udao;
     IUDAOVP public udaovp;
+    ContractManager public contractManager;
     address public platformTreasuryAddress;
 
     uint256 public payablePerValidation = 1 ether;
@@ -159,20 +162,26 @@ contract UDAOStaker is RoleController, EIP712 {
     uint256 public totalVotingPower;
 
     /**
-     * @param udaovpAddress address of the UDAO-vp ERC20 token
-     * @param udaoAddress address of the UDAO ERC20 token
      * @param _platformTreasuryAddress address of the platform treasury contract
      * @param rmAddress address of the role manager contract
+     * @param _contractManager address of the contract manager 
      */
     constructor(
-        address udaovpAddress,
-        address udaoAddress,
         address _platformTreasuryAddress,
-        address rmAddress
+        address rmAddress,
+        address _contractManager
     ) EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION) RoleController(rmAddress) {
-        udao = IERC20(udaoAddress);
-        udaovp = IUDAOVP(udaovpAddress);
+        contractManager = ContractManager(_contractManager);
+        udao = IERC20(contractManager.UdaoAddress());
+        udaovp = IUDAOVP(contractManager.UdaoVpAddress());
         platformTreasuryAddress = _platformTreasuryAddress;
+    }
+
+    /// @notice Get the updated addresses from contract manager
+    function updateAddresses() external onlyRole(BACKEND_ROLE){        
+        platformTreasuryAddress = contractManager.PlatformTreasuryAddress();
+        udao = IERC20(contractManager.UdaoAddress());
+        udaovp = IUDAOVP(contractManager.UdaoVpAddress());
     }
 
     /**

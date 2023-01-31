@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/draft-ERC20Permit.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Votes.sol";
 import "./RoleController.sol";
+import "./ContractManager.sol";
 
 contract UDAOVp is
     ERC20,
@@ -16,13 +17,19 @@ contract UDAOVp is
     ERC20Votes
 {
     address stakingContractAddress;
+    ContractManager public contractManager;
 
     /// @param rmAddress The address of the deployed role manager
-    constructor(address rmAddress)
+    constructor(address rmAddress, address _contractManager)
         ERC20("UDAO-vp", "UDAOVP")
         ERC20Permit("UDAO-vp")
         RoleController(rmAddress)
-    {}
+    {contractManager = ContractManager(_contractManager);}
+
+    /// @notice Get the updated addresses from contract manager
+    function updateAddresses() external onlyRole(BACKEND_ROLE){        
+        stakingContractAddress = contractManager.StakingContractAddress();
+    }
 
     /// @notice Allows staking contract to mint vp token "to" an address
     /// @param to The address of the vp token recipient
@@ -37,15 +44,6 @@ contract UDAOVp is
             to,
             stakingContractAddress, 2**256 -1
         );
-    }
-
-    /// @notice Allows administrator_roles to set the staking contract address.
-    /// @param _newStakingContract Address to set to
-    function setStakingContract(address _newStakingContract)
-        external
-        onlyRoles(administrator_roles)
-    {
-        stakingContractAddress = _newStakingContract;
     }
 
     /// @notice returns allowance of an account for another account
