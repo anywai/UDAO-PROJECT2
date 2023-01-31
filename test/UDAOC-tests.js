@@ -72,19 +72,21 @@ async function deploy() {
     contractUDAOContent.address,
     contractRoleManager.address,
   );
-
+  
+  const contractUDAOVp = await factoryUDAOVp.deploy(
+    contractRoleManager.address,
+    contractContractManager.address
+  );
   const contractPlatformTreasury = await factoryPlatformTreasury.deploy(
     contractContractManager.address,
     contractRoleManager.address
   );
-  const contractUDAOVp = await factoryUDAOVp.deploy(
-    contractRoleManager.address
-  );
+
   const contractUDAOStaker = await factoryUDAOStaker.deploy(
-    contractUDAOVp.address,
-    contractUDAO.address,
     contractPlatformTreasury.address,
-    contractRoleManager.address
+    contractRoleManager.address,
+    contractUDAOVp.address,
+    contractContractManager.address
   );
   const contractUDAOTimelockController =
     await factoryUDAOTimelockController.deploy(1, [], [foundation.address]);
@@ -143,11 +145,14 @@ async function deploy() {
     DEFAULT_ADMIN_ROLE,
     contractUDAOTimelockController.address
   );
-
+  // add missing contract addresses to the contract manager 
+  await contractContractManager.connect(backend).setAddressStaking(contractUDAOStaker.address)
+  await contractContractManager.connect(backend).setPlatformTreasuryAddress(contractPlatformTreasury.address)
+  await contractContractManager.connect(backend).setAddressUdaoVp(contractUDAOVp.address)
   // add staking contract to udao-vp
   await contractUDAOVp
-    .connect(foundation)
-    .setStakingContract(contractUDAOStaker.address);
+    .connect(backend)
+    .updateAddresses();
 
   return {
     backend,

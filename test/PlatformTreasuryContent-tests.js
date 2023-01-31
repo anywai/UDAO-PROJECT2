@@ -86,6 +86,7 @@ async function deploy() {
   const contractUDAOStaker = await factoryUDAOStaker.deploy(
     contractPlatformTreasury.address,
     contractRoleManager.address,
+    contractUDAOVp.address,
     contractContractManager.address
   );
   const contractUDAOTimelockController =
