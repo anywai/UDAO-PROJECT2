@@ -169,11 +169,12 @@ contract UDAOStaker is RoleController, EIP712 {
     constructor(
         address _platformTreasuryAddress,
         address rmAddress,
+        address udaoVpAddress,
         address _contractManager
     ) EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION) RoleController(rmAddress) {
         contractManager = ContractManager(_contractManager);
         udao = IERC20(contractManager.UdaoAddress());
-        udaovp = IUDAOVP(contractManager.UdaoVpAddress());
+        udaovp = IUDAOVP(udaoVpAddress);
         platformTreasuryAddress = _platformTreasuryAddress;
     }
 
