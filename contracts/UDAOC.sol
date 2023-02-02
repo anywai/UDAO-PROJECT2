@@ -14,13 +14,13 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
     string private constant SIGNATURE_VERSION = "1";
 
     bool isKycChecked;
-    /// @param rmAddress The address of the deployed role manager
+    /// @param irmAdress The address of the deployed role manager
     constructor(
-        address rmAddress
+        address irmAdress
     )
         ERC721("UDAO Content", "UDAOC")
         EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION)
-        RoleController(rmAddress)
+        RoleController(irmAdress)
     {isKycChecked=true;}
 
     /// @notice Represents an un-minted NFT, which has not yet been recorded into the blockchain.
@@ -86,7 +86,8 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
     function redeem(ContentVoucher calldata voucher) public whenNotPaused {
         // make sure redeemer is redeeming
         require(voucher.redeemer == msg.sender, "You are not the redeemer");
-
+        //make sure redeemer is kyced
+        require(IRM.isKYCed(msg.sender), "You are not KYCed");
         // make sure signature is valid and get the address of the signer
         address signer = _verifyRedeem(voucher);
         require(

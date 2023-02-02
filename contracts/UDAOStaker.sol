@@ -448,6 +448,8 @@ contract UDAOStaker is RoleController, EIP712 {
     function getApproved(RoleVoucher calldata voucher) external whenNotPaused {
         // make sure redeemer is redeeming
         require(voucher.redeemer == msg.sender, "You are not the redeemer");
+        //make sure redeemer is kyced
+        require(IRM.isKYCed(msg.sender), "You are not KYCed");
         // make sure signature is valid and get the address of the signer
         address signer = _verifyRole(voucher);
         require(voucher.validUntil >= block.timestamp, "Voucher has expired.");
