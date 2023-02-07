@@ -5,20 +5,15 @@ pragma solidity ^0.8.4;
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
-import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
 import "./RoleController.sol";
 
-contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
-    string private constant SIGNING_DOMAIN = "UDAOCMinter";
-    string private constant SIGNATURE_VERSION = "1";
+contract UDAOContent is ERC721, ERC721URIStorage, RoleController {
 
     /// @param irmAdress The address of the deployed role manager
     constructor(
         address irmAdress
     )
         ERC721("UDAO Content", "UDAOC")
-        EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION)
         RoleController(irmAdress)
     {}
 
@@ -37,8 +32,6 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
         string name;
         /// @notice The description of the NFT
         string description;
-        /// @notice the EIP-712 signature of all other fields in the ContentVoucher struct.
-        bytes signature;
     }
 
     // tokenId => is coaching service buyable
@@ -51,12 +44,6 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
         require(voucher.redeemer == msg.sender, "You are not the redeemer");
         //make sure redeemer is kyced
         require(IRM.isKYCed(msg.sender), "You are not KYCed");
-        // make sure signature is valid and get the address of the signer
-        address signer = _verifyRedeem(voucher);
-        require(
-            IRM.hasRole(BACKEND_ROLE, signer),
-            "Signature invalid or unauthorized"
-        );
         coachingEnabled[voucher.tokenId] = voucher.isCoachingEnabled;
         _mint(voucher.redeemer, voucher.tokenId);
         _setTokenURI(voucher.tokenId, voucher.uri);
@@ -87,29 +74,6 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
         return coachingEnabled[tokenId];
     }
 
-    /// @notice Returns a hash of the given ContentVoucher, prepared using EIP712 typed data hashing rules.
-    /// @param voucher A ContentVoucher to hash.
-    function _hashRedeem(
-        ContentVoucher calldata voucher
-    ) internal view returns (bytes32) {
-        return
-            _hashTypedDataV4(
-                keccak256(
-                    abi.encode(
-                        keccak256(
-                            "ContentVoucher(uint256 tokenId,string uri,address redeemer,bool isCoachingEnabled,string name,string description)"
-                        ),
-                        voucher.tokenId,
-                        keccak256(bytes(voucher.uri)),
-                        voucher.redeemer,
-                        voucher.isCoachingEnabled,
-                        keccak256(bytes(voucher.name)),
-                        keccak256(bytes(voucher.description))
-                    )
-                )
-            );
-    }
-
     /// @notice Returns the chain id of the current blockchain.
     /// @dev This is used to workaround an issue with ganache returning different values from the on-chain chainid() function and
     ///  the eth_chainId RPC method. See https://github.com/protocol/nft-website/issues/121 for context.
@@ -119,16 +83,6 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
             id := chainid()
         }
         return id;
-    }
-
-    /// @notice Verifies the signature for a given ContentVoucher, returning the address of the signer.
-    /// @dev Will revert if the signature is invalid. Does not verify that the signer is authorized to mint NFTs.
-    /// @param voucher A ContentVoucher describing an unminted NFT.
-    function _verifyRedeem(
-        ContentVoucher calldata voucher
-    ) internal view returns (address) {
-        bytes32 digest = _hashRedeem(voucher);
-        return ECDSA.recover(digest, voucher.signature);
     }
 
     /// @notice A content can be completely removed by the owner
@@ -162,8 +116,6 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
             require(!IRM.isBanned(from), "Sender is banned!");
         }
     }
-
-    
 
     /// @notice Allows off-chain check if a token(content) exists
     function exists(uint tokenId) external view returns (bool) {
