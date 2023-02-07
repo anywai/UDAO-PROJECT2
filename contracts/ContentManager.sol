@@ -2,13 +2,9 @@
 /// @title Content purchasing and cut management
 pragma solidity ^0.8.4;
 import "./BasePlatform.sol";
-import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
 
 
-abstract contract ContentManager is EIP712, BasePlatform {
-    string private constant SIGNING_DOMAIN = "ContentManager";
-    string private constant SIGNATURE_VERSION = "1";
+abstract contract ContentManager is  BasePlatform {
 
     /// @notice  triggered if coaching service payment to the instructor is forced 
     event ForcedPayment(uint256 _coachingId, address forcedBy);
@@ -40,12 +36,8 @@ abstract contract ContentManager is EIP712, BasePlatform {
         uint256[] purchasedParts;
         /// @notice The price to deduct from buyer
         uint256 priceToPay;
-        /// @notice The date until the voucher is valid
-        uint256 validUntil;
         /// @notice Address of the redeemer
         address redeemer;
-        /// @notice the EIP-712 signature of all other fields in the ContentVoucher struct.
-        bytes signature;
     }
 
     /// @notice Represents usage rights for a coaching service
@@ -54,14 +46,10 @@ abstract contract ContentManager is EIP712, BasePlatform {
         uint256 tokenId;
         /// @notice The price to deduct from buyer
         uint256 priceToPay;
-        /// @notice The date until the voucher is valid
-        uint256 validUntil;
         /// @notice if the coaching service is refundable or not
         bool isRefundable;
         /// @notice Address of the redeemer
         address redeemer;
-        /// @notice the EIP-712 signature of all other fields in the ContentVoucher struct.
-        bytes signature;
     }
 
     // wallet => content token Ids
@@ -95,7 +83,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
     mapping(uint256 => CoachingStruct) public coachingStructs;
     uint256 private coachingIndex;
 
-    constructor() EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION) {}
+    constructor()  {}
 
     /// @notice allows users to purchase a content
     /// @param vouchers vouchers for the content purchase
@@ -117,17 +105,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
             uint256 tokenId = voucher.tokenId;
             uint256 priceToPay = voucher.priceToPay;
 
-            // make sure signature is valid and get the address of the signer
-            address signer = _verifyContent(voucher);
-            require(
-                IRM.hasRole(BACKEND_ROLE, signer),
-                "Signature invalid or unauthorized"
-            );
 
-            require(
-                voucher.validUntil >= block.timestamp,
-                "Voucher has expired."
-            );
             require(
                 msg.sender == voucher.redeemer,
                 "You are not redeemer."
@@ -213,15 +191,8 @@ abstract contract ContentManager is EIP712, BasePlatform {
     /// @notice Allows users to buy coaching service.
     /// @param voucher voucher for the coaching purchase
     function buyCoaching(CoachingPurchaseVoucher calldata voucher) external whenNotPaused {
-        // make sure signature is valid and get the address of the signer
-        address signer = _verifyCoaching(voucher);
 
-        require(
-            IRM.hasRole(BACKEND_ROLE, signer),
-            "Signature invalid or unauthorized"
-        );
 
-        require(voucher.validUntil >= block.timestamp, "Voucher has expired.");
         require(udaoc.exists(voucher.tokenId), "Content does not exist!");
         require(!IRM.isBanned(msg.sender), "You are banned");
         require(IRM.isKYCed(msg.sender), "You are not KYCed");
@@ -465,53 +436,6 @@ abstract contract ContentManager is EIP712, BasePlatform {
         return studentList[tokenId];
     }
 
-    /// @notice Returns a hash of the given ContentPurchaseVoucher, prepared using EIP712 typed data hashing rules.
-    /// @param voucher A ContentPurchaseVoucher to hash.
-    function _hashContent(ContentPurchaseVoucher calldata voucher)
-        internal
-        view
-        returns (bytes32)
-    {
-        return
-            _hashTypedDataV4(
-                keccak256(
-                    abi.encode(
-                        keccak256(
-                            "ContentPurchaseVoucher(uint256 tokenId,uint256[] purchasedParts,uint256 priceToPay,uint256 validUntil,address redeemer)"
-                        ),
-                        voucher.tokenId,
-                        keccak256(abi.encodePacked(voucher.purchasedParts)),
-                        voucher.priceToPay,
-                        voucher.validUntil,
-                        voucher.redeemer
-                    )
-                )
-            );
-    }
-
-    /// @notice Returns a hash of the given CoachingPurchaseVoucher, prepared using EIP712 typed data hashing rules.
-    /// @param voucher A CoachingPurchaseVoucher to hash.
-    function _hashCoaching(CoachingPurchaseVoucher calldata voucher)
-        internal
-        view
-        returns (bytes32)
-    {
-        return
-            _hashTypedDataV4(
-                keccak256(
-                    abi.encode(
-                        keccak256(
-                            "CoachingPurchaseVoucher(uint256 tokenId,uint256 priceToPay,uint256 validUntil,bool isRefundable,address redeemer)"
-                        ),
-                        voucher.tokenId,
-                        voucher.priceToPay,
-                        voucher.validUntil,
-                        voucher.isRefundable,
-                        voucher.redeemer
-                    )
-                )
-            );
-    }
 
     /// @notice Returns the chain id of the current blockchain.
     /// @dev This is used to workaround an issue with ganache returning different values from the on-chain chainid() function and
@@ -524,27 +448,4 @@ abstract contract ContentManager is EIP712, BasePlatform {
         return id;
     }
 
-    /// @notice Verifies the signature for a given ContentPurchaseVoucher, returning the address of the signer.
-    /// @dev Will revert if the signature is invalid.
-    /// @param voucher A ContentPurchaseVoucher describing a content access rights.
-    function _verifyContent(ContentPurchaseVoucher calldata voucher)
-        internal
-        view
-        returns (address)
-    {
-        bytes32 digest = _hashContent(voucher);
-        return ECDSA.recover(digest, voucher.signature);
-    }
-
-    /// @notice Verifies the signature for a given CoachingPurchaseVoucher, returning the address of the signer.
-    /// @dev Will revert if the signature is invalid.
-    /// @param voucher A CoachingPurchaseVoucher describing a coaching se
-    function _verifyCoaching(CoachingPurchaseVoucher calldata voucher)
-        internal
-        view
-        returns (address)
-    {
-        bytes32 digest = _hashCoaching(voucher);
-        return ECDSA.recover(digest, voucher.signature);
-    }
 }
