@@ -149,6 +149,7 @@ abstract contract BasePlatform is Pausable, RoleController {
         udaoc = IUDAOC(contractManager.UdaocAddress());
         IVM = IValidationManager(contractManager.IVMAddress());
         IJM = IJurorManager(contractManager.IJMAddress());
+        IRM = IRoleManager(contractManager.IrmAddress());
     }
 
     /// @notice changes cut from coaching for foundation
@@ -253,7 +254,7 @@ abstract contract BasePlatform is Pausable, RoleController {
      * for validators to claim it later.
      *
      */
-    function distributeRewards() external onlyRoles(administrator_roles) {
+    function distributeRewards() external whenNotPaused onlyRoles(administrator_roles) {
         // Validator reward distribution
         payPerValidationScore[distributionRound] =
             validatorBalanceForRound /

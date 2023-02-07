@@ -97,15 +97,6 @@ abstract contract ContentManager is EIP712, BasePlatform {
 
     constructor() EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION) {}
 
-    /// @notice Allows seting the address of the valdation manager contract
-    /// @param vmAddress The address of the deployed ValidationManager contract
-    function setValidationManager(address vmAddress)
-        external
-        onlyRole(FOUNDATION_ROLE)
-    {
-        IVM = IValidationManager(vmAddress);
-    }
-
     /// @notice allows users to purchase a content
     /// @param vouchers vouchers for the content purchase
     function buyContent(ContentPurchaseVoucher[] calldata vouchers) external whenNotPaused {
@@ -233,8 +224,10 @@ abstract contract ContentManager is EIP712, BasePlatform {
         require(voucher.validUntil >= block.timestamp, "Voucher has expired.");
         require(udaoc.exists(voucher.tokenId), "Content does not exist!");
         require(!IRM.isBanned(msg.sender), "You are banned");
+        require(IRM.isKYCed(msg.sender), "You are not KYCed");
         address instructor = udaoc.ownerOf(voucher.tokenId);
         require(!IRM.isBanned(instructor), "Instructor is banned");
+        require(IRM.isKYCed(instructor), "Instructor is not KYCed");
         require(
             udaoc.isCoachingEnabled(voucher.tokenId),
             "Coaching is not enabled for this content"
@@ -268,7 +261,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
 
     /// @notice Allows both parties to finalize coaching service.
     /// @param _coachingId The ID of the coaching service
-    function finalizeCoaching(uint256 _coachingId) external {
+    function finalizeCoaching(uint256 _coachingId) external whenNotPaused {
         require(_coachingId < coachingIndex, "Coaching id doesn't exist");
         CoachingStruct storage currentCoaching = coachingStructs[_coachingId];
         require((msg.sender == currentCoaching.coach) || (msg.sender == currentCoaching.learner), "You are not learner neither coach");
@@ -296,7 +289,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
      *  deadline in the last 3 days of the deadline
      *  @param _coachingId id of the coaching service
      */
-    function delayDeadline(uint256 _coachingId) external {
+    function delayDeadline(uint256 _coachingId) external whenNotPaused {
         require(
             msg.sender == coachingStructs[_coachingId].coach ||
                 msg.sender == coachingStructs[_coachingId].learner,
@@ -317,7 +310,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
     /// @notice Payment and coaching service can be forcefully done by administrator_roles
     /// @param _coachingId id of the coaching service
     function forcedPayment(uint256 _coachingId)
-        external
+        external whenNotPaused
         onlyRoles(administrator_roles) 
     {
         CoachingStruct storage currentCoaching = coachingStructs[_coachingId];
@@ -331,7 +324,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
     /// @notice Payment and coaching service can be forcefully done by jurors
     /// @param _coachingId id of the coaching service
     function forcedPaymentJuror(uint256 _coachingId)
-        external
+        external whenNotPaused
         onlyRole(JUROR_CONTRACT)
     {
         CoachingStruct storage currentCoaching = coachingStructs[_coachingId];
@@ -344,7 +337,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
 
     /// @notice refunds the coaching service callable by coach
     /// @param _coachingId id of the coaching service
-    function refund(uint256 _coachingId) external {
+    function refund(uint256 _coachingId) external whenNotPaused {
         CoachingStruct storage currentCoaching = coachingStructs[_coachingId];
         uint256 totalPaymentAmount = currentCoaching.totalPaymentAmount;
         require(msg.sender == currentCoaching.coach, "Your are not the coach");
@@ -364,7 +357,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
     /// @notice forces refund of coaching service only be callable by administrator_role (FOUNDATION_ROLE, GOVERNANCE_ROLE)
     /// @param _coachingId id of the coaching service
     function forcedRefundAdmin(uint256 _coachingId)
-        external
+        external whenNotPaused
         onlyRoles(administrator_roles) 
     {
         uint256 startGas = gasleft();
@@ -406,7 +399,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
     /// @notice Jurors can force refund of a coaching service
     /// @param _coachingId The ID of the coaching service
     function forcedRefundJuror(uint256 _coachingId)
-        external
+        external whenNotPaused
         onlyRole(JUROR_CONTRACT)
     {
         uint256 startGas = gasleft();
@@ -445,7 +438,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
     /// @notice returns coaching informations of token
     /// @param _tokenId id of token that coaching will be returned
     function getCoachings(uint256 _tokenId)
-        external
+        external 
         view
         returns (uint256[] memory)
     {

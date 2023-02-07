@@ -73,18 +73,21 @@ async function deploy() {
     contractUDAOContent.address,
     contractRoleManager.address,
   );
+  
+  const contractUDAOVp = await factoryUDAOVp.deploy(
+    contractRoleManager.address,
+    contractContractManager.address
+  );
   const contractPlatformTreasury = await factoryPlatformTreasury.deploy(
     contractContractManager.address,
     contractRoleManager.address
   );
-  const contractUDAOVp = await factoryUDAOVp.deploy(
-    contractRoleManager.address
-  );
+
   const contractUDAOStaker = await factoryUDAOStaker.deploy(
-    contractUDAOVp.address,
-    contractUDAO.address,
     contractPlatformTreasury.address,
-    contractRoleManager.address
+    contractRoleManager.address,
+    contractUDAOVp.address,
+    contractContractManager.address
   );
   const contractUDAOTimelockController =
     await factoryUDAOTimelockController.deploy(1, [], [foundation.address]);
@@ -135,11 +138,14 @@ async function deploy() {
     VALIDATION_MANAGER,
     contractValidationManager.address
   );
-
+  // add missing contract addresses to the contract manager 
+  await contractContractManager.connect(backend).setAddressStaking(contractUDAOStaker.address)
+  await contractContractManager.connect(backend).setPlatformTreasuryAddress(contractPlatformTreasury.address)
+  await contractContractManager.connect(backend).setAddressUdaoVp(contractUDAOVp.address)
   // add staking contract to udao-vp
   await contractUDAOVp
-    .connect(foundation)
-    .setStakingContract(contractUDAOStaker.address);
+    .connect(backend)
+    .updateAddresses();
 
   return {
     backend,
@@ -164,6 +170,7 @@ async function deploy() {
     contractUDAOStaker,
     contractUDAOTimelockController,
     contractUDAOGovernor,
+    contractContractManager
   };
 }
 
@@ -171,133 +178,138 @@ describe("Platform Treasury Contract - Content", function () {
   it("Should deploy", async function () {
     const {
       backend,
-      validatorCandidate,
-      validator,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractValidationManager,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
+    contentCreator,
+    contentBuyer,
+    validatorCandidate,
+    validator,
+    superValidatorCandidate,
+    superValidator,
+    foundation,
+    governanceCandidate,
+    governanceMember,
+    jurorCandidate,
+    jurorMember,
+    contractUDAO,
+    contractRoleManager,
+    contractUDAOCertificate,
+    contractUDAOContent,
+    contractValidationManager,
+    contractPlatformTreasury,
+    contractUDAOVp,
+    contractUDAOStaker,
+    contractUDAOTimelockController,
+    contractUDAOGovernor,
+    contractContractManager
     } = await deploy();
   });
 
-  it("Should set validation manager", async function () {
+  it("Should get updated address of the validation manager", async function () {
     const {
       backend,
-      contentCreator,
-      contentBuyer,
-      validatorCandidate,
-      validator,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractValidationManager,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
+    contentCreator,
+    contentBuyer,
+    validatorCandidate,
+    validator,
+    superValidatorCandidate,
+    superValidator,
+    foundation,
+    governanceCandidate,
+    governanceMember,
+    jurorCandidate,
+    jurorMember,
+    contractUDAO,
+    contractRoleManager,
+    contractUDAOCertificate,
+    contractUDAOContent,
+    contractValidationManager,
+    contractPlatformTreasury,
+    contractUDAOVp,
+    contractUDAOStaker,
+    contractUDAOTimelockController,
+    contractUDAOGovernor,
+    contractContractManager
     } = await deploy();
     const originalVMAdress = await contractPlatformTreasury.IVM.call();
-    await contractPlatformTreasury
-      .connect(foundation)
-      .setValidationManager("0x5B38Da6a701c568545dCfcB03FcB875f56beddC4");
+    await contractContractManager
+      .connect(backend)
+      .setAddressIVM("0x5B38Da6a701c568545dCfcB03FcB875f56beddC4");
+    // Get updated address
+    await contractPlatformTreasury.connect(backend).updateAddresses();
     expect(await contractPlatformTreasury.IVM.call()).to.eql(
       "0x5B38Da6a701c568545dCfcB03FcB875f56beddC4"
     );
-    await contractPlatformTreasury
-      .connect(foundation)
-      .setValidationManager(originalVMAdress);
+    await contractContractManager
+      .connect(backend)
+      .setAddressIVM(originalVMAdress);
+    // Get updated address
+    await contractPlatformTreasury.connect(backend).updateAddresses();
     expect(await contractPlatformTreasury.IVM.call()).to.eql(originalVMAdress);
   });
 
   it("Should fail to set validation manager if not FOUNDATION", async function () {
     const {
       backend,
-      contentCreator,
-      contentBuyer,
-      validatorCandidate,
-      validator,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractValidationManager,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
+    contentCreator,
+    contentBuyer,
+    validatorCandidate,
+    validator,
+    superValidatorCandidate,
+    superValidator,
+    foundation,
+    governanceCandidate,
+    governanceMember,
+    jurorCandidate,
+    jurorMember,
+    contractUDAO,
+    contractRoleManager,
+    contractUDAOCertificate,
+    contractUDAOContent,
+    contractValidationManager,
+    contractPlatformTreasury,
+    contractUDAOVp,
+    contractUDAOStaker,
+    contractUDAOTimelockController,
+    contractUDAOGovernor,
+    contractContractManager
     } = await deploy();
     const originalVMAdress = await contractPlatformTreasury.IVM.call();
-    await contractPlatformTreasury
-      .connect(foundation)
-      .setValidationManager("0x5B38Da6a701c568545dCfcB03FcB875f56beddC4");
-    expect(await contractPlatformTreasury.IVM.call()).to.eql(
-      "0x5B38Da6a701c568545dCfcB03FcB875f56beddC4"
-    );
+    
     await expect(
       contractPlatformTreasury
-        .connect(backend)
-        .setValidationManager(originalVMAdress)
+        .connect(foundation)
+        .updateAddresses()
     ).to.revertedWith(
       "AccessControl: account " +
-        backend.address.toLowerCase() +
-        " is missing role 0x91f4acb4e22d884ddd51fc71554726ebe920375da6f1520c331da617e4181261"
+      foundation.address.toLowerCase() +
+        " is missing role 0x25cf2b509f2a7f322675b2a5322b182f44ad2c03ac941a0af17c9b178f5d5d5f"
     );
   });
 
   it("Should a user able to buy a content", async function () {
     const {
       backend,
-      contentCreator,
-      contentBuyer,
-      validatorCandidate,
-      validator,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractValidationManager,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
+    contentCreator,
+    contentBuyer,
+    validatorCandidate,
+    validator,
+    superValidatorCandidate,
+    superValidator,
+    foundation,
+    governanceCandidate,
+    governanceMember,
+    jurorCandidate,
+    jurorMember,
+    contractUDAO,
+    contractRoleManager,
+    contractUDAOCertificate,
+    contractUDAOContent,
+    contractValidationManager,
+    contractPlatformTreasury,
+    contractUDAOVp,
+    contractUDAOStaker,
+    contractUDAOTimelockController,
+    contractUDAOGovernor,
+    contractContractManager
     } = await deploy();
 
     /// Set KYC
@@ -381,27 +393,28 @@ describe("Platform Treasury Contract - Content", function () {
   it("Should a user able to buy multiple contents", async function () {
     const {
       backend,
-      contentCreator,
-      contentBuyer,
-      validatorCandidate,
-      validator,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractValidationManager,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
+    contentCreator,
+    contentBuyer,
+    validatorCandidate,
+    validator,
+    superValidatorCandidate,
+    superValidator,
+    foundation,
+    governanceCandidate,
+    governanceMember,
+    jurorCandidate,
+    jurorMember,
+    contractUDAO,
+    contractRoleManager,
+    contractUDAOCertificate,
+    contractUDAOContent,
+    contractValidationManager,
+    contractPlatformTreasury,
+    contractUDAOVp,
+    contractUDAOStaker,
+    contractUDAOTimelockController,
+    contractUDAOGovernor,
+    contractContractManager
     } = await deploy();
 
     /// Set KYC
@@ -524,27 +537,28 @@ describe("Platform Treasury Contract - Content", function () {
   it("Should a user able to buy parts of a content", async function () {
     const {
       backend,
-      contentCreator,
-      contentBuyer,
-      validatorCandidate,
-      validator,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractValidationManager,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
+    contentCreator,
+    contentBuyer,
+    validatorCandidate,
+    validator,
+    superValidatorCandidate,
+    superValidator,
+    foundation,
+    governanceCandidate,
+    governanceMember,
+    jurorCandidate,
+    jurorMember,
+    contractUDAO,
+    contractRoleManager,
+    contractUDAOCertificate,
+    contractUDAOContent,
+    contractValidationManager,
+    contractPlatformTreasury,
+    contractUDAOVp,
+    contractUDAOStaker,
+    contractUDAOTimelockController,
+    contractUDAOGovernor,
+    contractContractManager
     } = await deploy();
 
     /// Set KYC
@@ -632,27 +646,28 @@ describe("Platform Treasury Contract - Content", function () {
   it("Should fail to buy a content if signature invalid", async function () {
     const {
       backend,
-      contentCreator,
-      contentBuyer,
-      validatorCandidate,
-      validator,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractValidationManager,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
+    contentCreator,
+    contentBuyer,
+    validatorCandidate,
+    validator,
+    superValidatorCandidate,
+    superValidator,
+    foundation,
+    governanceCandidate,
+    governanceMember,
+    jurorCandidate,
+    jurorMember,
+    contractUDAO,
+    contractRoleManager,
+    contractUDAOCertificate,
+    contractUDAOContent,
+    contractValidationManager,
+    contractPlatformTreasury,
+    contractUDAOVp,
+    contractUDAOStaker,
+    contractUDAOTimelockController,
+    contractUDAOGovernor,
+    contractContractManager
     } = await deploy();
 
     /// Set KYC
@@ -733,27 +748,28 @@ describe("Platform Treasury Contract - Content", function () {
   it("Should fail to buy a content if voucher expired", async function () {
     const {
       backend,
-      contentCreator,
-      contentBuyer,
-      validatorCandidate,
-      validator,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractValidationManager,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
+    contentCreator,
+    contentBuyer,
+    validatorCandidate,
+    validator,
+    superValidatorCandidate,
+    superValidator,
+    foundation,
+    governanceCandidate,
+    governanceMember,
+    jurorCandidate,
+    jurorMember,
+    contractUDAO,
+    contractRoleManager,
+    contractUDAOCertificate,
+    contractUDAOContent,
+    contractValidationManager,
+    contractPlatformTreasury,
+    contractUDAOVp,
+    contractUDAOStaker,
+    contractUDAOTimelockController,
+    contractUDAOGovernor,
+    contractContractManager
     } = await deploy();
 
     /// Set KYC
@@ -834,27 +850,28 @@ describe("Platform Treasury Contract - Content", function () {
   it("Should fail to buy a content if content already purchased", async function () {
     const {
       backend,
-      contentCreator,
-      contentBuyer,
-      validatorCandidate,
-      validator,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractValidationManager,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
+    contentCreator,
+    contentBuyer,
+    validatorCandidate,
+    validator,
+    superValidatorCandidate,
+    superValidator,
+    foundation,
+    governanceCandidate,
+    governanceMember,
+    jurorCandidate,
+    jurorMember,
+    contractUDAO,
+    contractRoleManager,
+    contractUDAOCertificate,
+    contractUDAOContent,
+    contractValidationManager,
+    contractPlatformTreasury,
+    contractUDAOVp,
+    contractUDAOStaker,
+    contractUDAOTimelockController,
+    contractUDAOGovernor,
+    contractContractManager
     } = await deploy();
 
     /// Set KYC
@@ -950,27 +967,28 @@ describe("Platform Treasury Contract - Content", function () {
   it("Should fail to buy a content if content does not exists", async function () {
     const {
       backend,
-      contentCreator,
-      contentBuyer,
-      validatorCandidate,
-      validator,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractValidationManager,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
+    contentCreator,
+    contentBuyer,
+    validatorCandidate,
+    validator,
+    superValidatorCandidate,
+    superValidator,
+    foundation,
+    governanceCandidate,
+    governanceMember,
+    jurorCandidate,
+    jurorMember,
+    contractUDAO,
+    contractRoleManager,
+    contractUDAOCertificate,
+    contractUDAOContent,
+    contractValidationManager,
+    contractPlatformTreasury,
+    contractUDAOVp,
+    contractUDAOStaker,
+    contractUDAOTimelockController,
+    contractUDAOGovernor,
+    contractContractManager
     } = await deploy();
 
     /// Set KYC
@@ -1051,27 +1069,28 @@ describe("Platform Treasury Contract - Content", function () {
   it("Should fail to buy content if not validated yet", async function () {
     const {
       backend,
-      contentCreator,
-      contentBuyer,
-      validatorCandidate,
-      validator,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractValidationManager,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
+    contentCreator,
+    contentBuyer,
+    validatorCandidate,
+    validator,
+    superValidatorCandidate,
+    superValidator,
+    foundation,
+    governanceCandidate,
+    governanceMember,
+    jurorCandidate,
+    jurorMember,
+    contractUDAO,
+    contractRoleManager,
+    contractUDAOCertificate,
+    contractUDAOContent,
+    contractValidationManager,
+    contractPlatformTreasury,
+    contractUDAOVp,
+    contractUDAOStaker,
+    contractUDAOTimelockController,
+    contractUDAOGovernor,
+    contractContractManager
     } = await deploy();
 
     /// Set KYC
@@ -1134,27 +1153,28 @@ describe("Platform Treasury Contract - Content", function () {
   it("Should fail to buy content if buyer is banned", async function () {
     const {
       backend,
-      contentCreator,
-      contentBuyer,
-      validatorCandidate,
-      validator,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractValidationManager,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
+    contentCreator,
+    contentBuyer,
+    validatorCandidate,
+    validator,
+    superValidatorCandidate,
+    superValidator,
+    foundation,
+    governanceCandidate,
+    governanceMember,
+    jurorCandidate,
+    jurorMember,
+    contractUDAO,
+    contractRoleManager,
+    contractUDAOCertificate,
+    contractUDAOContent,
+    contractValidationManager,
+    contractPlatformTreasury,
+    contractUDAOVp,
+    contractUDAOStaker,
+    contractUDAOTimelockController,
+    contractUDAOGovernor,
+    contractContractManager
     } = await deploy();
 
     /// Set KYC
@@ -1238,27 +1258,28 @@ describe("Platform Treasury Contract - Content", function () {
   it("Should fail to buy content if instructer is banned", async function () {
     const {
       backend,
-      contentCreator,
-      contentBuyer,
-      validatorCandidate,
-      validator,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractValidationManager,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
+    contentCreator,
+    contentBuyer,
+    validatorCandidate,
+    validator,
+    superValidatorCandidate,
+    superValidator,
+    foundation,
+    governanceCandidate,
+    governanceMember,
+    jurorCandidate,
+    jurorMember,
+    contractUDAO,
+    contractRoleManager,
+    contractUDAOCertificate,
+    contractUDAOContent,
+    contractValidationManager,
+    contractPlatformTreasury,
+    contractUDAOVp,
+    contractUDAOStaker,
+    contractUDAOTimelockController,
+    contractUDAOGovernor,
+    contractContractManager
     } = await deploy();
 
     /// Set KYC
@@ -1553,27 +1574,28 @@ describe("Platform Treasury Contract - Content", function () {
   it("Should fail to buy a content part if full content is already purchased", async function () {
     const {
       backend,
-      contentCreator,
-      contentBuyer,
-      validatorCandidate,
-      validator,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractValidationManager,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
+    contentCreator,
+    contentBuyer,
+    validatorCandidate,
+    validator,
+    superValidatorCandidate,
+    superValidator,
+    foundation,
+    governanceCandidate,
+    governanceMember,
+    jurorCandidate,
+    jurorMember,
+    contractUDAO,
+    contractRoleManager,
+    contractUDAOCertificate,
+    contractUDAOContent,
+    contractValidationManager,
+    contractPlatformTreasury,
+    contractUDAOVp,
+    contractUDAOStaker,
+    contractUDAOTimelockController,
+    contractUDAOGovernor,
+    contractContractManager
     } = await deploy();
 
     /// Set KYC
@@ -1669,27 +1691,28 @@ describe("Platform Treasury Contract - Content", function () {
   it("Should fail to buy a content part if that part is already purchased", async function () {
     const {
       backend,
-      contentCreator,
-      contentBuyer,
-      validatorCandidate,
-      validator,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractValidationManager,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
+    contentCreator,
+    contentBuyer,
+    validatorCandidate,
+    validator,
+    superValidatorCandidate,
+    superValidator,
+    foundation,
+    governanceCandidate,
+    governanceMember,
+    jurorCandidate,
+    jurorMember,
+    contractUDAO,
+    contractRoleManager,
+    contractUDAOCertificate,
+    contractUDAOContent,
+    contractValidationManager,
+    contractPlatformTreasury,
+    contractUDAOVp,
+    contractUDAOStaker,
+    contractUDAOTimelockController,
+    contractUDAOGovernor,
+    contractContractManager
     } = await deploy();
 
     /// Set KYC

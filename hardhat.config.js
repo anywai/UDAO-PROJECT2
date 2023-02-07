@@ -26,7 +26,7 @@ module.exports = {
     hardhat: { chainId: 31337 },
   },
   gasReporter: {
-    enabled: true,
+    enabled: false,
     currency: "EUR",
     coinmarketcap: "9b067bab-555e-4a2e-8b46-3ddbf5254166",
     token: "MATIC",

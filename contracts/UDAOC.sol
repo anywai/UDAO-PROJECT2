@@ -13,15 +13,14 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
     string private constant SIGNING_DOMAIN = "UDAOCMinter";
     string private constant SIGNATURE_VERSION = "1";
 
-    bool isKycChecked;
-    /// @param rmAddress The address of the deployed role manager
+    /// @param irmAdress The address of the deployed role manager
     constructor(
-        address rmAddress
+        address irmAdress
     )
         ERC721("UDAO Content", "UDAOC")
         EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION)
-        RoleController(rmAddress)
-    {isKycChecked=true;}
+        RoleController(irmAdress)
+    {}
 
     /// @notice Represents an un-minted NFT, which has not yet been recorded into the blockchain.
     /// A signed voucher can be redeemed for a real NFT using the redeem function.
@@ -45,48 +44,13 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
     // tokenId => is coaching service buyable
     mapping(uint => bool) coachingEnabled;
 
-    /// @notice For transfers with "transfer" function
-    struct TransferVoucher {
-        /// @notice The id of the token to be redeemed.
-        uint256 tokenId;
-        /// @notice Address of the current owner
-        address from;
-        /// @notice Address of the redeemer
-        address to;
-        /// @notice The date until the voucher is valid
-        uint256 validUntil;
-        /// @notice the EIP-712 signature of all other fields in the ContentVoucher struct.
-        bytes signature;
-    }
-
-    /// @notice For transfers with "safeTransferFrom" functions
-    struct TransferVoucherData {
-        /// @notice The id of the token to be redeemed.
-        uint256 tokenId;
-        /// @notice Address of the current owner
-        address from;
-        /// @notice Address of the redeemer
-        address to;
-        /// @notice Data variable in "safeTransferFrom"
-        bytes data;
-        /// @notice The date until the voucher is valid
-        uint256 validUntil;
-        /// @notice the EIP-712 signature of all other fields in the ContentVoucher struct.
-        bytes signature;
-    }
-
-    uint256 private constant _NOT_VOUCHER = 1;
-    uint256 private constant _VOUCHER = 2;
-
-    uint256 private _is_voucher;
-
-
     /// @notice Redeems a ContentVoucher for an actual NFT, creating it in the process.
     /// @param voucher A signed ContentVoucher that describes the NFT to be redeemed.
     function redeem(ContentVoucher calldata voucher) public whenNotPaused {
         // make sure redeemer is redeeming
         require(voucher.redeemer == msg.sender, "You are not the redeemer");
-
+        //make sure redeemer is kyced
+        require(IRM.isKYCed(msg.sender), "You are not KYCed");
         // make sure signature is valid and get the address of the signer
         address signer = _verifyRedeem(voucher);
         require(
@@ -94,9 +58,7 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
             "Signature invalid or unauthorized"
         );
         coachingEnabled[voucher.tokenId] = voucher.isCoachingEnabled;
-        _is_voucher = _VOUCHER;
         _mint(voucher.redeemer, voucher.tokenId);
-        _is_voucher = _NOT_VOUCHER;
         _setTokenURI(voucher.tokenId, voucher.uri);
     }
 
@@ -125,60 +87,6 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
         return coachingEnabled[tokenId];
     }
 
-
-    /// @notice Allows backend to either to force or not the KYC check before transfers 
-    function setIsKycChecked(bool _isKycChecked) external onlyRole(FOUNDATION_ROLE){
-        isKycChecked = _isKycChecked;
-    }
-
-    /// @notice ERC721 transferFrom with a voucher
-    function voucherTransferFrom(TransferVoucher calldata voucher) public whenNotPaused {
-        address signer = _verifyTransfer(voucher);
-        require(
-                voucher.validUntil >= block.timestamp,
-                "Voucher has expired."
-            );
-        require(
-            IRM.hasRole(BACKEND_ROLE, signer),
-            "Signature invalid or unauthorized"
-        );
-        _is_voucher = _VOUCHER;
-        transferFrom(voucher.from,voucher.to, voucher.tokenId);
-        _is_voucher = _NOT_VOUCHER;
-    }
-
-    /// @notice ERC721 safeTransferFrom with a voucher
-    function voucherSafeTransferFrom(TransferVoucher calldata voucher) public whenNotPaused {
-        address signer = _verifyTransfer(voucher);
-        require(
-                voucher.validUntil >= block.timestamp,
-                "Voucher has expired."
-            );
-        require(
-            IRM.hasRole(BACKEND_ROLE, signer),
-            "Signature invalid or unauthorized"
-        );
-        _is_voucher = _VOUCHER;
-        safeTransferFrom(voucher.from,voucher.to, voucher.tokenId);
-        _is_voucher = _NOT_VOUCHER;
-    }
-
-    /// @notice ERC721 safeTransferFrom with data variable with a voucher
-    function voucherSafeTransferFrom(TransferVoucherData calldata voucher) public whenNotPaused {
-        address signer = _verifyTransferData(voucher);
-        require(
-                voucher.validUntil >= block.timestamp,
-                "Voucher has expired."
-            );
-        require(
-            IRM.hasRole(BACKEND_ROLE, signer),
-            "Signature invalid or unauthorized"
-        );
-        _is_voucher = _VOUCHER;
-        safeTransferFrom(voucher.from,voucher.to, voucher.tokenId, voucher.data);
-        _is_voucher = _NOT_VOUCHER;
-    }
-
     /// @notice Returns a hash of the given ContentVoucher, prepared using EIP712 typed data hashing rules.
     /// @param voucher A ContentVoucher to hash.
     function _hashRedeem(
@@ -197,49 +105,6 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
                         voucher.isCoachingEnabled,
                         keccak256(bytes(voucher.name)),
                         keccak256(bytes(voucher.description))
-                    )
-                )
-            );
-    }
-
-    /// @notice Returns a hash of the given TransferVoucher, prepared using EIP712 typed data hashing rules.
-    /// @param voucher A TransferVoucher to hash.
-    function _hashTransfer(
-        TransferVoucher calldata voucher
-    ) internal view returns (bytes32) {
-        return
-            _hashTypedDataV4(
-                keccak256(
-                    abi.encode(
-                        keccak256(
-                            "TransferVoucher(uint256 tokenId,address from,address to,uint256 validUntil)"
-                        ),
-                        voucher.tokenId,
-                        voucher.from,
-                        voucher.to,
-                        voucher.validUntil
-                    )
-                )
-            );
-    }
-
-    /// @notice Returns a hash of the given TransferVoucherData, prepared using EIP712 typed data hashing rules.
-    /// @param voucher A TransferVoucherData to hash.
-    function _hashTransferData(
-        TransferVoucherData calldata voucher
-    ) internal view returns (bytes32) {
-        return
-            _hashTypedDataV4(
-                keccak256(
-                    abi.encode(
-                        keccak256(
-                            "TransferVoucherData(uint256 tokenId,address from,address to,bytes data,uint256 validUntil)"
-                        ),
-                        voucher.tokenId,
-                        voucher.from,
-                        voucher.to,
-                        voucher.data,
-                        voucher.validUntil
                     )
                 )
             );
@@ -266,26 +131,6 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
         return ECDSA.recover(digest, voucher.signature);
     }
 
-     /// @notice Verifies the signature for a given transferVoucher, returning the address of the signer.
-    /// @dev Will revert if the signature is invalid. Does not verify that the signer is authorized to mint NFTs.
-    /// @param voucher A transferVoucher describing an unminted NFT.
-    function _verifyTransfer(
-        TransferVoucher calldata voucher
-    ) internal view returns (address) {
-        bytes32 digest = _hashTransfer(voucher);
-        return ECDSA.recover(digest, voucher.signature);
-    }
-
-    /// @notice Verifies the signature for a given transferVoucherData, returning the address of the signer.
-    /// @dev Will revert if the signature is invalid. Does not verify that the signer is authorized to mint NFTs.
-    /// @param voucher A transferVoucherData describing an unminted NFT.
-    function _verifyTransferData(
-        TransferVoucherData calldata voucher
-    ) internal view returns (address) {
-        bytes32 digest = _hashTransferData(voucher);
-        return ECDSA.recover(digest, voucher.signature);
-    }
-
     /// @notice A content can be completely removed by the owner
     /// @param tokenId The token ID of a content
     function burn(uint256 tokenId) external whenNotPaused {
@@ -293,9 +138,7 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
             ownerOf(tokenId) == msg.sender,
             "You are not the owner of token"
         );
-        _is_voucher = _VOUCHER;
         _burn(tokenId);
-        _is_voucher = _NOT_VOUCHER;
     }
 
     function _burn(
@@ -309,12 +152,15 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
         address to,
         uint256 tokenId
     ) internal virtual override {
-        super._beforeTokenTransfer(from, to, tokenId);
-        if(isKycChecked) { /// @notice if KYC check is active with vouchers
-            require(_is_voucher == _VOUCHER, "Non voucher transfers are not allowed");
-            require(IRM.isBanned(from)==false, "Sender is banned");
-            require(IRM.isBanned(to)==false, "Receiver is banned");
-        } 
+       super._beforeTokenTransfer(from, to, tokenId);
+        if (to != address(0)) {
+            require(IRM.isKYCed(to), "Receiver is not KYCed!");
+            require(!IRM.isBanned(to), "Receiver is banned!");
+        }
+        if (from != address(0)) {
+            require(IRM.isKYCed(from), "Sender is not KYCed!");
+            require(!IRM.isBanned(from), "Sender is banned!");
+        }
     }
 
     

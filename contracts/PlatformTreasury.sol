@@ -3,7 +3,6 @@ pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
-import "./RoleController.sol";
 import "./ContentManager.sol";
 
 contract PlatformTreasury is Pausable, ContentManager {
@@ -38,7 +37,7 @@ contract PlatformTreasury is Pausable, ContentManager {
     {}
 
     /// @notice withdraws governance balance to governance treasury
-    function withdrawGovernance() external onlyRole(GOVERNANCE_ROLE) {
+    function withdrawGovernance() external whenNotPaused onlyRole(GOVERNANCE_ROLE) {
         uint withdrawableBalance = governanceBalance;
         governanceBalance = 0;  /// @dev zeroing before the actual withdraw
         udao.transfer(governanceTreasury, withdrawableBalance);
@@ -46,7 +45,7 @@ contract PlatformTreasury is Pausable, ContentManager {
     }
 
     /// @notice withdraws foundation balance to foundation wallet
-    function withdrawFoundation() external onlyRole(FOUNDATION_ROLE) {
+    function withdrawFoundation() external whenNotPaused onlyRole(FOUNDATION_ROLE) {
         uint withdrawableBalance = foundationBalance;
         foundationBalance = 0;  /// @dev zeroing before the actual withdraw
         udao.transfer(foundationWallet, withdrawableBalance);
@@ -54,7 +53,7 @@ contract PlatformTreasury is Pausable, ContentManager {
     }
 
     /// @notice calculates validator earnings and withdraws calculated earning to validator's wallet
-    function withdrawValidator() external onlyRoles(validator_roles) {
+    function withdrawValidator() external whenNotPaused onlyRoles(validator_roles) {
         uint claimableRound = lastValidatorClaim[msg.sender];
         uint withdrawableBalance = 0;
         uint validatorScore = 0;
@@ -69,7 +68,7 @@ contract PlatformTreasury is Pausable, ContentManager {
     }
 
     /// @notice calculates juror earnings and withdraws calculated earning to juror's wallet
-    function withdrawJuror() external onlyRole(JUROR_ROLE) {
+    function withdrawJuror() external whenNotPaused onlyRole(JUROR_ROLE) {
         uint claimableRound = lastJurorClaim[msg.sender];
         uint withdrawableBalance = 0;
         uint jurorScore = 0;
@@ -83,7 +82,7 @@ contract PlatformTreasury is Pausable, ContentManager {
     }
 
     /// @notice Allows instructers to withdraw individually.
-    function withdrawInstructor() external {
+    function withdrawInstructor() whenNotPaused external {
         require(instructorBalance[msg.sender]>=instructorDebt[msg.sender], "Debt is larger than balance");
         uint debtAmount = 0;
         if(instructorDebt[msg.sender] > 0) {

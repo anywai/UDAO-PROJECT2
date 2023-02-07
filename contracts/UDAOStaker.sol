@@ -8,6 +8,8 @@ import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
 import "./RoleController.sol";
+import "./ContractManager.sol";
+
 
 interface IUDAOVP is IVotes, IERC20 {
     function mint(address to, uint256 amount) external;
@@ -19,6 +21,7 @@ contract UDAOStaker is RoleController, EIP712 {
 
     IERC20 public udao;
     IUDAOVP public udaovp;
+    ContractManager public contractManager;
     address public platformTreasuryAddress;
 
     uint256 public payablePerValidation = 1 ether;
@@ -159,20 +162,27 @@ contract UDAOStaker is RoleController, EIP712 {
     uint256 public totalVotingPower;
 
     /**
-     * @param udaovpAddress address of the UDAO-vp ERC20 token
-     * @param udaoAddress address of the UDAO ERC20 token
      * @param _platformTreasuryAddress address of the platform treasury contract
      * @param rmAddress address of the role manager contract
+     * @param _contractManager address of the contract manager 
      */
     constructor(
-        address udaovpAddress,
-        address udaoAddress,
         address _platformTreasuryAddress,
-        address rmAddress
+        address rmAddress,
+        address udaoVpAddress,
+        address _contractManager
     ) EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION) RoleController(rmAddress) {
-        udao = IERC20(udaoAddress);
-        udaovp = IUDAOVP(udaovpAddress);
+        contractManager = ContractManager(_contractManager);
+        udao = IERC20(contractManager.UdaoAddress());
+        udaovp = IUDAOVP(udaoVpAddress);
         platformTreasuryAddress = _platformTreasuryAddress;
+    }
+
+    /// @notice Get the updated addresses from contract manager
+    function updateAddresses() external onlyRole(BACKEND_ROLE){        
+        platformTreasuryAddress = contractManager.PlatformTreasuryAddress();
+        udao = IERC20(contractManager.UdaoAddress());
+        udaovp = IUDAOVP(contractManager.UdaoVpAddress());
     }
 
     /**
@@ -438,6 +448,8 @@ contract UDAOStaker is RoleController, EIP712 {
     function getApproved(RoleVoucher calldata voucher) external whenNotPaused {
         // make sure redeemer is redeeming
         require(voucher.redeemer == msg.sender, "You are not the redeemer");
+        //make sure redeemer is kyced
+        require(IRM.isKYCed(msg.sender), "You are not KYCed");
         // make sure signature is valid and get the address of the signer
         address signer = _verifyRole(voucher);
         require(voucher.validUntil >= block.timestamp, "Voucher has expired.");
@@ -525,7 +537,7 @@ contract UDAOStaker is RoleController, EIP712 {
      * @notice allows validators to withdraw their staked tokens
      * @param amount amount that will be withdrawn
      */
-    function withdrawValidatorStake(uint amount) public {
+    function withdrawValidatorStake(uint amount) public whenNotPaused{
         uint256 withdrawableBalance;
         uint256 validatorLockLength = validatorLock[msg.sender].length;
         ValidationApplication
@@ -624,7 +636,7 @@ contract UDAOStaker is RoleController, EIP712 {
      * @notice allows jurors to withdraw their staked tokens
      * @param amount amount of tokens that will be withdrawn
      */
-    function withdrawJurorStake(uint amount) public {
+    function withdrawJurorStake(uint amount) public whenNotPaused {
         uint256 withdrawableBalance;
         uint256 jurorLockLength = jurorLocks[msg.sender].length;
         JurorApplication storage jurorApplication = jurorApplications[
@@ -754,7 +766,7 @@ contract UDAOStaker is RoleController, EIP712 {
 
     /// @notice withdraw function for released UDAO tokens
     /// @param _amount amount of UDAO token that will be unstaked
-    function withdrawGovernanceStake(uint256 _amount) public {
+    function withdrawGovernanceStake(uint256 _amount) public whenNotPaused {
         require(_amount > 0, "Stake amount can't be 0");
         uint256 withdrawableBalance;
         uint256 vpBalance;
@@ -795,10 +807,10 @@ contract UDAOStaker is RoleController, EIP712 {
     }
 
     /**
-     * @notice add vote rewward to voters reward count
+     * @notice add vote reward to voters reward count
      * @param voter address of the voter
      */
-    function addVoteRewards(address voter) external onlyRole(GOVERNANCE_ROLE) {
+    function addVoteRewards(address voter) external whenNotPaused onlyRole(GOVERNANCE_ROLE) {
         uint256 votingPowerRatio = (udaovp.balanceOf(voter) * 10000) /
             totalVotingPower;
         rewardBalanceOf[voter] += votingPowerRatio * voteReward;
@@ -808,7 +820,7 @@ contract UDAOStaker is RoleController, EIP712 {
     /**
      * @notice withdraws reward earned from voting
      */
-    function withdrawRewards() external {
+    function withdrawRewards() external whenNotPaused {
         require(
             rewardBalanceOf[msg.sender] > 0,
             "You don't have any reward balance"
@@ -848,7 +860,7 @@ contract UDAOStaker is RoleController, EIP712 {
     /// before staking lock duration. 
     /// @param voucher voucher for corporate withdraw before deadline
     function unstakeForJobListing(CorporateWithdrawVoucher calldata voucher)
-        external
+        external whenNotPaused
         onlyRole(CORPORATE_ROLE) 
     {
         
@@ -884,7 +896,7 @@ contract UDAOStaker is RoleController, EIP712 {
     /// @notice Allows corporate accounts to unstake. Staker and unstaked amount returned with event.
     /// @param amount The unstaked amount.
     function unstakeForJobListing(uint256 amount)
-        external
+        external whenNotPaused
         onlyRole(CORPORATE_ROLE)
     {
         require(amount > 0, "Cannot unstake zero tokens");

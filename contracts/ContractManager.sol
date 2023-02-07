@@ -8,8 +8,13 @@ import "./RoleController.sol";
 pragma solidity ^0.8.0;
 
 contract ContractManager is RoleController {
+    /// @dev Below should be set after the deployment
+    address public StakingContractAddress; // staking contract
+    address public PlatformTreasuryAddress; // platform treasury contract
+    address public UdaoVpAddress; // udao vp contract
+    
+    /// @dev Below needs to be set during deployment
     address public IVMAddress; // validation interface address
-    //address public IStakingContractAddress; //staking interface address
     address public IJMAddress;  // juror interface manager
     address public UdaoAddress;  // udao token address
     address public UdaocAddress;  // content token address
@@ -20,21 +25,28 @@ contract ContractManager is RoleController {
     {
         // Set the initial addresses of contracts 
         IVMAddress = _vmAddress;
-        //IStakingContractAddress = _stakerAddress;
         IJMAddress = _jmAddress;
         UdaoAddress = _udaoAddress;
         UdaocAddress = _udaocAddress;
         IrmAddress = _irmAddress;
     }
 
+    function setPlatformTreasuryAddress(address _platformTreasuryAddress) external onlyRole(BACKEND_ROLE){
+        PlatformTreasuryAddress = _platformTreasuryAddress;
+    }
+
     function setAddressIVM(address _vmAddress) external onlyRole(BACKEND_ROLE){
         IVMAddress = _vmAddress;
     }
-    /*
-    function setAddressStaker(address _stakerAddress) external onlyRole(BACKEND_ROLE) {
-        IStakingContractAddress = _stakerAddress;
+    
+    function setAddressStaking(address _stakingAddress) external onlyRole(BACKEND_ROLE) {
+        StakingContractAddress = _stakingAddress;
     }
-    */
+
+    function setAddressUdaoVp(address _udaoVpAddress) external onlyRole(BACKEND_ROLE) {
+        UdaoVpAddress = _udaoVpAddress;
+    }
+    
      function setAddressIJMAddress(address _jmAddress) external onlyRole(BACKEND_ROLE) {
         IJMAddress = _jmAddress;
     }

@@ -3,6 +3,7 @@ pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
+import "./ContractManager.sol";
 import "./RoleController.sol";
 
 interface IStakingContract {
@@ -12,6 +13,8 @@ interface IStakingContract {
 contract JurorManager is RoleController, EIP712 {
     string private constant SIGNING_DOMAIN = "JurorSetter";
     string private constant SIGNATURE_VERSION = "1";
+
+    ContractManager public contractManager;
 
     event EndDispute(uint256 caseId, address[] jurors, uint256 totalJurorScore);
     event NextRound(uint256 newRoundId);
@@ -30,6 +33,10 @@ contract JurorManager is RoleController, EIP712 {
         address rmAddress
     ) EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION) RoleController(rmAddress) {}
 
+    /// @notice Get the updated addresses from contract manager
+    function updateAddresses() external onlyRole(BACKEND_ROLE){        
+        IRM = IRoleManager(contractManager.IrmAddress());
+    }
 
     struct CaseVoucher {
         /// @notice The off-chain id of the case
@@ -53,7 +60,7 @@ contract JurorManager is RoleController, EIP712 {
      */
     function endDispute(
         CaseVoucher calldata voucher
-    ) external onlyRole(JUROR_ROLE) {
+    ) external whenNotPaused onlyRole(JUROR_ROLE) {
         // make sure signature is valid and get the address of the signer
         address signer = _verify(voucher);
         require(
@@ -99,7 +106,7 @@ contract JurorManager is RoleController, EIP712 {
     }
 
     /// @notice Starts the new reward round
-    function nextRound() external onlyRole(TREASURY_CONTRACT) {
+    function nextRound() external whenNotPaused onlyRole(TREASURY_CONTRACT) {
         distributionRound++;
         emit NextRound(distributionRound);
     }
