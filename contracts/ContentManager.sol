@@ -34,8 +34,6 @@ abstract contract ContentManager is  BasePlatform {
         uint256 tokenId;
         /// @notice Purchased parts, whole content purchased if first index is 0
         uint256[] purchasedParts;
-        /// @notice The price to deduct from buyer
-        uint256 priceToPay;
         /// @notice Address of the redeemer
         address redeemer;
     }
@@ -86,85 +84,75 @@ abstract contract ContentManager is  BasePlatform {
     constructor()  {}
 
     /// @notice allows users to purchase a content
-    /// @param vouchers vouchers for the content purchase
-    function buyContent(ContentPurchaseVoucher[] calldata vouchers) external whenNotPaused {
+    /// @param voucher vouchers for the content purchase
+    function buyContent(ContentPurchaseVoucher calldata voucher) external whenNotPaused {
+        uint256 tokenId = voucher.tokenId;
+        uint256 partIdLength = voucher.purchasedParts.length;
+        uint256 priceToPay;
+
+        require(udaoc.exists(tokenId), "Content does not exist!");
         require(!IRM.isBanned(msg.sender), "You are banned");
+        require(IRM.isKYCed(msg.sender), "You are not KYCed");
+        address instructor = udaoc.ownerOf(tokenId);
+        require(IRM.isKYCed(instructor), "Instructor is not KYCed");
+        require(!IRM.isBanned(instructor), "Instructor is banned");
+        // TODO Uncomment below after fixing the validation
+        //require(IVM.isValidated(tokenId), "Content is not validated yet");
+        require(
+            isTokenBought[msg.sender][tokenId][0] == false,
+            "Full content is already bought"
+        );
+        require(
+            msg.sender == voucher.redeemer,
+            "You are not redeemer."
+        );
 
-        /// @dev If a user buys multiple contents, user receives multiple vouchers
-        uint256 voucherLength = vouchers.length;
-        for (uint256 i = 0; i < voucherLength; i++) {
-            _buyContent(vouchers[i]);
+        /// @dev Assign every purchased content part to user
+        for (uint256 j; j < partIdLength; j++) {
+            require(
+                voucher.purchasedParts[j] < udaoc.getPartNumberOfContent(tokenId),
+                 "Part does not exist!"
+             );
+            _updateOwned(tokenId, voucher.purchasedParts[j]);
+            priceToPay += udaoc.getPriceContent(tokenId, voucher.purchasedParts[j]);
         }
-    }
 
-    /**
-     * @notice internal function that executes required functions to buy content
-     * @param voucher a single voucher to buy content
-     */
-    function _buyContent(ContentPurchaseVoucher calldata voucher) internal {
-            uint256 tokenId = voucher.tokenId;
-            uint256 priceToPay = voucher.priceToPay;
+        /// @dev Calculate and assing the cuts
+        uint256 foundationCalc = (priceToPay * contentFoundationCut) /
+            100000;
+        uint256 governanceCalc = (priceToPay * contentGovernancenCut) /
+            100000;
+        uint256 validatorCalc = (priceToPay * validatorBalance) / 100000;
+        uint256 jurorCalc = (priceToPay * contentJurorCut) / 100000;
 
+        foundationBalance += foundationCalc;
+        governanceBalance += governanceCalc;
+        validatorBalanceForRound += validatorCalc;
+        jurorBalanceForRound += jurorCalc;
 
-            require(
-                msg.sender == voucher.redeemer,
-                "You are not redeemer."
-            );
+        instructorBalance[instructor] +=
+            priceToPay -
+            (foundationCalc) -
+            (governanceCalc) -
+            (validatorCalc) -
+            (jurorCalc);
+        
+        /// @dev transfer the tokens from buyer to contract
+        /// FIXME Abi adamın gönderdiği tokenlar burada toplanıyor.
+        /// ama burada withdraw yok? address(this) ==? content manager değil mi?
+        udao.transferFrom(
+            msg.sender,
+            address(this),
+            priceToPay
+        );
 
-            require(udaoc.exists(tokenId), "Content does not exist!");
-            address instructor = udaoc.ownerOf(tokenId);
-            require(!IRM.isBanned(instructor), "Instructor is banned");
-            require(
-                IVM.getIsValidated(tokenId),
-                "Content is not validated yet"
-            );
-            require(
-                isTokenBought[msg.sender][tokenId][0] == false,
-                "Full content is already bought"
-            );
-
-            uint256 partIdLength = voucher.purchasedParts.length;
-
-            /// @dev Assign every purchased content part to user
-            for (uint256 j; j < partIdLength; j++) {
-                _updateOwned(tokenId, voucher.purchasedParts[j]);
-            }
-
-            /// @dev Calculate and assing the cuts
-            uint256 foundationCalc = (priceToPay * contentFoundationCut) /
-                100000;
-            uint256 governanceCalc = (priceToPay * contentGovernancenCut) /
-                100000;
-            uint256 validatorCalc = (priceToPay * validatorBalance) / 100000;
-            uint256 jurorCalc = (priceToPay * contentJurorCut) / 100000;
-
-            foundationBalance += foundationCalc;
-            governanceBalance += governanceCalc;
-            validatorBalanceForRound += validatorCalc;
-            jurorBalanceForRound += jurorCalc;
-
-            instructorBalance[instructor] +=
-                priceToPay -
-                (foundationCalc) -
-                (governanceCalc) -
-                (validatorCalc) -
-                (jurorCalc);
-            
-            /// @dev transfer the tokens from buyer to contract
-            /// FIXME Abi adamın gönderdiği tokenlar burada toplanıyor.
-            /// ama burada withdraw yok? address(this) ==? content manager değil mi?
-            udao.transferFrom(
-                msg.sender,
-                address(this),
-                voucher.priceToPay
-            );
-
-            emit ContentBought(
-                voucher.tokenId,
-                voucher.purchasedParts,
-                voucher.priceToPay,
-                msg.sender
-            );
+        emit ContentBought(
+            voucher.tokenId,
+            voucher.purchasedParts,
+            priceToPay,
+            msg.sender
+        );
+        
     }
 
     /** 

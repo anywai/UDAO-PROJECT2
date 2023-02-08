@@ -17,11 +17,18 @@ contract UDAOContent is ERC721, ERC721URIStorage, RoleController {
         RoleController(irmAdress)
     {}
 
+    // tokenId => price
+    mapping(uint => mapping(uint => uint)) contentPrice;
+     // tokenId => number of Parts
+     mapping(uint => uint) private partNumberOfContent;
+
     /// @notice Represents an un-minted NFT, which has not yet been recorded into the blockchain.
     /// A signed voucher can be redeemed for a real NFT using the redeem function.
     struct ContentVoucher {
         /// @notice The id of the token to be redeemed.
         uint256 tokenId;
+        /// @notice The price of the content, first price is the full price
+        uint256[] contentPrice;
         /// @notice The metadata URI to associate with this token.
         string uri;
         /// @notice Address of the redeemer
@@ -47,6 +54,12 @@ contract UDAOContent is ERC721, ERC721URIStorage, RoleController {
         coachingEnabled[voucher.tokenId] = voucher.isCoachingEnabled;
         _mint(voucher.redeemer, voucher.tokenId);
         _setTokenURI(voucher.tokenId, voucher.uri);
+        // save the content price
+        uint partLength = voucher.contentPrice.length;
+        partNumberOfContent[voucher.tokenId] = partLength;
+        for (uint i = 0; i < partLength; i++) {
+            contentPrice[voucher.tokenId][i] = voucher.contentPrice[i];
+        }
     }
 
     /// @notice Allows instructers' to enable coaching for a specific content
@@ -74,16 +87,56 @@ contract UDAOContent is ERC721, ERC721URIStorage, RoleController {
         return coachingEnabled[tokenId];
     }
 
-    /// @notice Returns the chain id of the current blockchain.
-    /// @dev This is used to workaround an issue with ganache returning different values from the on-chain chainid() function and
-    ///  the eth_chainId RPC method. See https://github.com/protocol/nft-website/issues/121 for context.
-    function getChainID() external view returns (uint256) {
-        uint256 id;
-        assembly {
-            id := chainid()
-        }
-        return id;
+    /// @notice returns the price of a specific content
+    /// @param tokenId the content ID of the token
+    /// @param partId the part ID of the token (microlearning)
+    function getPriceContent(uint tokenId, uint partId)
+        external
+        view
+        returns (uint)
+    {
+        return contentPrice[tokenId][partId];
     }
+
+    /// @notice allows content owners to set content price
+    /// @param tokenId the content ID of the token
+    /// @param _contentPrice the price to set
+    function setPriceContent(uint tokenId, uint _contentPrice) external {
+        require(ownerOf(tokenId) == msg.sender, "You are not the owner");
+        contentPrice[tokenId][0] = _contentPrice;
+    }
+
+    /// @notice allows content owners to set price for a part in a content (microlearning)
+    /// @param tokenId the content ID of the token
+    /// @param _contentPrice the price to set
+    function setPartialContent(
+        uint tokenId,
+        uint partId,
+        uint _contentPrice
+    ) external {
+        require(ownerOf(tokenId) == msg.sender, "You are not the owner");
+        contentPrice[tokenId][partId] = _contentPrice;
+    }
+
+    /// @notice allows content owners to set price for multiple parts in a content (microlearning)
+    /// @param tokenId the content ID of the token
+    /// @param _contentPrice the price to set
+    function setBatchPartialContent(
+        uint tokenId,
+        uint[] calldata partId,
+        uint[] calldata _contentPrice
+    ) external {
+        require(ownerOf(tokenId) == msg.sender, "You are not the owner");
+        uint partLength = partId.length;
+        for (uint i = 0; i < partLength; i++) {
+            contentPrice[tokenId][partId[i]] = _contentPrice[i];
+        }
+    }
+
+    /// @notice Returns the part numbers that a content has
+    function getPartNumberOfContent(uint tokenId) external view returns (uint) {
+         return partNumberOfContent[tokenId];
+     }
 
     /// @notice A content can be completely removed by the owner
     /// @param tokenId The token ID of a content
