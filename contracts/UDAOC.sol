@@ -51,6 +51,8 @@ contract UDAOContent is ERC721, ERC721URIStorage, RoleController {
         require(voucher.redeemer == msg.sender, "You are not the redeemer");
         //make sure redeemer is kyced
         require(IRM.isKYCed(msg.sender), "You are not KYCed");
+        //make sure redeemer is not banned
+        require(!IRM.isBanned(msg.sender), "Redeemer is banned!");
         coachingEnabled[voucher.tokenId] = voucher.isCoachingEnabled;
         _mint(voucher.redeemer, voucher.tokenId);
         _setTokenURI(voucher.tokenId, voucher.uri);
@@ -77,6 +79,11 @@ contract UDAOContent is ERC721, ERC721URIStorage, RoleController {
             ownerOf(tokenId) == msg.sender,
             "You are not the owner of token"
         );
+        //make sure caller is kyced
+        require(IRM.isKYCed(msg.sender), "You are not KYCed");
+        //make sure caller is not banned
+        require(!IRM.isBanned(msg.sender), "You were banned!");
+
         coachingEnabled[tokenId] = true;
     }
 
@@ -87,6 +94,10 @@ contract UDAOContent is ERC721, ERC721URIStorage, RoleController {
             ownerOf(tokenId) == msg.sender,
             "You are not the owner of token"
         );
+        //make sure caller is kyced
+        require(IRM.isKYCed(msg.sender), "You are not KYCed");
+        //make sure caller is not banned
+        require(!IRM.isBanned(msg.sender), "You were banned!");
         coachingEnabled[tokenId] = false;
     }
 
@@ -111,6 +122,11 @@ contract UDAOContent is ERC721, ERC721URIStorage, RoleController {
     /// @param _contentPrice the price to set
     function setFullPriceContent(uint tokenId, uint _contentPrice) external {
         require(ownerOf(tokenId) == msg.sender, "You are not the owner");
+        //make sure caller is kyced
+        require(IRM.isKYCed(msg.sender), "You are not KYCed");
+        //make sure caller is not banned
+        require(!IRM.isBanned(msg.sender), "You were banned!");
+
         contentPrice[tokenId][0] = _contentPrice;
     }
 
@@ -128,6 +144,10 @@ contract UDAOContent is ERC721, ERC721URIStorage, RoleController {
                     partId < _getPartNumberOfContent(tokenId),
                     "Part does not exist!"
                 );
+        //make sure caller is kyced
+        require(IRM.isKYCed(msg.sender), "You are not KYCed");
+        //make sure caller is not banned
+        require(!IRM.isBanned(msg.sender), "You were banned!");
         contentPrice[tokenId][partId] = _contentPrice;
     }
 
@@ -140,7 +160,10 @@ contract UDAOContent is ERC721, ERC721URIStorage, RoleController {
         uint[] calldata _contentPrice
     ) external {
         require(ownerOf(tokenId) == msg.sender, "You are not the owner");
-
+        //make sure caller is kyced
+        require(IRM.isKYCed(msg.sender), "You are not KYCed");
+        //make sure caller is not banned
+        require(!IRM.isBanned(msg.sender), "You were banned!");
         uint partLength = partId.length;
         for (uint i = 0; i < partLength; i++) {
             require(
@@ -161,7 +184,10 @@ contract UDAOContent is ERC721, ERC721URIStorage, RoleController {
         uint[] calldata _contentPrice
     ) external {
         require(ownerOf(tokenId) == msg.sender, "You are not the owner");
-
+        //make sure caller is kyced
+        require(IRM.isKYCed(msg.sender), "You are not KYCed");
+        //make sure caller is not banned
+        require(!IRM.isBanned(msg.sender), "You were banned!");
         uint partLength = partId.length;
         require(partId[0] == 0, "First index of partId should be zero to set the full content price. Use setBatchPartialContent if you don't want to set the full content price");
         for (uint i = 0; i < partLength; i++) {
@@ -190,6 +216,10 @@ contract UDAOContent is ERC721, ERC721URIStorage, RoleController {
             ownerOf(tokenId) == msg.sender,
             "You are not the owner of token"
         );
+        //make sure caller is kyced
+        require(IRM.isKYCed(msg.sender), "You are not KYCed");
+        //make sure caller is not banned
+        require(!IRM.isBanned(msg.sender), "You were banned!");
         _burn(tokenId);
     }
 
