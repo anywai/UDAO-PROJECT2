@@ -17,7 +17,7 @@ contract UDAOContent is ERC721, ERC721URIStorage, RoleController {
         RoleController(irmAdress)
     {}
 
-    // tokenId => price
+    // tokenId => (partId => price), first part is the full price
     mapping(uint => mapping(uint => uint)) contentPrice;
      // tokenId => number of Parts
      mapping(uint => uint) private partNumberOfContent;
@@ -57,9 +57,17 @@ contract UDAOContent is ERC721, ERC721URIStorage, RoleController {
         // save the content price
         uint partLength = voucher.contentPrice.length;
         partNumberOfContent[voucher.tokenId] = partLength;
-        for (uint i = 0; i < partLength; i++) {
-            contentPrice[voucher.tokenId][i] = voucher.contentPrice[i];
+        /// @dev If microlearning enabled for a content
+        if(partLength > 1){
+            /// @dev First index is the full price for the content
+            uint priceLength = partLength + 1;
+            for (uint i = 0; i < priceLength; i++) {
+                contentPrice[voucher.tokenId][i] = voucher.contentPrice[i];
+            }
+        }else{ /// @dev If microlearning not enabled, only full content price
+            contentPrice[voucher.tokenId][0] = voucher.contentPrice[0];
         }
+        
     }
 
     /// @notice Allows instructers' to enable coaching for a specific content
@@ -89,7 +97,7 @@ contract UDAOContent is ERC721, ERC721URIStorage, RoleController {
 
     /// @notice returns the price of a specific content
     /// @param tokenId the content ID of the token
-    /// @param partId the part ID of the token (microlearning)
+    /// @param partId the part ID of the token (microlearning), full content price if 0
     function getPriceContent(uint tokenId, uint partId)
         external
         view
@@ -98,10 +106,10 @@ contract UDAOContent is ERC721, ERC721URIStorage, RoleController {
         return contentPrice[tokenId][partId];
     }
 
-    /// @notice allows content owners to set content price
+    /// @notice allows content owners to set full content price
     /// @param tokenId the content ID of the token
     /// @param _contentPrice the price to set
-    function setPriceContent(uint tokenId, uint _contentPrice) external {
+    function setFullPriceContent(uint tokenId, uint _contentPrice) external {
         require(ownerOf(tokenId) == msg.sender, "You are not the owner");
         contentPrice[tokenId][0] = _contentPrice;
     }
@@ -115,6 +123,11 @@ contract UDAOContent is ERC721, ERC721URIStorage, RoleController {
         uint _contentPrice
     ) external {
         require(ownerOf(tokenId) == msg.sender, "You are not the owner");
+        require(partId != 0, "Full content price is set with setFullPriceContent");
+        require(
+                    partId < _getPartNumberOfContent(tokenId),
+                    "Part does not exist!"
+                );
         contentPrice[tokenId][partId] = _contentPrice;
     }
 
@@ -127,11 +140,43 @@ contract UDAOContent is ERC721, ERC721URIStorage, RoleController {
         uint[] calldata _contentPrice
     ) external {
         require(ownerOf(tokenId) == msg.sender, "You are not the owner");
+
         uint partLength = partId.length;
         for (uint i = 0; i < partLength; i++) {
+            require(
+                    partId[i] < _getPartNumberOfContent(tokenId),
+                    "Part does not exist!"
+            );
+            require(partId[i] != 0, "Full content price is set with setBatchFullContent");
             contentPrice[tokenId][partId[i]] = _contentPrice[i];
         }
     }
+
+    /// @notice allows content owners to set price for full content and multiple parts in a content 
+    /// @param tokenId the content ID of the token
+    /// @param _contentPrice the price to set, first price is for full content price
+    function setBatchFullContent(
+        uint tokenId,
+        uint[] calldata partId,
+        uint[] calldata _contentPrice
+    ) external {
+        require(ownerOf(tokenId) == msg.sender, "You are not the owner");
+
+        uint partLength = partId.length;
+        require(partId[0] == 0, "First index of partId should be zero to set the full content price. Use setBatchPartialContent if you don't want to set the full content price");
+        for (uint i = 0; i < partLength; i++) {
+            require(
+                    partId[i] < _getPartNumberOfContent(tokenId),
+                    "Part does not exist!"
+            );
+            contentPrice[tokenId][partId[i]] = _contentPrice[i];
+        }
+    }
+
+    /// @notice Returns the part numbers that a content has
+    function _getPartNumberOfContent(uint tokenId) internal view returns (uint) {
+         return partNumberOfContent[tokenId];
+     }
 
     /// @notice Returns the part numbers that a content has
     function getPartNumberOfContent(uint tokenId) external view returns (uint) {

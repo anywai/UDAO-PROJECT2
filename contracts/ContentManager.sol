@@ -32,7 +32,9 @@ abstract contract ContentManager is  BasePlatform {
     struct ContentPurchaseVoucher {
         /// @notice The id of the token (content) to be redeemed.
         uint256 tokenId;
-        /// @notice Purchased parts, whole content purchased if first index is 0
+        /// @notice True, if full content is purchased
+        bool fullContentPurchase;
+        /// @notice Purchased parts
         uint256[] purchasedParts;
         /// @notice Address of the redeemer
         address redeemer;
@@ -107,15 +109,22 @@ abstract contract ContentManager is  BasePlatform {
             "You are not redeemer."
         );
 
-        /// @dev Assign every purchased content part to user
-        for (uint256 j; j < partIdLength; j++) {
-            require(
-                voucher.purchasedParts[j] < udaoc.getPartNumberOfContent(tokenId),
-                 "Part does not exist!"
-             );
-            _updateOwned(tokenId, voucher.purchasedParts[j]);
-            priceToPay += udaoc.getPriceContent(tokenId, voucher.purchasedParts[j]);
+        /// @dev Get the total payment amount first
+        if(voucher.fullContentPurchase){
+            priceToPay += udaoc.getPriceContent(tokenId, voucher.purchasedParts[0]);
+        }else{
+            require(voucher.purchasedParts[0] != 0, "Purchased parts says 0, but fullContentPurchase is false!");
+            for (uint256 j; j < partIdLength; j++) {
+                require(
+                    voucher.purchasedParts[j] < udaoc.getPartNumberOfContent(tokenId),
+                    "Part does not exist!"
+                );
+                priceToPay += udaoc.getPriceContent(tokenId, voucher.purchasedParts[j]);
+            }
         }
+        
+
+        
 
         /// @dev Calculate and assing the cuts
         uint256 foundationCalc = (priceToPay * contentFoundationCut) /
@@ -146,6 +155,20 @@ abstract contract ContentManager is  BasePlatform {
             priceToPay
         );
 
+         /// @dev Get the total payment amount first
+        if(voucher.fullContentPurchase){
+            _updateOwned(tokenId, voucher.purchasedParts[0]);
+        }else{
+            require(voucher.purchasedParts[0] != 0, "Purchased parts says 0, but fullContentPurchase is false!");
+            for (uint256 j; j < partIdLength; j++) {
+                require(
+                    voucher.purchasedParts[j] < udaoc.getPartNumberOfContent(tokenId),
+                    "Part does not exist!"
+                );
+            _updateOwned(tokenId, voucher.purchasedParts[j]);
+            }
+        }
+
         emit ContentBought(
             voucher.tokenId,
             voucher.purchasedParts,
@@ -161,7 +184,7 @@ abstract contract ContentManager is  BasePlatform {
      * @param purchasedPart purchased part of the content (all of the content if 0)
      */
     function _updateOwned(uint tokenId, uint purchasedPart) internal {
-                  require(
+                require(
                     isTokenBought[msg.sender][tokenId][
                         purchasedPart
                     ] == false,
