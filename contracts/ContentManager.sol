@@ -2,9 +2,13 @@
 /// @title Content purchasing and cut management
 pragma solidity ^0.8.4;
 import "./BasePlatform.sol";
+import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
 
+abstract contract ContentManager is  EIP712, BasePlatform {
 
-abstract contract ContentManager is  BasePlatform {
+    string private constant SIGNING_DOMAIN = "ContentManager";
+    string private constant SIGNATURE_VERSION = "1";
 
     /// @notice  triggered if coaching service payment to the instructor is forced 
     event ForcedPayment(uint256 _coachingId, address forcedBy);
@@ -38,6 +42,24 @@ abstract contract ContentManager is  BasePlatform {
         uint256[] purchasedParts;
         /// @notice Address of the redeemer
         address redeemer;
+    }
+
+    /// @notice Represents usage rights for a content (or part)
+    struct ContentDiscountVoucher {
+        /// @notice The id of the token (content) to be redeemed.
+        uint256 tokenId;
+        /// @notice True, if full content is purchased
+        bool fullContentPurchase;
+        /// @notice Purchased parts
+        uint256[] purchasedParts;
+        /// @notice Price to deduct
+        uint256 priceToPay;
+        /// @notice The date until the voucher is valid
+        uint256 validUntil;
+        /// @notice Address of the redeemer
+        address redeemer;
+         /// @notice the EIP-712 signature of all other fields in the ContentDiscountVoucher struct.
+        bytes signature;
     }
 
     /// @notice Represents usage rights for a coaching service
@@ -83,10 +105,10 @@ abstract contract ContentManager is  BasePlatform {
     mapping(uint256 => CoachingStruct) public coachingStructs;
     uint256 private coachingIndex;
 
-    constructor()  {}
+    constructor() EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION) {}
 
     /// @notice allows users to purchase a content
-    /// @param voucher vouchers for the content purchase
+    /// @param voucher voucher for the content purchase
     function buyContent(ContentPurchaseVoucher calldata voucher) external whenNotPaused {
         uint256 tokenId = voucher.tokenId;
         uint256 partIdLength = voucher.purchasedParts.length;
@@ -122,11 +144,99 @@ abstract contract ContentManager is  BasePlatform {
                 priceToPay += udaoc.getPriceContent(tokenId, voucher.purchasedParts[j]);
             }
         }
-        
-
-        
 
         /// @dev Calculate and assing the cuts
+        uint256 foundationCalc = (priceToPay * contentFoundationCut) /
+            100000;
+        uint256 governanceCalc = (priceToPay * contentGovernancenCut) /
+            100000;
+        uint256 validatorCalc = (priceToPay * validatorBalance) / 100000;
+        uint256 jurorCalc = (priceToPay * contentJurorCut) / 100000;
+
+        foundationBalance += foundationCalc;
+        governanceBalance += governanceCalc;
+        validatorBalanceForRound += validatorCalc;
+        jurorBalanceForRound += jurorCalc;
+
+        instructorBalance[instructor] +=
+            priceToPay -
+            (foundationCalc) -
+            (governanceCalc) -
+            (validatorCalc) -
+            (jurorCalc);
+        
+        /// @dev transfer the tokens from buyer to contract
+        /// FIXME Abi adamın gönderdiği tokenlar burada toplanıyor.
+        /// ama burada withdraw yok? address(this) ==? content manager değil mi?
+        udao.transferFrom(
+            msg.sender,
+            address(this),
+            priceToPay
+        );
+
+         /// @dev Get the total payment amount first
+        if(voucher.fullContentPurchase){
+            _updateOwned(tokenId, voucher.purchasedParts[0]);
+        }else{
+            require(voucher.purchasedParts[0] != 0, "Purchased parts says 0, but fullContentPurchase is false!");
+            for (uint256 j; j < partIdLength; j++) {
+                require(
+                    voucher.purchasedParts[j] < udaoc.getPartNumberOfContent(tokenId),
+                    "Part does not exist!"
+                );
+            _updateOwned(tokenId, voucher.purchasedParts[j]);
+            }
+        }
+
+        emit ContentBought(
+            voucher.tokenId,
+            voucher.purchasedParts,
+            priceToPay,
+            msg.sender
+        );
+        
+    }
+
+    /// @notice allows users to purchase a content
+    /// @param voucher voucher for the content purchase
+    function buyDiscountedContent(ContentDiscountVoucher calldata voucher) external whenNotPaused {
+        // make sure signature is valid and get the address of the signer
+        address signer = _verify(voucher);
+        require(
+            IRM.hasRole(BACKEND_ROLE, signer),
+            "Signature invalid or unauthorized"
+        );
+        require(
+            voucher.validUntil >= block.timestamp,
+            "Voucher has expired."
+        );
+        require(
+                msg.sender == voucher.redeemer,
+                "You are not redeemer."
+        );
+        uint256 tokenId = voucher.tokenId;
+        uint256 partIdLength = voucher.purchasedParts.length;
+        
+
+        require(udaoc.exists(tokenId), "Content does not exist!");
+        require(!IRM.isBanned(msg.sender), "You are banned");
+        require(IRM.isKYCed(msg.sender), "You are not KYCed");
+        address instructor = udaoc.ownerOf(tokenId);
+        require(IRM.isKYCed(instructor), "Instructor is not KYCed");
+        require(!IRM.isBanned(instructor), "Instructor is banned");
+        // TODO Uncomment below after fixing the validation
+        //require(IVM.isValidated(tokenId), "Content is not validated yet");
+        require(
+            isTokenBought[msg.sender][tokenId][0] == false,
+            "Full content is already bought"
+        );
+        require(
+            msg.sender == voucher.redeemer,
+            "You are not redeemer."
+        );
+        
+        /// @dev Calculate and assing the cuts
+        uint256 priceToPay = voucher.priceToPay;
         uint256 foundationCalc = (priceToPay * contentFoundationCut) /
             100000;
         uint256 governanceCalc = (priceToPay * contentGovernancenCut) /
@@ -459,4 +569,40 @@ abstract contract ContentManager is  BasePlatform {
         return id;
     }
 
+    /// @notice Returns a hash of the given ContentDiscountVoucher, prepared using EIP712 typed data hashing rules.
+    /// @param voucher A ContentDiscountVoucher to hash.
+    function _hash(ContentDiscountVoucher calldata voucher)
+        internal
+        view
+        returns (bytes32)
+    {
+        return
+            _hashTypedDataV4(
+                keccak256(
+                    abi.encode(
+                        keccak256(
+                            "ContentDiscountVoucher(uint256 tokenId,bool fullContentPurchase,uint256[] purchasedParts,uint256 priceToPay,uint256 validUntil,address redeemer)"
+                        ),
+                        voucher.tokenId,
+                        voucher.fullContentPurchase,
+                        keccak256(abi.encodePacked(voucher.purchasedParts)),
+                        voucher.priceToPay,
+                        voucher.validUntil,
+                        voucher.redeemer
+                    )
+                )
+            );
+    }
+    /// @notice Verifies the signature for a given ContentDiscountVoucher, returning the address of the signer.
+    /// @dev Will revert if the signature is invalid.
+    /// @param voucher A ContentDiscountVoucher describing a content access rights.
+    function _verify(ContentDiscountVoucher calldata voucher)
+        internal
+        view
+        returns (address)
+    {
+        bytes32 digest = _hash(voucher);
+        return ECDSA.recover(digest, voucher.signature);
+    }
 }
+
