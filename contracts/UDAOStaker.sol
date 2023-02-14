@@ -259,10 +259,6 @@ contract UDAOStaker is RoleController, EIP712 {
         uint256 amount;
         /// @notice Amount of days UDAO token that will be staked for
         uint256 _days;
-        /// @notice The date until the voucher is valid
-        uint256 validUntil;
-        /// @notice the EIP-712 signature of all other fields in the CorporateWithdrawVoucher struct.
-        bytes signature;
     }
 
     /// @notice allows users to apply for validator role
@@ -751,7 +747,6 @@ contract UDAOStaker is RoleController, EIP712 {
     
     /// @notice staking function to become a governance member
     function stakeForGovernance(GovernanceStakeVoucher calldata voucher) public whenNotPaused {
-        require(voucher.validUntil >= block.timestamp, "Voucher has expired.");
         require(!IRM.isBanned(msg.sender), "Address is banned");
         udao.transferFrom(msg.sender, address(this), voucher.amount);
 
@@ -993,27 +988,6 @@ contract UDAOStaker is RoleController, EIP712 {
             );
     }
 
-    function _hashGovernance(GovernanceStakeVoucher calldata voucher)
-        internal
-        view
-        returns (bytes32)
-    {
-        return
-            _hashTypedDataV4(
-                keccak256(
-                    abi.encode(
-                        keccak256(
-                            "UDAOStaker(address staker,uint256 amount,uint256 _days,uint256 validUntil)"
-                        ),
-                        voucher.staker,
-                        voucher.amount,
-                        voucher._days,
-                        voucher.validUntil
-                    )
-                )
-            );
-    }
-
     /// @notice Returns the chain id of the current blockchain.
     /// @dev This is used to workaround an issue with ganache returning different values from the on-chain chainid() function and
     ///  the eth_chainId RPC method. See https://github.com/protocol/nft-website/issues/121 for context.
@@ -1061,15 +1035,5 @@ contract UDAOStaker is RoleController, EIP712 {
         return ECDSA.recover(digest, voucher.signature);
     }
 
-    /// @notice Verifies the signature for a given GovernanceStakeVoucher, returning the address of the signer.
-    /// @dev Will revert if the signature is invalid. Does not verify that the signer is authorized to mint NFTs.
-    /// @param voucher A GovernanceStakeVoucher describing an unminted NFT.
-    function _verifyGovernanceStake(GovernanceStakeVoucher calldata voucher)
-        internal
-        view
-        returns (address)
-    {
-        bytes32 digest = _hashGovernance(voucher);
-        return ECDSA.recover(digest, voucher.signature);
-    }
+  
 }
