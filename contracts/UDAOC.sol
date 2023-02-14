@@ -5,28 +5,30 @@ pragma solidity ^0.8.4;
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
-import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
 import "./RoleController.sol";
 
-contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
-    string private constant SIGNING_DOMAIN = "UDAOCMinter";
-    string private constant SIGNATURE_VERSION = "1";
+contract UDAOContent is ERC721, ERC721URIStorage, RoleController {
 
     /// @param irmAdress The address of the deployed role manager
     constructor(
         address irmAdress
     )
         ERC721("UDAO Content", "UDAOC")
-        EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION)
         RoleController(irmAdress)
     {}
+
+    // tokenId => (partId => price), first part is the full price
+    mapping(uint => mapping(uint => uint)) contentPrice;
+     // tokenId => number of Parts
+     mapping(uint => uint) private partNumberOfContent;
 
     /// @notice Represents an un-minted NFT, which has not yet been recorded into the blockchain.
     /// A signed voucher can be redeemed for a real NFT using the redeem function.
     struct ContentVoucher {
         /// @notice The id of the token to be redeemed.
         uint256 tokenId;
+        /// @notice The price of the content, first price is the full price
+        uint256[] contentPrice;
         /// @notice The metadata URI to associate with this token.
         string uri;
         /// @notice Address of the redeemer
@@ -37,8 +39,6 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
         string name;
         /// @notice The description of the NFT
         string description;
-        /// @notice the EIP-712 signature of all other fields in the ContentVoucher struct.
-        bytes signature;
     }
 
     // tokenId => is coaching service buyable
@@ -51,15 +51,25 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
         require(voucher.redeemer == msg.sender, "You are not the redeemer");
         //make sure redeemer is kyced
         require(IRM.isKYCed(msg.sender), "You are not KYCed");
-        // make sure signature is valid and get the address of the signer
-        address signer = _verifyRedeem(voucher);
-        require(
-            IRM.hasRole(BACKEND_ROLE, signer),
-            "Signature invalid or unauthorized"
-        );
+        //make sure redeemer is not banned
+        require(!IRM.isBanned(msg.sender), "Redeemer is banned!");
         coachingEnabled[voucher.tokenId] = voucher.isCoachingEnabled;
         _mint(voucher.redeemer, voucher.tokenId);
         _setTokenURI(voucher.tokenId, voucher.uri);
+        // save the content price
+        uint partLength = voucher.contentPrice.length;
+        partNumberOfContent[voucher.tokenId] = partLength;
+        /// @dev If microlearning enabled for a content
+        if(partLength > 1){
+            /// @dev First index is the full price for the content
+            uint priceLength = partLength + 1;
+            for (uint i = 0; i < priceLength; i++) {
+                contentPrice[voucher.tokenId][i] = voucher.contentPrice[i];
+            }
+        }else{ /// @dev If microlearning not enabled, only full content price
+            contentPrice[voucher.tokenId][0] = voucher.contentPrice[0];
+        }
+        
     }
 
     /// @notice Allows instructers' to enable coaching for a specific content
@@ -69,6 +79,11 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
             ownerOf(tokenId) == msg.sender,
             "You are not the owner of token"
         );
+        //make sure caller is kyced
+        require(IRM.isKYCed(msg.sender), "You are not KYCed");
+        //make sure caller is not banned
+        require(!IRM.isBanned(msg.sender), "You were banned!");
+
         coachingEnabled[tokenId] = true;
     }
 
@@ -79,6 +94,10 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
             ownerOf(tokenId) == msg.sender,
             "You are not the owner of token"
         );
+        //make sure caller is kyced
+        require(IRM.isKYCed(msg.sender), "You are not KYCed");
+        //make sure caller is not banned
+        require(!IRM.isBanned(msg.sender), "You were banned!");
         coachingEnabled[tokenId] = false;
     }
 
@@ -87,49 +106,108 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
         return coachingEnabled[tokenId];
     }
 
-    /// @notice Returns a hash of the given ContentVoucher, prepared using EIP712 typed data hashing rules.
-    /// @param voucher A ContentVoucher to hash.
-    function _hashRedeem(
-        ContentVoucher calldata voucher
-    ) internal view returns (bytes32) {
-        return
-            _hashTypedDataV4(
-                keccak256(
-                    abi.encode(
-                        keccak256(
-                            "ContentVoucher(uint256 tokenId,string uri,address redeemer,bool isCoachingEnabled,string name,string description)"
-                        ),
-                        voucher.tokenId,
-                        keccak256(bytes(voucher.uri)),
-                        voucher.redeemer,
-                        voucher.isCoachingEnabled,
-                        keccak256(bytes(voucher.name)),
-                        keccak256(bytes(voucher.description))
-                    )
-                )
+    /// @notice returns the price of a specific content
+    /// @param tokenId the content ID of the token
+    /// @param partId the part ID of the token (microlearning), full content price if 0
+    function getPriceContent(uint tokenId, uint partId)
+        external
+        view
+        returns (uint)
+    {
+        return contentPrice[tokenId][partId];
+    }
+
+    /// @notice allows content owners to set full content price
+    /// @param tokenId the content ID of the token
+    /// @param _contentPrice the price to set
+    function setFullPriceContent(uint tokenId, uint _contentPrice) external {
+        require(ownerOf(tokenId) == msg.sender, "You are not the owner");
+        //make sure caller is kyced
+        require(IRM.isKYCed(msg.sender), "You are not KYCed");
+        //make sure caller is not banned
+        require(!IRM.isBanned(msg.sender), "You were banned!");
+
+        contentPrice[tokenId][0] = _contentPrice;
+    }
+
+    /// @notice allows content owners to set price for a part in a content (microlearning)
+    /// @param tokenId the content ID of the token
+    /// @param _contentPrice the price to set
+    function setPartialContent(
+        uint tokenId,
+        uint partId,
+        uint _contentPrice
+    ) external {
+        require(ownerOf(tokenId) == msg.sender, "You are not the owner");
+        require(partId != 0, "Full content price is set with setFullPriceContent");
+        require(
+                    partId < _getPartNumberOfContent(tokenId),
+                    "Part does not exist!"
+                );
+        //make sure caller is kyced
+        require(IRM.isKYCed(msg.sender), "You are not KYCed");
+        //make sure caller is not banned
+        require(!IRM.isBanned(msg.sender), "You were banned!");
+        contentPrice[tokenId][partId] = _contentPrice;
+    }
+
+    /// @notice allows content owners to set price for multiple parts in a content (microlearning)
+    /// @param tokenId the content ID of the token
+    /// @param _contentPrice the price to set
+    function setBatchPartialContent(
+        uint tokenId,
+        uint[] calldata partId,
+        uint[] calldata _contentPrice
+    ) external {
+        require(ownerOf(tokenId) == msg.sender, "You are not the owner");
+        //make sure caller is kyced
+        require(IRM.isKYCed(msg.sender), "You are not KYCed");
+        //make sure caller is not banned
+        require(!IRM.isBanned(msg.sender), "You were banned!");
+        uint partLength = partId.length;
+        for (uint i = 0; i < partLength; i++) {
+            require(
+                    partId[i] < _getPartNumberOfContent(tokenId),
+                    "Part does not exist!"
             );
-    }
-
-    /// @notice Returns the chain id of the current blockchain.
-    /// @dev This is used to workaround an issue with ganache returning different values from the on-chain chainid() function and
-    ///  the eth_chainId RPC method. See https://github.com/protocol/nft-website/issues/121 for context.
-    function getChainID() external view returns (uint256) {
-        uint256 id;
-        assembly {
-            id := chainid()
+            require(partId[i] != 0, "Full content price is set with setBatchFullContent");
+            contentPrice[tokenId][partId[i]] = _contentPrice[i];
         }
-        return id;
     }
 
-    /// @notice Verifies the signature for a given ContentVoucher, returning the address of the signer.
-    /// @dev Will revert if the signature is invalid. Does not verify that the signer is authorized to mint NFTs.
-    /// @param voucher A ContentVoucher describing an unminted NFT.
-    function _verifyRedeem(
-        ContentVoucher calldata voucher
-    ) internal view returns (address) {
-        bytes32 digest = _hashRedeem(voucher);
-        return ECDSA.recover(digest, voucher.signature);
+    /// @notice allows content owners to set price for full content and multiple parts in a content 
+    /// @param tokenId the content ID of the token
+    /// @param _contentPrice the price to set, first price is for full content price
+    function setBatchFullContent(
+        uint tokenId,
+        uint[] calldata partId,
+        uint[] calldata _contentPrice
+    ) external {
+        require(ownerOf(tokenId) == msg.sender, "You are not the owner");
+        //make sure caller is kyced
+        require(IRM.isKYCed(msg.sender), "You are not KYCed");
+        //make sure caller is not banned
+        require(!IRM.isBanned(msg.sender), "You were banned!");
+        uint partLength = partId.length;
+        require(partId[0] == 0, "First index of partId should be zero to set the full content price. Use setBatchPartialContent if you don't want to set the full content price");
+        for (uint i = 0; i < partLength; i++) {
+            require(
+                    partId[i] < _getPartNumberOfContent(tokenId),
+                    "Part does not exist!"
+            );
+            contentPrice[tokenId][partId[i]] = _contentPrice[i];
+        }
     }
+
+    /// @notice Returns the part numbers that a content has
+    function _getPartNumberOfContent(uint tokenId) internal view returns (uint) {
+         return partNumberOfContent[tokenId];
+     }
+
+    /// @notice Returns the part numbers that a content has
+    function getPartNumberOfContent(uint tokenId) external view returns (uint) {
+         return partNumberOfContent[tokenId];
+     }
 
     /// @notice A content can be completely removed by the owner
     /// @param tokenId The token ID of a content
@@ -138,6 +216,10 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
             ownerOf(tokenId) == msg.sender,
             "You are not the owner of token"
         );
+        //make sure caller is kyced
+        require(IRM.isKYCed(msg.sender), "You are not KYCed");
+        //make sure caller is not banned
+        require(!IRM.isBanned(msg.sender), "You were banned!");
         _burn(tokenId);
     }
 
@@ -162,8 +244,6 @@ contract UDAOContent is ERC721, EIP712, ERC721URIStorage, RoleController {
             require(!IRM.isBanned(from), "Sender is banned!");
         }
     }
-
-    
 
     /// @notice Allows off-chain check if a token(content) exists
     function exists(uint tokenId) external view returns (bool) {
