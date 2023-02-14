@@ -224,19 +224,8 @@ describe("Validation Manageer Contract", function () {
     } = await deploy();
     await contractRoleManager.setKYC(contentCreator.address, true);
 
-    const tx_mint = await contractUDAOContent.getChainID();
-    const lazyMinter = new LazyMinter({
-      contract: contractUDAOContent,
-      signer: backend,
-    });
-    const udaoc_voucher = await lazyMinter.createVoucher(
-      1,
-      "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
-      contentCreator.address,
-      true,
-      "Content Name",
-      "Content Description"
-    );
+    const udaoc_voucher = [1, [ethers.utils.parseEther("1"),ethers.utils.parseEther("1")], "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi", contentCreator.address, true, "Content Name", "Content Description"]
+
     await expect(
       contractUDAOContent.connect(contentCreator).redeem(udaoc_voucher)
     )
@@ -244,10 +233,9 @@ describe("Validation Manageer Contract", function () {
       .withArgs(
         "0x0000000000000000000000000000000000000000",
         contentCreator.address,
-        udaoc_voucher.tokenId
+        udaoc_voucher[0]
       );
 
-    const tx = await contractValidationManager.getChainID();
     const lazyValidation = new LazyValidation({
       contract: contractValidationManager,
       signer: backend,
@@ -293,19 +281,8 @@ describe("Validation Manageer Contract", function () {
     } = await deploy();
     await contractRoleManager.setKYC(contentCreator.address, true);
 
-    const tx_mint = await contractUDAOContent.getChainID();
-    const lazyMinter = new LazyMinter({
-      contract: contractUDAOContent,
-      signer: backend,
-    });
-    const udaoc_voucher = await lazyMinter.createVoucher(
-      1,
-      "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
-      contentCreator.address,
-      true,
-      "Content Name",
-      "Content Description"
-    );
+    const udaoc_voucher = [1, [ethers.utils.parseEther("1"),ethers.utils.parseEther("1")], "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi", contentCreator.address, true, "Content Name", "Content Description"]
+
     await expect(
       contractUDAOContent.connect(contentCreator).redeem(udaoc_voucher)
     )
@@ -313,10 +290,9 @@ describe("Validation Manageer Contract", function () {
       .withArgs(
         "0x0000000000000000000000000000000000000000",
         contentCreator.address,
-        udaoc_voucher.tokenId
+        udaoc_voucher[0]
       );
 
-    const tx = await contractValidationManager.getChainID();
     const lazyValidation = new LazyValidation({
       contract: contractValidationManager,
       signer: backend,
@@ -366,19 +342,8 @@ describe("Validation Manageer Contract", function () {
     } = await deploy();
     await contractRoleManager.setKYC(contentCreator.address, true);
 
-    const tx_mint = await contractUDAOContent.getChainID();
-    const lazyMinter = new LazyMinter({
-      contract: contractUDAOContent,
-      signer: backend,
-    });
-    const udaoc_voucher = await lazyMinter.createVoucher(
-      1,
-      "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
-      contentCreator.address,
-      true,
-      "Content Name",
-      "Content Description"
-    );
+    const udaoc_voucher = [1, [ethers.utils.parseEther("1"),ethers.utils.parseEther("1")], "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi", contentCreator.address, true, "Content Name", "Content Description"]
+
     await expect(
       contractUDAOContent.connect(contentCreator).redeem(udaoc_voucher)
     )
@@ -386,10 +351,9 @@ describe("Validation Manageer Contract", function () {
       .withArgs(
         "0x0000000000000000000000000000000000000000",
         contentCreator.address,
-        udaoc_voucher.tokenId
+        udaoc_voucher[0]
       );
 
-    const tx = await contractValidationManager.getChainID();
     const lazyValidation = new LazyValidation({
       contract: contractValidationManager,
       signer: backend,

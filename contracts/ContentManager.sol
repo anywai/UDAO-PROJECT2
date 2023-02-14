@@ -133,7 +133,7 @@ abstract contract ContentManager is  EIP712, BasePlatform {
 
         /// @dev Get the total payment amount first
         if(voucher.fullContentPurchase){
-            priceToPay += udaoc.getPriceContent(tokenId, voucher.purchasedParts[0]);
+            priceToPay += udaoc.getPriceContent(tokenId, 0);
         }else{
             require(voucher.purchasedParts[0] != 0, "Purchased parts says 0, but fullContentPurchase is false!");
             for (uint256 j; j < partIdLength; j++) {
@@ -174,9 +174,8 @@ abstract contract ContentManager is  EIP712, BasePlatform {
             priceToPay
         );
 
-         /// @dev Get the total payment amount first
         if(voucher.fullContentPurchase){
-            _updateOwned(tokenId, voucher.purchasedParts[0]);
+            _updateOwned(tokenId, 0);
         }else{
             require(voucher.purchasedParts[0] != 0, "Purchased parts says 0, but fullContentPurchase is false!");
             for (uint256 j; j < partIdLength; j++) {
