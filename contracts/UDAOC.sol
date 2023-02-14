@@ -59,17 +59,11 @@ contract UDAOContent is ERC721, ERC721URIStorage, RoleController {
         // save the content price
         uint partLength = voucher.contentPrice.length;
         partNumberOfContent[voucher.tokenId] = partLength;
-        /// @dev If microlearning enabled for a content
-        if(partLength > 1){
-            /// @dev First index is the full price for the content
-            uint priceLength = partLength + 1;
-            for (uint i = 0; i < priceLength; i++) {
+
+        /// @dev First index is the full price for the content
+        for (uint i = 0; i < partLength; i++) {
                 contentPrice[voucher.tokenId][i] = voucher.contentPrice[i];
             }
-        }else{ /// @dev If microlearning not enabled, only full content price
-            contentPrice[voucher.tokenId][0] = voucher.contentPrice[0];
-        }
-        
     }
 
     /// @notice Allows instructers' to enable coaching for a specific content
