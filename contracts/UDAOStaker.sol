@@ -122,6 +122,7 @@ contract UDAOStaker is RoleController, EIP712 {
 
     uint256 public corporateStakePerListing = 500 ether; //setter getter, decider=adminler
     mapping(address => CorporateStakeLock[]) corporateLocks;
+    mapping(address => uint) corporateListingAmount;
 
     struct GovernanceLock {
         uint256 expire;
@@ -247,8 +248,6 @@ contract UDAOStaker is RoleController, EIP712 {
         address redeemer;
         /// @notice Amount of tokens they want to unstake
         uint256 amount;
-        /// @notice the EIP-712 signature of all other fields in the CorporateWithdrawVoucher struct.
-        bytes signature;
     }
 
     /// @notice Allows people to stake for governance (kyc)
@@ -846,7 +845,7 @@ contract UDAOStaker is RoleController, EIP712 {
         CorporateStakeLock storage stakeLock = corporateLocks[msg.sender].push();
         stakeLock.lockAmount = amount;
         stakeLock.expire = block.timestamp + corporateLockTime;
-
+        corporateListingAmount[msg.sender] += amount / corporateStakePerListing;
         udao.transferFrom(msg.sender, address(this), amount);
         emit StakeForJobListing(msg.sender, amount, corporateStakePerListing);
     }
@@ -862,11 +861,6 @@ contract UDAOStaker is RoleController, EIP712 {
         uint256 withdrawableBalance;
         uint256 corporateLockLength = corporateLocks[msg.sender].length;
 
-        address signer = _verifyCorporate(voucher);
-        require(
-            IRM.hasRole(BACKEND_ROLE, signer),
-            "Signature invalid or unauthorized"
-        );
 
         for (int256 j; uint256(j) < corporateLockLength; j++) {
             CorporateStakeLock storage lock = corporateLocks[msg.sender][
@@ -881,6 +875,7 @@ contract UDAOStaker is RoleController, EIP712 {
             j--;
             if(withdrawableBalance >= voucher.amount) {
                 _withdrawCorporate(msg.sender, withdrawableBalance);
+                corporateListingAmount[msg.sender] -= withdrawableBalance / corporateStakePerListing;
                 return;
             }
             
@@ -951,25 +946,6 @@ contract UDAOStaker is RoleController, EIP712 {
             );
     }
 
-    function _hashCorporate(CorporateWithdrawVoucher calldata voucher)
-        internal
-        view
-        returns (bytes32)
-    {
-        return
-            _hashTypedDataV4(
-                keccak256(
-                    abi.encode(
-                        keccak256(
-                            "UDAOStaker(address redeemer,uint256 amount)"
-                        ),
-                        voucher.redeemer,
-                        voucher.amount
-                    )
-                )
-            );
-    }
-
     function _hashValidation(RegisterValidationVoucher calldata voucher)
         internal
         view
@@ -1008,18 +984,6 @@ contract UDAOStaker is RoleController, EIP712 {
         returns (address)
     {
         bytes32 digest = _hashRole(voucher);
-        return ECDSA.recover(digest, voucher.signature);
-    }
-
-    /// @notice Verifies the signature for a given CorporateWithdrawVoucher, returning the address of the signer.
-    /// @dev Will revert if the signature is invalid. Does not verify that the signer is authorized to mint NFTs.
-    /// @param voucher A CorporateWithdrawVoucher describing an unminted NFT.
-    function _verifyCorporate(CorporateWithdrawVoucher calldata voucher)
-        internal
-        view
-        returns (address)
-    {
-        bytes32 digest = _hashCorporate(voucher);
         return ECDSA.recover(digest, voucher.signature);
     }
 
