@@ -49,8 +49,8 @@ contract UDAOStaker is RoleController, EIP712 {
     event ValidationRegistered(address _validator, uint256 _validationId);
     event CaseRegistered(address _juror, uint256 _caseId);
     event ValidatorStakeWithdrawn(address _validator, uint256 _amount);
-    event JobListingRegistered(address corporate);
-    event JobListingUnregistered(address corporate);
+    event JobListingRegistered(address corporate, uint amountPerListing);
+    event JobListingUnregistered(address corporate, uint listingId, uint amount);
 
     // @TODO Juror staking eklendiğinde kullanılacak
     event JurorStakeWithdrawn(address _juror, uint256 _amount);
@@ -71,8 +71,7 @@ contract UDAOStaker is RoleController, EIP712 {
 
     event StakeForJobListing(
         address corporateAddress,
-        uint256 amount,
-        uint256 stakePerListing
+        uint256 amount
     );
 
     event UnstakeForJobListing(address corporateAddress, uint256 amount);
@@ -92,10 +91,6 @@ contract UDAOStaker is RoleController, EIP712 {
         uint256 expireDate;
     }
     
-    struct CorporateStakeLock {
-        uint256 lockAmount;
-        uint256 expire;
-    }
 
     struct JurorStakeLock {
         uint256 maxCaseAmount;
@@ -123,8 +118,8 @@ contract UDAOStaker is RoleController, EIP712 {
     mapping(address => uint256) latestValidationLockId;
 
     uint256 public corporateStakePerListing = 500 ether; //setter getter, decider=adminler
-    mapping(address => CorporateStakeLock[]) corporateLocks;
-    mapping(address => uint) corporateListingAmount;
+    mapping(address => uint) corporateStakedUDAO;
+    mapping(address => uint) corporateLockedUDAO;
     mapping(address => uint) corporateActiveListingAmount;
 
     struct GovernanceLock {
@@ -834,109 +829,31 @@ contract UDAOStaker is RoleController, EIP712 {
         external
         onlyRole(CORPORATE_ROLE) whenNotPaused
     {
-        require(amount > 0, "Cannot unstake zero tokens");
-        require(
-            amount % corporateStakePerListing == 0,
-            string(
-                abi.encodePacked(
-                    "Sent UDAO must be multiples of ",
-                    Strings.toHexString(corporateStakePerListing),
-                    " UDAO"
-                )
-            )
-        );
-        CorporateStakeLock storage stakeLock = corporateLocks[msg.sender].push();
-        stakeLock.lockAmount = amount;
-        stakeLock.expire = block.timestamp + corporateLockTime;
-        corporateListingAmount[msg.sender] += amount / corporateStakePerListing;
-        udao.transferFrom(msg.sender, address(this), amount);
-        emit StakeForJobListing(msg.sender, amount, corporateStakePerListing);
+
+        emit StakeForJobListing(msg.sender, amount);
     }
 
-    /// @notice Allows corporate accounts to unstake if they've found employee for job listing 
-    /// before staking lock duration. 
-    /// @param voucher voucher for corporate withdraw before deadline
-    function unstakeForJobListing(CorporateWithdrawVoucher calldata voucher)
-        external whenNotPaused
-        onlyRole(CORPORATE_ROLE) 
-    {
-        
-        uint256 withdrawableBalance;
-        uint256 corporateLockLength = corporateLocks[msg.sender].length;
 
+    mapping(address => mapping(uint => uint)) corporateListingId;
+    mapping(address => uint) corporateLatestListingId;
 
-        for (int256 j; uint256(j) < corporateLockLength; j++) {
-            CorporateStakeLock storage lock = corporateLocks[msg.sender][
-                uint256(j)
-            ];
-            withdrawableBalance += lock.lockAmount;
-
-            corporateLocks[msg.sender][uint256(j)] = corporateLocks[
-                msg.sender
-            ][corporateLocks[msg.sender].length - 1];
-            corporateLocks[msg.sender].pop();
-            j--;
-            if(withdrawableBalance >= voucher.amount) {
-                _withdrawCorporate(msg.sender, withdrawableBalance);
-                corporateListingAmount[msg.sender] -= withdrawableBalance / corporateStakePerListing;
-                return;
-            }
-            
+    function registerJobListing(uint jobListingCount) external onlyRole(CORPORATE_ROLE){
+        require(jobListingCount * corporateStakePerListing > 0, "Cannot unstake zero tokens");
+        udao.transferFrom(msg.sender, address(this), jobListingCount * corporateStakePerListing);
+        for(uint i = 0; i < jobListingCount; i++) {
+            corporateListingId[msg.sender][corporateLatestListingId[msg.sender]] = corporateStakePerListing;
+            corporateLatestListingId[msg.sender]++;
+            emit JobListingRegistered(msg.sender,corporateStakePerListing);
         }
+        emit StakeForJobListing(msg.sender, jobListingCount * corporateStakePerListing);
     }
 
-    function registerJobListing() external onlyRole(CORPORATE_ROLE){
-        require(corporateActiveListingAmount[msg.sender] < corporateListingAmount[msg.sender], "You have to stake more");
-        corporateActiveListingAmount[msg.sender]++;
-        emit JobListingRegistered(msg.sender);
-    }
-
-    function unregisterJobListing() external onlyRole(CORPORATE_ROLE){
-        require(corporateActiveListingAmount[msg.sender] > 0, "You don't have job listing");
-        corporateActiveListingAmount[msg.sender]--;
-        emit JobListingUnregistered(msg.sender);
-    }
-
-
-    /// @notice Allows corporate accounts to unstake. Staker and unstaked amount returned with event.
-    /// @param amount The unstaked amount.
-    function unstakeForJobListing(uint256 amount)
-        external whenNotPaused
-        onlyRole(CORPORATE_ROLE)
-    {
-        require(amount > 0, "Cannot unstake zero tokens");
-        
-        uint256 withdrawableBalance;
-        uint256 corporateLockLength = corporateLocks[msg.sender].length;
-
-        for (int256 j; uint256(j) < corporateLockLength; j++) {
-            CorporateStakeLock storage lock = corporateLocks[msg.sender][
-                uint256(j)
-            ];
-            if (lock.expire <= block.timestamp) {
-                withdrawableBalance += lock.lockAmount;
-
-                corporateLocks[msg.sender][uint256(j)] = corporateLocks[
-                    msg.sender
-                ][corporateLocks[msg.sender].length - 1];
-                corporateLocks[msg.sender].pop();
-                j--;
-                if(withdrawableBalance >= amount) {
-                    _withdrawCorporate(msg.sender, withdrawableBalance);
-                    return;
-                }
-            }
-        }
-    }
-
-    /**
-     * @notice an internal function executes transfer
-     * @param to address that will be tokens sent to
-     * @param withdrawableBalance amount of tokens that will be withdrawn
-     */
-    function _withdrawCorporate(address to, uint withdrawableBalance) internal {
-        udao.transferFrom(address(this), to, withdrawableBalance);
-        emit UnstakeForJobListing(to, withdrawableBalance);
+    function unregisterJobListing(uint listingId) external onlyRole(CORPORATE_ROLE){
+        uint withdrawAmount = corporateListingId[msg.sender][listingId];
+        require(withdrawAmount > 0,"Amount should be higher than 0");
+        corporateListingId[msg.sender][listingId] = 0;
+        udao.transferFrom(address(this), msg.sender, withdrawAmount);
+        emit JobListingUnregistered(msg.sender, listingId,withdrawAmount);
     }
 
     /// @notice Returns a hash of the given ContentVoucher, prepared using EIP712 typed data hashing rules.
