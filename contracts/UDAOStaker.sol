@@ -49,6 +49,8 @@ contract UDAOStaker is RoleController, EIP712 {
     event ValidationRegistered(address _validator, uint256 _validationId);
     event CaseRegistered(address _juror, uint256 _caseId);
     event ValidatorStakeWithdrawn(address _validator, uint256 _amount);
+    event JobListingRegistered(address corporate);
+    event JobListingUnregistered(address corporate);
 
     // @TODO Juror staking eklendiğinde kullanılacak
     event JurorStakeWithdrawn(address _juror, uint256 _amount);
@@ -123,6 +125,7 @@ contract UDAOStaker is RoleController, EIP712 {
     uint256 public corporateStakePerListing = 500 ether; //setter getter, decider=adminler
     mapping(address => CorporateStakeLock[]) corporateLocks;
     mapping(address => uint) corporateListingAmount;
+    mapping(address => uint) corporateActiveListingAmount;
 
     struct GovernanceLock {
         uint256 expire;
@@ -880,6 +883,18 @@ contract UDAOStaker is RoleController, EIP712 {
             }
             
         }
+    }
+
+    function registerJobListing() external onlyRole(CORPORATE_ROLE){
+        require(corporateActiveListingAmount[msg.sender] < corporateListingAmount[msg.sender], "You have to stake more");
+        corporateActiveListingAmount[msg.sender]++;
+        emit JobListingRegistered(msg.sender);
+    }
+
+    function unregisterJobListing() external onlyRole(CORPORATE_ROLE){
+        require(corporateActiveListingAmount[msg.sender] > 0, "You don't have job listing");
+        corporateActiveListingAmount[msg.sender]--;
+        emit JobListingUnregistered(msg.sender);
     }
 
 
