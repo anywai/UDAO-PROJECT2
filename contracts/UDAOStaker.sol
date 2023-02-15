@@ -232,14 +232,6 @@ contract UDAOStaker is RoleController, EIP712 {
         bytes signature;
     }
 
-    /// @notice Validation work registered to onchain with this
-    struct RegisterValidationVoucher {
-        /// @notice The off-chain ID of the validation work
-        uint256 validationId;
-        /// @notice the EIP-712 signature of all other fields in the RegisterValidationVoucher struct.
-        bytes signature;
-    }
-
     /// @notice Allows corporate accounts to unstake before lock time
     struct CorporateWithdrawVoucher {
         /// @notice Address of the corporate account
@@ -359,18 +351,11 @@ contract UDAOStaker is RoleController, EIP712 {
 
     /**
      * @notice Allows validators to accept the validation work
-     * @param voucher validation registration voucher
      */
-    function registerValidation(RegisterValidationVoucher calldata voucher)
+    function registerValidation(uint256 validationId)
         external
         onlyRoles(validator_roles) whenNotPaused
     {
-        address signer = _verifyValidation(voucher);
-
-        require(
-            IRM.hasRole(BACKEND_ROLE, signer),
-            "Signature invalid or unauthorized"
-        );
         
         ValidatorStakeLock storage stakeLock = validatorLock[_msgSender()][
             latestValidatorStakeId[_msgSender()]
@@ -388,7 +373,7 @@ contract UDAOStaker is RoleController, EIP712 {
             latestValidatorStakeId[_msgSender()]++;
         }
 
-        emit ValidationRegistered(msg.sender, voucher.validationId);
+        emit ValidationRegistered(msg.sender, validationId);
     }
 
     /**
@@ -878,24 +863,7 @@ contract UDAOStaker is RoleController, EIP712 {
             );
     }
 
-    function _hashValidation(RegisterValidationVoucher calldata voucher)
-        internal
-        view
-        returns (bytes32)
-    {
-        return
-            _hashTypedDataV4(
-                keccak256(
-                    abi.encode(
-                        keccak256(
-                            "UDAOStaker(uint256 validationId)"
-                        ),
-                        voucher.validationId
-                    )
-                )
-            );
-    }
-
+   
     /// @notice Returns the chain id of the current blockchain.
     /// @dev This is used to workaround an issue with ganache returning different values from the on-chain chainid() function and
     ///  the eth_chainId RPC method. See https://github.com/protocol/nft-website/issues/121 for context.
@@ -918,18 +886,5 @@ contract UDAOStaker is RoleController, EIP712 {
         bytes32 digest = _hashRole(voucher);
         return ECDSA.recover(digest, voucher.signature);
     }
-
-    /// @notice Verifies the signature for a given RegisterValidationVoucher, returning the address of the signer.
-    /// @dev Will revert if the signature is invalid. Does not verify that the signer is authorized to mint NFTs.
-    /// @param voucher A RegisterValidationVoucher describing an unminted NFT.
-    function _verifyValidation(RegisterValidationVoucher calldata voucher)
-        internal
-        view
-        returns (address)
-    {
-        bytes32 digest = _hashValidation(voucher);
-        return ECDSA.recover(digest, voucher.signature);
-    }
-
   
 }
