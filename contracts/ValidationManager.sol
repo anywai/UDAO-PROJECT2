@@ -89,7 +89,7 @@ contract ValidationManager is RoleController {
             validations[validationId].acceptVoteCount++;
         }
         validations[validationId].isVoted[msg.sender] = true;
-        validations[validationId].vote[msg.sender] = true;
+        validations[validationId].vote[msg.sender] = result;
         validations[validationId].validationCount++;
         emit ValidationResultSent(validations[validationId].tokenId,validationId,msg.sender,result);
     }
