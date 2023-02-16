@@ -96,6 +96,7 @@ async function deploy() {
     contractUDAOStaker.address,
     contractRoleManager.address
   );
+
   //POST DEPLOYMENT
   // add proposer
   const PROPOSER_ROLE = ethers.utils.keccak256(
@@ -141,6 +142,8 @@ async function deploy() {
   await contractContractManager.connect(backend).setAddressStaking(contractUDAOStaker.address)
   await contractContractManager.connect(backend).setPlatformTreasuryAddress(contractPlatformTreasury.address)
   await contractContractManager.connect(backend).setAddressUdaoVp(contractUDAOVp.address)
+
+  await contractValidationManager.connect(foundation).setStaker(contractUDAOStaker.address);
   // add staking contract to udao-vp
   await contractUDAOVp
     .connect(backend)

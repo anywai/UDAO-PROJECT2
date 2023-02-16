@@ -15,11 +15,9 @@ contract ValidationManager is RoleController {
 
     constructor(
         address udaocAddress,
-        address irmAddress,
-        address stakingAddress
+        address irmAddress
     ) RoleController(irmAddress) {
         udaoc = IUDAOC(udaocAddress);
-        staker = IStakingContract(stakingAddress);
     }
 
     event ValidationEnded(uint256 validationId, uint256 tokenId, bool result);
