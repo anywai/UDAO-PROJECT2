@@ -373,7 +373,7 @@ contract UDAOStaker is RoleController, EIP712 {
             latestValidatorStakeId[_msgSender()]++;
         }
 
-        emit ValidationRegistered(msg.sender, validationId);
+        emit ValidationRegistered(_msgSender(), validationId);
     }
 
     /**
