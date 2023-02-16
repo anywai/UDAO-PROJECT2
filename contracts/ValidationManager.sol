@@ -20,7 +20,10 @@ contract ValidationManager is RoleController {
         udaoc = IUDAOC(udaocAddress);
     }
 
-    event ValidationEnded(uint256 validationId, uint256 tokenId, bool result);
+    event ValidationCreated(uint256 tokenId, uint256 validationId);
+    event ValidationAssigned(uint256 tokenId, uint256 validationId, address validator);
+    event ValidationResultSent(uint256 tokenId, uint256 validationId, address validator, bool result);
+    event ValidationEnded(uint256 tokenId, uint256 validationId, bool result);
     event NextRound(uint256 newRoundId);
 
     // tokenId => is validation done
@@ -89,6 +92,7 @@ contract ValidationManager is RoleController {
         validations[validationId].isVoted[msg.sender] = true;
         validations[validationId].vote[msg.sender] = true;
         validations[validationId].validationCount++;
+        emit ValidationResultSent(validations[validationId].tokenId,validationId,msg.sender,result);
     }
 
     function finalizeValidation(uint256 validationId) external {
@@ -131,8 +135,8 @@ contract ValidationManager is RoleController {
             }
         }
         emit ValidationEnded(
-            validations[validationId].id,
             validations[validationId].tokenId,
+            validations[validationId].id,
             validations[validationId].finalValidationResult
         );
     }
@@ -179,6 +183,7 @@ contract ValidationManager is RoleController {
         validation.id = validations.length;
         validation.tokenId = tokenId;
         validation.validationScore = score;
+        emit ValidationCreated(tokenId, validations.length -1);
     }
 
     /// @notice returns successful and unsuccessful validation count of the account
@@ -255,6 +260,7 @@ contract ValidationManager is RoleController {
         staker.registerValidation();
         activeValidation[msg.sender] = validationId;
         validations[validationId].validators.push(msg.sender);
+        emit ValidationAssigned(validations[validationId].tokenId, validationId, msg.sender);
     }
 
     /// @notice Returns the validation result of a token
