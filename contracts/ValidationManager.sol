@@ -58,7 +58,7 @@ contract ValidationManager is RoleController {
 
     uint256 public distributionRound;
     /// @dev is used during the calculation of a validator score
-    uint256 public totalSuccessfulValidationScore;
+    uint256 public totalValidationScore;
 
     function setUDAOC(address udaocAddress) external onlyRole(FOUNDATION_ROLE) {
         udaoc = IUDAOC(udaocAddress);
@@ -196,8 +196,8 @@ contract ValidationManager is RoleController {
     }
 
     /// @notice returns total successful validation count
-    function getTotalValidation() external view returns (uint) {
-        return totalSuccessfulValidation;
+    function getTotalValidationScore() external view returns (uint) {
+        return totalValidationScore;
     }
 
     /// @notice Only foundation can open a dispute after enough off-chain dispute reports gathered from users.
