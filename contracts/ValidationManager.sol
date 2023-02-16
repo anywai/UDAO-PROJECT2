@@ -5,7 +5,7 @@ import "./RoleController.sol";
 import "./IUDAOC.sol";
 
 interface IStakingContract {
-    function registerValidation() external;
+    function registerValidation(uint256 validationId) external;
 }
 
 contract ValidationManager is RoleController {

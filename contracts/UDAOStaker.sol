@@ -354,7 +354,7 @@ contract UDAOStaker is RoleController, EIP712 {
      */
     function registerValidation(uint256 validationId)
         external
-        onlyRoles(validator_roles) whenNotPaused
+        onlyRole(VALIDATION_MANAGER) whenNotPaused
     {
         
         ValidatorStakeLock storage stakeLock = validatorLock[_msgSender()][
