@@ -55,7 +55,6 @@ contract ValidationManager is RoleController {
     mapping(address => bool) isInDispute;
     mapping(address => uint) public successfulValidation;
     mapping(address => uint) public unsuccessfulValidation;
-    uint public totalSuccessfulValidation;
 
     uint256 public distributionRound;
     /// @dev is used during the calculation of a validator score
@@ -126,7 +125,6 @@ contract ValidationManager is RoleController {
                 validatorScorePerRound[validations[validationId].validators[i]][distributionRound] += validations[validationId].validationScore;
                 /// @dev Record success point of a validator
                 successfulValidation[validations[validationId].validators[i]]++;
-                totalSuccessfulValidation++;
             } else {
                 /// @dev Record unsuccess point of a validator
                 unsuccessfulValidation[
@@ -210,7 +208,6 @@ contract ValidationManager is RoleController {
         for (uint i; i < disputedAddresses.length; i++) {
             isInDispute[disputedAddresses[i]] = true;
             successfulValidation[disputedAddresses[i]]--;
-            totalSuccessfulValidation--;
             unsuccessfulValidation[disputedAddresses[i]]++;
         }
     }
@@ -229,7 +226,6 @@ contract ValidationManager is RoleController {
             isInDispute[disputedAddresses[i]] = false;
             if (!result) {
                 successfulValidation[disputedAddresses[i]]++;
-                totalSuccessfulValidation++;
                 unsuccessfulValidation[disputedAddresses[i]]--;
             }
         }
