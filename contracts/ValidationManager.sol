@@ -43,8 +43,8 @@ contract ValidationManager is RoleController {
         uint validatorScore; // successfulValidation * validationScore
     }
 
-    uint public requiredValidator;
-    uint public minRequiredAcceptVote;
+    uint public requiredValidator = 5;
+    uint public minRequiredAcceptVote = 3;
     // validator => round => score
     mapping(address => mapping(uint256 => uint256)) public validatorScorePerRound;
 
