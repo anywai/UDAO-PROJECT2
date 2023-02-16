@@ -253,7 +253,6 @@ contract ValidationManager is RoleController {
             udaoc.ownerOf(validations[validationId].tokenId) != msg.sender,
             "You are the instructor of this course."
         );
-        staker.registerValidation();
         activeValidation[msg.sender] = validationId;
         validations[validationId].validators.push(msg.sender);
         emit ValidationAssigned(validations[validationId].tokenId, validationId, msg.sender);
