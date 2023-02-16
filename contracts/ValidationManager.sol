@@ -178,7 +178,7 @@ contract ValidationManager is RoleController {
     {
         require(udaoc.exists(tokenId), "ERC721: invalid token ID");
         Validation storage validation = validations.push();
-        validation.id = validations.length;
+        validation.id = validations.length - 1;
         validation.tokenId = tokenId;
         validation.validationScore = score;
         emit ValidationCreated(tokenId, validations.length -1);
