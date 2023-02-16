@@ -120,8 +120,7 @@ abstract contract ContentManager is  EIP712, BasePlatform {
         address instructor = udaoc.ownerOf(tokenId);
         require(IRM.isKYCed(instructor), "Instructor is not KYCed");
         require(!IRM.isBanned(instructor), "Instructor is banned");
-        // TODO Uncomment below after fixing the validation
-        //require(IVM.isValidated(tokenId), "Content is not validated yet");
+        require(IVM.getIsValidated(tokenId), "Content is not validated yet");
         require(
             isTokenBought[msg.sender][tokenId][0] == false,
             "Full content is already bought"
@@ -223,8 +222,7 @@ abstract contract ContentManager is  EIP712, BasePlatform {
         address instructor = udaoc.ownerOf(tokenId);
         require(IRM.isKYCed(instructor), "Instructor is not KYCed");
         require(!IRM.isBanned(instructor), "Instructor is banned");
-        // TODO Uncomment below after fixing the validation
-        //require(IVM.isValidated(tokenId), "Content is not validated yet");
+        require(IVM.getIsValidated(tokenId), "Content is not validated yet");
         require(
             isTokenBought[msg.sender][tokenId][0] == false,
             "Full content is already bought"
