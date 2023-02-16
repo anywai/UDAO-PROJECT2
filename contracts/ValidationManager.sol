@@ -123,6 +123,7 @@ contract ValidationManager is RoleController {
             ) {
                 /// @dev Record score of a validator in this round
                 validatorScorePerRound[validations[validationId].validators[i]][distributionRound] += validations[validationId].validationScore;
+                totalValidationScore += validations[validationId].validationScore;
                 /// @dev Record success point of a validator
                 successfulValidation[validations[validationId].validators[i]]++;
             } else {
