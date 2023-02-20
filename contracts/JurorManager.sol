@@ -23,6 +23,8 @@ contract JurorManager is RoleController {
     mapping(address => mapping(uint256 => uint256)) public jurorScorePerRound;
     // juror => caseId
     mapping(address => uint256) activeDispute;
+    mapping(address => uint) public successfulCase;
+    mapping(address => uint) public unsuccessfulCase;
 
     uint256 public distributionRound;
     uint256 public totalCaseScore;
@@ -177,7 +179,7 @@ contract JurorManager is RoleController {
         _addJurorScores(disputes[caseId].jurors);
 
         /// TODO Below is for unfixed juror scores and juror penalty..
-        /*
+
         for (uint i; i < disputes[caseId].jurors.length; i++) {
             if (
                 disputes[caseId].verdict ==
@@ -188,15 +190,14 @@ contract JurorManager is RoleController {
                 jurorScorePerRound[disputes[caseId].jurors[i]][distributionRound]++;
                 totalJurorScore++;
                 /// @dev Record success point of a validator
-                successfulValidation[disputes[caseId].jurors[i]]++;
+                successfulCase[disputes[caseId].jurors[i]]++;
             } else {
                 /// @dev Record unsuccess point of a validator
-                unsuccessfulValidation[
+                unsuccessfulCase[
                     disputes[caseId].jurors[i]
                 ]++;
             }
         }
-        */
         emit DisputeEnded(
             caseId,
             disputes[caseId].verdict
@@ -254,6 +255,17 @@ contract JurorManager is RoleController {
     function nextRound() external whenNotPaused onlyRole(TREASURY_CONTRACT) {
         distributionRound++;
         emit NextRound(distributionRound);
+    }
+
+    /// @notice returns successful and unsuccessful case count of the account
+    /// @param account wallet address of the account that wanted to be checked
+    function getCaseResults(address account)
+        external
+        view
+        returns (uint[2] memory results)
+    {
+        results[0] = successfulCase[account];
+        results[1] = unsuccessfulCase[account];
     }
 
     /// @notice Returns the score of a juror for a speficied round
