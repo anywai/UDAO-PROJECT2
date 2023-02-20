@@ -43,8 +43,8 @@ contract ValidationManager is RoleController {
         uint validatorScore; // successfulValidation * validationScore
     }
 
-    uint public requiredValidator = 5;
-    uint public minRequiredAcceptVote = 3;
+    uint128 public requiredValidator = 5;
+    uint128 public minRequiredAcceptVote = 3;
     // validator => round => score
     mapping(address => mapping(uint256 => uint256)) public validatorScorePerRound;
 
@@ -83,6 +83,7 @@ contract ValidationManager is RoleController {
             activeValidation[msg.sender] == validationId,
             "This content is not assigned to this wallet"
         );
+        /// TODO 2 tane validationCount var. Bunlar ne işe yarıyor?
         validationCount[msg.sender]++;
         activeValidation[msg.sender] = 0;
         if (result) {
@@ -102,6 +103,8 @@ contract ValidationManager is RoleController {
             "Not enough validation"
         );
         if (
+            /// TODO Eğer bir validator işini bitirmeden validation biterse,
+            /// sonucu göndermeyen validator eksi puan alıyor!
             validations[validationId].acceptVoteCount >= minRequiredAcceptVote
         ) {
             validations[validationId].finalValidationResult = true;
@@ -163,7 +166,7 @@ contract ValidationManager is RoleController {
 
     /// @notice sets required validator vote count per content
     /// @param _requiredValidator new required vote count
-    function setRequiredValidators(uint _requiredValidator)
+    function setRequiredValidators(uint128 _requiredValidator)
         external
         onlyRole(GOVERNANCE_ROLE)
     {
