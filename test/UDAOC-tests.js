@@ -272,25 +272,14 @@ describe("UDAOC Contract", function () {
     } = await deploy();
     await contractRoleManager.setKYC(contentCreator.address, true);
 
-    const tx = await contractUDAOContent.getChainID();
-    const lazyMinter = new LazyMinter({
-      contract: contractUDAOContent,
-      signer: backend,
-    });
-    const voucher = await lazyMinter.createVoucher(
-      1,
-      "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
-      contentCreator.address,
-      true,
-      "Content Name",
-      "Content Description"
-    );
-    await expect(contractUDAOContent.connect(contentCreator).redeem(voucher))
+    const udaoc_voucher = [1, [ethers.utils.parseEther("1"),ethers.utils.parseEther("1")], "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi", contentCreator.address, true, "Content Name", "Content Description"]
+
+    await expect(contractUDAOContent.connect(contentCreator).redeem(udaoc_voucher))
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
         "0x0000000000000000000000000000000000000000",
         contentCreator.address,
-        voucher.tokenId
+        udaoc_voucher[0]
       );
   });
 
@@ -321,68 +310,57 @@ describe("UDAOC Contract", function () {
     } = await deploy();
     await contractRoleManager.setKYC(contentCreator.address, true);
 
-    const tx = await contractUDAOContent.getChainID();
-    const lazyMinter = new LazyMinter({
-      contract: contractUDAOContent,
-      signer: backend,
-    });
-    const voucher = await lazyMinter.createVoucher(
-      1,
-      "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
-      contentCreator.address,
-      true,
-      "Content Name",
-      "Content Description"
-    );
+    const udaoc_voucher = [1, [ethers.utils.parseEther("1"),ethers.utils.parseEther("1")], "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi", contentCreator.address, true, "Content Name", "Content Description"]
+
     await expect(
-      contractUDAOContent.connect(contentBuyer).redeem(voucher)
+      contractUDAOContent.connect(contentBuyer).redeem(udaoc_voucher)
     ).to.revertedWith("You are not the redeemer");
   });
 
-  it("Should fail to create Content if wrong signer", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      validatorCandidate,
-      validator,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractValidationManager,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-    } = await deploy();
-    await contractRoleManager.setKYC(contentCreator.address, true);
+  // it("Should fail to create Content if wrong signer", async function () {
+  //   const {
+  //     backend,
+  //     contentCreator,
+  //     contentBuyer,
+  //     validatorCandidate,
+  //     validator,
+  //     superValidatorCandidate,
+  //     superValidator,
+  //     foundation,
+  //     governanceCandidate,
+  //     governanceMember,
+  //     jurorCandidate,
+  //     jurorMember,
+  //     contractUDAO,
+  //     contractRoleManager,
+  //     contractUDAOCertificate,
+  //     contractUDAOContent,
+  //     contractValidationManager,
+  //     contractPlatformTreasury,
+  //     contractUDAOVp,
+  //     contractUDAOStaker,
+  //     contractUDAOTimelockController,
+  //     contractUDAOGovernor,
+  //   } = await deploy();
+  //   await contractRoleManager.setKYC(contentCreator.address, true);
 
-    const tx = await contractUDAOContent.getChainID();
-    const lazyMinter = new LazyMinter({
-      contract: contractUDAOContent,
-      signer: foundation,
-    });
-    const voucher = await lazyMinter.createVoucher(
-      1,
-      "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
-      contentCreator.address,
-      true,
-      "Content Name",
-      "Content Description"
-    );
-    await expect(
-      contractUDAOContent.connect(contentCreator).redeem(voucher)
-    ).to.revertedWith("Signature invalid or unauthorized");
-  });
+  //   const tx = await contractUDAOContent.getChainID();
+  //   const lazyMinter = new LazyMinter({
+  //     contract: contractUDAOContent,
+  //     signer: foundation,
+  //   });
+  //   const voucher = await lazyMinter.createVoucher(
+  //     1,
+  //     "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
+  //     contentCreator.address,
+  //     true,
+  //     "Content Name",
+  //     "Content Description"
+  //   );
+  //   await expect(
+  //     contractUDAOContent.connect(contentCreator).redeem(voucher)
+  //   ).to.revertedWith("Signature invalid or unauthorized");
+  // });
 
   it("Should get token URI of the Content", async function () {
     const {
@@ -411,25 +389,14 @@ describe("UDAOC Contract", function () {
     } = await deploy();
     await contractRoleManager.setKYC(contentCreator.address, true);
 
-    const tx = await contractUDAOContent.getChainID();
-    const lazyMinter = new LazyMinter({
-      contract: contractUDAOContent,
-      signer: backend,
-    });
-    const voucher = await lazyMinter.createVoucher(
-      1,
-      "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
-      contentCreator.address,
-      true,
-      "Content Name",
-      "Content Description"
-    );
-    await expect(contractUDAOContent.connect(contentCreator).redeem(voucher))
+    const udaoc_voucher = [1, [ethers.utils.parseEther("1"),ethers.utils.parseEther("1")], "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi", contentCreator.address, true, "Content Name", "Content Description"]
+
+    await expect(contractUDAOContent.connect(contentCreator).redeem(udaoc_voucher))
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
         "0x0000000000000000000000000000000000000000",
         contentCreator.address,
-        voucher.tokenId
+        udaoc_voucher[0]
       );
     expect(await contractUDAOContent.tokenURI(1)).to.eql(
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi"
@@ -464,25 +431,14 @@ describe("UDAOC Contract", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
-    const tx = await contractUDAOContent.getChainID();
-    const lazyMinter = new LazyMinter({
-      contract: contractUDAOContent,
-      signer: backend,
-    });
-    const voucher = await lazyMinter.createVoucher(
-      1,
-      "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
-      contentCreator.address,
-      true,
-      "Content Name",
-      "Content Description"
-    );
-    await expect(contractUDAOContent.connect(contentCreator).redeem(voucher))
+    const udaoc_voucher = [1, [ethers.utils.parseEther("1"),ethers.utils.parseEther("1")], "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi", contentCreator.address, true, "Content Name", "Content Description"]
+
+    await expect(contractUDAOContent.connect(contentCreator).redeem(udaoc_voucher))
           .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
           .withArgs(
             "0x0000000000000000000000000000000000000000",
             contentCreator.address,
-            voucher.tokenId
+            udaoc_voucher[0]
           );
         await expect(
           contractUDAOContent
@@ -521,25 +477,14 @@ describe("UDAOC Contract", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
-    const tx = await contractUDAOContent.getChainID();
-    const lazyMinter = new LazyMinter({
-      contract: contractUDAOContent,
-      signer: backend,
-    });
-    const voucher = await lazyMinter.createVoucher(
-      1,
-      "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
-      contentCreator.address,
-      true,
-      "Content Name",
-      "Content Description"
-    );
-    await expect(contractUDAOContent.connect(contentCreator).redeem(voucher))
+    const udaoc_voucher = [1, [ethers.utils.parseEther("1"),ethers.utils.parseEther("1")], "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi", contentCreator.address, true, "Content Name", "Content Description"]
+
+    await expect(contractUDAOContent.connect(contentCreator).redeem(udaoc_voucher))
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
         "0x0000000000000000000000000000000000000000",
         contentCreator.address,
-        voucher.tokenId
+        udaoc_voucher[0]
       );
     await contractRoleManager.setKYC(contentCreator.address, false);
 
@@ -577,26 +522,15 @@ describe("UDAOC Contract", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
-    const tx = await contractUDAOContent.getChainID();
-    const lazyMinter = new LazyMinter({
-      contract: contractUDAOContent,
-      signer: backend,
-    });
-    const voucher = await lazyMinter.createVoucher(
-      1,
-      "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
-      contentCreator.address,
-      true,
-      "Content Name",
-      "Content Description"
-    );
+    const udaoc_voucher = [1, [ethers.utils.parseEther("1"),ethers.utils.parseEther("1")], "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi", contentCreator.address, true, "Content Name", "Content Description"]
 
-    await expect(contractUDAOContent.connect(contentCreator).redeem(voucher))
+
+    await expect(contractUDAOContent.connect(contentCreator).redeem(udaoc_voucher))
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
         "0x0000000000000000000000000000000000000000",
         contentCreator.address,
-        voucher.tokenId
+        udaoc_voucher[0]
       );
 
     await contractRoleManager.setBan(contentCreator.address, true);
@@ -635,25 +569,14 @@ describe("UDAOC Contract", function () {
     await contractRoleManager.setKYC(contentBuyer.address, true);
     await contractRoleManager.setBan(contentBuyer.address, true);
 
-    const tx = await contractUDAOContent.getChainID();
-    const lazyMinter = new LazyMinter({
-      contract: contractUDAOContent,
-      signer: backend,
-    });
-    const voucher = await lazyMinter.createVoucher(
-      1,
-      "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
-      contentCreator.address,
-      true,
-      "Content Name",
-      "Content Description"
-    );
-    await expect(contractUDAOContent.connect(contentCreator).redeem(voucher))
+    const udaoc_voucher = [1, [ethers.utils.parseEther("1"),ethers.utils.parseEther("1")], "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi", contentCreator.address, true, "Content Name", "Content Description"]
+
+    await expect(contractUDAOContent.connect(contentCreator).redeem(udaoc_voucher))
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
         "0x0000000000000000000000000000000000000000",
         contentCreator.address,
-        voucher.tokenId
+        udaoc_voucher[0]
       );
     await expect(
       contractUDAOContent
@@ -689,25 +612,14 @@ describe("UDAOC Contract", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
-    const tx = await contractUDAOContent.getChainID();
-    const lazyMinter = new LazyMinter({
-      contract: contractUDAOContent,
-      signer: backend,
-    });
-    const voucher = await lazyMinter.createVoucher(
-      1,
-      "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
-      contentCreator.address,
-      true,
-      "Content Name",
-      "Content Description"
-    );
-    await expect(contractUDAOContent.connect(contentCreator).redeem(voucher))
+    const udaoc_voucher = [1, [ethers.utils.parseEther("1"),ethers.utils.parseEther("1")], "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi", contentCreator.address, true, "Content Name", "Content Description"]
+
+    await expect(contractUDAOContent.connect(contentCreator).redeem(udaoc_voucher))
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
         "0x0000000000000000000000000000000000000000",
         contentCreator.address,
-        voucher.tokenId
+        udaoc_voucher[0]
       );
     await contractRoleManager.setKYC(contentCreator.address, false);
 
@@ -747,33 +659,22 @@ describe("UDAOC Contract", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
-    const tx = await contractUDAOContent.getChainID();
-    const lazyMinter = new LazyMinter({
-      contract: contractUDAOContent,
-      signer: backend,
-    });
-    const voucher = await lazyMinter.createVoucher(
-      1,
-      "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
-      contentCreator.address,
-      true,
-      "Content Name",
-      "Content Description"
-    );
+    const udaoc_voucher = [1, [ethers.utils.parseEther("1"),ethers.utils.parseEther("1")], "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi", contentCreator.address, true, "Content Name", "Content Description"]
 
-    await expect(contractUDAOContent.connect(contentCreator).redeem(voucher))
+
+    await expect(contractUDAOContent.connect(contentCreator).redeem(udaoc_voucher))
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
         "0x0000000000000000000000000000000000000000",
         contentCreator.address,
-        voucher.tokenId
+        udaoc_voucher[0]
       );
     await expect(contractUDAOContent.connect(contentCreator).burn(1))
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
         contentCreator.address,
         "0x0000000000000000000000000000000000000000",
-        voucher.tokenId
+        udaoc_voucher[0]
       );
   });
 
@@ -805,26 +706,15 @@ describe("UDAOC Contract", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
-    const tx = await contractUDAOContent.getChainID();
-    const lazyMinter = new LazyMinter({
-      contract: contractUDAOContent,
-      signer: backend,
-    });
-    const voucher = await lazyMinter.createVoucher(
-      1,
-      "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
-      contentCreator.address,
-      true,
-      "Content Name",
-      "Content Description"
-    );
+    const udaoc_voucher = [1, [ethers.utils.parseEther("1"),ethers.utils.parseEther("1")], "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi", contentCreator.address, true, "Content Name", "Content Description"]
 
-    await expect(contractUDAOContent.connect(contentCreator).redeem(voucher))
+
+    await expect(contractUDAOContent.connect(contentCreator).redeem(udaoc_voucher))
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
         "0x0000000000000000000000000000000000000000",
         contentCreator.address,
-        voucher.tokenId
+        udaoc_voucher[0]
       );
 
     await expect(
@@ -894,25 +784,14 @@ describe("UDAOC Contract", function () {
     } = await deploy();
     await contractRoleManager.setKYC(contentCreator.address, true);
 
-    const tx = await contractUDAOContent.getChainID();
-    const lazyMinter = new LazyMinter({
-      contract: contractUDAOContent,
-      signer: backend,
-    });
-    const voucher = await lazyMinter.createVoucher(
-      1,
-      "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
-      contentCreator.address,
-      false,
-      "Content Name",
-      "Content Description"
-    );
-    await expect(contractUDAOContent.connect(contentCreator).redeem(voucher))
+    const udaoc_voucher = [1, [ethers.utils.parseEther("1"),ethers.utils.parseEther("1")], "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi", contentCreator.address, false, "Content Name", "Content Description"]
+
+    await expect(contractUDAOContent.connect(contentCreator).redeem(udaoc_voucher))
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
         "0x0000000000000000000000000000000000000000",
         contentCreator.address,
-        voucher.tokenId
+        udaoc_voucher[0]
       );
     await contractUDAOContent.connect(contentCreator).enableCoaching(1);
     expect(await contractUDAOContent.isCoachingEnabled(1)).to.be.eql(true);
@@ -945,25 +824,14 @@ describe("UDAOC Contract", function () {
     } = await deploy();
     await contractRoleManager.setKYC(contentCreator.address, true);
 
-    const tx = await contractUDAOContent.getChainID();
-    const lazyMinter = new LazyMinter({
-      contract: contractUDAOContent,
-      signer: backend,
-    });
-    const voucher = await lazyMinter.createVoucher(
-      1,
-      "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
-      contentCreator.address,
-      true,
-      "Content Name",
-      "Content Description"
-    );
-    await expect(contractUDAOContent.connect(contentCreator).redeem(voucher))
+    const udaoc_voucher = [1, [ethers.utils.parseEther("1"),ethers.utils.parseEther("1")], "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi", contentCreator.address, true, "Content Name", "Content Description"]
+
+    await expect(contractUDAOContent.connect(contentCreator).redeem(udaoc_voucher))
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
         "0x0000000000000000000000000000000000000000",
         contentCreator.address,
-        voucher.tokenId
+        udaoc_voucher[0]
       );
     await contractUDAOContent.connect(contentCreator).disableCoaching(1);
     expect(await contractUDAOContent.isCoachingEnabled(1)).to.be.eql(false);
@@ -996,25 +864,14 @@ describe("UDAOC Contract", function () {
     } = await deploy();
     await contractRoleManager.setKYC(contentCreator.address, true);
 
-    const tx = await contractUDAOContent.getChainID();
-    const lazyMinter = new LazyMinter({
-      contract: contractUDAOContent,
-      signer: backend,
-    });
-    const voucher = await lazyMinter.createVoucher(
-      1,
-      "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
-      contentCreator.address,
-      false,
-      "Content Name",
-      "Content Description"
-    );
-    await expect(contractUDAOContent.connect(contentCreator).redeem(voucher))
+    const udaoc_voucher = [1, [ethers.utils.parseEther("1"),ethers.utils.parseEther("1")], "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi", contentCreator.address, false, "Content Name", "Content Description"]
+
+    await expect(contractUDAOContent.connect(contentCreator).redeem(udaoc_voucher))
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
         "0x0000000000000000000000000000000000000000",
         contentCreator.address,
-        voucher.tokenId
+        udaoc_voucher[0]
       );
     await expect(
       contractUDAOContent.connect(contentBuyer).enableCoaching(1)
@@ -1048,25 +905,14 @@ describe("UDAOC Contract", function () {
     } = await deploy();
     await contractRoleManager.setKYC(contentCreator.address, true);
 
-    const tx = await contractUDAOContent.getChainID();
-    const lazyMinter = new LazyMinter({
-      contract: contractUDAOContent,
-      signer: backend,
-    });
-    const voucher = await lazyMinter.createVoucher(
-      1,
-      "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
-      contentCreator.address,
-      true,
-      "Content Name",
-      "Content Description"
-    );
-    await expect(contractUDAOContent.connect(contentCreator).redeem(voucher))
+    const udaoc_voucher = [1, [ethers.utils.parseEther("1"),ethers.utils.parseEther("1")], "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi", contentCreator.address, true, "Content Name", "Content Description"]
+
+    await expect(contractUDAOContent.connect(contentCreator).redeem(udaoc_voucher))
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
         "0x0000000000000000000000000000000000000000",
         contentCreator.address,
-        voucher.tokenId
+        udaoc_voucher[0]
       );
     await expect(
       contractUDAOContent.connect(contentBuyer).disableCoaching(1)

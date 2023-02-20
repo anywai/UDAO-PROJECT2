@@ -182,7 +182,7 @@ async function deploy() {
   };
 }
 
-describe("Content Manager Contract", function () {
+describe("Governance Contract", function () {
   it("Should deploy", async function () {
     const {
       backend,

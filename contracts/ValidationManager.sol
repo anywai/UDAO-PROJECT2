@@ -1,100 +1,268 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.4;
 
-import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
 import "./RoleController.sol";
 import "./IUDAOC.sol";
 
-contract ValidationManager is RoleController, EIP712 {
-    string private constant SIGNING_DOMAIN = "ValidationSetter";
-    string private constant SIGNATURE_VERSION = "1";
+interface IStakingContract {
+    function registerValidation(uint256 validationId) external;
+}
 
+contract ValidationManager is RoleController {
     // UDAO (ERC721) Token interface
     IUDAOC udaoc;
+    IStakingContract staker;
 
-    constructor(address udaocAddress, address irmAddress)
-        EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION)
-        RoleController(irmAddress)
-    {
+    constructor(
+        address udaocAddress,
+        address irmAddress
+    ) RoleController(irmAddress) {
         udaoc = IUDAOC(udaocAddress);
     }
 
-    struct ValidationVoucher {
-        /// @notice The id of the token to record validation status.
-        uint256 tokenId;
-        /// @notice The date until the voucher is valid
-        uint256 validUntil;
-        /// @notice Addresses of the validators
-        address[] validators;
-        /// @notice Scores validators earned from this validation
-        uint256[] validationScore;
-        /// @notice Final verdict of the validation process
-        bool isValidated;
-        /// @notice the EIP-712 signature of all other fields in the ValidationVoucher struct.
-        bytes signature;
-    }
-
-    event ValidationEnded(uint256 tokenId, bool result);
+    event ValidationCreated(uint256 tokenId, uint256 validationId);
+    event ValidationAssigned(uint256 tokenId, uint256 validationId, address validator);
+    event ValidationResultSent(uint256 tokenId, uint256 validationId, address validator, bool result);
+    event ValidationEnded(uint256 tokenId, uint256 validationId, bool result);
     event NextRound(uint256 newRoundId);
 
-    // tokenId => if a content validated or not
+    // tokenId => is validation done
     mapping(uint256 => bool) public isValidated;
+
+    struct Validation {
+        uint id;
+        uint tokenId;
+        uint8 validationCount;
+        address[] validators;
+        uint acceptVoteCount;
+        bool finalValidationResult;
+        mapping(address => bool) vote;
+        mapping(address => bool) isVoted;
+        uint resultDate;
+        uint validationScore;
+        uint validatorScore; // successfulValidation * validationScore
+    }
+
+    uint public requiredValidator = 5;
+    uint public minRequiredAcceptVote = 3;
     // validator => round => score
-    mapping(address => mapping(uint256 => uint256))
-        public validatorScorePerRound;
+    mapping(address => mapping(uint256 => uint256)) public validatorScorePerRound;
 
-    /// TODO Bu next round jurorlarınkiyle aynı değil mi?
-    /// Tek bir next roundla her ikisini yeni rounda geçiremez miyiz?
-    /// Ve tek bir "distributionRound" değişkeni olamaz mı?
+    Validation[] validations;
 
-    /// CEVAP: Zaten tek fonksiyon ile çağrılıyor (PlatformTreasury içinden) ama round ilerletme daha 
-    /// az çağırılacak bundan dolayı external call sayısını azaltmak için juror ve validator içine ayrı
-    /// round bilgisi ekledim 
+    mapping(address => uint) validationCount;
+    mapping(address => uint) activeValidation;
+    mapping(address => bool) isInDispute;
+    mapping(address => uint) public successfulValidation;
+    mapping(address => uint) public unsuccessfulValidation;
+
     uint256 public distributionRound;
-
     /// @dev is used during the calculation of a validator score
-    uint256 public totalSuccessfulValidationScore;
+    uint256 public totalValidationScore;
 
-    /// @notice Allows to set the address of content contract address
-    /// TODO Check if every "set" contract address has the same role requirement
     function setUDAOC(address udaocAddress) external onlyRole(FOUNDATION_ROLE) {
         udaoc = IUDAOC(udaocAddress);
     }
 
-    /// @notice Writes validation result to blockchain
-    /// @param voucher voucher that contains the signed validation data
-    function setAsValidated(ValidationVoucher calldata voucher) external whenNotPaused{
-        // make sure signature is valid and get the address of the signer
-        address signer = _verify(voucher);
-        require(voucher.validUntil >= block.timestamp, "Voucher has expired.");
-        require(
-            IRM.hasRole(BACKEND_ROLE, signer),
-            "Signature invalid or unauthorized"
-        );
-        require(udaoc.exists(voucher.tokenId), "ERC721: invalid token ID");
-        isValidated[voucher.tokenId] = voucher.isValidated;
-        _recordScores(voucher.validators, voucher.validationScore);
-
-        emit ValidationEnded(voucher.tokenId, true);
+    function setStaker(address stakerAddress)
+        external
+        onlyRole(FOUNDATION_ROLE)
+    {
+        staker = IStakingContract(stakerAddress);
     }
 
-    /// @notice Records the scores of validators for a specific validation work
-    /// @param _validators Validator address of whom did the validation work
-    /// @param _validationScores Scores of the validators 
-    function _recordScores(
-        address[] calldata _validators,
-        uint256[] calldata _validationScores
-    ) internal {
-        uint256 totalValidators = _validators.length;
-
-        /// @dev loop validators and record their scores
-        for (uint256 i; i < totalValidators; i++) {
-            validatorScorePerRound[_validators[i]][
-                distributionRound
-            ] += _validationScores[i];
-            totalSuccessfulValidationScore += _validationScores[i];
+    /// @dev this is possibly deprecated, moved to offchain?
+    function sendValidation(uint validationId, bool result)
+        external
+        onlyRoles(validator_roles)
+    {
+        /// @notice sends validation result
+        /// @param validationId id of the validation
+        /// @param result result of validation
+        require(
+            activeValidation[msg.sender] == validationId,
+            "This content is not assigned to this wallet"
+        );
+        validationCount[msg.sender]++;
+        activeValidation[msg.sender] = 0;
+        if (result) {
+            validations[validationId].acceptVoteCount++;
         }
+        validations[validationId].isVoted[msg.sender] = true;
+        validations[validationId].vote[msg.sender] = result;
+        validations[validationId].validationCount++;
+        emit ValidationResultSent(validations[validationId].tokenId,validationId,msg.sender,result);
+    }
+
+    function finalizeValidation(uint256 validationId) external {
+        /// @notice finalizes validation if enough validation is sent
+        /// @param validationId id of the validation
+        require(
+            validations[validationId].validationCount >= requiredValidator,
+            "Not enough validation"
+        );
+        if (
+            validations[validationId].acceptVoteCount >= minRequiredAcceptVote
+        ) {
+            validations[validationId].finalValidationResult = true;
+            /// @dev Easier to check the validation result with token Id
+            isValidated[validations[validationId].tokenId] = true;
+        } else {
+            validations[validationId].finalValidationResult = false;
+            /// @dev Easier to check the validation result with token Id
+            isValidated[validations[validationId].tokenId] = false;
+        }
+        
+        validations[validationId].resultDate = block.timestamp;
+        for (uint i; i < validations[validationId].validators.length; i++) {
+            if (
+                validations[validationId].finalValidationResult ==
+                validations[validationId].vote[
+                    validations[validationId].validators[i]
+                ]
+            ) {
+                /// @dev Record score of a validator in this round
+                validatorScorePerRound[validations[validationId].validators[i]][distributionRound] += validations[validationId].validationScore;
+                totalValidationScore += validations[validationId].validationScore;
+                /// @dev Record success point of a validator
+                successfulValidation[validations[validationId].validators[i]]++;
+            } else {
+                /// @dev Record unsuccess point of a validator
+                unsuccessfulValidation[
+                    validations[validationId].validators[i]
+                ]++;
+            }
+        }
+        emit ValidationEnded(
+            validations[validationId].tokenId,
+            validations[validationId].id,
+            validations[validationId].finalValidationResult
+        );
+    }
+
+    function dismissValidation(uint validationId)
+        external
+        onlyRoles(validator_roles)
+    {
+        /// @notice allows validators to dismiss a validation assignment
+        /// @param validationId id of the content that will be dismissed
+        require(
+            activeValidation[msg.sender] == validationId,
+            "This content is not assigned to this wallet"
+        );
+        activeValidation[msg.sender] = 0;
+        for (uint i; i < validations[validationId].validators.length; i++) {
+            if (msg.sender == validations[validationId].validators[i]) {
+                validations[validationId].validators[i] = validations[
+                    validationId
+                ].validators[validations[validationId].validators.length - 1];
+                validations[validationId].validators.pop();
+            }
+        }
+    }
+
+    /// @notice sets required validator vote count per content
+    /// @param _requiredValidator new required vote count
+    function setRequiredValidators(uint _requiredValidator)
+        external
+        onlyRole(GOVERNANCE_ROLE)
+    {
+        requiredValidator = _requiredValidator;
+    }
+
+    /// @notice starts new validation for content
+    /// @param tokenId id of the content that will be validated
+    /// @param score validation score of the content
+    function createValidation(uint256 tokenId, uint256 score)
+        external
+        onlyRole(BACKEND_ROLE)
+    {
+        require(udaoc.exists(tokenId), "ERC721: invalid token ID");
+        Validation storage validation = validations.push();
+        validation.id = validations.length - 1;
+        validation.tokenId = tokenId;
+        validation.validationScore = score;
+        emit ValidationCreated(tokenId, validations.length -1);
+    }
+
+    /// @notice returns successful and unsuccessful validation count of the account
+    /// @param account wallet address of the account that wanted to be checked
+    function getValidationResults(address account)
+        external
+        view
+        returns (uint[2] memory results)
+    {
+        results[0] = successfulValidation[account];
+        results[1] = unsuccessfulValidation[account];
+    }
+
+    /// @notice returns total successful validation count
+    function getTotalValidationScore() external view returns (uint) {
+        return totalValidationScore;
+    }
+
+    /// @notice Only foundation can open a dispute after enough off-chain dispute reports gathered from users.
+    /// @param validationId id of the validation
+    function openDispute(uint validationId) external onlyRole(FOUNDATION_ROLE) {
+        Validation storage validation = validations[validationId];
+        address[] memory disputedAddresses = validation.validators;
+        for (uint i; i < disputedAddresses.length; i++) {
+            isInDispute[disputedAddresses[i]] = true;
+            successfulValidation[disputedAddresses[i]]--;
+            unsuccessfulValidation[disputedAddresses[i]]++;
+        }
+    }
+
+    /// @notice ends dispute
+    /// @param validationId id of the validation
+    /// @param result result of the dispute
+    function endDispute(
+        uint validationId,
+        bool result // result true means validators lost the case
+    ) external onlyRole(JUROR_CONTRACT) {
+        Validation storage validation = validations[validationId];
+        address[] memory disputedAddresses = validation.validators;
+        uint disputeLength = disputedAddresses.length;
+        for (uint i; i < disputeLength; i++) {
+            isInDispute[disputedAddresses[i]] = false;
+            if (!result) {
+                successfulValidation[disputedAddresses[i]]++;
+                unsuccessfulValidation[disputedAddresses[i]]--;
+            }
+        }
+    }
+
+    /// @notice assign validation to self
+    /// @param validationId id of the validation
+    function assignValidation(uint256 validationId)
+        external
+        onlyRoles(validator_roles)
+    {
+        require(
+            validationId < validations.length,
+            "Validation does not exist!"
+        );
+        require(
+            activeValidation[msg.sender] == 0,
+            "You already have an assigned content"
+        );
+        require(
+            validations[validationId].validators.length < requiredValidator,
+            "Content already have enough validators!"
+        );
+        require(
+            udaoc.ownerOf(validations[validationId].tokenId) != msg.sender,
+            "You are the instructor of this course."
+        );
+        activeValidation[msg.sender] = validationId;
+        validations[validationId].validators.push(msg.sender);
+        emit ValidationAssigned(validations[validationId].tokenId, validationId, msg.sender);
+    }
+
+    /// @notice Returns the validation result of a token
+    /// @param tokenId The ID of a token
+    function getIsValidated(uint tokenId) external view returns (bool) {
+        return isValidated[tokenId];
     }
 
     /// @notice Returns the score of a validator for a specific round
@@ -108,66 +276,10 @@ contract ValidationManager is RoleController, EIP712 {
         return validatorScorePerRound[_validator][_round];
     }
 
-    /// @notice Returns total successful validation count and is used for reward calculation
-    function getTotalValidationScore() external view returns (uint256) {
-        return totalSuccessfulValidationScore;
-    }
-
-    /// @notice Returns if a content is validated or not. Used as a check before service purchases
-    function getIsValidated(uint256 tokenId) external view returns (bool) {
-        return isValidated[tokenId];
-    }
-
     /// @notice Starts the new reward round
     function nextRound() external whenNotPaused onlyRole(TREASURY_CONTRACT) {
         distributionRound++;
         emit NextRound(distributionRound);
     }
 
-    /// @notice Returns a hash of the given ContentVoucher, prepared using EIP712 typed data hashing rules.
-    /// @param voucher A ContentVoucher to hash.
-    function _hash(ValidationVoucher calldata voucher)
-        internal
-        view
-        returns (bytes32)
-    {
-        return
-            _hashTypedDataV4(
-                keccak256(
-                    abi.encode(
-                        keccak256(
-                            "ValidationVoucher(uint256 tokenId,uint256 validUntil,address[] validators,uint256[] validationScore,bool isValidated)"
-                        ),
-                        voucher.tokenId,
-                        voucher.validUntil,
-                        keccak256(abi.encodePacked(voucher.validators)),
-                        keccak256(abi.encodePacked(voucher.validationScore)),
-                        voucher.isValidated
-                    )
-                )
-            );
-    }
-
-    /// @notice Returns the chain id of the current blockchain.
-    /// @dev This is used to workaround an issue with ganache returning different values from the on-chain chainid() function and
-    ///  the eth_chainId RPC method. See https://github.com/protocol/nft-website/issues/121 for context.
-    function getChainID() external view returns (uint256) {
-        uint256 id;
-        assembly {
-            id := chainid()
-        }
-        return id;
-    }
-
-    /// @notice Verifies the signature for a given ContentVoucher, returning the address of the signer.
-    /// @dev Will revert if the signature is invalid. Does not verify that the signer is authorized to mint NFTs.
-    /// @param voucher A ContentVoucher describing an unminted NFT.
-    function _verify(ValidationVoucher calldata voucher)
-        internal
-        view
-        returns (address)
-    {
-        bytes32 digest = _hash(voucher);
-        return ECDSA.recover(digest, voucher.signature);
-    }
 }
