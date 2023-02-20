@@ -89,7 +89,7 @@ contract JurorManager is RoleController {
     }
 
     /// @notice starts new dispute case 
-    function createDispute(uint256 caseId, uint128 caseScope, string calldata question, bool isTokenRelated, uint256 tokenId)
+    function createDispute(uint128 caseScope, string calldata question, bool isTokenRelated, uint256 tokenId)
         external
         onlyRole(BACKEND_ROLE)
     {
@@ -101,7 +101,7 @@ contract JurorManager is RoleController {
         if(isTokenRelated){
             dispute.tokenId = tokenId;
         }
-        emit DisputeCreated(caseId, caseScope, question);
+        emit DisputeCreated(dispute.caseId, caseScope, question);
     }
 
     /// @notice assign a dispute to self
