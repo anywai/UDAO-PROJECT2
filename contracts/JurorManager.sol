@@ -39,6 +39,7 @@ contract JurorManager is RoleController {
         address udaocAddress
     )  RoleController(rmAddress) {
         udaoc = IUDAOC(udaocAddress);
+        disputes.push();
     }
 
     /// @notice Get the updated addresses from contract manager
