@@ -18,6 +18,7 @@ contract ValidationManager is RoleController {
         address irmAddress
     ) RoleController(irmAddress) {
         udaoc = IUDAOC(udaocAddress);
+        validations.push();
     }
 
     event ValidationCreated(uint256 tokenId, uint256 validationId);
