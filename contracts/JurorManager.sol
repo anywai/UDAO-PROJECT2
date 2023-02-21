@@ -133,7 +133,18 @@ contract JurorManager is RoleController {
             udaoc.ownerOf(disputes[caseId].tokenId) != msg.sender,
             "You are the instructor of this course."
         );
+
         /// TODO Add check if the juror is validator of the validation case
+
+        uint validationId = IVM.getLatestValidationIdOfToken(disputes[caseId].tokenId);
+        address[] memory validators = IVM.getValidatorsOfVal(validationId);
+
+        uint validatorLength = validators.length;
+
+        for(uint i = 0; i < validatorLength; i++) {
+            require(msg.sender != validators[i], "You can't assign content you validated!");
+        }
+
         activeDispute[msg.sender] = caseId;
         disputes[caseId].jurors.push(msg.sender);
         emit DisputeAssigned(caseId, msg.sender);

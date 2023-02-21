@@ -30,6 +30,9 @@ contract ValidationManager is RoleController {
     // tokenId => is validation done
     mapping(uint256 => bool) public isValidated;
 
+    // tokenId => validationId
+    mapping(uint256 => uint256) public latestValidationOfToken;
+
     struct Validation {
         uint id;
         uint tokenId;
@@ -139,6 +142,7 @@ contract ValidationManager is RoleController {
                 ]++;
             }
         }
+        latestValidationOfToken[validations[validationId].tokenId] = validationId;
         emit ValidationEnded(
             validations[validationId].tokenId,
             validations[validationId].id,
@@ -269,6 +273,12 @@ contract ValidationManager is RoleController {
     /// @param tokenId The ID of a token
     function getIsValidated(uint tokenId) external view returns (bool) {
         return isValidated[tokenId];
+    }
+
+    /// @notice Returns the validation result of a token
+    /// @param tokenId The ID of a token
+    function getLatestValidationIdOfToken(uint tokenId) external view returns (uint) {
+        return latestValidationOfToken[tokenId];
     }
 
     /// @notice Returns the score of a validator for a specific round
