@@ -23,8 +23,8 @@ contract JurorManager is RoleController {
     mapping(address => mapping(uint256 => uint256)) public jurorScorePerRound;
     // juror => caseId
     mapping(address => uint256) activeDispute;
-    mapping(address => uint) public successfulCase;
-    mapping(address => uint) public unsuccessfulCase;
+    mapping(address => uint) public successfulDispute;
+    mapping(address => uint) public unsuccessfulDispute;
 
     uint256 public distributionRound;
     uint256 public totalCaseScore;
@@ -190,10 +190,10 @@ contract JurorManager is RoleController {
                 jurorScorePerRound[disputes[caseId].jurors[i]][distributionRound]++;
                 totalJurorScore++;
                 /// @dev Record success point of a validator
-                successfulCase[disputes[caseId].jurors[i]]++;
+                successfulDispute[disputes[caseId].jurors[i]]++;
             } else {
                 /// @dev Record unsuccess point of a validator
-                unsuccessfulCase[
+                unsuccessfulDispute[
                     disputes[caseId].jurors[i]
                 ]++;
             }
@@ -264,8 +264,8 @@ contract JurorManager is RoleController {
         view
         returns (uint[2] memory results)
     {
-        results[0] = successfulCase[account];
-        results[1] = unsuccessfulCase[account];
+        results[0] = successfulDispute[account];
+        results[1] = unsuccessfulDispute[account];
     }
 
     /// @notice Returns the score of a juror for a speficied round
