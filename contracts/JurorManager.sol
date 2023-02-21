@@ -6,10 +6,12 @@ import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
 import "./ContractManager.sol";
 import "./RoleController.sol";
 import "./IUDAOC.sol";
+import "./IVM.sol";
 
 
 contract JurorManager is RoleController {
     IUDAOC udaoc;
+    IValidationManager public IVM;
 
     ContractManager public contractManager;
 
@@ -38,9 +40,11 @@ contract JurorManager is RoleController {
      */
     constructor(
         address rmAddress,
-        address udaocAddress
+        address udaocAddress,
+        address ivmAddress
     )  RoleController(rmAddress) {
         udaoc = IUDAOC(udaocAddress);
+        IVM = IValidationManager(ivmAddress);
         disputes.push();
     }
 

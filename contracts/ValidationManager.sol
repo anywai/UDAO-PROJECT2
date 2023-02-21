@@ -51,6 +51,10 @@ contract ValidationManager is RoleController {
 
     Validation[] validations;
 
+    function getValidatorsOfVal(uint validationId) external view returns(address[] memory){
+        return validations[validationId].validators;
+    }
+
     mapping(address => uint) public validationCount;
     mapping(address => uint) public activeValidation;
     mapping(address => bool) public isInDispute;
