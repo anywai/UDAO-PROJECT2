@@ -51,9 +51,9 @@ contract ValidationManager is RoleController {
 
     Validation[] validations;
 
-    mapping(address => uint) validationCount;
-    mapping(address => uint) activeValidation;
-    mapping(address => bool) isInDispute;
+    mapping(address => uint) public validationCount;
+    mapping(address => uint) public activeValidation;
+    mapping(address => bool) public isInDispute;
     mapping(address => uint) public successfulValidation;
     mapping(address => uint) public unsuccessfulValidation;
 
@@ -104,8 +104,6 @@ contract ValidationManager is RoleController {
             "Not enough validation"
         );
         if (
-            /// TODO Eğer bir validator işini bitirmeden validation biterse,
-            /// sonucu göndermeyen validator eksi puan alıyor!
             validations[validationId].acceptVoteCount >= minRequiredAcceptVote
         ) {
             validations[validationId].finalValidationResult = true;
