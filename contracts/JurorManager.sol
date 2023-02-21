@@ -191,8 +191,6 @@ contract JurorManager is RoleController {
         
         disputes[caseId].resultDate = block.timestamp;
 
-        _addJurorScores(disputes[caseId].jurors);
-
         /// TODO Below is for unfixed juror scores and juror penalty..
 
         for (uint i; i < disputes[caseId].jurors.length; i++) {
@@ -253,17 +251,6 @@ contract JurorManager is RoleController {
             }
         }
         revert("Sender is not in juror list");
-    }
-
-    /// @notice Adds scores of jurors that took a case
-    /// @param _jurors list of jurors contained in voucher
-    function _addJurorScores(address[] storage _jurors) internal {
-        uint totalJurors = _jurors.length;
-
-        for (uint i; i < totalJurors; i++) {
-            jurorScorePerRound[_jurors[i]][distributionRound]++;
-            totalJurorScore++;
-        }
     }
 
     /// @notice Starts the new reward round
