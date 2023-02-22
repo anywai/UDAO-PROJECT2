@@ -14,4 +14,6 @@ interface IRoleManager is IAccessControl {
     function isBanned(address _address) external view returns (bool);
 
     function grantRoleStaker(bytes32 role, address user) external;
+
+    function revokeRoleStaker(bytes32 role, address user) external;
 }
