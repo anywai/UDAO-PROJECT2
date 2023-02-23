@@ -33,7 +33,7 @@ contract UDAOStaker is RoleController, EIP712 {
     /// @notice Amount to deduct from juror application
     uint256 public jurorLockAmount = 150 ether;
 
-    event SetSuperValidatorLockAmount(uint256 _newAmount);
+    event SetValidatorLockAmount(uint256 _newAmount);
     event SetVoteReward(uint256 _newAmount);
     event SetPlatformTreasuryAddress(address _newAddress);
     event RoleApplied(uint256 _roleId, address _user, uint256 _jobAmount);
@@ -149,7 +149,7 @@ contract UDAOStaker is RoleController, EIP712 {
         onlyRoles(administrator_roles)
     {
         validatorLockAmount = _amount;
-        emit SetSuperValidatorLockAmount(_amount);
+        emit SetValidatorLockAmount(_amount);
     }
 
     /**
