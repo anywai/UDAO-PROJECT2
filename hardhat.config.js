@@ -3,6 +3,12 @@ require("@nomiclabs/hardhat-waffle");
 require("hardhat-contract-sizer");
 require("solidity-coverage");
 require("hardhat-gas-reporter");
+require("dotenv").config();
+require("@nomiclabs/hardhat-ethers");
+require("@nomiclabs/hardhat-etherscan");
+
+// const { POLYGON_MUMBAI_RPC_PROVIDER, PRIVATE_KEY, POLYGONSCAN_API_KEY } =
+//   process.env;
 
 // This is a sample Hardhat task. To learn how to create your own go to
 // https://hardhat.org/guides/create-task.html
@@ -23,15 +29,21 @@ task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
 module.exports = {
   defaultNetwork: "hardhat",
   networks: {
-    hardhat: { chainId: 31337 },
+    hardhat: {
+      /**chainId: 31337  */
+    },
+    // mumbai: {
+    //   url: POLYGON_MUMBAI_RPC_PROVIDER,
+    //   accounts: [`0x${PRIVATE_KEY}`],
+    // },
   },
   gasReporter: {
-    enabled: false,
+    enabled: true,
     currency: "EUR",
     coinmarketcap: "9b067bab-555e-4a2e-8b46-3ddbf5254166",
     token: "MATIC",
     gasPriceApi:
-      "https://api.polygonscan.com/api?module=proxy&action=eth_gasPrice"
+      "https://api.polygonscan.com/api?module=proxy&action=eth_gasPrice",
   },
   solidity: {
     version: "0.8.17",
@@ -42,4 +54,5 @@ module.exports = {
       },
     },
   },
+  // etherscan: { apiKey: POLYGONSCAN_API_KEY },
 };
