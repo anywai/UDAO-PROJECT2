@@ -97,4 +97,8 @@ contract RoleManager is AccessControl, IRoleManager {
     function grantRoleStaker(bytes32 role, address user) external onlyRole(STAKING_CONTRACT) {
         _grantRole(role, user);
     }
+
+    function revokeRoleStaker(bytes32 role, address user) external onlyRole(STAKING_CONTRACT) {
+        _revokeRole(role, user);
+    }
 }

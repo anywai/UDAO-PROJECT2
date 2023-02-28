@@ -18,6 +18,7 @@ contract ValidationManager is RoleController {
         address irmAddress
     ) RoleController(irmAddress) {
         udaoc = IUDAOC(udaocAddress);
+        validations.push();
     }
 
     event ValidationCreated(uint256 tokenId, uint256 validationId);
@@ -28,6 +29,9 @@ contract ValidationManager is RoleController {
 
     // tokenId => is validation done
     mapping(uint256 => bool) public isValidated;
+
+    // tokenId => validationId
+    mapping(uint256 => uint256) public latestValidationOfToken;
 
     struct Validation {
         uint id;
@@ -43,16 +47,20 @@ contract ValidationManager is RoleController {
         uint validatorScore; // successfulValidation * validationScore
     }
 
-    uint public requiredValidator = 5;
-    uint public minRequiredAcceptVote = 3;
+    uint128 public requiredValidator = 5;
+    uint128 public minRequiredAcceptVote = 3;
     // validator => round => score
     mapping(address => mapping(uint256 => uint256)) public validatorScorePerRound;
 
     Validation[] validations;
 
-    mapping(address => uint) validationCount;
-    mapping(address => uint) activeValidation;
-    mapping(address => bool) isInDispute;
+    function getValidatorsOfVal(uint validationId) external view returns(address[] memory){
+        return validations[validationId].validators;
+    }
+
+    mapping(address => uint) public validationCount;
+    mapping(address => uint) public activeValidation;
+    mapping(address => bool) public isInDispute;
     mapping(address => uint) public successfulValidation;
     mapping(address => uint) public unsuccessfulValidation;
 
@@ -83,6 +91,7 @@ contract ValidationManager is RoleController {
             activeValidation[msg.sender] == validationId,
             "This content is not assigned to this wallet"
         );
+        /// TODO 2 tane validationCount var. Bunlar ne işe yarıyor?
         validationCount[msg.sender]++;
         activeValidation[msg.sender] = 0;
         if (result) {
@@ -133,6 +142,7 @@ contract ValidationManager is RoleController {
                 ]++;
             }
         }
+        latestValidationOfToken[validations[validationId].tokenId] = validationId;
         emit ValidationEnded(
             validations[validationId].tokenId,
             validations[validationId].id,
@@ -163,7 +173,7 @@ contract ValidationManager is RoleController {
 
     /// @notice sets required validator vote count per content
     /// @param _requiredValidator new required vote count
-    function setRequiredValidators(uint _requiredValidator)
+    function setRequiredValidators(uint128 _requiredValidator)
         external
         onlyRole(GOVERNANCE_ROLE)
     {
@@ -263,6 +273,12 @@ contract ValidationManager is RoleController {
     /// @param tokenId The ID of a token
     function getIsValidated(uint tokenId) external view returns (bool) {
         return isValidated[tokenId];
+    }
+
+    /// @notice Returns the validation result of a token
+    /// @param tokenId The ID of a token
+    function getLatestValidationIdOfToken(uint tokenId) external view returns (uint) {
+        return latestValidationOfToken[tokenId];
     }
 
     /// @notice Returns the score of a validator for a specific round

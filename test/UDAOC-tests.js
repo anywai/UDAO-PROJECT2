@@ -47,32 +47,41 @@ async function deploy() {
     "PlatformTreasury"
   );
   let factoryUDAOGovernor = await ethers.getContractFactory("UDAOGovernor");
-  let factoryContractManager = await ethers.getContractFactory("ContractManager");
+  let factoryContractManager = await ethers.getContractFactory(
+    "ContractManager"
+  );
 
   //DEPLOYMENTS
   const contractUDAO = await factoryUDAO.deploy();
   const contractRoleManager = await factoryRoleManager.deploy();
+
   const contractUDAOCertificate = await factoryUDAOCertificate.deploy(
     contractRoleManager.address
   );
+
   const contractUDAOContent = await factoryUDAOContent.deploy(
     contractRoleManager.address
   );
+
   const contractValidationManager = await factoryValidationManager.deploy(
     contractUDAOContent.address,
     contractRoleManager.address
   );
+
   const contractJurorManager = await factoryJurorManager.deploy(
-    contractRoleManager.address
+    contractRoleManager.address,
+    contractUDAOContent.address,
+    contractValidationManager.address
   );
+
   const contractContractManager = await factoryContractManager.deploy(
     contractValidationManager.address,
     contractJurorManager.address,
     contractUDAO.address,
     contractUDAOContent.address,
-    contractRoleManager.address,
+    contractRoleManager.address
   );
-  
+
   const contractUDAOVp = await factoryUDAOVp.deploy(
     contractRoleManager.address,
     contractContractManager.address
@@ -145,14 +154,18 @@ async function deploy() {
     DEFAULT_ADMIN_ROLE,
     contractUDAOTimelockController.address
   );
-  // add missing contract addresses to the contract manager 
-  await contractContractManager.connect(backend).setAddressStaking(contractUDAOStaker.address)
-  await contractContractManager.connect(backend).setPlatformTreasuryAddress(contractPlatformTreasury.address)
-  await contractContractManager.connect(backend).setAddressUdaoVp(contractUDAOVp.address)
-  // add staking contract to udao-vp
-  await contractUDAOVp
+  // add missing contract addresses to the contract manager
+  await contractContractManager
     .connect(backend)
-    .updateAddresses();
+    .setAddressStaking(contractUDAOStaker.address);
+  await contractContractManager
+    .connect(backend)
+    .setPlatformTreasuryAddress(contractPlatformTreasury.address);
+  await contractContractManager
+    .connect(backend)
+    .setAddressUdaoVp(contractUDAOVp.address);
+  // add staking contract to udao-vp
+  await contractUDAOVp.connect(backend).updateAddresses();
 
   return {
     backend,
@@ -272,9 +285,19 @@ describe("UDAOC Contract", function () {
     } = await deploy();
     await contractRoleManager.setKYC(contentCreator.address, true);
 
-    const udaoc_voucher = [1, [ethers.utils.parseEther("1"),ethers.utils.parseEther("1")], "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi", contentCreator.address, true, "Content Name", "Content Description"]
+    const udaoc_voucher = [
+      1,
+      [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
+      "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
+      contentCreator.address,
+      true,
+      "Content Name",
+      "Content Description",
+    ];
 
-    await expect(contractUDAOContent.connect(contentCreator).redeem(udaoc_voucher))
+    await expect(
+      contractUDAOContent.connect(contentCreator).redeem(udaoc_voucher)
+    )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
         "0x0000000000000000000000000000000000000000",
@@ -310,7 +333,15 @@ describe("UDAOC Contract", function () {
     } = await deploy();
     await contractRoleManager.setKYC(contentCreator.address, true);
 
-    const udaoc_voucher = [1, [ethers.utils.parseEther("1"),ethers.utils.parseEther("1")], "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi", contentCreator.address, true, "Content Name", "Content Description"]
+    const udaoc_voucher = [
+      1,
+      [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
+      "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
+      contentCreator.address,
+      true,
+      "Content Name",
+      "Content Description",
+    ];
 
     await expect(
       contractUDAOContent.connect(contentBuyer).redeem(udaoc_voucher)
@@ -389,9 +420,19 @@ describe("UDAOC Contract", function () {
     } = await deploy();
     await contractRoleManager.setKYC(contentCreator.address, true);
 
-    const udaoc_voucher = [1, [ethers.utils.parseEther("1"),ethers.utils.parseEther("1")], "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi", contentCreator.address, true, "Content Name", "Content Description"]
+    const udaoc_voucher = [
+      1,
+      [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
+      "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
+      contentCreator.address,
+      true,
+      "Content Name",
+      "Content Description",
+    ];
 
-    await expect(contractUDAOContent.connect(contentCreator).redeem(udaoc_voucher))
+    await expect(
+      contractUDAOContent.connect(contentCreator).redeem(udaoc_voucher)
+    )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
         "0x0000000000000000000000000000000000000000",
@@ -431,23 +472,32 @@ describe("UDAOC Contract", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
-    const udaoc_voucher = [1, [ethers.utils.parseEther("1"),ethers.utils.parseEther("1")], "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi", contentCreator.address, true, "Content Name", "Content Description"]
+    const udaoc_voucher = [
+      1,
+      [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
+      "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
+      contentCreator.address,
+      true,
+      "Content Name",
+      "Content Description",
+    ];
 
-    await expect(contractUDAOContent.connect(contentCreator).redeem(udaoc_voucher))
-          .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
-          .withArgs(
-            "0x0000000000000000000000000000000000000000",
-            contentCreator.address,
-            udaoc_voucher[0]
-          );
-        await expect(
-          contractUDAOContent
-            .connect(contentCreator)
-            .transferFrom(contentCreator.address, contentBuyer.address, 1)
-        )
-          .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
-          .withArgs(contentCreator.address, contentBuyer.address, 1);
-        
+    await expect(
+      contractUDAOContent.connect(contentCreator).redeem(udaoc_voucher)
+    )
+      .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
+      .withArgs(
+        "0x0000000000000000000000000000000000000000",
+        contentCreator.address,
+        udaoc_voucher[0]
+      );
+    await expect(
+      contractUDAOContent
+        .connect(contentCreator)
+        .transferFrom(contentCreator.address, contentBuyer.address, 1)
+    )
+      .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
+      .withArgs(contentCreator.address, contentBuyer.address, 1);
   });
   it("Should fail to transfer token if sender is not KYCed", async function () {
     const {
@@ -477,9 +527,19 @@ describe("UDAOC Contract", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
-    const udaoc_voucher = [1, [ethers.utils.parseEther("1"),ethers.utils.parseEther("1")], "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi", contentCreator.address, true, "Content Name", "Content Description"]
+    const udaoc_voucher = [
+      1,
+      [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
+      "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
+      contentCreator.address,
+      true,
+      "Content Name",
+      "Content Description",
+    ];
 
-    await expect(contractUDAOContent.connect(contentCreator).redeem(udaoc_voucher))
+    await expect(
+      contractUDAOContent.connect(contentCreator).redeem(udaoc_voucher)
+    )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
         "0x0000000000000000000000000000000000000000",
@@ -522,10 +582,19 @@ describe("UDAOC Contract", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
-    const udaoc_voucher = [1, [ethers.utils.parseEther("1"),ethers.utils.parseEther("1")], "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi", contentCreator.address, true, "Content Name", "Content Description"]
+    const udaoc_voucher = [
+      1,
+      [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
+      "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
+      contentCreator.address,
+      true,
+      "Content Name",
+      "Content Description",
+    ];
 
-
-    await expect(contractUDAOContent.connect(contentCreator).redeem(udaoc_voucher))
+    await expect(
+      contractUDAOContent.connect(contentCreator).redeem(udaoc_voucher)
+    )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
         "0x0000000000000000000000000000000000000000",
@@ -569,9 +638,19 @@ describe("UDAOC Contract", function () {
     await contractRoleManager.setKYC(contentBuyer.address, true);
     await contractRoleManager.setBan(contentBuyer.address, true);
 
-    const udaoc_voucher = [1, [ethers.utils.parseEther("1"),ethers.utils.parseEther("1")], "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi", contentCreator.address, true, "Content Name", "Content Description"]
+    const udaoc_voucher = [
+      1,
+      [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
+      "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
+      contentCreator.address,
+      true,
+      "Content Name",
+      "Content Description",
+    ];
 
-    await expect(contractUDAOContent.connect(contentCreator).redeem(udaoc_voucher))
+    await expect(
+      contractUDAOContent.connect(contentCreator).redeem(udaoc_voucher)
+    )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
         "0x0000000000000000000000000000000000000000",
@@ -612,9 +691,19 @@ describe("UDAOC Contract", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
-    const udaoc_voucher = [1, [ethers.utils.parseEther("1"),ethers.utils.parseEther("1")], "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi", contentCreator.address, true, "Content Name", "Content Description"]
+    const udaoc_voucher = [
+      1,
+      [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
+      "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
+      contentCreator.address,
+      true,
+      "Content Name",
+      "Content Description",
+    ];
 
-    await expect(contractUDAOContent.connect(contentCreator).redeem(udaoc_voucher))
+    await expect(
+      contractUDAOContent.connect(contentCreator).redeem(udaoc_voucher)
+    )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
         "0x0000000000000000000000000000000000000000",
@@ -629,7 +718,6 @@ describe("UDAOC Contract", function () {
         .transferFrom(contentCreator.address, contentBuyer.address, 1)
     ).to.revertedWith("Sender is not KYCed!");
   });
-
 
   it("Should burn token if token owner", async function () {
     const {
@@ -659,10 +747,19 @@ describe("UDAOC Contract", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
-    const udaoc_voucher = [1, [ethers.utils.parseEther("1"),ethers.utils.parseEther("1")], "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi", contentCreator.address, true, "Content Name", "Content Description"]
+    const udaoc_voucher = [
+      1,
+      [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
+      "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
+      contentCreator.address,
+      true,
+      "Content Name",
+      "Content Description",
+    ];
 
-
-    await expect(contractUDAOContent.connect(contentCreator).redeem(udaoc_voucher))
+    await expect(
+      contractUDAOContent.connect(contentCreator).redeem(udaoc_voucher)
+    )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
         "0x0000000000000000000000000000000000000000",
@@ -706,10 +803,19 @@ describe("UDAOC Contract", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
-    const udaoc_voucher = [1, [ethers.utils.parseEther("1"),ethers.utils.parseEther("1")], "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi", contentCreator.address, true, "Content Name", "Content Description"]
+    const udaoc_voucher = [
+      1,
+      [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
+      "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
+      contentCreator.address,
+      true,
+      "Content Name",
+      "Content Description",
+    ];
 
-
-    await expect(contractUDAOContent.connect(contentCreator).redeem(udaoc_voucher))
+    await expect(
+      contractUDAOContent.connect(contentCreator).redeem(udaoc_voucher)
+    )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
         "0x0000000000000000000000000000000000000000",
@@ -719,9 +825,7 @@ describe("UDAOC Contract", function () {
 
     await expect(
       contractUDAOContent.connect(contentBuyer).burn(1)
-    ).to.revertedWith(
-      "You are not the owner of token"
-    );
+    ).to.revertedWith("You are not the owner of token");
   });
 
   it("Should return true if supports ERC721 interface", async function () {
@@ -784,9 +888,19 @@ describe("UDAOC Contract", function () {
     } = await deploy();
     await contractRoleManager.setKYC(contentCreator.address, true);
 
-    const udaoc_voucher = [1, [ethers.utils.parseEther("1"),ethers.utils.parseEther("1")], "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi", contentCreator.address, false, "Content Name", "Content Description"]
+    const udaoc_voucher = [
+      1,
+      [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
+      "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
+      contentCreator.address,
+      false,
+      "Content Name",
+      "Content Description",
+    ];
 
-    await expect(contractUDAOContent.connect(contentCreator).redeem(udaoc_voucher))
+    await expect(
+      contractUDAOContent.connect(contentCreator).redeem(udaoc_voucher)
+    )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
         "0x0000000000000000000000000000000000000000",
@@ -824,9 +938,19 @@ describe("UDAOC Contract", function () {
     } = await deploy();
     await contractRoleManager.setKYC(contentCreator.address, true);
 
-    const udaoc_voucher = [1, [ethers.utils.parseEther("1"),ethers.utils.parseEther("1")], "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi", contentCreator.address, true, "Content Name", "Content Description"]
+    const udaoc_voucher = [
+      1,
+      [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
+      "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
+      contentCreator.address,
+      true,
+      "Content Name",
+      "Content Description",
+    ];
 
-    await expect(contractUDAOContent.connect(contentCreator).redeem(udaoc_voucher))
+    await expect(
+      contractUDAOContent.connect(contentCreator).redeem(udaoc_voucher)
+    )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
         "0x0000000000000000000000000000000000000000",
@@ -864,9 +988,19 @@ describe("UDAOC Contract", function () {
     } = await deploy();
     await contractRoleManager.setKYC(contentCreator.address, true);
 
-    const udaoc_voucher = [1, [ethers.utils.parseEther("1"),ethers.utils.parseEther("1")], "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi", contentCreator.address, false, "Content Name", "Content Description"]
+    const udaoc_voucher = [
+      1,
+      [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
+      "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
+      contentCreator.address,
+      false,
+      "Content Name",
+      "Content Description",
+    ];
 
-    await expect(contractUDAOContent.connect(contentCreator).redeem(udaoc_voucher))
+    await expect(
+      contractUDAOContent.connect(contentCreator).redeem(udaoc_voucher)
+    )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
         "0x0000000000000000000000000000000000000000",
@@ -905,9 +1039,19 @@ describe("UDAOC Contract", function () {
     } = await deploy();
     await contractRoleManager.setKYC(contentCreator.address, true);
 
-    const udaoc_voucher = [1, [ethers.utils.parseEther("1"),ethers.utils.parseEther("1")], "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi", contentCreator.address, true, "Content Name", "Content Description"]
+    const udaoc_voucher = [
+      1,
+      [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
+      "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
+      contentCreator.address,
+      true,
+      "Content Name",
+      "Content Description",
+    ];
 
-    await expect(contractUDAOContent.connect(contentCreator).redeem(udaoc_voucher))
+    await expect(
+      contractUDAOContent.connect(contentCreator).redeem(udaoc_voucher)
+    )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
         "0x0000000000000000000000000000000000000000",

@@ -47,7 +47,9 @@ async function deploy() {
     "PlatformTreasury"
   );
   let factoryUDAOGovernor = await ethers.getContractFactory("UDAOGovernor");
-  let factoryContractManager = await ethers.getContractFactory("ContractManager");
+  let factoryContractManager = await ethers.getContractFactory(
+    "ContractManager"
+  );
 
   //DEPLOYMENTS
   const contractUDAO = await factoryUDAO.deploy();
@@ -63,7 +65,9 @@ async function deploy() {
     contractRoleManager.address
   );
   const contractJurorManager = await factoryJurorManager.deploy(
-    contractRoleManager.address
+    contractRoleManager.address,
+    contractUDAOContent.address,
+    contractValidationManager.address
   );
 
   const contractContractManager = await factoryContractManager.deploy(
@@ -71,9 +75,9 @@ async function deploy() {
     contractJurorManager.address,
     contractUDAO.address,
     contractUDAOContent.address,
-    contractRoleManager.address,
+    contractRoleManager.address
   );
-  
+
   const contractUDAOVp = await factoryUDAOVp.deploy(
     contractRoleManager.address,
     contractContractManager.address
@@ -147,14 +151,18 @@ async function deploy() {
     DEFAULT_ADMIN_ROLE,
     contractUDAOTimelockController.address
   );
-  // add missing contract addresses to the contract manager 
-  await contractContractManager.connect(backend).setAddressStaking(contractUDAOStaker.address)
-  await contractContractManager.connect(backend).setPlatformTreasuryAddress(contractPlatformTreasury.address)
-  await contractContractManager.connect(backend).setAddressUdaoVp(contractUDAOVp.address)
-  // add staking contract to udao-vp
-  await contractUDAOVp
+  // add missing contract addresses to the contract manager
+  await contractContractManager
     .connect(backend)
-    .updateAddresses();
+    .setAddressStaking(contractUDAOStaker.address);
+  await contractContractManager
+    .connect(backend)
+    .setPlatformTreasuryAddress(contractPlatformTreasury.address);
+  await contractContractManager
+    .connect(backend)
+    .setAddressUdaoVp(contractUDAOVp.address);
+  // add staking contract to udao-vp
+  await contractUDAOVp.connect(backend).updateAddresses();
 
   return {
     backend,
