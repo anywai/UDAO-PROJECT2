@@ -7,8 +7,8 @@ require("dotenv").config();
 require("@nomiclabs/hardhat-ethers");
 require("@nomiclabs/hardhat-etherscan");
 
-// const { POLYGON_MUMBAI_RPC_PROVIDER, PRIVATE_KEY, POLYGONSCAN_API_KEY } =
-//   process.env;
+const { POLYGON_MUMBAI_RPC_PROVIDER, PRIVATE_KEY, POLYGONSCAN_API_KEY } =
+  process.env;
 
 // This is a sample Hardhat task. To learn how to create your own go to
 // https://hardhat.org/guides/create-task.html
@@ -32,10 +32,10 @@ module.exports = {
     hardhat: {
       /**chainId: 31337  */
     },
-    // mumbai: {
-    //   url: POLYGON_MUMBAI_RPC_PROVIDER,
-    //   accounts: [`0x${PRIVATE_KEY}`],
-    // },
+    mumbai: {
+      url: POLYGON_MUMBAI_RPC_PROVIDER,
+      accounts: [`0x${PRIVATE_KEY}`],
+    },
   },
   gasReporter: {
     enabled: true,
@@ -54,5 +54,5 @@ module.exports = {
       },
     },
   },
-  // etherscan: { apiKey: POLYGONSCAN_API_KEY },
+  etherscan: { apiKey: POLYGONSCAN_API_KEY },
 };
