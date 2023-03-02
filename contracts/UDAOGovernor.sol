@@ -33,9 +33,9 @@ contract UDAOGovernor is
     )
         Governor("UDAOGovernor")
         GovernorSettings(
-            50400, /* 1 week voting delay */
-            50400, /* 1 week voting period duration*/
-            0 /*proposal threshold*/
+            302400, /* 1 week voting delay */
+            302400, /* 1 week voting period duration*/
+            1 /*proposal threshold*/
         )
         GovernorVotes(_token)
         GovernorVotesQuorumFraction(4)
