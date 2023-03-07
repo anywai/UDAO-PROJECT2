@@ -39,8 +39,6 @@ abstract contract ContentManager is EIP712, BasePlatform {
         bool fullContentPurchase;
         /// @notice Purchased parts
         uint256[] purchasedParts;
-        /// @notice Address of the redeemer
-        address redeemer;
         /// @notice Address of the gift receiver if purhcase is a gift
         address giftReceiver;
     }
@@ -73,8 +71,6 @@ abstract contract ContentManager is EIP712, BasePlatform {
         uint256 priceToPay;
         /// @notice if the coaching service is refundable or not
         bool isRefundable;
-        /// @notice Address of the redeemer
-        address redeemer;
     }
 
     // wallet => content token Ids
@@ -137,7 +133,6 @@ abstract contract ContentManager is EIP712, BasePlatform {
             isTokenBought[msg.sender][tokenId][0] == false,
             "Full content is already bought"
         );
-        require(msg.sender == voucher.redeemer, "You are not redeemer.");
 
         /// @dev Get the total payment amount first
         if (voucher.fullContentPurchase) {
@@ -332,7 +327,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
         governanceBalance += (priceToPay * coachingGovernancenCut) / 100000;
         coachingStructs[coachingIndex] = CoachingStruct({
             coach: instructor,
-            learner: voucher.redeemer,
+            learner: msg.sender,
             isDone: 0,
             isRefundable: voucher.isRefundable,
             totalPaymentAmount: priceToPay,
@@ -346,7 +341,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
         emit CoachingBought(msg.sender, voucher.tokenId, coachingIndex);
         coachingIndex++;
 
-        studentList[voucher.tokenId].push(voucher.redeemer);
+        studentList[voucher.tokenId].push(msg.sender);
         udao.transferFrom(msg.sender, address(this), priceToPay);
     }
 
