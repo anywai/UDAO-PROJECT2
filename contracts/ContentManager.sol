@@ -41,6 +41,8 @@ abstract contract ContentManager is EIP712, BasePlatform {
         uint256[] purchasedParts;
         /// @notice Address of the redeemer
         address redeemer;
+        /// @notice Address of the gift receiver if purhcase is a gift
+        address giftReceiver;
     }
 
     /// @notice Represents usage rights for a content (or part)
@@ -57,6 +59,8 @@ abstract contract ContentManager is EIP712, BasePlatform {
         uint256 validUntil;
         /// @notice Address of the redeemer
         address redeemer;
+        /// @notice Address of the gift receiver if purhcase is a gift
+        address giftReceiver;
         /// @notice the EIP-712 signature of all other fields in the ContentDiscountVoucher struct.
         bytes signature;
     }
@@ -115,10 +119,16 @@ abstract contract ContentManager is EIP712, BasePlatform {
         uint256 tokenId = voucher.tokenId;
         uint256 partIdLength = voucher.purchasedParts.length;
         uint256 priceToPay;
+        address contentReceiver = msg.sender;
 
         require(udaoc.exists(tokenId), "Content does not exist!");
         require(!IRM.isBanned(msg.sender), "You are banned");
         require(IRM.isKYCed(msg.sender), "You are not KYCed");
+        if(voucher.giftReceiver != address(0)){
+            contentReceiver = voucher.giftReceiver;
+            require(!IRM.isBanned(contentReceiver), "Gift receiver is banned");
+            require(IRM.isKYCed(contentReceiver), "Gift receiver is not KYCed");
+        }
         address instructor = udaoc.ownerOf(tokenId);
         require(IRM.isKYCed(instructor), "Instructor is not KYCed");
         require(!IRM.isBanned(instructor), "Instructor is banned");
@@ -169,12 +179,10 @@ abstract contract ContentManager is EIP712, BasePlatform {
             (jurorCalc);
 
         /// @dev transfer the tokens from buyer to contract
-        /// FIXME Abi adamın gönderdiği tokenlar burada toplanıyor.
-        /// ama burada withdraw yok? address(this) ==? content manager değil mi?
         udao.transferFrom(msg.sender, address(this), priceToPay);
 
         if (voucher.fullContentPurchase) {
-            _updateOwned(tokenId, 0);
+            _updateOwned(tokenId, 0, contentReceiver);
         } else {
             require(
                 voucher.purchasedParts[0] != 0,
@@ -186,7 +194,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
                         udaoc.getPartNumberOfContent(tokenId),
                     "Part does not exist!"
                 );
-                _updateOwned(tokenId, voucher.purchasedParts[j]);
+                _updateOwned(tokenId, voucher.purchasedParts[j], contentReceiver);
             }
         }
 
@@ -212,10 +220,17 @@ abstract contract ContentManager is EIP712, BasePlatform {
         );
         require(voucher.validUntil >= block.timestamp, "Voucher has expired.");
         require(msg.sender == voucher.redeemer, "You are not redeemer.");
+
         uint256 tokenId = voucher.tokenId;
         uint256 partIdLength = voucher.purchasedParts.length;
+        address contentReceiver = msg.sender;
 
         require(udaoc.exists(tokenId), "Content does not exist!");
+        if(voucher.giftReceiver != address(0)){
+            contentReceiver = voucher.giftReceiver;
+            require(!IRM.isBanned(contentReceiver), "Gift receiver is banned");
+            require(IRM.isKYCed(contentReceiver), "Gift receiver is not KYCed");
+        }
         require(!IRM.isBanned(msg.sender), "You are banned");
         require(IRM.isKYCed(msg.sender), "You are not KYCed");
         address instructor = udaoc.ownerOf(tokenId);
@@ -223,7 +238,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
         require(!IRM.isBanned(instructor), "Instructor is banned");
         require(IVM.getIsValidated(tokenId), "Content is not validated yet");
         require(
-            isTokenBought[msg.sender][tokenId][0] == false,
+            isTokenBought[contentReceiver][tokenId][0] == false,
             "Full content is already bought"
         );
         require(msg.sender == voucher.redeemer, "You are not redeemer.");
@@ -248,13 +263,11 @@ abstract contract ContentManager is EIP712, BasePlatform {
             (jurorCalc);
 
         /// @dev transfer the tokens from buyer to contract
-        /// FIXME Abi adamın gönderdiği tokenlar burada toplanıyor.
-        /// ama burada withdraw yok? address(this) ==? content manager değil mi?
         udao.transferFrom(msg.sender, address(this), priceToPay);
 
         /// @dev Get the total payment amount first
         if (voucher.fullContentPurchase) {
-            _updateOwned(tokenId, voucher.purchasedParts[0]);
+            _updateOwned(tokenId, voucher.purchasedParts[0], contentReceiver);
         } else {
             require(
                 voucher.purchasedParts[0] != 0,
@@ -266,7 +279,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
                         udaoc.getPartNumberOfContent(tokenId),
                     "Part does not exist!"
                 );
-                _updateOwned(tokenId, voucher.purchasedParts[j]);
+                _updateOwned(tokenId, voucher.purchasedParts[j], contentReceiver);
             }
         }
 
@@ -282,15 +295,16 @@ abstract contract ContentManager is EIP712, BasePlatform {
      * @notice an internal function to update owned contents of the user
      * @param tokenId id of the token that bought (completely of partially)
      * @param purchasedPart purchased part of the content (all of the content if 0)
+     * @param contentReceiver content receiver
      */
-    function _updateOwned(uint256 tokenId, uint256 purchasedPart) internal {
+    function _updateOwned(uint256 tokenId, uint256 purchasedPart, address contentReceiver) internal {
         require(
-            isTokenBought[msg.sender][tokenId][purchasedPart] == false,
+            isTokenBought[contentReceiver][tokenId][purchasedPart] == false,
             "Content part is already bought"
         );
 
-        isTokenBought[msg.sender][tokenId][purchasedPart] = true;
-        ownedContents[msg.sender].push([tokenId, purchasedPart]);
+        isTokenBought[contentReceiver][tokenId][purchasedPart] = true;
+        ownedContents[contentReceiver].push([tokenId, purchasedPart]);
     }
 
     /// @notice Allows users to buy coaching service.
@@ -571,14 +585,15 @@ abstract contract ContentManager is EIP712, BasePlatform {
                 keccak256(
                     abi.encode(
                         keccak256(
-                            "ContentDiscountVoucher(uint256 tokenId,bool fullContentPurchase,uint256[] purchasedParts,uint256 priceToPay,uint256 validUntil,address redeemer)"
+                            "ContentDiscountVoucher(uint256 tokenId,bool fullContentPurchase,uint256[] purchasedParts,uint256 priceToPay,uint256 validUntil,address redeemer,address giftReceiver)"
                         ),
                         voucher.tokenId,
                         voucher.fullContentPurchase,
                         keccak256(abi.encodePacked(voucher.purchasedParts)),
                         voucher.priceToPay,
                         voucher.validUntil,
-                        voucher.redeemer
+                        voucher.redeemer,
+                        voucher.giftReceiver
                     )
                 )
             );

@@ -498,7 +498,7 @@ describe("Platform Treasury Contract - Content", function () {
         ethers.utils.parseEther("999999999999.0")
       );
 
-    const purchase_udaoc_voucher = [1, true, [1], contentBuyer.address];
+    const purchase_udaoc_voucher = [1, true, [1], contentBuyer.address, ethers.constants.AddressZero];
 
     await contractPlatformTreasury
       .connect(contentBuyer)
@@ -835,7 +835,7 @@ describe("Platform Treasury Contract - Content", function () {
         ethers.utils.parseEther("999999999999.0")
       );
 
-    const purchase_udaoc_voucher = [1, false, [1, 2, 3], contentBuyer.address];
+    const purchase_udaoc_voucher = [1, false, [1, 2, 3], contentBuyer.address,  ethers.constants.AddressZero];
 
     await contractPlatformTreasury
       .connect(contentBuyer)
@@ -1030,13 +1030,13 @@ describe("Platform Treasury Contract - Content", function () {
         contractPlatformTreasury.address,
         ethers.utils.parseEther("999999999999.0")
       );
-    const purchase_udaoc_voucher = [1, false, [2], contentBuyer.address];
+    const purchase_udaoc_voucher = [1, false, [2], contentBuyer.address, ethers.constants.AddressZero];
 
     await contractPlatformTreasury
       .connect(contentBuyer)
       .buyContent(purchase_udaoc_voucher);
 
-    const purchase_udaoc_voucher2 = [1, false, [2], contentBuyer.address];
+    const purchase_udaoc_voucher2 = [1, false, [2], contentBuyer.address,  ethers.constants.AddressZero];
 
     await expect(
       contractPlatformTreasury
@@ -1087,7 +1087,7 @@ describe("Platform Treasury Contract - Content", function () {
         contractPlatformTreasury.address,
         ethers.utils.parseEther("999999999999.0")
       );
-    const purchase_udaoc_voucher = [1, true, [1], contentBuyer.address];
+    const purchase_udaoc_voucher = [1, true, [1], contentBuyer.address, ethers.constants.AddressZero];
 
     await expect(
       contractPlatformTreasury
@@ -1153,7 +1153,7 @@ describe("Platform Treasury Contract - Content", function () {
   //       contractPlatformTreasury.address,
   //       ethers.utils.parseEther("999999999999.0")
   //     );
-  //     const purchase_udaoc_voucher = [1, true, [1], contentBuyer.address];
+  //     const purchase_udaoc_voucher = [1, true, [1], contentBuyer.address, ethers.constants.AddressZero];
 
   //   await expect(
   //     contractPlatformTreasury
@@ -1339,7 +1339,7 @@ describe("Platform Treasury Contract - Content", function () {
         contractPlatformTreasury.address,
         ethers.utils.parseEther("999999999999.0")
       );
-    const purchase_udaoc_voucher = [1, true, [1], contentBuyer.address];
+    const purchase_udaoc_voucher = [1, true, [1], contentBuyer.address, ethers.constants.AddressZero];
 
     await expect(
       contractPlatformTreasury
@@ -1526,7 +1526,7 @@ describe("Platform Treasury Contract - Content", function () {
     /// Set BAN
     await contractRoleManager.setBan(contentCreator.address, true);
 
-    const purchase_udaoc_voucher = [1, true, [1], contentBuyer.address];
+    const purchase_udaoc_voucher = [1, true, [1], contentBuyer.address, ethers.constants.AddressZero];
 
     await expect(
       contractPlatformTreasury
@@ -1712,7 +1712,7 @@ describe("Platform Treasury Contract - Content", function () {
     /// Set KYC to false
     await contractRoleManager.setKYC(contentCreator.address, false);
 
-    const purchase_udaoc_voucher = [1, true, [1], contentBuyer.address];
+    const purchase_udaoc_voucher = [1, true, [1], contentBuyer.address, ethers.constants.AddressZero];
 
     await expect(
       contractPlatformTreasury
@@ -1897,7 +1897,7 @@ describe("Platform Treasury Contract - Content", function () {
 
     await contractRoleManager.setKYC(contentBuyer.address, false);
 
-    const purchase_udaoc_voucher = [1, true, [1], contentBuyer.address];
+    const purchase_udaoc_voucher = [1, true, [1], contentBuyer.address, ethers.constants.AddressZero];
 
     await expect(
       contractPlatformTreasury
@@ -2085,13 +2085,13 @@ describe("Platform Treasury Contract - Content", function () {
         contractPlatformTreasury.address,
         ethers.utils.parseEther("999999999999.0")
       );
-    const purchase_udaoc_voucher = [1, true, [1], contentBuyer.address];
+    const purchase_udaoc_voucher = [1, true, [1], contentBuyer.address, ethers.constants.AddressZero];
 
     await contractPlatformTreasury
       .connect(contentBuyer)
       .buyContent(purchase_udaoc_voucher);
 
-    const purchase_udaoc_voucher2 = [1, false, [3], contentBuyer.address];
+    const purchase_udaoc_voucher2 = [1, false, [3], contentBuyer.address,  ethers.constants.AddressZero];
 
     await expect(
       contractPlatformTreasury
