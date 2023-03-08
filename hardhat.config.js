@@ -26,7 +26,9 @@ task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
 /**
  * @type import('hardhat/config').HardhatUserConfig
  */
+
 module.exports = {
+  docgen: { pages: "files"},
   defaultNetwork: "hardhat",
   networks: {
     hardhat: {
