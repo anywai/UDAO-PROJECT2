@@ -179,16 +179,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
         if (voucher.fullContentPurchase) {
             _updateOwned(tokenId, 0, contentReceiver);
         } else {
-            require(
-                voucher.purchasedParts[0] != 0,
-                "Purchased parts says 0, but fullContentPurchase is false!"
-            );
             for (uint256 j; j < partIdLength; j++) {
-                require(
-                    voucher.purchasedParts[j] <
-                        udaoc.getPartNumberOfContent(tokenId),
-                    "Part does not exist!"
-                );
                 _updateOwned(tokenId, voucher.purchasedParts[j], contentReceiver);
             }
         }
