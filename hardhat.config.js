@@ -26,7 +26,9 @@ task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
 /**
  * @type import('hardhat/config').HardhatUserConfig
  */
+
 module.exports = {
+  docgen: { pages: "files"},
   defaultNetwork: "hardhat",
   networks: {
     hardhat: {
@@ -38,7 +40,7 @@ module.exports = {
     },
   },
   gasReporter: {
-    enabled: true,
+    enabled: false,
     currency: "EUR",
     coinmarketcap: "9b067bab-555e-4a2e-8b46-3ddbf5254166",
     token: "MATIC",

@@ -86,6 +86,7 @@ contract JurorManager is RoleController {
 
     uint256 public totalJurorScore;
 
+    /// TODO Wth is this function.
     /// @notice sets required juror count per dispute
     /// @param _requiredJurors new required juror count
     function setRequiredValidators(uint128 _requiredJurors)
