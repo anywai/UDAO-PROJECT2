@@ -108,23 +108,22 @@ abstract contract ContentManager is EIP712, BasePlatform {
 
     /// @notice allows users to purchase a content
     /// @param voucher voucher for the content purchase
-    function buyContent(ContentPurchaseVoucher calldata voucher)
-        external
-        whenNotPaused
-    {
+    function buyContent(
+        ContentPurchaseVoucher calldata voucher
+    ) external whenNotPaused {
         uint256 tokenId = voucher.tokenId;
         uint256 partIdLength = voucher.purchasedParts.length;
         uint256 priceToPay;
         address contentReceiver = msg.sender;
 
         require(udaoc.exists(tokenId), "Content does not exist!");
-        require(!IRM.isBanned(msg.sender), "You are banned");
-        require(IRM.isKYCed(msg.sender), "You are not KYCed");
-        if(voucher.giftReceiver != address(0)){
+        if (voucher.giftReceiver != address(0)) {
             contentReceiver = voucher.giftReceiver;
             require(!IRM.isBanned(contentReceiver), "Gift receiver is banned");
             require(IRM.isKYCed(contentReceiver), "Gift receiver is not KYCed");
         }
+        require(!IRM.isBanned(msg.sender), "You are banned");
+        require(IRM.isKYCed(msg.sender), "You are not KYCed");
         address instructor = udaoc.ownerOf(tokenId);
         require(IRM.isKYCed(instructor), "Instructor is not KYCed");
         require(!IRM.isBanned(instructor), "Instructor is banned");
@@ -156,22 +155,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
         }
 
         /// @dev Calculate and assing the cuts
-        uint256 foundationCalc = (priceToPay * contentFoundationCut) / 100000;
-        uint256 governanceCalc = (priceToPay * contentGovernancenCut) / 100000;
-        uint256 validatorCalc = (priceToPay * validatorBalance) / 100000;
-        uint256 jurorCalc = (priceToPay * contentJurorCut) / 100000;
-
-        foundationBalance += foundationCalc;
-        governanceBalance += governanceCalc;
-        validatorBalanceForRound += validatorCalc;
-        jurorBalanceForRound += jurorCalc;
-
-        instructorBalance[instructor] +=
-            priceToPay -
-            (foundationCalc) -
-            (governanceCalc) -
-            (validatorCalc) -
-            (jurorCalc);
+        _updateBalancesContent(priceToPay, instructor);
 
         /// @dev transfer the tokens from buyer to contract
         udao.transferFrom(msg.sender, address(this), priceToPay);
@@ -180,7 +164,11 @@ abstract contract ContentManager is EIP712, BasePlatform {
             _updateOwned(tokenId, 0, contentReceiver);
         } else {
             for (uint256 j; j < partIdLength; j++) {
-                _updateOwned(tokenId, voucher.purchasedParts[j], contentReceiver);
+                _updateOwned(
+                    tokenId,
+                    voucher.purchasedParts[j],
+                    contentReceiver
+                );
             }
         }
 
@@ -194,10 +182,9 @@ abstract contract ContentManager is EIP712, BasePlatform {
 
     /// @notice allows users to purchase a content
     /// @param voucher voucher for the content purchase
-    function buyDiscountedContent(ContentDiscountVoucher calldata voucher)
-        external
-        whenNotPaused
-    {
+    function buyDiscountedContent(
+        ContentDiscountVoucher calldata voucher
+    ) external whenNotPaused {
         // make sure signature is valid and get the address of the signer
         address signer = _verify(voucher);
         require(
@@ -212,7 +199,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
         address contentReceiver = msg.sender;
 
         require(udaoc.exists(tokenId), "Content does not exist!");
-        if(voucher.giftReceiver != address(0)){
+        if (voucher.giftReceiver != address(0)) {
             contentReceiver = voucher.giftReceiver;
             require(!IRM.isBanned(contentReceiver), "Gift receiver is banned");
             require(IRM.isKYCed(contentReceiver), "Gift receiver is not KYCed");
@@ -231,22 +218,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
 
         /// @dev Calculate and assing the cuts
         uint256 priceToPay = voucher.priceToPay;
-        uint256 foundationCalc = (priceToPay * contentFoundationCut) / 100000;
-        uint256 governanceCalc = (priceToPay * contentGovernancenCut) / 100000;
-        uint256 validatorCalc = (priceToPay * validatorBalance) / 100000;
-        uint256 jurorCalc = (priceToPay * contentJurorCut) / 100000;
-
-        foundationBalance += foundationCalc;
-        governanceBalance += governanceCalc;
-        validatorBalanceForRound += validatorCalc;
-        jurorBalanceForRound += jurorCalc;
-
-        instructorBalance[instructor] +=
-            priceToPay -
-            (foundationCalc) -
-            (governanceCalc) -
-            (validatorCalc) -
-            (jurorCalc);
+        _updateBalancesContent(priceToPay, instructor);
 
         /// @dev transfer the tokens from buyer to contract
         udao.transferFrom(msg.sender, address(this), priceToPay);
@@ -265,7 +237,11 @@ abstract contract ContentManager is EIP712, BasePlatform {
                         udaoc.getPartNumberOfContent(tokenId),
                     "Part does not exist!"
                 );
-                _updateOwned(tokenId, voucher.purchasedParts[j], contentReceiver);
+                _updateOwned(
+                    tokenId,
+                    voucher.purchasedParts[j],
+                    contentReceiver
+                );
             }
         }
 
@@ -277,13 +253,39 @@ abstract contract ContentManager is EIP712, BasePlatform {
         );
     }
 
+    function _updateBalancesContent(
+        uint priceToPay,
+        address instructor
+    ) internal {
+        uint256 foundationCalc = (priceToPay * contentFoundationCut) / 100000;
+        uint256 governanceCalc = (priceToPay * contentGovernancenCut) / 100000;
+        uint256 validatorCalc = (priceToPay * validatorBalance) / 100000;
+        uint256 jurorCalc = (priceToPay * contentJurorCut) / 100000;
+
+        foundationBalance += foundationCalc;
+        governanceBalance += governanceCalc;
+        validatorBalanceForRound += validatorCalc;
+        jurorBalanceForRound += jurorCalc;
+
+        instructorBalance[instructor] +=
+            priceToPay -
+            (foundationCalc) -
+            (governanceCalc) -
+            (validatorCalc) -
+            (jurorCalc);
+    }
+
     /**
      * @notice an internal function to update owned contents of the user
      * @param tokenId id of the token that bought (completely of partially)
      * @param purchasedPart purchased part of the content (all of the content if 0)
      * @param contentReceiver content receiver
      */
-    function _updateOwned(uint256 tokenId, uint256 purchasedPart, address contentReceiver) internal {
+    function _updateOwned(
+        uint256 tokenId,
+        uint256 purchasedPart,
+        address contentReceiver
+    ) internal {
         require(
             isTokenBought[contentReceiver][tokenId][purchasedPart] == false,
             "Content part is already bought"
@@ -295,10 +297,9 @@ abstract contract ContentManager is EIP712, BasePlatform {
 
     /// @notice Allows users to buy coaching service.
     /// @param voucher voucher for the coaching purchase
-    function buyCoaching(CoachingPurchaseVoucher calldata voucher)
-        external
-        whenNotPaused
-    {
+    function buyCoaching(
+        CoachingPurchaseVoucher calldata voucher
+    ) external whenNotPaused {
         require(udaoc.exists(voucher.tokenId), "Content does not exist!");
         require(!IRM.isBanned(msg.sender), "You are banned");
         require(IRM.isKYCed(msg.sender), "You are not KYCed");
@@ -388,11 +389,9 @@ abstract contract ContentManager is EIP712, BasePlatform {
 
     /// @notice Payment and coaching service can be forcefully done by administrator_roles
     /// @param _coachingId id of the coaching service
-    function forcedPayment(uint256 _coachingId)
-        external
-        whenNotPaused
-        onlyRoles(administrator_roles)
-    {
+    function forcedPayment(
+        uint256 _coachingId
+    ) external whenNotPaused onlyRoles(administrator_roles) {
         CoachingStruct storage currentCoaching = coachingStructs[_coachingId];
         instructorBalance[currentCoaching.coach] += coachingStructs[_coachingId]
             .coachingPaymentAmount;
@@ -403,11 +402,9 @@ abstract contract ContentManager is EIP712, BasePlatform {
 
     /// @notice Payment and coaching service can be forcefully done by jurors
     /// @param _coachingId id of the coaching service
-    function forcedPaymentJuror(uint256 _coachingId)
-        external
-        whenNotPaused
-        onlyRole(JUROR_CONTRACT)
-    {
+    function forcedPaymentJuror(
+        uint256 _coachingId
+    ) external whenNotPaused onlyRole(JUROR_CONTRACT) {
         CoachingStruct storage currentCoaching = coachingStructs[_coachingId];
         instructorBalance[currentCoaching.coach] += coachingStructs[_coachingId]
             .coachingPaymentAmount;
@@ -437,11 +434,9 @@ abstract contract ContentManager is EIP712, BasePlatform {
 
     /// @notice forces refund of coaching service only be callable by administrator_role (FOUNDATION_ROLE, GOVERNANCE_ROLE)
     /// @param _coachingId id of the coaching service
-    function forcedRefundAdmin(uint256 _coachingId)
-        external
-        whenNotPaused
-        onlyRoles(administrator_roles)
-    {
+    function forcedRefundAdmin(
+        uint256 _coachingId
+    ) external whenNotPaused onlyRoles(administrator_roles) {
         uint256 startGas = gasleft();
         CoachingStruct storage currentCoaching = coachingStructs[_coachingId];
         uint256 totalPaymentAmount = currentCoaching.totalPaymentAmount;
@@ -480,11 +475,9 @@ abstract contract ContentManager is EIP712, BasePlatform {
 
     /// @notice Jurors can force refund of a coaching service
     /// @param _coachingId The ID of the coaching service
-    function forcedRefundJuror(uint256 _coachingId)
-        external
-        whenNotPaused
-        onlyRole(JUROR_CONTRACT)
-    {
+    function forcedRefundJuror(
+        uint256 _coachingId
+    ) external whenNotPaused onlyRole(JUROR_CONTRACT) {
         uint256 startGas = gasleft();
         CoachingStruct storage currentCoaching = coachingStructs[_coachingId];
         uint256 totalPaymentAmount = currentCoaching.totalPaymentAmount;
@@ -520,31 +513,25 @@ abstract contract ContentManager is EIP712, BasePlatform {
 
     /// @notice returns coaching informations of token
     /// @param _tokenId id of token that coaching will be returned
-    function getCoachings(uint256 _tokenId)
-        external
-        view
-        returns (uint256[] memory)
-    {
+    function getCoachings(
+        uint256 _tokenId
+    ) external view returns (uint256[] memory) {
         return coachingIdsOfToken[_tokenId];
     }
 
     /// @notice returns owned contents of the _owner
     /// @param _owner address of the user that will owned contents be returned
-    function getOwnedContent(address _owner)
-        public
-        view
-        returns (uint256[][] memory)
-    {
+    function getOwnedContent(
+        address _owner
+    ) public view returns (uint256[][] memory) {
         return (ownedContents[_owner]);
     }
 
     /// @notice Returns the buyers of a coaching service for a token
     /// @param tokenId The token ID of a course of a coaching service
-    function getStudentListOfToken(uint256 tokenId)
-        public
-        view
-        returns (address[] memory)
-    {
+    function getStudentListOfToken(
+        uint256 tokenId
+    ) public view returns (address[] memory) {
         return studentList[tokenId];
     }
 
@@ -561,11 +548,9 @@ abstract contract ContentManager is EIP712, BasePlatform {
 
     /// @notice Returns a hash of the given ContentDiscountVoucher, prepared using EIP712 typed data hashing rules.
     /// @param voucher A ContentDiscountVoucher to hash.
-    function _hash(ContentDiscountVoucher calldata voucher)
-        internal
-        view
-        returns (bytes32)
-    {
+    function _hash(
+        ContentDiscountVoucher calldata voucher
+    ) internal view returns (bytes32) {
         return
             _hashTypedDataV4(
                 keccak256(
@@ -588,11 +573,9 @@ abstract contract ContentManager is EIP712, BasePlatform {
     /// @notice Verifies the signature for a given ContentDiscountVoucher, returning the address of the signer.
     /// @dev Will revert if the signature is invalid.
     /// @param voucher A ContentDiscountVoucher describing a content access rights.
-    function _verify(ContentDiscountVoucher calldata voucher)
-        internal
-        view
-        returns (address)
-    {
+    function _verify(
+        ContentDiscountVoucher calldata voucher
+    ) internal view returns (address) {
         bytes32 digest = _hash(voucher);
         return ECDSA.recover(digest, voucher.signature);
     }
