@@ -5,6 +5,8 @@ import "./BasePlatform.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
 
+import "./IPriceGetter.sol";
+
 abstract contract ContentManager is EIP712, BasePlatform {
     string private constant SIGNING_DOMAIN = "ContentManager";
     string private constant SIGNATURE_VERSION = "1";
@@ -104,7 +106,13 @@ abstract contract ContentManager is EIP712, BasePlatform {
     mapping(uint256 => CoachingStruct) public coachingStructs;
     uint256 private coachingIndex;
 
-    constructor() EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION) {}
+    IPriceGetter priceGetter;
+
+    constructor(
+        address priceGetterAddress
+    ) EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION) {
+        priceGetter = IPriceGetter(priceGetterAddress);
+    }
 
     /// @notice allows users to purchase a content
     /// @param voucher voucher for the content purchase
@@ -133,9 +141,14 @@ abstract contract ContentManager is EIP712, BasePlatform {
             "Full content is already bought"
         );
 
+        // TODO Get price conversion from an oracle
+        uint udaoRate = 0.01 ether;
+
         /// @dev Get the total payment amount first
         if (voucher.fullContentPurchase) {
-            priceToPay += udaoc.getPriceContent(tokenId, 0);
+            priceToPay +=
+                (udaoc.getPriceContent(tokenId, 0) / udaoRate) *
+                10 ** 18;
         } else {
             require(
                 voucher.purchasedParts[0] != 0,
@@ -147,10 +160,9 @@ abstract contract ContentManager is EIP712, BasePlatform {
                         udaoc.getPartNumberOfContent(tokenId),
                     "Part does not exist!"
                 );
-                priceToPay += udaoc.getPriceContent(
-                    tokenId,
-                    voucher.purchasedParts[j]
-                );
+                priceToPay +=
+                    udaoc.getPriceContent(tokenId, voucher.purchasedParts[j]) /
+                    udaoRate;
             }
         }
 
