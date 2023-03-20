@@ -8,10 +8,10 @@ import "./ContentManager.sol";
 contract PlatformTreasury is Pausable, ContentManager {
     string private constant SIGNING_DOMAIN = "ValidationScore";
     string private constant SIGNATURE_VERSION = "1";
-    
+
     /// this event gets triggered when governance withdraw tokens
     event GovernanceWithdrawn(uint amount);
-    
+
     /// this event gets triggered when founcation withdraw tokens
     event FoundationWithdrawn(uint amount);
 
@@ -25,35 +25,53 @@ contract PlatformTreasury is Pausable, ContentManager {
     event InstructorWithdrawn(address instructor, uint amount);
 
     /// this event gets triggered when a instructor withdraw tokens and if has debt
-    event InstructorWithdrawnWithDebt(address instructor, uint amount, uint debtAmount);
+    event InstructorWithdrawnWithDebt(
+        address instructor,
+        uint amount,
+        uint debtAmount
+    );
 
     /// @param _contractManagerAddress The address of the deployed role manager
     /// @param _rmAddress The address of the deployed role manager
     constructor(
         address _contractManagerAddress,
-        address _rmAddress
+        address _rmAddress,
+        address priceGetterAddress
     )
+        ContentManager(priceGetterAddress)
         BasePlatform(_contractManagerAddress, _rmAddress)
     {}
 
     /// @notice withdraws governance balance to governance treasury
-    function withdrawGovernance() external whenNotPaused onlyRole(GOVERNANCE_ROLE) {
+    function withdrawGovernance()
+        external
+        whenNotPaused
+        onlyRole(GOVERNANCE_ROLE)
+    {
         uint withdrawableBalance = governanceBalance;
-        governanceBalance = 0;  /// @dev zeroing before the actual withdraw
+        governanceBalance = 0; /// @dev zeroing before the actual withdraw
         udao.transfer(governanceTreasury, withdrawableBalance);
         emit GovernanceWithdrawn(withdrawableBalance);
     }
 
     /// @notice withdraws foundation balance to foundation wallet
-    function withdrawFoundation() external whenNotPaused onlyRole(FOUNDATION_ROLE) {
+    function withdrawFoundation()
+        external
+        whenNotPaused
+        onlyRole(FOUNDATION_ROLE)
+    {
         uint withdrawableBalance = foundationBalance;
-        foundationBalance = 0;  /// @dev zeroing before the actual withdraw
+        foundationBalance = 0; /// @dev zeroing before the actual withdraw
         udao.transfer(foundationWallet, withdrawableBalance);
         emit FoundationWithdrawn(withdrawableBalance);
     }
 
     /// @notice calculates validator earnings and withdraws calculated earning to validator's wallet
-    function withdrawValidator() external whenNotPaused onlyRoles(validator_roles) {
+    function withdrawValidator()
+        external
+        whenNotPaused
+        onlyRoles(validator_roles)
+    {
         uint claimableRound = lastValidatorClaim[msg.sender];
         uint withdrawableBalance = 0;
         uint validatorScore = 0;
@@ -82,18 +100,28 @@ contract PlatformTreasury is Pausable, ContentManager {
     }
 
     /// @notice Allows instructers to withdraw individually.
-    function withdrawInstructor() whenNotPaused external {
-        require(instructorBalance[msg.sender]>=instructorDebt[msg.sender], "Debt is larger than balance");
+    function withdrawInstructor() external whenNotPaused {
+        require(
+            instructorBalance[msg.sender] >= instructorDebt[msg.sender],
+            "Debt is larger than balance"
+        );
         uint debtAmount = 0;
-        if(instructorDebt[msg.sender] > 0) {
+        if (instructorDebt[msg.sender] > 0) {
             debtAmount = instructorDebt[msg.sender];
         }
-        uint withdrawableBalance = instructorBalance[msg.sender] - instructorDebt[msg.sender];
+        uint withdrawableBalance = instructorBalance[msg.sender] -
+            instructorDebt[msg.sender];
         instructorBalance[msg.sender] = 0;
         instructorDebt[msg.sender] = 0;
         udao.transfer(msg.sender, withdrawableBalance);
-        if(debtAmount > 0) {
-            emit InstructorWithdrawnWithDebt(msg.sender, withdrawableBalance, debtAmount);
-        } else {emit InstructorWithdrawn(msg.sender, withdrawableBalance);}
+        if (debtAmount > 0) {
+            emit InstructorWithdrawnWithDebt(
+                msg.sender,
+                withdrawableBalance,
+                debtAmount
+            );
+        } else {
+            emit InstructorWithdrawn(msg.sender, withdrawableBalance);
+        }
     }
 }

@@ -28,16 +28,15 @@ task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
  */
 
 module.exports = {
-  docgen: { pages: "files"},
-  defaultNetwork: "hardhat",
+  docgen: { pages: "files" },
   networks: {
     hardhat: {
-      /**chainId: 31337  */
+      chainId: 31337,
     },
-    mumbai: {
-      url: POLYGON_MUMBAI_RPC_PROVIDER,
-      accounts: [`0x${PRIVATE_KEY}`],
-    },
+    // mumbai: {
+    //   url: POLYGON_MUMBAI_RPC_PROVIDER,
+    //   accounts: [`0x${PRIVATE_KEY}`],
+    // },
   },
   gasReporter: {
     enabled: false,
