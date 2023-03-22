@@ -8,7 +8,6 @@ import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import "./IPriceGetter.sol";
 
 contract PriceGetter is IPriceGetter {
-    AggregatorV3Interface internal priceFeed;
     address public token0;
     address public token1;
     address public pool;
@@ -59,7 +58,7 @@ contract PriceGetter is IPriceGetter {
         int56 tickCumulativesDelta = tickCumulatives[1] - tickCumulatives[0];
 
         // int56 / uint32 = int24
-        int24 tick = int24((tickCumulativesDelta / secondsAgo));
+        int24 tick = int24((tickCumulativesDelta / int56(int32(secondsAgo))));
         // Always round to negative infinity
         /*
         int doesn't round down when it is negative
@@ -73,7 +72,8 @@ contract PriceGetter is IPriceGetter {
         down
         */
         if (
-            tickCumulativesDelta < 0 && (tickCumulativesDelta % secondsAgo != 0)
+            tickCumulativesDelta < 0 &&
+            (tickCumulativesDelta % int56(int32(secondsAgo)) != 0)
         ) {
             tick--;
         }
@@ -93,7 +93,7 @@ contract PriceGetter is IPriceGetter {
     function convertFiatToMatic(
         uint256 val,
         string memory fiat
-    ) external view returns (int) {
+    ) external view returns (uint) {
         uint256 msgValueInUSD = (
             ((val * (uint256)(getLatestPrice(fiat))) / (10 ** 18))
         );
@@ -103,7 +103,7 @@ contract PriceGetter is IPriceGetter {
     /// @notice Get current price of 1 Matic in fiat from chainlink
     function getLatestPrice(string memory fiat) public view returns (int) {
         /// @dev MATIC / USD address on Mumbai
-        priceFeed = AggregatorV3Interface(
+        AggregatorV3Interface priceFeed = AggregatorV3Interface(
             0xAB594600376Ec9fD91F8e885dADF0CE036862dE0
         );
         (
