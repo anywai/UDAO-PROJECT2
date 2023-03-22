@@ -22,8 +22,17 @@ contract ValidationManager is RoleController {
     }
 
     event ValidationCreated(uint256 tokenId, uint256 validationId);
-    event ValidationAssigned(uint256 tokenId, uint256 validationId, address validator);
-    event ValidationResultSent(uint256 tokenId, uint256 validationId, address validator, bool result);
+    event ValidationAssigned(
+        uint256 tokenId,
+        uint256 validationId,
+        address validator
+    );
+    event ValidationResultSent(
+        uint256 tokenId,
+        uint256 validationId,
+        address validator,
+        bool result
+    );
     event ValidationEnded(uint256 tokenId, uint256 validationId, bool result);
     event NextRound(uint256 newRoundId);
 
@@ -50,11 +59,14 @@ contract ValidationManager is RoleController {
     uint128 public requiredValidator = 5;
     uint128 public minRequiredAcceptVote = 3;
     // validator => round => score
-    mapping(address => mapping(uint256 => uint256)) public validatorScorePerRound;
+    mapping(address => mapping(uint256 => uint256))
+        public validatorScorePerRound;
 
     Validation[] validations;
 
-    function getValidatorsOfVal(uint validationId) external view returns(address[] memory){
+    function getValidatorsOfVal(
+        uint validationId
+    ) external view returns (address[] memory) {
         return validations[validationId].validators;
     }
 
@@ -72,18 +84,17 @@ contract ValidationManager is RoleController {
         udaoc = IUDAOC(udaocAddress);
     }
 
-    function setStaker(address stakerAddress)
-        external
-        onlyRole(FOUNDATION_ROLE)
-    {
+    function setStaker(
+        address stakerAddress
+    ) external onlyRole(FOUNDATION_ROLE) {
         staker = IStakingContract(stakerAddress);
     }
 
     /// @dev this is possibly deprecated, moved to offchain?
-    function sendValidation(uint validationId, bool result)
-        external
-        onlyRoles(validator_roles)
-    {
+    function sendValidation(
+        uint validationId,
+        bool result
+    ) external onlyRoles(validator_roles) {
         /// @notice sends validation result
         /// @param validationId id of the validation
         /// @param result result of validation
@@ -100,7 +111,12 @@ contract ValidationManager is RoleController {
         validations[validationId].isVoted[msg.sender] = true;
         validations[validationId].vote[msg.sender] = result;
         validations[validationId].validationCount++;
-        emit ValidationResultSent(validations[validationId].tokenId,validationId,msg.sender,result);
+        emit ValidationResultSent(
+            validations[validationId].tokenId,
+            validationId,
+            msg.sender,
+            result
+        );
     }
 
     function finalizeValidation(uint256 validationId) external {
@@ -121,7 +137,7 @@ contract ValidationManager is RoleController {
             /// @dev Easier to check the validation result with token Id
             isValidated[validations[validationId].tokenId] = false;
         }
-        
+
         validations[validationId].resultDate = block.timestamp;
         for (uint i; i < validations[validationId].validators.length; i++) {
             if (
@@ -131,8 +147,11 @@ contract ValidationManager is RoleController {
                 ]
             ) {
                 /// @dev Record score of a validator in this round
-                validatorScorePerRound[validations[validationId].validators[i]][distributionRound] += validations[validationId].validationScore;
-                totalValidationScore += validations[validationId].validationScore;
+                validatorScorePerRound[validations[validationId].validators[i]][
+                    distributionRound
+                ] += validations[validationId].validationScore;
+                totalValidationScore += validations[validationId]
+                    .validationScore;
                 /// @dev Record success point of a validator
                 successfulValidation[validations[validationId].validators[i]]++;
             } else {
@@ -142,7 +161,9 @@ contract ValidationManager is RoleController {
                 ]++;
             }
         }
-        latestValidationOfToken[validations[validationId].tokenId] = validationId;
+        latestValidationOfToken[
+            validations[validationId].tokenId
+        ] = validationId;
         emit ValidationEnded(
             validations[validationId].tokenId,
             validations[validationId].id,
@@ -150,10 +171,9 @@ contract ValidationManager is RoleController {
         );
     }
 
-    function dismissValidation(uint validationId)
-        external
-        onlyRoles(validator_roles)
-    {
+    function dismissValidation(
+        uint validationId
+    ) external onlyRoles(validator_roles) {
         /// @notice allows validators to dismiss a validation assignment
         /// @param validationId id of the content that will be dismissed
         require(
@@ -173,35 +193,32 @@ contract ValidationManager is RoleController {
 
     /// @notice sets required validator vote count per content
     /// @param _requiredValidator new required vote count
-    function setRequiredValidators(uint128 _requiredValidator)
-        external
-        onlyRole(GOVERNANCE_ROLE)
-    {
+    function setRequiredValidators(
+        uint128 _requiredValidator
+    ) external onlyRole(GOVERNANCE_ROLE) {
         requiredValidator = _requiredValidator;
     }
 
     /// @notice starts new validation for content
     /// @param tokenId id of the content that will be validated
     /// @param score validation score of the content
-    function createValidation(uint256 tokenId, uint256 score)
-        external
-        onlyRole(BACKEND_ROLE)
-    {
+    function createValidation(
+        uint256 tokenId,
+        uint256 score
+    ) external onlyRole(BACKEND_ROLE) {
         require(udaoc.exists(tokenId), "ERC721: invalid token ID");
         Validation storage validation = validations.push();
         validation.id = validations.length - 1;
         validation.tokenId = tokenId;
         validation.validationScore = score;
-        emit ValidationCreated(tokenId, validations.length -1);
+        emit ValidationCreated(tokenId, validations.length - 1);
     }
 
     /// @notice returns successful and unsuccessful validation count of the account
     /// @param account wallet address of the account that wanted to be checked
-    function getValidationResults(address account)
-        external
-        view
-        returns (uint[2] memory results)
-    {
+    function getValidationResults(
+        address account
+    ) external view returns (uint[2] memory results) {
         results[0] = successfulValidation[account];
         results[1] = unsuccessfulValidation[account];
     }
@@ -244,10 +261,9 @@ contract ValidationManager is RoleController {
 
     /// @notice assign validation to self
     /// @param validationId id of the validation
-    function assignValidation(uint256 validationId)
-        external
-        onlyRoles(validator_roles)
-    {
+    function assignValidation(
+        uint256 validationId
+    ) external onlyRoles(validator_roles) {
         require(
             validationId < validations.length,
             "Validation does not exist!"
@@ -266,7 +282,11 @@ contract ValidationManager is RoleController {
         );
         activeValidation[msg.sender] = validationId;
         validations[validationId].validators.push(msg.sender);
-        emit ValidationAssigned(validations[validationId].tokenId, validationId, msg.sender);
+        emit ValidationAssigned(
+            validations[validationId].tokenId,
+            validationId,
+            msg.sender
+        );
     }
 
     /// @notice Returns the validation result of a token
@@ -277,18 +297,19 @@ contract ValidationManager is RoleController {
 
     /// @notice Returns the validation result of a token
     /// @param tokenId The ID of a token
-    function getLatestValidationIdOfToken(uint tokenId) external view returns (uint) {
+    function getLatestValidationIdOfToken(
+        uint tokenId
+    ) external view returns (uint) {
         return latestValidationOfToken[tokenId];
     }
 
     /// @notice Returns the score of a validator for a specific round
     /// @param _validator The address of the validator
     /// @param _round Reward round ID
-    function getValidatorScore(address _validator, uint256 _round)
-        external
-        view
-        returns (uint256)
-    {
+    function getValidatorScore(
+        address _validator,
+        uint256 _round
+    ) external view returns (uint256) {
         return validatorScorePerRound[_validator][_round];
     }
 
@@ -297,5 +318,4 @@ contract ValidationManager is RoleController {
         distributionRound++;
         emit NextRound(distributionRound);
     }
-
 }

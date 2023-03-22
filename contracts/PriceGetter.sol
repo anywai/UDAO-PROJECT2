@@ -59,7 +59,7 @@ contract PriceGetter is IPriceGetter {
         int56 tickCumulativesDelta = tickCumulatives[1] - tickCumulatives[0];
 
         // int56 / uint32 = int24
-        int24 tick = int24(tickCumulativesDelta / secondsAgo);
+        int24 tick = int24((tickCumulativesDelta / secondsAgo));
         // Always round to negative infinity
         /*
         int doesn't round down when it is negative
@@ -90,9 +90,12 @@ contract PriceGetter is IPriceGetter {
     function convertMaticToUdao() internal {}
 
     /// @notice Get current price of Matic in fiat from chainlink
-    function convertFiatToMatic(uint256 val) external view returns (int) {
+    function convertFiatToMatic(
+        uint256 val,
+        string memory fiat
+    ) external view returns (int) {
         uint256 msgValueInUSD = (
-            ((val * (uint256)(getLatestPrice())) / (10 ** 18))
+            ((val * (uint256)(getLatestPrice(fiat))) / (10 ** 18))
         );
         return msgValueInUSD;
     }
@@ -111,25 +114,37 @@ contract PriceGetter is IPriceGetter {
 
         ) = priceFeed.latestRoundData();
 
-        if (fiat == "eur") {
-            priceFeed = 0x73366fe0aa0ded304479862808e02506fe556a98;
-        } else if (fiat == "jpy") {
-            priceFeed = 0xd647a6fc9bc6402301583c91decc5989d8bc382d;
-        } else if (fiat = "aud") {
-            priceFeed = 0x062df9c4efd2030e243ffcc398b652e8b8f95c6f;
-        } else if (fiat == "cad") {
-            priceFeed = 0xaca44abb8b04d07d883202f99fa5e3c53ed57fb5;
-        } else if (fiat == "chf") {
-            priceFeed = 0xc76f762cedf0f78a439727861628e0fdfe1e70c2;
-        } else if (fiat == "gbp") {
-            priceFeed = 0x099a2540848573e94fb1ca0fa420b00acbbc845a;
-        } else if (fiat == "usd") {
-            continue;
-        } else {
-            revert("Unsupported fiat");
-        }
+        bytes32 hashFiat = keccak256(abi.encodePacked(fiat));
 
-        if (fiat != "usd") {
+        if (hashFiat != keccak256(abi.encodePacked("usd"))) {
+            if (hashFiat == keccak256(abi.encodePacked("eur"))) {
+                priceFeed = AggregatorV3Interface(
+                    0x73366Fe0AA0Ded304479862808e02506FE556a98
+                );
+            } else if (hashFiat == keccak256(abi.encodePacked("jpy"))) {
+                priceFeed = AggregatorV3Interface(
+                    0xD647a6fC9BC6402301583C91decC5989d8Bc382D
+                );
+            } else if (hashFiat == keccak256(abi.encodePacked("aud"))) {
+                priceFeed = AggregatorV3Interface(
+                    0x062Df9C4efd2030e243ffCc398b652e8b8F95C6f
+                );
+            } else if (hashFiat == keccak256(abi.encodePacked("cad"))) {
+                priceFeed = AggregatorV3Interface(
+                    0xACA44ABb8B04D07D883202F99FA5E3c53ed57Fb5
+                );
+            } else if (hashFiat == keccak256(abi.encodePacked("chf"))) {
+                priceFeed = AggregatorV3Interface(
+                    0xc76f762CedF0F78a439727861628E0fdfE1e70c2
+                );
+            } else if (hashFiat == keccak256(abi.encodePacked("gbp"))) {
+                priceFeed = AggregatorV3Interface(
+                    0x099a2540848573e94fb1Ca0Fa420b00acbBc845a
+                );
+            } else {
+                revert("Unsupported fiat");
+            }
+
             (
                 ,
                 /* uint80 roundID */ int fiatToUsdPrice /*uint startedAt*/ /*uint timeStamp*/ /*uint80 answeredInRound*/,
