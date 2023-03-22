@@ -31,12 +31,21 @@ module.exports = {
   docgen: { pages: "files" },
   networks: {
     hardhat: {
+      forking: {
+        enabled: true,
+        url: POLYGON_MUMBAI_RPC_PROVIDER,
+      },
+      live: false,
       chainId: 31337,
+      allowUnlimitedContractSize: true,
     },
-    // mumbai: {
-    //   url: POLYGON_MUMBAI_RPC_PROVIDER,
-    //   accounts: [`0x${PRIVATE_KEY}`],
-    // },
+    localhost: {
+      allowUnlimitedContractSize: true,
+    },
+    mumbai: {
+      url: POLYGON_MUMBAI_RPC_PROVIDER,
+      accounts: [`0x${PRIVATE_KEY}`],
+    },
   },
   gasReporter: {
     enabled: false,

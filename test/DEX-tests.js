@@ -4,6 +4,9 @@ const { ethers } = hardhat;
 const chai = require("chai");
 const BN = require("bn.js");
 const bn = require("bignumber.js");
+const helpers = require("@nomicfoundation/hardhat-network-helpers");
+require("dotenv").config();
+
 bn.config({ EXPONENTIAL_AT: 999999, DECIMAL_PLACES: 40 });
 const {
   Pool,
@@ -44,11 +47,26 @@ async function getPoolData(poolContract) {
 chai.use(require("chai-bn")(BN));
 
 async function deploy() {
+  const provider = new ethers.providers.AlchemyProvider(
+    "homestead",
+    process.env.ALCHEMY_API_KEY
+  );
   const [owner, account1, account2, account3] = await ethers.getSigners();
+
+  await helpers.takeSnapshot();
 
   let factoryUDAO = await ethers.getContractFactory("UDAO");
   //DEPLOYMENTS
   const contractUDAO = await factoryUDAO.deploy();
+
+  const address = "0x907f2e1F4A477319A700fC9a28374BA47527050e";
+  await helpers.impersonateAccount(address);
+  const impersonatedSigner = await ethers.getSigner(address);
+
+  await impersonatedSigner.sendTransaction({
+    to: owner.address,
+    value: ethers.utils.parseEther("1000000.0"), // Sends exactly 1000000.0 ether
+  });
 
   return {
     owner,
@@ -62,6 +80,7 @@ async function deploy() {
 describe("Uniswap DEX Tests", function () {
   it("Should deploy, create and fund a pool", async function () {
     const { owner, account1, account2, contractUDAO, whale } = await deploy();
+    await helpers.takeSnapshot.SnapshotRestorer();
   });
 
   it("Should create a pool", async function () {
@@ -75,6 +94,8 @@ describe("Uniswap DEX Tests", function () {
       weth,
       nonfungiblePositionManager,
     } = await deploy();
+
+    console.log("Read ABIs");
 
     const NonFunbiblePositionABI = [
       {
@@ -872,97 +893,104 @@ describe("Uniswap DEX Tests", function () {
       },
     ];
 
+    console.log("Find Positin Manager");
+
     const positionManager = await ethers.getContractAt(
       NonFunbiblePositionABI,
       "0xC36442b4a4522E871399CD717aBDD847Ab11FE88"
     );
 
+    console.log("Find WMATIC");
+
     const WMATIC = await ethers.getContractAt(
       IWMATIC_ABI,
       "0x9c3C9283D3e44854697Cd22D3Faa240Cfb032889"
     );
+    console.log("Deposit MATIC for WMATIC");
+    await WMATIC.connect(owner).deposit({
+      value: ethers.utils.parseEther("1000.0"),
+    });
+
+    console.log("Approve WMATIC");
+
     // call approve for tokens before adding a new pool
     await WMATIC.connect(owner).approve(
       positionManager.address,
-      ethers.utils.parseEther("0.1")
+      ethers.utils.parseEther("99999999.0")
     );
+
+    console.log("Approve UDAO");
+
     await contractUDAO
       .connect(owner)
-      .approve(positionManager.address, ethers.utils.parseEther("1000"));
-    const fee = ethers.utils
-      .hexZeroPad(ethers.utils.hexlify(ethers.BigNumber.from("30")), 64)
-      .substring(2);
-    const sqrtPriceX96 = ethers.utils
-      .hexZeroPad(
-        ethers.utils.hexlify(
-          ethers.BigNumber.from(
-            encodePriceSqrt(
-              ethers.utils.parseEther("1"),
-              ethers.utils.parseEther("1")
-            )
-          )
-        ),
-        64
-      )
-      .substring(2);
-    const tickLower = ethers.utils
-      .hexZeroPad(ethers.utils.hexlify(ethers.BigNumber.from("0")), 64)
-      .substring(2);
-    const tickUpper = ethers.utils
-      .hexZeroPad(ethers.utils.hexlify(ethers.BigNumber.from("23040")), 64)
-      .substring(2);
-    const amount0des = ethers.utils
-      .hexZeroPad(
-        ethers.utils.hexlify(ethers.BigNumber.from("950252822518485471")),
-        64
-      )
-      .substring(2);
-    const amount1des = ethers.utils
-      .hexZeroPad(
-        ethers.utils.hexlify(ethers.BigNumber.from("9999999999999999991268")),
-        64
-      )
-      .substring(2);
-    const minAmount0 = ethers.utils
-      .hexZeroPad(ethers.utils.hexlify(0), 64)
-      .substring(2);
-    const minAmount1 = ethers.utils
-      .hexZeroPad(
-        ethers.utils.hexlify(ethers.BigNumber.from("9963392298778452810744")),
-        64
-      )
-      .substring(2);
-    const deadline = ethers.utils
-      .hexZeroPad(ethers.utils.hexlify(parseInt(Date.now() / 100 + 999999)), 64)
-      .substring(2);
-    let multiCallParams = [
-      // first call
-      "0x13ead562" + // encoded function signature ( createAndInitializePoolIfNecessary(address, address, uint24, uint160) )
-        "000000000000000000000000" +
-        contractUDAO.address.toLowerCase().substring(2) + // token1 address
-        "000000000000000000000000" +
-        WMATIC.address.toLowerCase().substring(2) + // token2 address
-        fee + // fee
-        sqrtPriceX96, // sqrtPriceX96
-      // second call
-      "0x88316456" + // encoded function signature ( mint((address,address,uint24,int24,int24,uint256,uint256,uint256,uint256,address,uint256)) )
-        "000000000000000000000000" +
-        contractUDAO.address.toLowerCase().substring(2) + // token1 address
-        "000000000000000000000000" +
-        WMATIC.address.toLowerCase().substring(2) + // token2 address
-        fee + // fee
-        tickLower + // tick lower
-        tickUpper + // tick upper
-        amount0des + // amount 0 desired
-        amount1des + // amount 1 desired
-        minAmount0 + // min amount 0 expected
-        minAmount1 + // min amount 1 expected
-        "000000000000000000000000" +
-        owner.address.toLowerCase().substring(2) +
-        deadline,
-      // deployer address "00000000000000000000000000000000000000000000000000000000610bb8b6" // deadline
-    ];
-    // adding a new liquidity pool through position manager
-    await positionManager.connect(owner).multicall(multiCallParams);
+      .approve(positionManager.address, ethers.utils.parseEther("9999999.0"));
+
+    console.log("Creating Pool");
+
+    const tx = await positionManager
+      .connect(owner)
+      .createAndInitializePoolIfNecessary(
+        WMATIC.address,
+        contractUDAO.address,
+        "3000",
+        "250541420775534450580036817218"
+      );
+
+    const result = await tx.wait();
+    console.log("Result is", result);
+    console.log("Created pool");
+    console.log("Minting position");
+    const tx_2 = await positionManager
+      .connect(owner)
+      .mint([
+        WMATIC.address,
+        contractUDAO.address,
+        "3000",
+        "0",
+        "23040",
+        "950252822518485471",
+        "9999999999999999991268",
+        "0",
+        "9963392298778452810744",
+        owner.address,
+        "1678352028999",
+      ]);
+    const result_2 = await tx_2.wait();
+    console.log("Result 2 is", result_2);
+    console.log("Minted position");
+
+    console.log("Deploying price getter");
+
+    let factoryPriceGetter = await ethers.getContractFactory("PriceGetter");
+    const contractPriceGetter = await factoryPriceGetter.deploy(
+      "0x1F98431c8aD98523631AE4a59f267346ea31F984",
+      contractUDAO.address,
+      "0x9c3C9283D3e44854697Cd22D3Faa240Cfb032889",
+      3000
+    );
+    console.log("Deployed price getter");
+
+    await helpers.time.increase(2);
+    await helpers.time.increase(2);
+    await helpers.time.increase(2);
+    await helpers.time.increase(2);
+    await helpers.time.increase(2);
+    await helpers.time.increase(2);
+    await helpers.time.increase(2);
+    await helpers.time.increase(2);
+    await helpers.time.increase(2);
+    await helpers.time.increase(2);
+    await helpers.time.increase(2);
+    await helpers.time.increase(2);
+    await helpers.time.increase(2);
+    await helpers.time.increase(2);
+    await helpers.time.increase(2);
+
+    const out = await contractPriceGetter.getUdaoOut(
+      WMATIC.address,
+      ethers.utils.parseEther("1.0")
+    );
+    console.log("Out is ", out);
+    await helpers.takeSnapshot.SnapshotRestorer();
   });
 });

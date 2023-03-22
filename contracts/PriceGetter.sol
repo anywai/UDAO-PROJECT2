@@ -7,6 +7,8 @@ import "./uniswap-0.8/v3-periphery/contracts/libraries/OracleLibrary.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import "./IPriceGetter.sol";
 
+import "hardhat/console.sol";
+
 contract PriceGetter is IPriceGetter {
     address public token0;
     address public token1;
@@ -26,6 +28,7 @@ contract PriceGetter is IPriceGetter {
             _token1,
             _fee
         );
+        console.log("Pool is", _pool);
         require(_pool != address(0), "pool doesn't exist");
 
         pool = _pool;
@@ -104,7 +107,7 @@ contract PriceGetter is IPriceGetter {
     function getLatestPrice(string memory fiat) public view returns (int) {
         /// @dev MATIC / USD address on Mumbai
         AggregatorV3Interface priceFeed = AggregatorV3Interface(
-            0xAB594600376Ec9fD91F8e885dADF0CE036862dE0
+            0xd0D5e3DB44DE05E9F294BB0a3bEEaF030DE24Ada
         );
         (
             ,
@@ -153,7 +156,7 @@ contract PriceGetter is IPriceGetter {
 
             ) = priceFeed.latestRoundData();
 
-            price = (fiatToUsdPrice * 10 ** 8) / price; // Matic per fiat
+            price = (price * 10 ** 8) / fiatToUsdPrice; // Matic per fiat
         }
 
         return (price);
