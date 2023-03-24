@@ -32,11 +32,17 @@ contract PriceGetter is IPriceGetter {
         pool = _pool;
     }
 
-     /// @notice Get current price of UDAO in Matic from uniswap
-    function getUdaoOut(uint128 amountIn, string memory fiat) external view returns (uint udaoPayment) {
-        uint128 maticPayment = convertFiatToMatic(convertMaticToUdao(amountIn), fiat);
+    /// @notice Get current price of UDAO in Matic from uniswap
+    function getUdaoOut(
+        uint128 amountIn,
+        string memory fiat
+    ) external view returns (uint udaoPayment) {
+        uint128 maticPayment = convertFiatToMatic(
+            convertMaticToUdao(amountIn),
+            fiat
+        );
         udaoPayment = convertMaticToUdao(maticPayment);
-        return(udaoPayment);
+        return (udaoPayment);
     }
 
     /// @dev token0 = tokenIn (matic) and token1 = tokenOut(udao)
@@ -109,7 +115,7 @@ contract PriceGetter is IPriceGetter {
     function getLatestPrice(string memory fiat) public view returns (int) {
         /// @dev MATIC / USD address on Mumbai
         AggregatorV3Interface priceFeed = AggregatorV3Interface(
-            0xd0D5e3DB44DE05E9F294BB0a3bEEaF030DE24Ada
+            0xAB594600376Ec9fD91F8e885dADF0CE036862dE0
         );
         (
             ,
