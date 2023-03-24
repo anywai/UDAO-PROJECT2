@@ -34,12 +34,74 @@ async function deploy() {
     value: ethers.utils.parseEther("1000000.0"), // Sends exactly 1000000.0 ether
   });
 
+  const positionManager = await ethers.getContractAt(
+    NonFunbiblePositionABI,
+    NonFunbiblePositionAddress
+  );
+
+  // console.log("Find WMATIC");
+
+  const WMATIC = await ethers.getContractAt(WMATIC_ABI, WMATICAddress);
+  // console.log("Deposit MATIC for WMATIC");
+  await WMATIC.connect(owner).deposit({
+    value: ethers.utils.parseEther("1000.0"),
+  });
+
+  // console.log("Approve WMATIC");
+
+  // call approve for tokens before adding a new pool
+  await WMATIC.connect(owner).approve(
+    positionManager.address,
+    ethers.utils.parseEther("99999999.0")
+  );
+
+  // console.log("Approve UDAO");
+
+  await contractUDAO
+    .connect(owner)
+    .approve(positionManager.address, ethers.utils.parseEther("9999999.0"));
+
+  // console.log("Creating Pool");
+
+  const tx = await positionManager
+    .connect(owner)
+    .createAndInitializePoolIfNecessary(
+      WMATIC.address,
+      contractUDAO.address,
+      "3000",
+      "250541420775534450580036817218"
+    );
+  const tx_2 = await positionManager
+    .connect(owner)
+    .mint([
+      WMATIC.address,
+      contractUDAO.address,
+      "3000",
+      "0",
+      "23040",
+      "950252822518485471",
+      "9999999999999999991268",
+      "0",
+      "9963392298778452810744",
+      owner.address,
+      "1678352028999",
+    ]);
+
+  const factoryPriceGetter = await ethers.getContractFactory("PriceGetter");
+  const contractPriceGetter = await factoryPriceGetter.deploy(
+    "0x1F98431c8aD98523631AE4a59f267346ea31F984",
+    contractUDAO.address,
+    WMATICAddress,
+    3000
+  );
+
   return {
     owner,
     account1,
     account2,
     account3,
     contractUDAO,
+    contractPriceGetter,
   };
 }
 
@@ -58,78 +120,9 @@ describe("Uniswap DEX Tests", function () {
       whale,
       weth,
       nonfungiblePositionManager,
+      contractPriceGetter,
     } = await deploy();
 
-    const positionManager = await ethers.getContractAt(
-      NonFunbiblePositionABI,
-      NonFunbiblePositionAddress
-    );
-
-    // console.log("Find WMATIC");
-
-    const WMATIC = await ethers.getContractAt(WMATIC_ABI, WMATICAddress);
-    // console.log("Deposit MATIC for WMATIC");
-    await WMATIC.connect(owner).deposit({
-      value: ethers.utils.parseEther("1000.0"),
-    });
-
-    // console.log("Approve WMATIC");
-
-    // call approve for tokens before adding a new pool
-    await WMATIC.connect(owner).approve(
-      positionManager.address,
-      ethers.utils.parseEther("99999999.0")
-    );
-
-    // console.log("Approve UDAO");
-
-    await contractUDAO
-      .connect(owner)
-      .approve(positionManager.address, ethers.utils.parseEther("9999999.0"));
-
-    // console.log("Creating Pool");
-
-    const tx = await positionManager
-      .connect(owner)
-      .createAndInitializePoolIfNecessary(
-        WMATIC.address,
-        contractUDAO.address,
-        "3000",
-        "250541420775534450580036817218"
-      );
-
-    const result = await tx.wait();
-    // console.log("Result is", result);
-    // console.log("Created pool");
-    // console.log("Minting position");
-    const tx_2 = await positionManager
-      .connect(owner)
-      .mint([
-        WMATIC.address,
-        contractUDAO.address,
-        "3000",
-        "0",
-        "23040",
-        "950252822518485471",
-        "9999999999999999991268",
-        "0",
-        "9963392298778452810744",
-        owner.address,
-        "1678352028999",
-      ]);
-    const result_2 = await tx_2.wait();
-    // console.log("Result 2 is", result_2);
-    // console.log("Minted position");
-
-    // console.log("Deploying price getter");
-
-    let factoryPriceGetter = await ethers.getContractFactory("PriceGetter");
-    const contractPriceGetter = await factoryPriceGetter.deploy(
-      "0x1F98431c8aD98523631AE4a59f267346ea31F984",
-      contractUDAO.address,
-      WMATICAddress,
-      3000
-    );
     // console.log("Deployed price getter");
 
     await helpers.time.increase(2);
@@ -149,8 +142,8 @@ describe("Uniswap DEX Tests", function () {
     await helpers.time.increase(2);
 
     const out = await contractPriceGetter.getUdaoOut(
-      WMATIC.address,
-      ethers.utils.parseEther("1.0")
+      ethers.utils.parseEther("1.0"),
+      "eur"
     );
     // console.log("Out is ", out);
   });
