@@ -24,7 +24,9 @@ contract UDAOCertificate is
 
     Counters.Counter private _tokenIdCounter;
 
-    constructor(address irmAdress)
+    constructor(
+        address irmAdress
+    )
         ERC721("UDAO Certificate", "UDAO-Cert")
         EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION)
         RoleController(irmAdress)
@@ -67,11 +69,9 @@ contract UDAOCertificate is
 
     /// @notice Returns a hash of the given CertificateVoucher, prepared using EIP712 typed data hashing rules.
     /// @param voucher A CertificateVoucher to hash.
-    function _hash(CertificateVoucher calldata voucher)
-        internal
-        view
-        returns (bytes32)
-    {
+    function _hash(
+        CertificateVoucher calldata voucher
+    ) internal view returns (bytes32) {
         return
             _hashTypedDataV4(
                 keccak256(
@@ -103,11 +103,9 @@ contract UDAOCertificate is
     /// @notice Verifies the signature for a given CertificateVoucher, returning the address of the signer.
     /// @dev Will revert if the signature is invalid. Does not verify that the signer is authorized to mint NFTs.
     /// @param voucher A CertificateVoucher describing an unminted NFT.
-    function _verify(CertificateVoucher calldata voucher)
-        internal
-        view
-        returns (address)
-    {
+    function _verify(
+        CertificateVoucher calldata voucher
+    ) internal view returns (address) {
         bytes32 digest = _hash(voucher);
         return ECDSA.recover(digest, voucher.signature);
     }
@@ -152,19 +150,15 @@ contract UDAOCertificate is
         _burn(tokenId);
     }
 
-    function _burn(uint256 tokenId)
-        internal
-        override(ERC721, ERC721URIStorage)
-    {
+    function _burn(
+        uint256 tokenId
+    ) internal override(ERC721, ERC721URIStorage) {
         super._burn(tokenId);
     }
 
-    function tokenURI(uint256 tokenId)
-        public
-        view
-        override(ERC721, ERC721URIStorage)
-        returns (string memory)
-    {
+    function tokenURI(
+        uint256 tokenId
+    ) public view override(ERC721, ERC721URIStorage) returns (string memory) {
         return super.tokenURI(tokenId);
     }
 }
