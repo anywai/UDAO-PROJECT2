@@ -34,7 +34,7 @@ contract PriceGetter is IPriceGetter {
 
      /// @notice Get current price of UDAO in Matic from uniswap
     function getUdaoOut(uint128 amountIn, string memory fiat) external view returns (uint udaoPayment) {
-        uint maticPayment = convertFiatToMatic(convertMaticToUdao(amountIn), fiat);
+        uint128 maticPayment = convertFiatToMatic(convertMaticToUdao(amountIn), fiat);
         udaoPayment = convertMaticToUdao(maticPayment);
         return(udaoPayment);
     }
@@ -98,11 +98,11 @@ contract PriceGetter is IPriceGetter {
     function convertFiatToMatic(
         uint256 val,
         string memory fiat
-    ) public view returns (uint) {
+    ) public view returns (uint128) {
         uint256 msgValueInUSD = (
             ((val * (uint256)(getLatestPrice(fiat))) / (10 ** 18))
         );
-        return msgValueInUSD;
+        return (uint128)(msgValueInUSD);
     }
 
     /// @notice Get current price of 1 Matic in fiat from chainlink
