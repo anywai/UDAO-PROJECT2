@@ -3,7 +3,6 @@ pragma solidity ^0.8.4;
 
 interface IPriceGetter {
     function getUdaoOut(
-        address tokenIn,
-        uint128 amountIn
+        uint128 amountIn, string memory fiat
     ) external view returns (uint amountOut);
 }

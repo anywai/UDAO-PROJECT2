@@ -12,6 +12,7 @@ contract PriceGetter is IPriceGetter {
     address public token1;
     address public pool;
 
+    /// @dev token0 = tokenIn (udao) and token1 = tokenOut(matic)
     constructor(
         address _factory,
         address _token0,
@@ -31,14 +32,23 @@ contract PriceGetter is IPriceGetter {
         pool = _pool;
     }
 
-    function getUdaoOut(
-        address tokenIn,
-        uint128 amountIn
-    ) external view returns (uint amountOut) {
-        uint32 secondsAgo = 20;
-        require(tokenIn == token0 || tokenIn == token1, "invalid token");
+     /// @notice Get current price of UDAO in Matic from uniswap
+    function getUdaoOut(uint128 amountIn, string memory fiat) external view returns (uint amountOut) {
+        //int usdPerMatic = getLatestPrice(fiat);
+        uint udaoPerMatic = convertMaticToUdao(amountIn);
+        
+        amountOut = convertFiatToMatic(convertMaticToUdao(amountIn), fiat);
+        return(amountOut);
+    }
 
-        address tokenOut = tokenIn == token0 ? token1 : token0;
+    /// @dev token0 = tokenIn (udao) and token1 = tokenOut(matic)
+    function convertMaticToUdao(
+        uint128 amountIn
+    ) public view returns (uint amountOut) {
+        uint32 secondsAgo = 20;
+
+        address tokenIn = token0;
+        address tokenOut = token1;
 
         /// @dev Consult has calculations that are unnecessary for us. Below is
         // "consult" but some parts are stripped out
@@ -86,14 +96,11 @@ contract PriceGetter is IPriceGetter {
         );
     }
 
-    /// @notice Get current price of UDAO in Matic from uniswap
-    function convertMaticToUdao() internal {}
-
     /// @notice Get current price of Matic in fiat from chainlink
     function convertFiatToMatic(
         uint256 val,
         string memory fiat
-    ) external view returns (uint) {
+    ) public view returns (uint) {
         uint256 msgValueInUSD = (
             ((val * (uint256)(getLatestPrice(fiat))) / (10 ** 18))
         );

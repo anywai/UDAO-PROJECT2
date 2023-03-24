@@ -41,6 +41,8 @@ abstract contract ContentManager is EIP712, BasePlatform {
         bool fullContentPurchase;
         /// @notice Purchased parts
         uint256[] purchasedParts;
+        /// @notice Name of the purchasing currency
+        string currencyName;
         /// @notice Address of the gift receiver if purhcase is a gift
         address giftReceiver;
     }
@@ -122,6 +124,8 @@ abstract contract ContentManager is EIP712, BasePlatform {
         uint256 tokenId = voucher.tokenId;
         uint256 partIdLength = voucher.purchasedParts.length;
         uint256 priceToPay;
+        uint256 pricePerPart;
+        string memory _currencyName;
         address contentReceiver = msg.sender;
 
         require(udaoc.exists(tokenId), "Content does not exist!");
@@ -141,14 +145,9 @@ abstract contract ContentManager is EIP712, BasePlatform {
             "Full content is already bought"
         );
 
-        // TODO Get price conversion from an oracle
-        uint udaoRate = 0.01 ether;
-
         /// @dev Get the total payment amount first
         if (voucher.fullContentPurchase) {
-            priceToPay +=
-                (udaoc.getPriceContent(tokenId, 0) / udaoRate) *
-                10 ** 18;
+            (priceToPay, _currencyName) = udaoc.getPriceContent(tokenId, 0);
         } else {
             require(
                 voucher.purchasedParts[0] != 0,
@@ -160,11 +159,19 @@ abstract contract ContentManager is EIP712, BasePlatform {
                         udaoc.getPartNumberOfContent(tokenId),
                     "Part does not exist!"
                 );
-                priceToPay +=
-                    udaoc.getPriceContent(tokenId, voucher.purchasedParts[j]) /
-                    udaoRate;
+                (pricePerPart, _currencyName) = udaoc.getPriceContent(
+                    tokenId,
+                    voucher.purchasedParts[j]
+                );
+                priceToPay += pricePerPart;
             }
         }
+
+        /// @dev Convert fiat to token if necessary
+        bytes32 hashPurchaseCurrency = keccak256(abi.encodePacked(voucher.currencyName));
+        bytes32 hashSellingCurrency = keccak256(abi.encodePacked(_currencyName));
+        /// TODO aşağıya fiat döünüşümleri yapıp priceToPay hesaplaması gelecek.
+
 
         /// @dev Calculate and assing the cuts
         _updateBalancesContent(priceToPay, instructor);
