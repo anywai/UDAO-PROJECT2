@@ -171,7 +171,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
         bytes32 hashPurchaseCurrency = keccak256(abi.encodePacked(voucher.currencyName));
         bytes32 hashSellingCurrency = keccak256(abi.encodePacked(_currencyName));
         /// TODO aşağıya fiat döünüşümleri yapıp priceToPay hesaplaması gelecek.
-
+        //getUdaoOut
 
         /// @dev Calculate and assing the cuts
         _updateBalancesContent(priceToPay, instructor);
