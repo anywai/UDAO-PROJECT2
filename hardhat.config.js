@@ -36,7 +36,6 @@ module.exports = {
   networks: {
     hardhat: {
       forking: {
-        enabled: true,
         url: POLYGON_RPC_PROVIDER,
         blockNumber: 40691400,
       },
