@@ -7,8 +7,6 @@ import "./uniswap-0.8/v3-periphery/contracts/libraries/OracleLibrary.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import "./IPriceGetter.sol";
 
-import "hardhat/console.sol";
-
 contract PriceGetter is IPriceGetter {
     address public token0;
     address public token1;
@@ -16,8 +14,8 @@ contract PriceGetter is IPriceGetter {
 
     constructor(
         address _factory,
-        address _token0, // weth 0xA6FA4fB5f76172d178d61B04b0ecd319C5d1C0aa
-        address _token1, // wmatic 0x9c3C9283D3e44854697Cd22D3Faa240Cfb032889
+        address _token0,
+        address _token1,
         uint24 _fee
     ) {
         token0 = _token0;
@@ -28,7 +26,6 @@ contract PriceGetter is IPriceGetter {
             _token1,
             _fee
         );
-        console.log("Pool is", _pool);
         require(_pool != address(0), "pool doesn't exist");
 
         pool = _pool;
