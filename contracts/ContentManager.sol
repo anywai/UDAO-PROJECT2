@@ -41,8 +41,9 @@ abstract contract ContentManager is EIP712, BasePlatform {
         bool fullContentPurchase;
         /// @notice Purchased parts
         uint256[] purchasedParts;
-        /// @notice Name of the purchasing currency
-        string currencyName;
+        /// TODO Why do we need currencyName in purchase voucher
+        // /// @notice Name of the purchasing currency
+        // string currencyName;
         /// @notice Address of the gift receiver if purhcase is a gift
         address giftReceiver;
     }
@@ -168,8 +169,12 @@ abstract contract ContentManager is EIP712, BasePlatform {
         }
 
         /// @dev Convert fiat to token if necessary
-        bytes32 hashPurchaseCurrency = keccak256(abi.encodePacked(voucher.currencyName));
-        bytes32 hashSellingCurrency = keccak256(abi.encodePacked(_currencyName));
+        // bytes32 hashPurchaseCurrency = keccak256(
+        //     abi.encodePacked(voucher.currencyName)
+        // );
+        bytes32 hashSellingCurrency = keccak256(
+            abi.encodePacked(_currencyName)
+        );
         /// TODO aşağıya fiat döünüşümleri yapıp priceToPay hesaplaması gelecek.
         //getUdaoOut
 
