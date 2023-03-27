@@ -16,6 +16,11 @@ const {
 chai.use(require("chai-bn")(BN));
 
 async function deploy() {
+  helpers.reset(
+    "https://polygon-mainnet.g.alchemy.com/v2/OsNaN43nxvV85Kk1JpU-a5qduFwjcIGJ",
+    40691400
+  );
+
   const [
     backend,
     contentCreator,
@@ -64,7 +69,10 @@ async function deploy() {
     NonFunbiblePositionABI,
     "0xC36442b4a4522E871399CD717aBDD847Ab11FE88"
   );
-
+  await helpers.setBalance(
+    backend.address,
+    ethers.utils.parseEther("1000000.0")
+  );
   const WMATIC = await ethers.getContractAt(WMATIC_ABI, WMATICAddress);
   await WMATIC.connect(backend).deposit({
     value: ethers.utils.parseEther("1000.0"),
@@ -129,11 +137,6 @@ async function deploy() {
   await helpers.time.increase(2);
   await helpers.time.increase(2);
   await helpers.time.increase(2);
-
-  const out = await contractPriceGetter.getUdaoOut(
-    WMATIC.address,
-    ethers.utils.parseEther("1.0")
-  );
 
   // Price Getter End
   const contractRoleManager = await factoryRoleManager.deploy();
@@ -372,6 +375,7 @@ describe("UDAOC Contract", function () {
     const udaoc_voucher = [
       1,
       [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
+      "usd",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       true,
@@ -420,6 +424,7 @@ describe("UDAOC Contract", function () {
     const udaoc_voucher = [
       1,
       [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
+      "usd",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       true,
@@ -507,6 +512,7 @@ describe("UDAOC Contract", function () {
     const udaoc_voucher = [
       1,
       [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
+      "usd",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       true,
@@ -559,6 +565,7 @@ describe("UDAOC Contract", function () {
     const udaoc_voucher = [
       1,
       [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
+      "usd",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       true,
@@ -614,6 +621,7 @@ describe("UDAOC Contract", function () {
     const udaoc_voucher = [
       1,
       [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
+      "usd",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       true,
@@ -669,6 +677,7 @@ describe("UDAOC Contract", function () {
     const udaoc_voucher = [
       1,
       [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
+      "usd",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       true,
@@ -725,6 +734,7 @@ describe("UDAOC Contract", function () {
     const udaoc_voucher = [
       1,
       [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
+      "usd",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       true,
@@ -778,6 +788,7 @@ describe("UDAOC Contract", function () {
     const udaoc_voucher = [
       1,
       [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
+      "usd",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       true,
@@ -834,6 +845,7 @@ describe("UDAOC Contract", function () {
     const udaoc_voucher = [
       1,
       [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
+      "usd",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       true,
@@ -890,6 +902,7 @@ describe("UDAOC Contract", function () {
     const udaoc_voucher = [
       1,
       [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
+      "usd",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       true,
@@ -975,6 +988,7 @@ describe("UDAOC Contract", function () {
     const udaoc_voucher = [
       1,
       [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
+      "usd",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       false,
@@ -1025,6 +1039,7 @@ describe("UDAOC Contract", function () {
     const udaoc_voucher = [
       1,
       [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
+      "usd",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       true,
@@ -1075,6 +1090,7 @@ describe("UDAOC Contract", function () {
     const udaoc_voucher = [
       1,
       [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
+      "usd",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       false,
@@ -1126,6 +1142,7 @@ describe("UDAOC Contract", function () {
     const udaoc_voucher = [
       1,
       [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
+      "usd",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       true,

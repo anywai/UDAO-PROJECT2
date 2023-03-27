@@ -17,6 +17,10 @@ const {
 chai.use(require("chai-bn")(BN));
 
 async function deploy() {
+  helpers.reset(
+    "https://polygon-mainnet.g.alchemy.com/v2/OsNaN43nxvV85Kk1JpU-a5qduFwjcIGJ",
+    40691400
+  );
   const [
     backend,
     contentCreator,
@@ -70,6 +74,10 @@ async function deploy() {
     "0xC36442b4a4522E871399CD717aBDD847Ab11FE88"
   );
 
+  await helpers.setBalance(
+    backend.address,
+    ethers.utils.parseEther("1000000.0")
+  );
   const WMATIC = await ethers.getContractAt(WMATIC_ABI, WMATICAddress);
   await WMATIC.connect(backend).deposit({
     value: ethers.utils.parseEther("1000.0"),
@@ -134,11 +142,6 @@ async function deploy() {
   await helpers.time.increase(2);
   await helpers.time.increase(2);
   await helpers.time.increase(2);
-
-  const out = await contractPriceGetter.getUdaoOut(
-    WMATIC.address,
-    ethers.utils.parseEther("1.0")
-  );
 
   // Price Getter End
   const contractRoleManager = await factoryRoleManager.deploy();
@@ -315,7 +318,6 @@ describe("Platform Treasury Contract - Coaching", function () {
       contractUDAOTimelockController,
       contractUDAOGovernor,
     } = await deploy();
-
     /// Set KYC
     await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer.address, true);
@@ -323,12 +325,14 @@ describe("Platform Treasury Contract - Coaching", function () {
     const udaoc_voucher = [
       1,
       [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
+      "usd",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       true,
       "Content Name",
       "Content Description",
     ];
+
     await expect(
       contractUDAOContent.connect(contentCreator).redeem(udaoc_voucher)
     )
@@ -338,11 +342,13 @@ describe("Platform Treasury Contract - Coaching", function () {
         contentCreator.address,
         udaoc_voucher[0]
       );
+
     await expect(
       contractValidationManager.connect(backend).createValidation(1, 50)
     )
       .to.emit(contractValidationManager, "ValidationCreated")
       .withArgs(ethers.BigNumber.from(1), ethers.BigNumber.from(1));
+
     await expect(
       contractValidationManager.connect(validator1).assignValidation(1)
     )
@@ -352,6 +358,7 @@ describe("Platform Treasury Contract - Coaching", function () {
         ethers.BigNumber.from(1),
         validator1.address
       );
+
     await expect(
       contractValidationManager.connect(validator2).assignValidation(1)
     )
@@ -450,6 +457,7 @@ describe("Platform Treasury Contract - Coaching", function () {
       contentBuyer.address,
       ethers.utils.parseEther("100.0")
     );
+
     /// Content buyer needs to give approval to the platformtreasury
     await contractUDAO
       .connect(contentBuyer)
@@ -457,12 +465,14 @@ describe("Platform Treasury Contract - Coaching", function () {
         contractPlatformTreasury.address,
         ethers.utils.parseEther("999999999999.0")
       );
+
     const coaching_voucher = [
       1,
       ethers.utils.parseEther("2"),
       true,
       contentBuyer.address,
     ];
+
     await contractPlatformTreasury
       .connect(contentBuyer)
       .buyCoaching(coaching_voucher);
@@ -508,6 +518,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     const udaoc_voucher = [
       1,
       [ethers.utils.parseEther("1")],
+      "usd",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       true,
@@ -703,6 +714,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     const udaoc_voucher = [
       1,
       [ethers.utils.parseEther("1")],
+      "usd",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       false,
@@ -890,13 +902,13 @@ describe("Platform Treasury Contract - Coaching", function () {
       contract: contractPlatformTreasury,
       signer: backend,
     });
-    const coaching_voucher = await lazyCoaching.createVoucher(
+    const coaching_voucher = [
       3,
       ethers.utils.parseEther("2"),
       Date.now() + 999999999,
       true,
-      contentBuyer.address
-    );
+      contentBuyer.address,
+    ];
     await expect(
       contractPlatformTreasury
         .connect(contentBuyer)
@@ -941,6 +953,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     const udaoc_voucher = [
       1,
       [ethers.utils.parseEther("1")],
+      "usd",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       true,
@@ -1021,6 +1034,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     const udaoc_voucher = [
       1,
       [ethers.utils.parseEther("1")],
+      "usd",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       true,
@@ -1212,6 +1226,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     const udaoc_voucher = [
       1,
       [ethers.utils.parseEther("1")],
+      "usd",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       true,
@@ -1403,6 +1418,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     const udaoc_voucher = [
       1,
       [ethers.utils.parseEther("1")],
+      "usd",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       true,
@@ -1595,6 +1611,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     const udaoc_voucher = [
       1,
       [ethers.utils.parseEther("1")],
+      "usd",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       true,
@@ -1785,6 +1802,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     const udaoc_voucher = [
       1,
       [ethers.utils.parseEther("1")],
+      "usd",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       true,
@@ -1801,6 +1819,7 @@ describe("Platform Treasury Contract - Coaching", function () {
         contentCreator.address,
         udaoc_voucher[0]
       );
+
     await expect(
       contractValidationManager.connect(backend).createValidation(1, 50)
     )
@@ -1913,6 +1932,7 @@ describe("Platform Treasury Contract - Coaching", function () {
       contentBuyer.address,
       ethers.utils.parseEther("100.0")
     );
+
     /// Content buyer needs to give approval to the platformtreasury
     await contractUDAO
       .connect(contentBuyer)
@@ -1927,7 +1947,6 @@ describe("Platform Treasury Contract - Coaching", function () {
       true,
       contentBuyer.address,
     ];
-
     await contractPlatformTreasury
       .connect(contentBuyer)
       .buyCoaching(coaching_voucher);
@@ -1979,6 +1998,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     const udaoc_voucher = [
       1,
       [ethers.utils.parseEther("1")],
+      "usd",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       true,
@@ -2174,6 +2194,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     const udaoc_voucher = [
       1,
       [ethers.utils.parseEther("1")],
+      "usd",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       true,
@@ -2366,6 +2387,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     const udaoc_voucher = [
       1,
       [ethers.utils.parseEther("1")],
+      "usd",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       true,
@@ -2562,6 +2584,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     const udaoc_voucher = [
       1,
       [ethers.utils.parseEther("1")],
+      "usd",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       true,
@@ -2758,6 +2781,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     const udaoc_voucher = [
       1,
       [ethers.utils.parseEther("1")],
+      "usd",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       true,
@@ -2957,6 +2981,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     const udaoc_voucher = [
       1,
       [ethers.utils.parseEther("1")],
+      "usd",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       true,
@@ -3156,6 +3181,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     const udaoc_voucher = [
       1,
       [ethers.utils.parseEther("1")],
+      "usd",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       true,
@@ -3351,6 +3377,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     const udaoc_voucher = [
       1,
       [ethers.utils.parseEther("1")],
+      "usd",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       true,
@@ -3546,6 +3573,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     const udaoc_voucher = [
       1,
       [ethers.utils.parseEther("1")],
+      "usd",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       true,
@@ -3741,6 +3769,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     const udaoc_voucher = [
       1,
       [ethers.utils.parseEther("1")],
+      "usd",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       true,
@@ -3940,6 +3969,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     const udaoc_voucher = [
       1,
       [ethers.utils.parseEther("1")],
+      "usd",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       true,
@@ -4135,6 +4165,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     const udaoc_voucher = [
       1,
       [ethers.utils.parseEther("1")],
+      "usd",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       true,
@@ -4330,6 +4361,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     const udaoc_voucher = [
       1,
       [ethers.utils.parseEther("1")],
+      "usd",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       true,
@@ -4527,6 +4559,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     const udaoc_voucher = [
       1,
       [ethers.utils.parseEther("1")],
+      "usd",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       true,
@@ -4726,6 +4759,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     const udaoc_voucher = [
       1,
       [ethers.utils.parseEther("1")],
+      "usd",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       true,

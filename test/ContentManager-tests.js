@@ -16,6 +16,10 @@ const {
 chai.use(require("chai-bn")(BN));
 
 async function deploy() {
+  helpers.reset(
+    "https://polygon-mainnet.g.alchemy.com/v2/OsNaN43nxvV85Kk1JpU-a5qduFwjcIGJ",
+    40691400
+  );
   const [
     backend,
     contentCreator,

@@ -19,6 +19,10 @@ bn.config({ EXPONENTIAL_AT: 999999, DECIMAL_PLACES: 40 });
 chai.use(require("chai-bn")(BN));
 
 async function deploy() {
+  helpers.reset(
+    "https://polygon-mainnet.g.alchemy.com/v2/OsNaN43nxvV85Kk1JpU-a5qduFwjcIGJ",
+    40691400
+  );
   const [owner, account1, account2, account3] = await ethers.getSigners();
 
   let factoryUDAO = await ethers.getContractFactory("UDAO");
