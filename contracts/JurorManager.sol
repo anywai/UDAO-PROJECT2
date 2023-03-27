@@ -8,7 +8,6 @@ import "./RoleController.sol";
 import "./IUDAOC.sol";
 import "./IVM.sol";
 
-
 contract JurorManager is RoleController {
     IUDAOC udaoc;
     IValidationManager public IVM;
@@ -33,8 +32,6 @@ contract JurorManager is RoleController {
     uint128 public requiredJurors = 3;
     uint128 public minRequiredAcceptVote = 2;
 
-
-
     /**
      * @param rmAddress address of the role manager contract
      */
@@ -42,14 +39,14 @@ contract JurorManager is RoleController {
         address rmAddress,
         address udaocAddress,
         address ivmAddress
-    )  RoleController(rmAddress) {
+    ) RoleController(rmAddress) {
         udaoc = IUDAOC(udaocAddress);
         IVM = IValidationManager(ivmAddress);
         disputes.push();
     }
 
     /// @notice Get the updated addresses from contract manager
-    function updateAddresses() external onlyRole(BACKEND_ROLE){        
+    function updateAddresses() external onlyRole(BACKEND_ROLE) {
         IRM = IRoleManager(contractManager.IrmAddress());
     }
 
@@ -89,24 +86,25 @@ contract JurorManager is RoleController {
     /// TODO Wth is this function.
     /// @notice sets required juror count per dispute
     /// @param _requiredJurors new required juror count
-    function setRequiredValidators(uint128 _requiredJurors)
-        external
-        onlyRole(GOVERNANCE_ROLE)
-    {
+    function setRequiredJurors(
+        uint128 _requiredJurors
+    ) external onlyRole(GOVERNANCE_ROLE) {
         requiredJurors = _requiredJurors;
     }
 
-    /// @notice starts new dispute case 
-    function createDispute(uint128 caseScope, string calldata question, bool isTokenRelated, uint256 tokenId)
-        external
-        onlyRole(BACKEND_ROLE)
-    {
+    /// @notice starts new dispute case
+    function createDispute(
+        uint128 caseScope,
+        string calldata question,
+        bool isTokenRelated,
+        uint256 tokenId
+    ) external onlyRole(BACKEND_ROLE) {
         Dispute storage dispute = disputes.push();
         dispute.caseId = disputes.length - 1;
         dispute.caseScope = caseScope;
         dispute.question = question;
         dispute.isTokenRelated = isTokenRelated;
-        if(isTokenRelated){
+        if (isTokenRelated) {
             dispute.tokenId = tokenId;
         }
         emit DisputeCreated(dispute.caseId, caseScope, question);
@@ -114,14 +112,8 @@ contract JurorManager is RoleController {
 
     /// @notice assign a dispute to self
     /// @param caseId id of the dispute
-    function assignDispute(uint256 caseId)
-        external
-        onlyRole(JUROR_ROLE)
-    {
-        require(
-            caseId < disputes.length,
-            "Dispute does not exist!"
-        );
+    function assignDispute(uint256 caseId) external onlyRole(JUROR_ROLE) {
+        require(caseId < disputes.length, "Dispute does not exist!");
         require(
             activeDispute[msg.sender] == 0,
             "You already have an assigned dispute"
@@ -135,15 +127,18 @@ contract JurorManager is RoleController {
             "You are the instructor of this course."
         );
 
-        /// TODO Add check if the juror is validator of the validation case
-
-        uint validationId = IVM.getLatestValidationIdOfToken(disputes[caseId].tokenId);
+        uint validationId = IVM.getLatestValidationIdOfToken(
+            disputes[caseId].tokenId
+        );
         address[] memory validators = IVM.getValidatorsOfVal(validationId);
 
         uint validatorLength = validators.length;
 
-        for(uint i = 0; i < validatorLength; i++) {
-            require(msg.sender != validators[i], "You can't assign content you validated!");
+        for (uint i = 0; i < validatorLength; i++) {
+            require(
+                msg.sender != validators[i],
+                "You can't assign content you validated!"
+            );
         }
 
         activeDispute[msg.sender] = caseId;
@@ -154,10 +149,10 @@ contract JurorManager is RoleController {
     /// @notice Allows jurors to send dipsute result
     /// @param caseId id of the dispute
     /// @param result result of validation
-    function sendDisputeResult(uint256 caseId, bool result)
-        external
-        onlyRole(JUROR_ROLE)
-    {
+    function sendDisputeResult(
+        uint256 caseId,
+        bool result
+    ) external onlyRole(JUROR_ROLE) {
         require(
             activeDispute[msg.sender] == caseId,
             "This dispute is not assigned to this wallet"
@@ -182,14 +177,12 @@ contract JurorManager is RoleController {
             disputes[caseId].voteCount >= requiredJurors,
             "Not enough juror votes to finalize the case"
         );
-        if (
-            disputes[caseId].acceptVoteCount >= minRequiredAcceptVote
-        ) {
+        if (disputes[caseId].acceptVoteCount >= minRequiredAcceptVote) {
             disputes[caseId].verdict = true;
         } else {
             disputes[caseId].verdict = false;
         }
-        
+
         disputes[caseId].resultDate = block.timestamp;
 
         /// TODO Below is for unfixed juror scores and juror penalty..
@@ -197,25 +190,20 @@ contract JurorManager is RoleController {
         for (uint i; i < disputes[caseId].jurors.length; i++) {
             if (
                 disputes[caseId].verdict ==
-                disputes[caseId].vote[
-                    disputes[caseId].jurors[i]
-                ]
+                disputes[caseId].vote[disputes[caseId].jurors[i]]
             ) {
-                jurorScorePerRound[disputes[caseId].jurors[i]][distributionRound]++;
+                jurorScorePerRound[disputes[caseId].jurors[i]][
+                    distributionRound
+                ]++;
                 totalJurorScore++;
                 /// @dev Record success point of a validator
                 successfulDispute[disputes[caseId].jurors[i]]++;
             } else {
                 /// @dev Record unsuccess point of a validator
-                unsuccessfulDispute[
-                    disputes[caseId].jurors[i]
-                ]++;
+                unsuccessfulDispute[disputes[caseId].jurors[i]]++;
             }
         }
-        emit DisputeEnded(
-            caseId,
-            disputes[caseId].verdict
-        );
+        emit DisputeEnded(caseId, disputes[caseId].verdict);
     }
 
     /**
@@ -262,11 +250,9 @@ contract JurorManager is RoleController {
 
     /// @notice returns successful and unsuccessful case count of the account
     /// @param account wallet address of the account that wanted to be checked
-    function getCaseResults(address account)
-        external
-        view
-        returns (uint[2] memory results)
-    {
+    function getCaseResults(
+        address account
+    ) external view returns (uint[2] memory results) {
         results[0] = successfulDispute[account];
         results[1] = unsuccessfulDispute[account];
     }
@@ -283,5 +269,4 @@ contract JurorManager is RoleController {
     function getTotalJurorScore() external view returns (uint) {
         return totalJurorScore;
     }
-
 }

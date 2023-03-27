@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "./RoleController.sol";
+import "./IPriceGetter.sol";
 
 contract UDAOContent is ERC721, ERC721URIStorage, RoleController {
 
@@ -19,6 +20,8 @@ contract UDAOContent is ERC721, ERC721URIStorage, RoleController {
 
     // tokenId => (partId => price), first part is the full price
     mapping(uint => mapping(uint => uint)) contentPrice;
+    // tokenId => currency name
+    mapping(uint => string) currencyName;
      // tokenId => number of Parts
      mapping(uint => uint) private partNumberOfContent;
 
@@ -29,6 +32,8 @@ contract UDAOContent is ERC721, ERC721URIStorage, RoleController {
         uint256 tokenId;
         /// @notice The price of the content, first price is the full price
         uint256[] contentPrice;
+        /// @notice Name of the selling currency
+        string currencyName;
         /// @notice The metadata URI to associate with this token.
         string uri;
         /// @notice Address of the redeemer
@@ -59,6 +64,8 @@ contract UDAOContent is ERC721, ERC721URIStorage, RoleController {
         // save the content price
         uint partLength = voucher.contentPrice.length;
         partNumberOfContent[voucher.tokenId] = partLength;
+
+        currencyName[voucher.tokenId] = voucher.currencyName;
 
         /// @dev First index is the full price for the content
         for (uint i = 0; i < partLength; i++) {
@@ -106,9 +113,9 @@ contract UDAOContent is ERC721, ERC721URIStorage, RoleController {
     function getPriceContent(uint tokenId, uint partId)
         external
         view
-        returns (uint)
+        returns (uint , string memory)
     {
-        return contentPrice[tokenId][partId];
+        return (contentPrice[tokenId][partId], currencyName[tokenId]);
     }
 
     /// @notice allows content owners to set full content price

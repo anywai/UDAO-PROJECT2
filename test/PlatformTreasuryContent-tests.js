@@ -4,12 +4,23 @@ const { ethers } = hardhat;
 const chai = require("chai");
 const BN = require("bn.js");
 const { DiscountedPurchase } = require("../lib/DiscountedPurchase");
-const { parseEther } = require("ethers/lib/utils");
+const helpers = require("@nomicfoundation/hardhat-network-helpers");
+
+const {
+  WMATIC_ABI,
+  NonFunbiblePositionABI,
+  NonFunbiblePositionAddress,
+  WMATICAddress,
+} = require("../lib/abis");
 
 // Enable and inject BN dependency
 chai.use(require("chai-bn")(BN));
 
 async function deploy() {
+  helpers.reset(
+    "https://polygon-mainnet.g.alchemy.com/v2/OsNaN43nxvV85Kk1JpU-a5qduFwjcIGJ",
+    40691400
+  );
   const [
     backend,
     contentCreator,
@@ -55,6 +66,83 @@ async function deploy() {
 
   //DEPLOYMENTS
   const contractUDAO = await factoryUDAO.deploy();
+
+  // Deploys PriceGetter
+
+  const positionManager = await ethers.getContractAt(
+    NonFunbiblePositionABI,
+    "0xC36442b4a4522E871399CD717aBDD847Ab11FE88"
+  );
+  await helpers.setBalance(
+    backend.address,
+    ethers.utils.parseEther("1000000.0")
+  );
+  const WMATIC = await ethers.getContractAt(WMATIC_ABI, WMATICAddress);
+  await WMATIC.connect(backend).deposit({
+    value: ethers.utils.parseEther("1000.0"),
+  });
+
+  // call approve for tokens before adding a new pool
+  await WMATIC.connect(backend).approve(
+    positionManager.address,
+    ethers.utils.parseEther("99999999.0")
+  );
+
+  await contractUDAO
+    .connect(backend)
+    .approve(positionManager.address, ethers.utils.parseEther("9999999.0"));
+
+  const tx = await positionManager
+    .connect(backend)
+    .createAndInitializePoolIfNecessary(
+      WMATIC.address,
+      contractUDAO.address,
+      "3000",
+      "250541420775534450580036817218"
+    );
+  const result = await tx.wait();
+  const tx_2 = await positionManager
+    .connect(backend)
+    .mint([
+      WMATIC.address,
+      contractUDAO.address,
+      "3000",
+      "0",
+      "23040",
+      "950252822518485471",
+      "9999999999999999991268",
+      "0",
+      "9963392298778452810744",
+      backend.address,
+      "1678352028999",
+    ]);
+  const result_2 = await tx_2.wait();
+
+  let factoryPriceGetter = await ethers.getContractFactory("PriceGetter");
+  const contractPriceGetter = await factoryPriceGetter.deploy(
+    "0x1F98431c8aD98523631AE4a59f267346ea31F984",
+    contractUDAO.address,
+    "0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270",
+    3000
+  );
+
+  await helpers.time.increase(2);
+  await helpers.time.increase(2);
+  await helpers.time.increase(2);
+  await helpers.time.increase(2);
+  await helpers.time.increase(2);
+  await helpers.time.increase(2);
+  await helpers.time.increase(2);
+  await helpers.time.increase(2);
+  await helpers.time.increase(2);
+  await helpers.time.increase(2);
+  await helpers.time.increase(2);
+  await helpers.time.increase(2);
+  await helpers.time.increase(2);
+  await helpers.time.increase(2);
+  await helpers.time.increase(2);
+
+  // Price Getter End
   const contractRoleManager = await factoryRoleManager.deploy();
   const contractUDAOCertificate = await factoryUDAOCertificate.deploy(
     contractRoleManager.address
@@ -85,7 +173,8 @@ async function deploy() {
   );
   const contractPlatformTreasury = await factoryPlatformTreasury.deploy(
     contractContractManager.address,
-    contractRoleManager.address
+    contractRoleManager.address,
+    contractPriceGetter.address
   );
 
   const contractUDAOStaker = await factoryUDAOStaker.deploy(
@@ -359,6 +448,7 @@ describe("Platform Treasury Contract - Content", function () {
     const udaoc_voucher = [
       1,
       [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
+      "usd",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       true,
@@ -696,6 +786,7 @@ describe("Platform Treasury Contract - Content", function () {
         ethers.utils.parseEther("1"),
         ethers.utils.parseEther("1"),
       ],
+      "usd",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       true,
@@ -898,6 +989,7 @@ describe("Platform Treasury Contract - Content", function () {
         ethers.utils.parseEther("1"),
         ethers.utils.parseEther("1"),
       ],
+      "usd",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       true,
@@ -1153,6 +1245,7 @@ describe("Platform Treasury Contract - Content", function () {
     const udaoc_voucher = [
       1,
       [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
+      "usd",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       true,
@@ -1336,6 +1429,7 @@ describe("Platform Treasury Contract - Content", function () {
     const udaoc_voucher = [
       1,
       [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
+      "usd",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       true,
@@ -1522,6 +1616,7 @@ describe("Platform Treasury Contract - Content", function () {
     const udaoc_voucher = [
       1,
       [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
+      "usd",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       true,
@@ -1708,6 +1803,7 @@ describe("Platform Treasury Contract - Content", function () {
     const udaoc_voucher = [
       1,
       [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
+      "usd",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       true,
@@ -1899,6 +1995,7 @@ describe("Platform Treasury Contract - Content", function () {
         ethers.utils.parseEther("1"),
         ethers.utils.parseEther("1"),
       ],
+      "usd",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       true,
@@ -2099,6 +2196,7 @@ describe("Platform Treasury Contract - Content", function () {
         ethers.utils.parseEther("1"),
         ethers.utils.parseEther("1"),
       ],
+      "usd",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       true,
@@ -2287,6 +2385,7 @@ describe("Platform Treasury Contract - Content", function () {
         ethers.utils.parseEther("1"),
         ethers.utils.parseEther("1"),
       ],
+      "usd",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       true,
@@ -2482,6 +2581,7 @@ describe("Platform Treasury Contract - Content", function () {
         ethers.utils.parseEther("1"),
         ethers.utils.parseEther("1"),
       ],
+      "usd",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       true,
@@ -2671,6 +2771,7 @@ describe("Platform Treasury Contract - Content", function () {
     const udaoc_voucher = [
       1,
       [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
+      "usd",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       true,
@@ -2864,6 +2965,7 @@ describe("Platform Treasury Contract - Content", function () {
         ethers.utils.parseEther("1"),
         ethers.utils.parseEther("1"),
       ],
+      "usd",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       true,
@@ -3055,6 +3157,7 @@ describe("Platform Treasury Contract - Content", function () {
     const udaoc_voucher = [
       1,
       [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
+      "usd",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       true,
@@ -3240,6 +3343,7 @@ describe("Platform Treasury Contract - Content", function () {
     const udaoc_voucher = [
       1,
       [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
+      "usd",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       true,
@@ -3424,6 +3528,7 @@ describe("Platform Treasury Contract - Content", function () {
     const udaoc_voucher = [
       1,
       [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
+      "usd",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       true,

@@ -2,9 +2,9 @@
 /// @title Gets UDAO-USD conversion rate from oracle
 pragma solidity ^0.8.4;
 
-import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
-import "@uniswap/v3-periphery/contracts/libraries/OracleLibrary.sol";
-
+import "./uniswap-0.8/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
+import "./uniswap-0.8/v3-periphery/contracts/libraries/OracleLibrary.sol";
+import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import "./IPriceGetter.sol";
 
 contract PriceGetter is IPriceGetter {
@@ -12,6 +12,7 @@ contract PriceGetter is IPriceGetter {
     address public token1;
     address public pool;
 
+    /// @dev token0 = tokenIn (matic) and token1 = tokenOut(udao)
     constructor(
         address _factory,
         address _token0,
@@ -31,15 +32,30 @@ contract PriceGetter is IPriceGetter {
         pool = _pool;
     }
 
-    function getUDAORate(
-        address tokenIn,
+     /// @notice Get fiat to UDAO token amount
+     /// @param amountIn Amount of fiat
+     /// @param fiat Name of the fiat currency
+    function getUdaoOut(uint128 amountIn, string memory fiat) external view returns (uint udaoPayment) {
+        /// @dev Get amount of matic in return of given amount of fiat
+        uint128 _fiatToMaticAmount = convertFiatToMatic(amountIn, fiat);
+        /// @dev Get amount of udao in return of given amount of matic
+        udaoPayment = convertMaticToUdao(_fiatToMaticAmount);
+        return(udaoPayment);
+    }
+
+    /// @notice Converts given amount of matic to udao
+    /// @dev token0 = tokenIn (matic) and token1 = tokenOut(udao)
+    /// @param amountIn Amount of matic token to convert
+    function convertMaticToUdao(
         uint128 amountIn
-    ) external view returns (uint amountOut) {
+    ) public view returns (uint amountOut) {
         uint32 secondsAgo = 20;
-        require(tokenIn == token0 || tokenIn == token1, "invalid token");
 
-        address tokenOut = tokenIn == token0 ? token1 : token0;
+        address tokenIn = token0;
+        address tokenOut = token1;
 
+        /// @dev Consult has calculations that are unnecessary for us. Below is
+        // "consult" but some parts are stripped out
         // (int24 tick, ) = OracleLibrary.consult(pool, secondsAgo);
 
         // Code copied from OracleLibrary.sol, consult()
@@ -56,7 +72,7 @@ contract PriceGetter is IPriceGetter {
         int56 tickCumulativesDelta = tickCumulatives[1] - tickCumulatives[0];
 
         // int56 / uint32 = int24
-        int24 tick = int24(tickCumulativesDelta / secondsAgo);
+        int24 tick = int24((tickCumulativesDelta / int56(int32(secondsAgo))));
         // Always round to negative infinity
         /*
         int doesn't round down when it is negative
@@ -70,7 +86,8 @@ contract PriceGetter is IPriceGetter {
         down
         */
         if (
-            tickCumulativesDelta < 0 && (tickCumulativesDelta % secondsAgo != 0)
+            tickCumulativesDelta < 0 &&
+            (tickCumulativesDelta % int56(int32(secondsAgo)) != 0)
         ) {
             tick--;
         }
@@ -81,5 +98,78 @@ contract PriceGetter is IPriceGetter {
             tokenIn,
             tokenOut
         );
+    }
+
+    /// @notice Returns given amount of fiat currency to matic token
+    /// @param val Amount of fiat currency
+    /// @param fiat Name of the fiat currency
+    function convertFiatToMatic(
+        uint256 val,
+        string memory fiat
+    ) public view returns (uint128) {
+        uint256 msgValueInUSD = (
+            ((val * (uint256)(getLatestPrice(fiat))) / (10 ** 18))
+        );
+        return (uint128)(msgValueInUSD);
+    }
+
+    /// @notice Returns current price of 1 Matic in fiat from chainlink
+    /// @param fiat Name of the fiat currency
+    function getLatestPrice(string memory fiat) public view returns (int) {
+        /// @dev MATIC / USD address on Mumbai
+        AggregatorV3Interface priceFeed = AggregatorV3Interface(
+            0xAB594600376Ec9fD91F8e885dADF0CE036862dE0
+        );
+        (
+            ,
+            /* uint80 roundID */ int price /*uint startedAt*/ /*uint timeStamp*/ /*uint80 answeredInRound*/,
+            ,
+            ,
+
+        ) = priceFeed.latestRoundData();
+
+        bytes32 hashFiat = keccak256(abi.encodePacked(fiat));
+
+        if (hashFiat != keccak256(abi.encodePacked("usd"))) {
+            if (hashFiat == keccak256(abi.encodePacked("eur"))) {
+                priceFeed = AggregatorV3Interface(
+                    0x73366Fe0AA0Ded304479862808e02506FE556a98
+                );
+            } else if (hashFiat == keccak256(abi.encodePacked("jpy"))) {
+                priceFeed = AggregatorV3Interface(
+                    0xD647a6fC9BC6402301583C91decC5989d8Bc382D
+                );
+            } else if (hashFiat == keccak256(abi.encodePacked("aud"))) {
+                priceFeed = AggregatorV3Interface(
+                    0x062Df9C4efd2030e243ffCc398b652e8b8F95C6f
+                );
+            } else if (hashFiat == keccak256(abi.encodePacked("cad"))) {
+                priceFeed = AggregatorV3Interface(
+                    0xACA44ABb8B04D07D883202F99FA5E3c53ed57Fb5
+                );
+            } else if (hashFiat == keccak256(abi.encodePacked("chf"))) {
+                priceFeed = AggregatorV3Interface(
+                    0xc76f762CedF0F78a439727861628E0fdfE1e70c2
+                );
+            } else if (hashFiat == keccak256(abi.encodePacked("gbp"))) {
+                priceFeed = AggregatorV3Interface(
+                    0x099a2540848573e94fb1Ca0Fa420b00acbBc845a
+                );
+            } else {
+                revert("Unsupported fiat");
+            }
+
+            (
+                ,
+                /* uint80 roundID */ int fiatToUsdPrice /*uint startedAt*/ /*uint timeStamp*/ /*uint80 answeredInRound*/,
+                ,
+                ,
+
+            ) = priceFeed.latestRoundData();
+
+            price = (price * 10 ** 8) / fiatToUsdPrice; // Matic per fiat
+        }
+
+        return (price);
     }
 }
