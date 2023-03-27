@@ -102,7 +102,6 @@ contract ValidationManager is RoleController {
             activeValidation[msg.sender] == validationId,
             "This content is not assigned to this wallet"
         );
-        /// TODO 2 tane validationCount var. Bunlar ne işe yarıyor?
         validationCount[msg.sender]++;
         activeValidation[msg.sender] = 0;
         if (result) {
