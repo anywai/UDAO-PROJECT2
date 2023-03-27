@@ -12,7 +12,7 @@ contract PriceGetter is IPriceGetter {
     address public token1;
     address public pool;
 
-    /// @dev token0 = tokenIn (udao) and token1 = tokenOut(matic)
+    /// @dev token0 = tokenIn (matic) and token1 = tokenOut(udao)
     constructor(
         address _factory,
         address _token0,
@@ -32,20 +32,20 @@ contract PriceGetter is IPriceGetter {
         pool = _pool;
     }
 
-    /// @notice Get current price of UDAO in Matic from uniswap
-    function getUdaoOut(
-        uint128 amountIn,
-        string memory fiat
-    ) external view returns (uint udaoPayment) {
-        uint128 maticPayment = convertFiatToMatic(
-            convertMaticToUdao(amountIn),
-            fiat
-        );
-        udaoPayment = convertMaticToUdao(maticPayment);
-        return (udaoPayment);
+     /// @notice Get fiat to UDAO token amount
+     /// @param amountIn Amount of fiat
+     /// @param fiat Name of the fiat currency
+    function getUdaoOut(uint128 amountIn, string memory fiat) external view returns (uint udaoPayment) {
+        /// @dev Get amount of matic in return of given amount of fiat
+        uint128 _fiatToMaticAmount = convertFiatToMatic(amountIn, fiat);
+        /// @dev Get amount of udao in return of given amount of matic
+        udaoPayment = convertMaticToUdao(_fiatToMaticAmount);
+        return(udaoPayment);
     }
 
+    /// @notice Converts given amount of matic to udao
     /// @dev token0 = tokenIn (matic) and token1 = tokenOut(udao)
+    /// @param amountIn Amount of matic token to convert
     function convertMaticToUdao(
         uint128 amountIn
     ) public view returns (uint amountOut) {
@@ -100,7 +100,9 @@ contract PriceGetter is IPriceGetter {
         );
     }
 
-    /// @notice Get current price of Matic in fiat from chainlink
+    /// @notice Returns given amount of fiat currency to matic token
+    /// @param val Amount of fiat currency
+    /// @param fiat Name of the fiat currency
     function convertFiatToMatic(
         uint256 val,
         string memory fiat
@@ -111,7 +113,8 @@ contract PriceGetter is IPriceGetter {
         return (uint128)(msgValueInUSD);
     }
 
-    /// @notice Get current price of 1 Matic in fiat from chainlink
+    /// @notice Returns current price of 1 Matic in fiat from chainlink
+    /// @param fiat Name of the fiat currency
     function getLatestPrice(string memory fiat) public view returns (int) {
         /// @dev MATIC / USD address on Mumbai
         AggregatorV3Interface priceFeed = AggregatorV3Interface(
