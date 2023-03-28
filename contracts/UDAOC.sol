@@ -38,6 +38,10 @@ contract UDAOContent is ERC721, ERC721URIStorage, RoleController {
         string uri;
         /// @notice Address of the redeemer
         address redeemer;
+        /// @notice The price of the content, first price is the full price
+        uint256 coachingPrice;
+        /// @notice Name of the selling currency
+        string coachingCurrencyName;
         /// @notice Whether learner can buy coaching or not
         bool isCoachingEnabled;
         /// @notice The name of the NFT
@@ -48,6 +52,10 @@ contract UDAOContent is ERC721, ERC721URIStorage, RoleController {
 
     // tokenId => is coaching service buyable
     mapping(uint => bool) coachingEnabled;
+    // tokenId => coaching price
+    mapping(uint => uint) coachingPrice;
+    // tokenId => coaching currency
+    mapping(uint => bytes32) coachingCurrency;
 
     /// @notice Redeems a ContentVoucher for an actual NFT, creating it in the process.
     /// @param voucher A signed ContentVoucher that describes the NFT to be redeemed.
@@ -65,7 +73,14 @@ contract UDAOContent is ERC721, ERC721URIStorage, RoleController {
         uint partLength = voucher.contentPrice.length;
         partNumberOfContent[voucher.tokenId] = partLength;
 
-        currencyName[voucher.tokenId] = keccak256(abi.encodePacked(voucher.currencyName));
+        currencyName[voucher.tokenId] = keccak256(
+            abi.encodePacked(voucher.currencyName)
+        );
+
+        coachingPrice[voucher.tokenId] = voucher.coachingPrice;
+        coachingCurrency[voucher.tokenId] = keccak256(
+            abi.encodePacked(voucher.coachingCurrencyName)
+        );
 
         /// @dev First index is the full price for the content
         for (uint i = 0; i < partLength; i++) {
@@ -107,6 +122,34 @@ contract UDAOContent is ERC721, ERC721URIStorage, RoleController {
         return coachingEnabled[tokenId];
     }
 
+    /// @notice sets the coaching price and currency of a specific content
+    /// @param tokenId the content ID of the token
+    /// @param price the price of the coaching
+    /// @param currency the currency of the coaching
+    function setCoachingPriceAndCurrency(
+        uint tokenId,
+        uint price,
+        bytes32 currency
+    ) external whenNotPaused {
+        require(
+            ownerOf(tokenId) == msg.sender,
+            "You are not the owner of token"
+        );
+        //make sure caller is kyced
+        require(IRM.isKYCed(msg.sender), "You are not KYCed");
+        //make sure caller is not banned
+        require(!IRM.isBanned(msg.sender), "You were banned!");
+        coachingPrice[tokenId] = price;
+        coachingCurrency[tokenId] = currency;
+    }
+
+    /// @notice returns the coaching price and currency of a specific content
+    /// @param tokenId the content ID of the token
+    function getCoachingPriceAndCurrency(
+        uint tokenId
+    ) external view returns (uint256, bytes32) {
+        return (coachingPrice[tokenId], coachingCurrency[tokenId]);
+    }
     /// @notice returns the price of a specific content
     /// @param tokenId the content ID of the token
     /// @param partId the part ID of the token (microlearning), full content price if 0

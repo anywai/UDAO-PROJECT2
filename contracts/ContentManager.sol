@@ -69,8 +69,6 @@ abstract contract ContentManager is EIP712, BasePlatform {
     struct CoachingPurchaseVoucher {
         /// @notice The id of the token (content) to be redeemed.
         uint256 tokenId;
-        /// @notice The price to deduct from buyer
-        uint256 priceToPay;
         /// @notice if the coaching service is refundable or not
         bool isRefundable;
     }
@@ -333,16 +331,28 @@ abstract contract ContentManager is EIP712, BasePlatform {
             IVM.getIsValidated(voucher.tokenId),
             "Content is not validated yet"
         );
-        uint256 priceToPay = voucher.priceToPay;
-        foundationBalance += (priceToPay * coachingFoundationCut) / 100000;
-        governanceBalance += (priceToPay * coachingGovernancenCut) / 100000;
+        (uint priceToPay, bytes32 sellingCurrency) = udaoc
+            .getCoachingPriceAndCurrency(voucher.tokenId);
+        uint priceToPayUdao;
+        /// @dev Check if sold in udao or fiat and get the price in udao
+        if (sellingCurrency == keccak256(abi.encodePacked("udao"))) {
+            priceToPayUdao = priceToPay;
+        } else {
+            priceToPayUdao = priceGetter.getUdaoOut(
+                uint128(priceToPay),
+                sellingCurrency
+            );
+        }
+
+        foundationBalance += (priceToPayUdao * coachingFoundationCut) / 100000;
+        governanceBalance += (priceToPayUdao * coachingGovernancenCut) / 100000;
         coachingStructs[coachingIndex] = CoachingStruct({
             coach: instructor,
             learner: msg.sender,
             isDone: 0,
             isRefundable: voucher.isRefundable,
-            totalPaymentAmount: priceToPay,
-            coachingPaymentAmount: (priceToPay -
+            totalPaymentAmount: priceToPayUdao,
+            coachingPaymentAmount: (priceToPayUdao -
                 foundationBalance -
                 governanceBalance),
             moneyLockDeadline: block.timestamp + 30 days
@@ -353,7 +363,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
         coachingIndex++;
 
         studentList[voucher.tokenId].push(msg.sender);
-        udao.transferFrom(msg.sender, address(this), priceToPay);
+        udao.transferFrom(msg.sender, address(this), priceToPayUdao);
     }
 
     /// @notice Allows both parties to finalize coaching service.
