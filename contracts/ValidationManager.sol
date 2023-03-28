@@ -84,13 +84,17 @@ contract ValidationManager is RoleController {
         udaoc = IUDAOC(udaocAddress);
     }
 
+    /// @notice creates a validation for a token
+    /// @param stakerAddress address of staking contract
     function setStaker(
         address stakerAddress
     ) external onlyRole(FOUNDATION_ROLE) {
         staker = IStakingContract(stakerAddress);
     }
 
-    /// @dev this is possibly deprecated, moved to offchain?
+    /// Sends validation result of validator to blockchain
+    /// @param validationId id of validation
+    /// @param result result of validation
     function sendValidation(
         uint validationId,
         bool result

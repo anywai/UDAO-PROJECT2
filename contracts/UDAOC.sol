@@ -9,21 +9,17 @@ import "./RoleController.sol";
 import "./IPriceGetter.sol";
 
 contract UDAOContent is ERC721, ERC721URIStorage, RoleController {
-
     /// @param irmAdress The address of the deployed role manager
     constructor(
         address irmAdress
-    )
-        ERC721("UDAO Content", "UDAOC")
-        RoleController(irmAdress)
-    {}
+    ) ERC721("UDAO Content", "UDAOC") RoleController(irmAdress) {}
 
     // tokenId => (partId => price), first part is the full price
     mapping(uint => mapping(uint => uint)) contentPrice;
     // tokenId => currency name
     mapping(uint => bytes32) currencyName;
-     // tokenId => number of Parts
-     mapping(uint => uint) private partNumberOfContent;
+    // tokenId => number of Parts
+    mapping(uint => uint) private partNumberOfContent;
 
     /// @notice Represents an un-minted NFT, which has not yet been recorded into the blockchain.
     /// A signed voucher can be redeemed for a real NFT using the redeem function.
@@ -84,8 +80,8 @@ contract UDAOContent is ERC721, ERC721URIStorage, RoleController {
 
         /// @dev First index is the full price for the content
         for (uint i = 0; i < partLength; i++) {
-                contentPrice[voucher.tokenId][i] = voucher.contentPrice[i];
-            }
+            contentPrice[voucher.tokenId][i] = voucher.contentPrice[i];
+        }
     }
 
     /// @notice Allows instructers' to enable coaching for a specific content
@@ -118,6 +114,7 @@ contract UDAOContent is ERC721, ERC721URIStorage, RoleController {
     }
 
     /// @notice Returns if a coaching enabled for a token or not
+    /// @param tokenId the content ID of the token
     function isCoachingEnabled(uint tokenId) external view returns (bool) {
         return coachingEnabled[tokenId];
     }
@@ -150,14 +147,14 @@ contract UDAOContent is ERC721, ERC721URIStorage, RoleController {
     ) external view returns (uint256, bytes32) {
         return (coachingPrice[tokenId], coachingCurrency[tokenId]);
     }
+
     /// @notice returns the price of a specific content
     /// @param tokenId the content ID of the token
     /// @param partId the part ID of the token (microlearning), full content price if 0
-    function getPriceContent(uint tokenId, uint partId)
-        external
-        view
-        returns (uint , bytes32)
-    {
+    function getContentPriceAndCurrency(
+        uint tokenId,
+        uint partId
+    ) external view returns (uint256, bytes32) {
         return (contentPrice[tokenId][partId], currencyName[tokenId]);
     }
 
@@ -183,11 +180,14 @@ contract UDAOContent is ERC721, ERC721URIStorage, RoleController {
         uint _contentPrice
     ) external {
         require(ownerOf(tokenId) == msg.sender, "You are not the owner");
-        require(partId != 0, "Full content price is set with setFullPriceContent");
         require(
-                    partId < _getPartNumberOfContent(tokenId),
-                    "Part does not exist!"
-                );
+            partId != 0,
+            "Full content price is set with setFullPriceContent"
+        );
+        require(
+            partId < _getPartNumberOfContent(tokenId),
+            "Part does not exist!"
+        );
         //make sure caller is kyced
         require(IRM.isKYCed(msg.sender), "You are not KYCed");
         //make sure caller is not banned
@@ -211,15 +211,18 @@ contract UDAOContent is ERC721, ERC721URIStorage, RoleController {
         uint partLength = partId.length;
         for (uint i = 0; i < partLength; i++) {
             require(
-                    partId[i] < _getPartNumberOfContent(tokenId),
-                    "Part does not exist!"
+                partId[i] < _getPartNumberOfContent(tokenId),
+                "Part does not exist!"
             );
-            require(partId[i] != 0, "Full content price is set with setBatchFullContent");
+            require(
+                partId[i] != 0,
+                "Full content price is set with setBatchFullContent"
+            );
             contentPrice[tokenId][partId[i]] = _contentPrice[i];
         }
     }
 
-    /// @notice allows content owners to set price for full content and multiple parts in a content 
+    /// @notice allows content owners to set price for full content and multiple parts in a content
     /// @param tokenId the content ID of the token
     /// @param _contentPrice the price to set, first price is for full content price
     function setBatchFullContent(
@@ -233,25 +236,30 @@ contract UDAOContent is ERC721, ERC721URIStorage, RoleController {
         //make sure caller is not banned
         require(!IRM.isBanned(msg.sender), "You were banned!");
         uint partLength = partId.length;
-        require(partId[0] == 0, "First index of partId should be zero to set the full content price. Use setBatchPartialContent if you don't want to set the full content price");
+        require(
+            partId[0] == 0,
+            "First index of partId should be zero to set the full content price. Use setBatchPartialContent if you don't want to set the full content price"
+        );
         for (uint i = 0; i < partLength; i++) {
             require(
-                    partId[i] < _getPartNumberOfContent(tokenId),
-                    "Part does not exist!"
+                partId[i] < _getPartNumberOfContent(tokenId),
+                "Part does not exist!"
             );
             contentPrice[tokenId][partId[i]] = _contentPrice[i];
         }
     }
 
     /// @notice Returns the part numbers that a content has
-    function _getPartNumberOfContent(uint tokenId) internal view returns (uint) {
-         return partNumberOfContent[tokenId];
-     }
+    function _getPartNumberOfContent(
+        uint tokenId
+    ) internal view returns (uint) {
+        return partNumberOfContent[tokenId];
+    }
 
     /// @notice Returns the part numbers that a content has
     function getPartNumberOfContent(uint tokenId) external view returns (uint) {
-         return partNumberOfContent[tokenId];
-     }
+        return partNumberOfContent[tokenId];
+    }
 
     /// @notice A content can be completely removed by the owner
     /// @param tokenId The token ID of a content
@@ -272,13 +280,13 @@ contract UDAOContent is ERC721, ERC721URIStorage, RoleController {
     ) internal override(ERC721, ERC721URIStorage) {
         super._burn(tokenId);
     }
-     
+
     function _beforeTokenTransfer(
         address from,
         address to,
         uint256 tokenId
     ) internal virtual override {
-       super._beforeTokenTransfer(from, to, tokenId);
+        super._beforeTokenTransfer(from, to, tokenId);
         if (to != address(0)) {
             require(IRM.isKYCed(to), "Receiver is not KYCed!");
             require(!IRM.isBanned(to), "Receiver is banned!");

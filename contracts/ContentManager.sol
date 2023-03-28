@@ -46,6 +46,17 @@ abstract contract ContentManager is EIP712, BasePlatform {
     }
 
     /// @notice Represents usage rights for a content (or part)
+    /**
+     * @notice struct to hold content discount voucher information
+     * @param tokenId id of the content
+     * @param fullContentPurchase is full content purchased
+     * @param purchasedParts parts of the content purchased
+     * @param priceToPay price to pay
+     * @param validUntil date until the voucher is valid
+     * @param redeemer address of the redeemer
+     * @param giftReceiver address of the gift receiver if purchase is a gift
+     * @param signature the EIP-712 signature of all other fields in the ContentDiscountVoucher struct.
+     */
     struct ContentDiscountVoucher {
         /// @notice The id of the token (content) to be redeemed.
         uint256 tokenId;
@@ -277,6 +288,9 @@ abstract contract ContentManager is EIP712, BasePlatform {
         );
     }
 
+    /// @notice allows users to purchase a content
+    /// @param priceToPay price to pay for the content
+    /// @param instructor instructor of the content
     function _updateBalancesContent(
         uint priceToPay,
         address instructor
