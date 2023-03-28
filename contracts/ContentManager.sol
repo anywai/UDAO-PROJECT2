@@ -41,9 +41,6 @@ abstract contract ContentManager is EIP712, BasePlatform {
         bool fullContentPurchase;
         /// @notice Purchased parts
         uint256[] purchasedParts;
-        /// TODO Why do we need currencyName in purchase voucher
-        // /// @notice Name of the purchasing currency
-        // string currencyName;
         /// @notice Address of the gift receiver if purhcase is a gift
         address giftReceiver;
     }
@@ -124,9 +121,10 @@ abstract contract ContentManager is EIP712, BasePlatform {
     ) external whenNotPaused {
         uint256 tokenId = voucher.tokenId;
         uint256 partIdLength = voucher.purchasedParts.length;
-        uint256 priceToPay;
-        uint256 pricePerPart;
-        string memory _currencyName;
+        uint256 priceToPayUdao;
+        uint128 priceToPay;
+        uint128 pricePerPart;
+        bytes32 sellingCurrency;
         address contentReceiver = msg.sender;
 
         require(udaoc.exists(tokenId), "Content does not exist!");
@@ -148,7 +146,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
 
         /// @dev Get the total payment amount first
         if (voucher.fullContentPurchase) {
-            (priceToPay, _currencyName) = udaoc.getPriceContent(tokenId, 0);
+            (priceToPay, sellingCurrency) = udaoc.getPriceContent(tokenId, 0);
         } else {
             require(
                 voucher.purchasedParts[0] != 0,
@@ -160,7 +158,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
                         udaoc.getPartNumberOfContent(tokenId),
                     "Part does not exist!"
                 );
-                (pricePerPart, _currencyName) = udaoc.getPriceContent(
+                (pricePerPart, sellingCurrency) = udaoc.getPriceContent(
                     tokenId,
                     voucher.purchasedParts[j]
                 );
@@ -168,21 +166,18 @@ abstract contract ContentManager is EIP712, BasePlatform {
             }
         }
 
-        /// @dev Convert fiat to token if necessary
-        // bytes32 hashPurchaseCurrency = keccak256(
-        //     abi.encodePacked(voucher.currencyName)
-        // );
-        bytes32 hashSellingCurrency = keccak256(
-            abi.encodePacked(_currencyName)
-        );
-        /// TODO aşağıya fiat döünüşümleri yapıp priceToPay hesaplaması gelecek.
-        //getUdaoOut
+        /// @dev Check if sold in udao or fiat and get the price in udao
+        if(sellingCurrency == keccak256(abi.encodePacked("udao"))){
+            priceToPayUdao = priceToPay;
+        }else{
+            priceToPayUdao = priceGetter.getUdaoOut(priceToPay, sellingCurrency);
+        }
 
-        /// @dev Calculate and assing the cuts
-        _updateBalancesContent(priceToPay, instructor);
+        /// @dev Calculate and assign the cuts
+        _updateBalancesContent(priceToPayUdao, instructor);
 
         /// @dev transfer the tokens from buyer to contract
-        udao.transferFrom(msg.sender, address(this), priceToPay);
+        udao.transferFrom(msg.sender, address(this), priceToPayUdao);
 
         if (voucher.fullContentPurchase) {
             _updateOwned(tokenId, 0, contentReceiver);
@@ -199,7 +194,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
         emit ContentBought(
             voucher.tokenId,
             voucher.purchasedParts,
-            priceToPay,
+            priceToPayUdao,
             msg.sender
         );
     }

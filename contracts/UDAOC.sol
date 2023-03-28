@@ -21,7 +21,7 @@ contract UDAOContent is ERC721, ERC721URIStorage, RoleController {
     // tokenId => (partId => price), first part is the full price
     mapping(uint => mapping(uint => uint)) contentPrice;
     // tokenId => currency name
-    mapping(uint => string) currencyName;
+    mapping(uint => bytes32) currencyName;
      // tokenId => number of Parts
      mapping(uint => uint) private partNumberOfContent;
 
@@ -65,7 +65,7 @@ contract UDAOContent is ERC721, ERC721URIStorage, RoleController {
         uint partLength = voucher.contentPrice.length;
         partNumberOfContent[voucher.tokenId] = partLength;
 
-        currencyName[voucher.tokenId] = voucher.currencyName;
+        currencyName[voucher.tokenId] = keccak256(abi.encodePacked(voucher.currencyName));
 
         /// @dev First index is the full price for the content
         for (uint i = 0; i < partLength; i++) {
@@ -113,7 +113,7 @@ contract UDAOContent is ERC721, ERC721URIStorage, RoleController {
     function getPriceContent(uint tokenId, uint partId)
         external
         view
-        returns (uint , string memory)
+        returns (uint , bytes32)
     {
         return (contentPrice[tokenId][partId], currencyName[tokenId]);
     }

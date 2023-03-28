@@ -20,7 +20,7 @@ interface IUDAOC is IERC721 {
 
     function isCoachingEnabled(uint tokenId) external view returns (bool);
 
-    function getPriceContent(uint tokenId, uint partId) external view returns (uint, string memory);
+    function getPriceContent(uint tokenId, uint partId) external view returns (uint128, bytes32);
 
     function getPartNumberOfContent(uint tokenId) external view returns (uint);
 }
