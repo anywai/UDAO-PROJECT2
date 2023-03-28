@@ -120,8 +120,8 @@ abstract contract ContentManager is EIP712, BasePlatform {
         uint256 tokenId = voucher.tokenId;
         uint256 partIdLength = voucher.purchasedParts.length;
         uint256 priceToPayUdao;
-        uint128 priceToPay;
-        uint128 pricePerPart;
+        uint256 priceToPay;
+        uint256 pricePerPart;
         bytes32 sellingCurrency;
         address contentReceiver = msg.sender;
 
@@ -144,7 +144,10 @@ abstract contract ContentManager is EIP712, BasePlatform {
 
         /// @dev Get the total payment amount first
         if (voucher.fullContentPurchase) {
-            (priceToPay, sellingCurrency) = udaoc.getPriceContent(tokenId, 0);
+            (priceToPay, sellingCurrency) = udaoc.getContentPriceAndCurrency(
+                tokenId,
+                0
+            );
         } else {
             require(
                 voucher.purchasedParts[0] != 0,
@@ -156,19 +159,23 @@ abstract contract ContentManager is EIP712, BasePlatform {
                         udaoc.getPartNumberOfContent(tokenId),
                     "Part does not exist!"
                 );
-                (pricePerPart, sellingCurrency) = udaoc.getPriceContent(
-                    tokenId,
-                    voucher.purchasedParts[j]
-                );
+                (pricePerPart, sellingCurrency) = udaoc
+                    .getContentPriceAndCurrency(
+                        tokenId,
+                        voucher.purchasedParts[j]
+                    );
                 priceToPay += pricePerPart;
             }
         }
 
         /// @dev Check if sold in udao or fiat and get the price in udao
-        if(sellingCurrency == keccak256(abi.encodePacked("udao"))){
+        if (sellingCurrency == keccak256(abi.encodePacked("udao"))) {
             priceToPayUdao = priceToPay;
-        }else{
-            priceToPayUdao = priceGetter.getUdaoOut(priceToPay, sellingCurrency);
+        } else {
+            priceToPayUdao = priceGetter.getUdaoOut(
+                uint128(priceToPay),
+                sellingCurrency
+            );
         }
 
         /// @dev Calculate and assign the cuts
