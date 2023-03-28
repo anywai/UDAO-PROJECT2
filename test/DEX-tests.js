@@ -147,7 +147,9 @@ describe("Uniswap DEX Tests", function () {
 
     const out = await contractPriceGetter.getUdaoOut(
       ethers.utils.parseEther("1.0"),
-      "eur"
+      ethers.utils.keccak256(
+        ethers.utils.toUtf8Bytes("eur")
+      )
     );
     // console.log("Out is ", out);
   });
