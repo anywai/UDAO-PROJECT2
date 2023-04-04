@@ -8,7 +8,9 @@ import "@openzeppelin/contracts/utils/Counters.sol";
 import "./RoleController.sol";
 import "./IPriceGetter.sol";
 
-contract UDAOContent is ERC721, ERC721URIStorage, RoleController {
+import "./IUDAOC.sol";
+
+contract UDAOContent is IUDAOC, ERC721, ERC721URIStorage, RoleController {
     /// @param irmAdress The address of the deployed role manager
     constructor(
         address irmAdress
@@ -40,6 +42,8 @@ contract UDAOContent is ERC721, ERC721URIStorage, RoleController {
         string coachingCurrencyName;
         /// @notice Whether learner can buy coaching or not
         bool isCoachingEnabled;
+        /// @notice Whether coaching is refundable or not
+        bool isCoachingRefundable;
         /// @notice The name of the NFT
         string name;
         /// @notice The description of the NFT
@@ -47,11 +51,13 @@ contract UDAOContent is ERC721, ERC721URIStorage, RoleController {
     }
 
     // tokenId => is coaching service buyable
-    mapping(uint => bool) coachingEnabled;
+    mapping(uint => bool) public coachingEnabled;
     // tokenId => coaching price
     mapping(uint => uint) coachingPrice;
     // tokenId => coaching currency
     mapping(uint => bytes32) coachingCurrency;
+    // tokenId => is coaching refundable
+    mapping(uint => bool) public coachingRefundable;
 
     /// @notice Redeems a ContentVoucher for an actual NFT, creating it in the process.
     /// @param voucher A signed ContentVoucher that describes the NFT to be redeemed.
@@ -63,6 +69,7 @@ contract UDAOContent is ERC721, ERC721URIStorage, RoleController {
         //make sure redeemer is not banned
         require(!IRM.isBanned(msg.sender), "Redeemer is banned!");
         coachingEnabled[voucher.tokenId] = voucher.isCoachingEnabled;
+        coachingRefundable[voucher.tokenId] = voucher.isCoachingRefundable;
         _mint(voucher.redeemer, voucher.tokenId);
         _setTokenURI(voucher.tokenId, voucher.uri);
         // save the content price
@@ -312,7 +319,7 @@ contract UDAOContent is ERC721, ERC721URIStorage, RoleController {
 
     function supportsInterface(
         bytes4 interfaceId
-    ) public view override(ERC721) returns (bool) {
+    ) public view override(ERC721, IERC165) returns (bool) {
         return super.supportsInterface(interfaceId);
     }
 }

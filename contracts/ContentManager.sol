@@ -80,6 +80,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
     struct CoachingPurchaseVoucher {
         /// @notice The id of the token (content) to be redeemed.
         uint256 tokenId;
+        // TODO isRefundable should not be here
         /// @notice if the coaching service is refundable or not
         bool isRefundable;
     }
@@ -334,26 +335,20 @@ abstract contract ContentManager is EIP712, BasePlatform {
     }
 
     /// @notice Allows users to buy coaching service.
-    /// @param voucher voucher for the coaching purchase
-    function buyCoaching(
-        CoachingPurchaseVoucher calldata voucher
-    ) external whenNotPaused {
-        require(udaoc.exists(voucher.tokenId), "Content does not exist!");
+    function buyCoaching(uint tokenId) external whenNotPaused {
+        require(udaoc.exists(tokenId), "Content does not exist!");
         require(!IRM.isBanned(msg.sender), "You are banned");
         require(IRM.isKYCed(msg.sender), "You are not KYCed");
-        address instructor = udaoc.ownerOf(voucher.tokenId);
+        address instructor = udaoc.ownerOf(tokenId);
         require(!IRM.isBanned(instructor), "Instructor is banned");
         require(IRM.isKYCed(instructor), "Instructor is not KYCed");
         require(
-            udaoc.isCoachingEnabled(voucher.tokenId),
+            udaoc.coachingEnabled(tokenId),
             "Coaching is not enabled for this content"
         );
-        require(
-            IVM.getIsValidated(voucher.tokenId),
-            "Content is not validated yet"
-        );
+        require(IVM.getIsValidated(tokenId), "Content is not validated yet");
         (uint priceToPay, bytes32 sellingCurrency) = udaoc
-            .getCoachingPriceAndCurrency(voucher.tokenId);
+            .getCoachingPriceAndCurrency(tokenId);
         uint priceToPayUdao;
         /// @dev Check if sold in udao or fiat and get the price in udao
         if (sellingCurrency == keccak256(abi.encodePacked("udao"))) {
@@ -371,7 +366,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
             coach: instructor,
             learner: msg.sender,
             isDone: 0,
-            isRefundable: voucher.isRefundable,
+            isRefundable: udaoc.coachingRefundable(tokenId),
             totalPaymentAmount: priceToPayUdao,
             coachingPaymentAmount: (priceToPayUdao -
                 foundationBalance -
@@ -379,11 +374,11 @@ abstract contract ContentManager is EIP712, BasePlatform {
             moneyLockDeadline: block.timestamp + 30 days
         });
 
-        coachingIdsOfToken[voucher.tokenId].push(coachingIndex);
-        emit CoachingBought(msg.sender, voucher.tokenId, coachingIndex);
+        coachingIdsOfToken[tokenId].push(coachingIndex);
+        emit CoachingBought(msg.sender, tokenId, coachingIndex);
         coachingIndex++;
 
-        studentList[voucher.tokenId].push(msg.sender);
+        studentList[tokenId].push(msg.sender);
         udao.transferFrom(msg.sender, address(this), priceToPayUdao);
     }
 
