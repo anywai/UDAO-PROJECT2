@@ -34,9 +34,9 @@ contract UDAOContent is ERC721, ERC721URIStorage, RoleController {
         string uri;
         /// @notice Address of the redeemer
         address redeemer;
-        /// @notice The price of the content, first price is the full price
+        /// @notice The price of the coaching service
         uint256 coachingPrice;
-        /// @notice Name of the selling currency
+        /// @notice Name of the coaching currency
         string coachingCurrencyName;
         /// @notice Whether learner can buy coaching or not
         bool isCoachingEnabled;
