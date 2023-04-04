@@ -41,14 +41,22 @@ abstract contract ContentManager is EIP712, BasePlatform {
         bool fullContentPurchase;
         /// @notice Purchased parts
         uint256[] purchasedParts;
-        /// TODO Why do we need currencyName in purchase voucher
-        // /// @notice Name of the purchasing currency
-        // string currencyName;
         /// @notice Address of the gift receiver if purhcase is a gift
         address giftReceiver;
     }
 
     /// @notice Represents usage rights for a content (or part)
+    /**
+     * @notice struct to hold content discount voucher information
+     * @param tokenId id of the content
+     * @param fullContentPurchase is full content purchased
+     * @param purchasedParts parts of the content purchased
+     * @param priceToPay price to pay
+     * @param validUntil date until the voucher is valid
+     * @param redeemer address of the redeemer
+     * @param giftReceiver address of the gift receiver if purchase is a gift
+     * @param signature the EIP-712 signature of all other fields in the ContentDiscountVoucher struct.
+     */
     struct ContentDiscountVoucher {
         /// @notice The id of the token (content) to be redeemed.
         uint256 tokenId;
@@ -72,8 +80,6 @@ abstract contract ContentManager is EIP712, BasePlatform {
     struct CoachingPurchaseVoucher {
         /// @notice The id of the token (content) to be redeemed.
         uint256 tokenId;
-        /// @notice The price to deduct from buyer
-        uint256 priceToPay;
         /// @notice if the coaching service is refundable or not
         bool isRefundable;
     }
@@ -124,9 +130,10 @@ abstract contract ContentManager is EIP712, BasePlatform {
     ) external whenNotPaused {
         uint256 tokenId = voucher.tokenId;
         uint256 partIdLength = voucher.purchasedParts.length;
+        uint256 priceToPayUdao;
         uint256 priceToPay;
         uint256 pricePerPart;
-        string memory _currencyName;
+        bytes32 sellingCurrency;
         address contentReceiver = msg.sender;
 
         require(udaoc.exists(tokenId), "Content does not exist!");
@@ -148,7 +155,10 @@ abstract contract ContentManager is EIP712, BasePlatform {
 
         /// @dev Get the total payment amount first
         if (voucher.fullContentPurchase) {
-            (priceToPay, _currencyName) = udaoc.getPriceContent(tokenId, 0);
+            (priceToPay, sellingCurrency) = udaoc.getContentPriceAndCurrency(
+                tokenId,
+                0
+            );
         } else {
             require(
                 voucher.purchasedParts[0] != 0,
@@ -160,29 +170,30 @@ abstract contract ContentManager is EIP712, BasePlatform {
                         udaoc.getPartNumberOfContent(tokenId),
                     "Part does not exist!"
                 );
-                (pricePerPart, _currencyName) = udaoc.getPriceContent(
-                    tokenId,
-                    voucher.purchasedParts[j]
-                );
+                (pricePerPart, sellingCurrency) = udaoc
+                    .getContentPriceAndCurrency(
+                        tokenId,
+                        voucher.purchasedParts[j]
+                    );
                 priceToPay += pricePerPart;
             }
         }
 
-        /// @dev Convert fiat to token if necessary
-        // bytes32 hashPurchaseCurrency = keccak256(
-        //     abi.encodePacked(voucher.currencyName)
-        // );
-        bytes32 hashSellingCurrency = keccak256(
-            abi.encodePacked(_currencyName)
-        );
-        /// TODO aşağıya fiat döünüşümleri yapıp priceToPay hesaplaması gelecek.
-        //getUdaoOut
+        /// @dev Check if sold in udao or fiat and get the price in udao
+        if (sellingCurrency == keccak256(abi.encodePacked("udao"))) {
+            priceToPayUdao = priceToPay;
+        } else {
+            priceToPayUdao = priceGetter.getUdaoOut(
+                uint128(priceToPay),
+                sellingCurrency
+            );
+        }
 
-        /// @dev Calculate and assing the cuts
-        _updateBalancesContent(priceToPay, instructor);
+        /// @dev Calculate and assign the cuts
+        _updateBalancesContent(priceToPayUdao, instructor);
 
         /// @dev transfer the tokens from buyer to contract
-        udao.transferFrom(msg.sender, address(this), priceToPay);
+        udao.transferFrom(msg.sender, address(this), priceToPayUdao);
 
         if (voucher.fullContentPurchase) {
             _updateOwned(tokenId, 0, contentReceiver);
@@ -199,7 +210,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
         emit ContentBought(
             voucher.tokenId,
             voucher.purchasedParts,
-            priceToPay,
+            priceToPayUdao,
             msg.sender
         );
     }
@@ -277,6 +288,9 @@ abstract contract ContentManager is EIP712, BasePlatform {
         );
     }
 
+    /// @notice allows users to purchase a content
+    /// @param priceToPay price to pay for the content
+    /// @param instructor instructor of the content
     function _updateBalancesContent(
         uint priceToPay,
         address instructor
@@ -338,16 +352,28 @@ abstract contract ContentManager is EIP712, BasePlatform {
             IVM.getIsValidated(voucher.tokenId),
             "Content is not validated yet"
         );
-        uint256 priceToPay = voucher.priceToPay;
-        foundationBalance += (priceToPay * coachingFoundationCut) / 100000;
-        governanceBalance += (priceToPay * coachingGovernancenCut) / 100000;
+        (uint priceToPay, bytes32 sellingCurrency) = udaoc
+            .getCoachingPriceAndCurrency(voucher.tokenId);
+        uint priceToPayUdao;
+        /// @dev Check if sold in udao or fiat and get the price in udao
+        if (sellingCurrency == keccak256(abi.encodePacked("udao"))) {
+            priceToPayUdao = priceToPay;
+        } else {
+            priceToPayUdao = priceGetter.getUdaoOut(
+                uint128(priceToPay),
+                sellingCurrency
+            );
+        }
+
+        foundationBalance += (priceToPayUdao * coachingFoundationCut) / 100000;
+        governanceBalance += (priceToPayUdao * coachingGovernancenCut) / 100000;
         coachingStructs[coachingIndex] = CoachingStruct({
             coach: instructor,
             learner: msg.sender,
             isDone: 0,
             isRefundable: voucher.isRefundable,
-            totalPaymentAmount: priceToPay,
-            coachingPaymentAmount: (priceToPay -
+            totalPaymentAmount: priceToPayUdao,
+            coachingPaymentAmount: (priceToPayUdao -
                 foundationBalance -
                 governanceBalance),
             moneyLockDeadline: block.timestamp + 30 days
@@ -358,7 +384,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
         coachingIndex++;
 
         studentList[voucher.tokenId].push(msg.sender);
-        udao.transferFrom(msg.sender, address(this), priceToPay);
+        udao.transferFrom(msg.sender, address(this), priceToPayUdao);
     }
 
     /// @notice Allows both parties to finalize coaching service.
