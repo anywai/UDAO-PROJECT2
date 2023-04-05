@@ -394,7 +394,7 @@ describe("UDAOC Contract", function () {
       .withArgs(
         "0x0000000000000000000000000000000000000000",
         contentCreator.address,
-        udaoc_voucher[0]
+        0
       );
   });
 
@@ -535,9 +535,9 @@ describe("UDAOC Contract", function () {
       .withArgs(
         "0x0000000000000000000000000000000000000000",
         contentCreator.address,
-        udaoc_voucher[0]
+        0
       );
-    expect(await contractUDAOContent.tokenURI(1)).to.eql(
+    expect(await contractUDAOContent.tokenURI(0)).to.eql(
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi"
     );
   });
@@ -590,15 +590,15 @@ describe("UDAOC Contract", function () {
       .withArgs(
         "0x0000000000000000000000000000000000000000",
         contentCreator.address,
-        udaoc_voucher[0]
+        0
       );
     await expect(
       contractUDAOContent
         .connect(contentCreator)
-        .transferFrom(contentCreator.address, contentBuyer.address, 1)
+        .transferFrom(contentCreator.address, contentBuyer.address, 0)
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
-      .withArgs(contentCreator.address, contentBuyer.address, 1);
+      .withArgs(contentCreator.address, contentBuyer.address, 0);
   });
   it("Should fail to transfer token if sender is not KYCed", async function () {
     const {
@@ -648,14 +648,14 @@ describe("UDAOC Contract", function () {
       .withArgs(
         "0x0000000000000000000000000000000000000000",
         contentCreator.address,
-        udaoc_voucher[0]
+        0
       );
     await contractRoleManager.setKYC(contentCreator.address, false);
 
     await expect(
       contractUDAOContent
         .connect(contentCreator)
-        .transferFrom(contentCreator.address, contentBuyer.address, 1)
+        .transferFrom(contentCreator.address, contentBuyer.address, 0)
     ).to.revertedWith("Sender is not KYCed!");
   });
   it("Should fail to transfer token if sender is banned", async function () {
@@ -706,14 +706,14 @@ describe("UDAOC Contract", function () {
       .withArgs(
         "0x0000000000000000000000000000000000000000",
         contentCreator.address,
-        udaoc_voucher[0]
+        0
       );
 
     await contractRoleManager.setBan(contentCreator.address, true);
     await expect(
       contractUDAOContent
         .connect(contentCreator)
-        .transferFrom(contentCreator.address, contentBuyer.address, 1)
+        .transferFrom(contentCreator.address, contentBuyer.address, 0)
     ).to.revertedWith("Sender is banned!");
   });
   it("Should fail to transfer token if receiver is banned", async function () {
@@ -765,12 +765,12 @@ describe("UDAOC Contract", function () {
       .withArgs(
         "0x0000000000000000000000000000000000000000",
         contentCreator.address,
-        udaoc_voucher[0]
+        0
       );
     await expect(
       contractUDAOContent
         .connect(contentCreator)
-        .transferFrom(contentCreator.address, contentBuyer.address, 1)
+        .transferFrom(contentCreator.address, contentBuyer.address, 0)
     ).to.revertedWith("Receiver is banned!");
   });
   it("Should fail to transfer token if sender is not KYCed", async function () {
@@ -821,14 +821,14 @@ describe("UDAOC Contract", function () {
       .withArgs(
         "0x0000000000000000000000000000000000000000",
         contentCreator.address,
-        udaoc_voucher[0]
+        0
       );
     await contractRoleManager.setKYC(contentCreator.address, false);
 
     await expect(
       contractUDAOContent
         .connect(contentCreator)
-        .transferFrom(contentCreator.address, contentBuyer.address, 1)
+        .transferFrom(contentCreator.address, contentBuyer.address, 0)
     ).to.revertedWith("Sender is not KYCed!");
   });
 
@@ -880,14 +880,14 @@ describe("UDAOC Contract", function () {
       .withArgs(
         "0x0000000000000000000000000000000000000000",
         contentCreator.address,
-        udaoc_voucher[0]
+        0
       );
-    await expect(contractUDAOContent.connect(contentCreator).burn(1))
+    await expect(contractUDAOContent.connect(contentCreator).burn(0))
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
         contentCreator.address,
         "0x0000000000000000000000000000000000000000",
-        udaoc_voucher[0]
+        0
       );
   });
 
@@ -939,11 +939,11 @@ describe("UDAOC Contract", function () {
       .withArgs(
         "0x0000000000000000000000000000000000000000",
         contentCreator.address,
-        udaoc_voucher[0]
+        0
       );
 
     await expect(
-      contractUDAOContent.connect(contentBuyer).burn(1)
+      contractUDAOContent.connect(contentBuyer).burn(0)
     ).to.revertedWith("You are not the owner of token");
   });
 
@@ -1027,10 +1027,10 @@ describe("UDAOC Contract", function () {
       .withArgs(
         "0x0000000000000000000000000000000000000000",
         contentCreator.address,
-        udaoc_voucher[0]
+        0
       );
-    await contractUDAOContent.connect(contentCreator).enableCoaching(1);
-    expect(await contractUDAOContent.isCoachingEnabled(1)).to.be.eql(true);
+    await contractUDAOContent.connect(contentCreator).enableCoaching(0);
+    expect(await contractUDAOContent.isCoachingEnabled(0)).to.be.eql(true);
   });
 
   it("Should disable coaching for content", async function () {
@@ -1080,10 +1080,10 @@ describe("UDAOC Contract", function () {
       .withArgs(
         "0x0000000000000000000000000000000000000000",
         contentCreator.address,
-        udaoc_voucher[0]
+        0
       );
-    await contractUDAOContent.connect(contentCreator).disableCoaching(1);
-    expect(await contractUDAOContent.isCoachingEnabled(1)).to.be.eql(false);
+    await contractUDAOContent.connect(contentCreator).disableCoaching(0);
+    expect(await contractUDAOContent.isCoachingEnabled(0)).to.be.eql(false);
   });
 
   it("Should fail to enable coaching for content if not owner", async function () {
@@ -1133,10 +1133,10 @@ describe("UDAOC Contract", function () {
       .withArgs(
         "0x0000000000000000000000000000000000000000",
         contentCreator.address,
-        udaoc_voucher[0]
+        0
       );
     await expect(
-      contractUDAOContent.connect(contentBuyer).enableCoaching(1)
+      contractUDAOContent.connect(contentBuyer).enableCoaching(0)
     ).to.revertedWith("You are not the owner of token");
   });
 
@@ -1187,10 +1187,10 @@ describe("UDAOC Contract", function () {
       .withArgs(
         "0x0000000000000000000000000000000000000000",
         contentCreator.address,
-        udaoc_voucher[0]
+        0
       );
     await expect(
-      contractUDAOContent.connect(contentBuyer).disableCoaching(1)
+      contractUDAOContent.connect(contentBuyer).disableCoaching(0)
     ).to.revertedWith("You are not the owner of token");
   });
 });
