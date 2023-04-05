@@ -344,30 +344,29 @@ describe("Platform Treasury Contract - Coaching", function () {
       .withArgs(
         "0x0000000000000000000000000000000000000000",
         contentCreator.address,
-        udaoc_voucher[0]
+        0
       );
+    
     await expect(
-      contractValidationManager.connect(backend).createValidation(1, 50)
+      contractValidationManager.connect(backend).createValidation(0, 50)
     )
       .to.emit(contractValidationManager, "ValidationCreated")
-      .withArgs(ethers.BigNumber.from(1), ethers.BigNumber.from(1));
-
+      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1));
     await expect(
       contractValidationManager.connect(validator1).assignValidation(1)
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator1.address
       );
-
     await expect(
       contractValidationManager.connect(validator2).assignValidation(1)
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator2.address
       );
@@ -376,7 +375,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator3.address
       );
@@ -385,7 +384,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator4.address
       );
@@ -394,7 +393,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator5.address
       );
@@ -404,7 +403,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator1.address,
         true
@@ -414,7 +413,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator2.address,
         true
@@ -424,7 +423,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator3.address,
         true
@@ -434,7 +433,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator4.address,
         true
@@ -444,7 +443,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator5.address,
         false
@@ -453,7 +452,7 @@ describe("Platform Treasury Contract - Coaching", function () {
       contractValidationManager.connect(contentCreator).finalizeValidation(1)
     )
       .to.emit(contractValidationManager, "ValidationEnded")
-      .withArgs(ethers.BigNumber.from(1), ethers.BigNumber.from(1), true);
+      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), true);
 
     /// Send UDAO to the buyer's wallet
     await contractUDAO.transfer(
@@ -469,17 +468,10 @@ describe("Platform Treasury Contract - Coaching", function () {
         ethers.utils.parseEther("999999999999.0")
       );
 
-    const coaching_voucher = [
-      1,
-      ethers.utils.parseEther("2"),
-      true,
-      contentBuyer.address,
-    ];
-
     await contractPlatformTreasury
       .connect(contentBuyer)
-      .buyCoaching(coaching_voucher);
-    expect(await contractPlatformTreasury.getStudentListOfToken(1)).to.be.eql([
+      .buyCoaching(0);
+    expect(await contractPlatformTreasury.getStudentListOfToken(0)).to.be.eql([
       contentBuyer.address,
     ]);
   });
@@ -538,19 +530,19 @@ describe("Platform Treasury Contract - Coaching", function () {
       .withArgs(
         "0x0000000000000000000000000000000000000000",
         contentCreator.address,
-        udaoc_voucher[0]
+        0
       );
     await expect(
-      contractValidationManager.connect(backend).createValidation(1, 50)
+      contractValidationManager.connect(backend).createValidation(0, 50)
     )
       .to.emit(contractValidationManager, "ValidationCreated")
-      .withArgs(ethers.BigNumber.from(1), ethers.BigNumber.from(1));
+      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1));
     await expect(
       contractValidationManager.connect(validator1).assignValidation(1)
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator1.address
       );
@@ -559,7 +551,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator2.address
       );
@@ -568,7 +560,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator3.address
       );
@@ -577,7 +569,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator4.address
       );
@@ -586,7 +578,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator5.address
       );
@@ -596,7 +588,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator1.address,
         true
@@ -606,7 +598,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator2.address,
         true
@@ -616,7 +608,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator3.address,
         true
@@ -626,7 +618,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator4.address,
         true
@@ -636,7 +628,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator5.address,
         false
@@ -645,7 +637,7 @@ describe("Platform Treasury Contract - Coaching", function () {
       contractValidationManager.connect(contentCreator).finalizeValidation(1)
     )
       .to.emit(contractValidationManager, "ValidationEnded")
-      .withArgs(ethers.BigNumber.from(1), ethers.BigNumber.from(1), true);
+      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), true);
 
     /// Send UDAO to the buyer's wallet
     await contractUDAO.transfer(
@@ -660,25 +652,19 @@ describe("Platform Treasury Contract - Coaching", function () {
         ethers.utils.parseEther("999999999999.0")
       );
 
-    const coaching_voucher = [
-      1,
-      ethers.utils.parseEther("2"),
-      true,
-      contentBuyer.address,
-    ];
-
+    
     await contractPlatformTreasury
       .connect(contentBuyer)
-      .buyCoaching(coaching_voucher);
+      .buyCoaching(0);
     await contractPlatformTreasury
       .connect(contentBuyer)
-      .buyCoaching(coaching_voucher);
-    expect(await contractPlatformTreasury.getStudentListOfToken(1)).to.be.eql([
+      .buyCoaching(0);
+    expect(await contractPlatformTreasury.getStudentListOfToken(0)).to.be.eql([
       contentBuyer.address,
       contentBuyer.address,
     ]);
     expect(
-      (await contractPlatformTreasury.getCoachings(1)).toString()
+      (await contractPlatformTreasury.getCoachings(0)).toString()
     ).to.be.eql("0,1");
   });
 
@@ -736,19 +722,19 @@ describe("Platform Treasury Contract - Coaching", function () {
       .withArgs(
         "0x0000000000000000000000000000000000000000",
         contentCreator.address,
-        udaoc_voucher[0]
+        0
       );
     await expect(
-      contractValidationManager.connect(backend).createValidation(1, 50)
+      contractValidationManager.connect(backend).createValidation(0, 50)
     )
       .to.emit(contractValidationManager, "ValidationCreated")
-      .withArgs(ethers.BigNumber.from(1), ethers.BigNumber.from(1));
+      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1));
     await expect(
       contractValidationManager.connect(validator1).assignValidation(1)
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator1.address
       );
@@ -757,7 +743,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator2.address
       );
@@ -766,7 +752,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator3.address
       );
@@ -775,7 +761,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator4.address
       );
@@ -784,7 +770,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator5.address
       );
@@ -794,7 +780,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator1.address,
         true
@@ -804,7 +790,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator2.address,
         true
@@ -814,7 +800,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator3.address,
         true
@@ -824,7 +810,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator4.address,
         true
@@ -834,7 +820,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator5.address,
         false
@@ -843,7 +829,7 @@ describe("Platform Treasury Contract - Coaching", function () {
       contractValidationManager.connect(contentCreator).finalizeValidation(1)
     )
       .to.emit(contractValidationManager, "ValidationEnded")
-      .withArgs(ethers.BigNumber.from(1), ethers.BigNumber.from(1), true);
+      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), true);
 
     /// Send UDAO to the buyer's wallet
     await contractUDAO.transfer(
@@ -857,17 +843,10 @@ describe("Platform Treasury Contract - Coaching", function () {
         contractPlatformTreasury.address,
         ethers.utils.parseEther("999999999999.0")
       );
-    const coaching_voucher = [
-      1,
-      ethers.utils.parseEther("2"),
-      true,
-      contentBuyer.address,
-    ];
-
     await expect(
       contractPlatformTreasury
         .connect(contentBuyer)
-        .buyCoaching(coaching_voucher)
+        .buyCoaching(0)
     ).to.revertedWith("Coaching is not enabled for this content");
   });
 
@@ -905,21 +884,10 @@ describe("Platform Treasury Contract - Coaching", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
-    const lazyCoaching = new LazyCoaching({
-      contract: contractPlatformTreasury,
-      signer: backend,
-    });
-    const coaching_voucher = [
-      3,
-      ethers.utils.parseEther("2"),
-      Date.now() + 999999999,
-      true,
-      contentBuyer.address,
-    ];
     await expect(
       contractPlatformTreasury
         .connect(contentBuyer)
-        .buyCoaching(coaching_voucher)
+        .buyCoaching(0)
     ).to.revertedWith("Content does not exist!");
   });
 
@@ -977,7 +945,7 @@ describe("Platform Treasury Contract - Coaching", function () {
       .withArgs(
         "0x0000000000000000000000000000000000000000",
         contentCreator.address,
-        udaoc_voucher[0]
+        0
       );
     /// Send UDAO to the buyer's wallet
     await contractUDAO.transfer(
@@ -992,17 +960,10 @@ describe("Platform Treasury Contract - Coaching", function () {
         ethers.utils.parseEther("999999999999.0")
       );
 
-    const coaching_voucher = [
-      1,
-      ethers.utils.parseEther("2"),
-      true,
-      contentBuyer.address,
-    ];
-
     await expect(
       contractPlatformTreasury
         .connect(contentBuyer)
-        .buyCoaching(coaching_voucher)
+        .buyCoaching(0)
     ).to.revertedWith("Content is not validated yet");
   });
 
@@ -1060,19 +1021,19 @@ describe("Platform Treasury Contract - Coaching", function () {
       .withArgs(
         "0x0000000000000000000000000000000000000000",
         contentCreator.address,
-        udaoc_voucher[0]
+        0
       );
     await expect(
-      contractValidationManager.connect(backend).createValidation(1, 50)
+      contractValidationManager.connect(backend).createValidation(0, 50)
     )
       .to.emit(contractValidationManager, "ValidationCreated")
-      .withArgs(ethers.BigNumber.from(1), ethers.BigNumber.from(1));
+      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1));
     await expect(
       contractValidationManager.connect(validator1).assignValidation(1)
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator1.address
       );
@@ -1081,7 +1042,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator2.address
       );
@@ -1090,7 +1051,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator3.address
       );
@@ -1099,7 +1060,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator4.address
       );
@@ -1108,7 +1069,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator5.address
       );
@@ -1118,7 +1079,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator1.address,
         true
@@ -1128,7 +1089,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator2.address,
         true
@@ -1138,7 +1099,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator3.address,
         true
@@ -1148,7 +1109,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator4.address,
         true
@@ -1158,7 +1119,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator5.address,
         false
@@ -1167,7 +1128,7 @@ describe("Platform Treasury Contract - Coaching", function () {
       contractValidationManager.connect(contentCreator).finalizeValidation(1)
     )
       .to.emit(contractValidationManager, "ValidationEnded")
-      .withArgs(ethers.BigNumber.from(1), ethers.BigNumber.from(1), true);
+      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), true);
 
     /// Send UDAO to the buyer's wallet
     await contractUDAO.transfer(
@@ -1185,17 +1146,11 @@ describe("Platform Treasury Contract - Coaching", function () {
     /// Set BAN
     await contractRoleManager.setBan(contentBuyer.address, true);
 
-    const coaching_voucher = [
-      1,
-      ethers.utils.parseEther("2"),
-      true,
-      contentBuyer.address,
-    ];
 
     await expect(
       contractPlatformTreasury
         .connect(contentBuyer)
-        .buyCoaching(coaching_voucher)
+        .buyCoaching(0)
     ).to.revertedWith("You are banned");
   });
 
@@ -1254,19 +1209,19 @@ describe("Platform Treasury Contract - Coaching", function () {
       .withArgs(
         "0x0000000000000000000000000000000000000000",
         contentCreator.address,
-        udaoc_voucher[0]
+        0
       );
     await expect(
-      contractValidationManager.connect(backend).createValidation(1, 50)
+      contractValidationManager.connect(backend).createValidation(0, 50)
     )
       .to.emit(contractValidationManager, "ValidationCreated")
-      .withArgs(ethers.BigNumber.from(1), ethers.BigNumber.from(1));
+      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1));
     await expect(
       contractValidationManager.connect(validator1).assignValidation(1)
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator1.address
       );
@@ -1275,7 +1230,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator2.address
       );
@@ -1284,7 +1239,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator3.address
       );
@@ -1293,7 +1248,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator4.address
       );
@@ -1302,7 +1257,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator5.address
       );
@@ -1312,7 +1267,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator1.address,
         true
@@ -1322,7 +1277,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator2.address,
         true
@@ -1332,7 +1287,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator3.address,
         true
@@ -1342,7 +1297,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator4.address,
         true
@@ -1352,7 +1307,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator5.address,
         false
@@ -1361,7 +1316,7 @@ describe("Platform Treasury Contract - Coaching", function () {
       contractValidationManager.connect(contentCreator).finalizeValidation(1)
     )
       .to.emit(contractValidationManager, "ValidationEnded")
-      .withArgs(ethers.BigNumber.from(1), ethers.BigNumber.from(1), true);
+      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), true);
 
     /// Send UDAO to the buyer's wallet
     await contractUDAO.transfer(
@@ -1378,18 +1333,10 @@ describe("Platform Treasury Contract - Coaching", function () {
 
     /// Set BAN
     await contractRoleManager.setBan(contentCreator.address, true);
-
-    const coaching_voucher = [
-      1,
-      ethers.utils.parseEther("2"),
-      true,
-      contentBuyer.address,
-    ];
-
     await expect(
       contractPlatformTreasury
         .connect(contentBuyer)
-        .buyCoaching(coaching_voucher)
+        .buyCoaching(0)
     ).to.revertedWith("Instructor is banned");
   });
 
@@ -1448,19 +1395,19 @@ describe("Platform Treasury Contract - Coaching", function () {
       .withArgs(
         "0x0000000000000000000000000000000000000000",
         contentCreator.address,
-        udaoc_voucher[0]
+        0
       );
     await expect(
-      contractValidationManager.connect(backend).createValidation(1, 50)
+      contractValidationManager.connect(backend).createValidation(0, 50)
     )
       .to.emit(contractValidationManager, "ValidationCreated")
-      .withArgs(ethers.BigNumber.from(1), ethers.BigNumber.from(1));
+      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1));
     await expect(
       contractValidationManager.connect(validator1).assignValidation(1)
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator1.address
       );
@@ -1469,7 +1416,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator2.address
       );
@@ -1478,7 +1425,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator3.address
       );
@@ -1487,7 +1434,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator4.address
       );
@@ -1496,7 +1443,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator5.address
       );
@@ -1506,7 +1453,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator1.address,
         true
@@ -1516,7 +1463,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator2.address,
         true
@@ -1526,7 +1473,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator3.address,
         true
@@ -1536,7 +1483,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator4.address,
         true
@@ -1546,7 +1493,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator5.address,
         false
@@ -1555,7 +1502,7 @@ describe("Platform Treasury Contract - Coaching", function () {
       contractValidationManager.connect(contentCreator).finalizeValidation(1)
     )
       .to.emit(contractValidationManager, "ValidationEnded")
-      .withArgs(ethers.BigNumber.from(1), ethers.BigNumber.from(1), true);
+      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), true);
 
     /// Send UDAO to the buyer's wallet
     await contractUDAO.transfer(
@@ -1573,17 +1520,12 @@ describe("Platform Treasury Contract - Coaching", function () {
     /// Set KYC to false
     await contractRoleManager.setKYC(contentCreator.address, false);
 
-    const coaching_voucher = [
-      1,
-      ethers.utils.parseEther("2"),
-      true,
-      contentBuyer.address,
-    ];
+    
 
     await expect(
       contractPlatformTreasury
         .connect(contentBuyer)
-        .buyCoaching(coaching_voucher)
+        .buyCoaching(0)
     ).to.revertedWith("Instructor is not KYCed");
   });
 
@@ -1643,19 +1585,19 @@ describe("Platform Treasury Contract - Coaching", function () {
       .withArgs(
         "0x0000000000000000000000000000000000000000",
         contentCreator.address,
-        udaoc_voucher[0]
+        0
       );
     await expect(
-      contractValidationManager.connect(backend).createValidation(1, 50)
+      contractValidationManager.connect(backend).createValidation(0, 50)
     )
       .to.emit(contractValidationManager, "ValidationCreated")
-      .withArgs(ethers.BigNumber.from(1), ethers.BigNumber.from(1));
+      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1));
     await expect(
       contractValidationManager.connect(validator1).assignValidation(1)
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator1.address
       );
@@ -1664,7 +1606,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator2.address
       );
@@ -1673,7 +1615,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator3.address
       );
@@ -1682,7 +1624,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator4.address
       );
@@ -1691,7 +1633,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator5.address
       );
@@ -1701,7 +1643,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator1.address,
         true
@@ -1711,7 +1653,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator2.address,
         true
@@ -1721,7 +1663,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator3.address,
         true
@@ -1731,7 +1673,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator4.address,
         true
@@ -1741,7 +1683,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator5.address,
         false
@@ -1750,7 +1692,7 @@ describe("Platform Treasury Contract - Coaching", function () {
       contractValidationManager.connect(contentCreator).finalizeValidation(1)
     )
       .to.emit(contractValidationManager, "ValidationEnded")
-      .withArgs(ethers.BigNumber.from(1), ethers.BigNumber.from(1), true);
+      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), true);
 
     /// Send UDAO to the buyer's wallet
     await contractUDAO.transfer(
@@ -1767,17 +1709,12 @@ describe("Platform Treasury Contract - Coaching", function () {
 
     await contractRoleManager.setKYC(contentBuyer.address, false);
 
-    const coaching_voucher = [
-      1,
-      ethers.utils.parseEther("2"),
-      true,
-      contentBuyer.address,
-    ];
+    
 
     await expect(
       contractPlatformTreasury
         .connect(contentBuyer)
-        .buyCoaching(coaching_voucher)
+        .buyCoaching(0)
     ).to.revertedWith("You are not KYCed");
   });
 
@@ -1836,20 +1773,20 @@ describe("Platform Treasury Contract - Coaching", function () {
       .withArgs(
         "0x0000000000000000000000000000000000000000",
         contentCreator.address,
-        udaoc_voucher[0]
+        0
       );
 
     await expect(
-      contractValidationManager.connect(backend).createValidation(1, 50)
+      contractValidationManager.connect(backend).createValidation(0, 50)
     )
       .to.emit(contractValidationManager, "ValidationCreated")
-      .withArgs(ethers.BigNumber.from(1), ethers.BigNumber.from(1));
+      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1));
     await expect(
       contractValidationManager.connect(validator1).assignValidation(1)
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator1.address
       );
@@ -1858,7 +1795,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator2.address
       );
@@ -1867,7 +1804,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator3.address
       );
@@ -1876,7 +1813,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator4.address
       );
@@ -1885,7 +1822,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator5.address
       );
@@ -1895,7 +1832,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator1.address,
         true
@@ -1905,7 +1842,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator2.address,
         true
@@ -1915,7 +1852,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator3.address,
         true
@@ -1925,7 +1862,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator4.address,
         true
@@ -1935,7 +1872,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator5.address,
         false
@@ -1944,7 +1881,7 @@ describe("Platform Treasury Contract - Coaching", function () {
       contractValidationManager.connect(contentCreator).finalizeValidation(1)
     )
       .to.emit(contractValidationManager, "ValidationEnded")
-      .withArgs(ethers.BigNumber.from(1), ethers.BigNumber.from(1), true);
+      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), true);
 
     /// Send UDAO to the buyer's wallet
     await contractUDAO.transfer(
@@ -1961,16 +1898,11 @@ describe("Platform Treasury Contract - Coaching", function () {
       );
 
     // TODO What IS THIS COACHING VOUCHER?
-    const coaching_voucher = [
-      1,
-      ethers.utils.parseEther("2"),
-      true,
-      contentBuyer.address,
-    ];
+    
     await contractPlatformTreasury
       .connect(contentBuyer)
-      .buyCoaching(coaching_voucher);
-    expect(await contractPlatformTreasury.getStudentListOfToken(1)).to.be.eql([
+      .buyCoaching(0);
+    expect(await contractPlatformTreasury.getStudentListOfToken(0)).to.be.eql([
       contentBuyer.address,
     ]);
 
@@ -2035,19 +1967,19 @@ describe("Platform Treasury Contract - Coaching", function () {
       .withArgs(
         "0x0000000000000000000000000000000000000000",
         contentCreator.address,
-        udaoc_voucher[0]
+        0
       );
     await expect(
-      contractValidationManager.connect(backend).createValidation(1, 50)
+      contractValidationManager.connect(backend).createValidation(0, 50)
     )
       .to.emit(contractValidationManager, "ValidationCreated")
-      .withArgs(ethers.BigNumber.from(1), ethers.BigNumber.from(1));
+      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1));
     await expect(
       contractValidationManager.connect(validator1).assignValidation(1)
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator1.address
       );
@@ -2056,7 +1988,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator2.address
       );
@@ -2065,7 +1997,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator3.address
       );
@@ -2074,7 +2006,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator4.address
       );
@@ -2083,7 +2015,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator5.address
       );
@@ -2093,7 +2025,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator1.address,
         true
@@ -2103,7 +2035,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator2.address,
         true
@@ -2113,7 +2045,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator3.address,
         true
@@ -2123,7 +2055,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator4.address,
         true
@@ -2133,7 +2065,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator5.address,
         false
@@ -2142,7 +2074,7 @@ describe("Platform Treasury Contract - Coaching", function () {
       contractValidationManager.connect(contentCreator).finalizeValidation(1)
     )
       .to.emit(contractValidationManager, "ValidationEnded")
-      .withArgs(ethers.BigNumber.from(1), ethers.BigNumber.from(1), true);
+      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), true);
 
     /// Send UDAO to the buyer's wallet
     await contractUDAO.transfer(
@@ -2157,17 +2089,12 @@ describe("Platform Treasury Contract - Coaching", function () {
         ethers.utils.parseEther("999999999999.0")
       );
 
-    const coaching_voucher = [
-      1,
-      ethers.utils.parseEther("2"),
-      true,
-      contentBuyer.address,
-    ];
+    
 
     await contractPlatformTreasury
       .connect(contentBuyer)
-      .buyCoaching(coaching_voucher);
-    expect(await contractPlatformTreasury.getStudentListOfToken(1)).to.be.eql([
+      .buyCoaching(0);
+    expect(await contractPlatformTreasury.getStudentListOfToken(0)).to.be.eql([
       contentBuyer.address,
     ]);
     await network.provider.send("evm_increaseTime", [999999999]);
@@ -2233,19 +2160,19 @@ describe("Platform Treasury Contract - Coaching", function () {
       .withArgs(
         "0x0000000000000000000000000000000000000000",
         contentCreator.address,
-        udaoc_voucher[0]
+        0
       );
     await expect(
-      contractValidationManager.connect(backend).createValidation(1, 50)
+      contractValidationManager.connect(backend).createValidation(0, 50)
     )
       .to.emit(contractValidationManager, "ValidationCreated")
-      .withArgs(ethers.BigNumber.from(1), ethers.BigNumber.from(1));
+      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1));
     await expect(
       contractValidationManager.connect(validator1).assignValidation(1)
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator1.address
       );
@@ -2254,7 +2181,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator2.address
       );
@@ -2263,7 +2190,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator3.address
       );
@@ -2272,7 +2199,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator4.address
       );
@@ -2281,7 +2208,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator5.address
       );
@@ -2291,7 +2218,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator1.address,
         true
@@ -2301,7 +2228,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator2.address,
         true
@@ -2311,7 +2238,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator3.address,
         true
@@ -2321,7 +2248,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator4.address,
         true
@@ -2331,7 +2258,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator5.address,
         false
@@ -2340,7 +2267,7 @@ describe("Platform Treasury Contract - Coaching", function () {
       contractValidationManager.connect(contentCreator).finalizeValidation(1)
     )
       .to.emit(contractValidationManager, "ValidationEnded")
-      .withArgs(ethers.BigNumber.from(1), ethers.BigNumber.from(1), true);
+      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), true);
 
     /// Send UDAO to the buyer's wallet
     await contractUDAO.transfer(
@@ -2354,17 +2281,12 @@ describe("Platform Treasury Contract - Coaching", function () {
         contractPlatformTreasury.address,
         ethers.utils.parseEther("999999999999.0")
       );
-    const coaching_voucher = [
-      1,
-      ethers.utils.parseEther("2"),
-      true,
-      contentBuyer.address,
-    ];
+    
 
     await contractPlatformTreasury
       .connect(contentBuyer)
-      .buyCoaching(coaching_voucher);
-    expect(await contractPlatformTreasury.getStudentListOfToken(1)).to.be.eql([
+      .buyCoaching(0);
+    expect(await contractPlatformTreasury.getStudentListOfToken(0)).to.be.eql([
       contentBuyer.address,
     ]);
 
@@ -2428,19 +2350,19 @@ describe("Platform Treasury Contract - Coaching", function () {
       .withArgs(
         "0x0000000000000000000000000000000000000000",
         contentCreator.address,
-        udaoc_voucher[0]
+        0
       );
     await expect(
-      contractValidationManager.connect(backend).createValidation(1, 50)
+      contractValidationManager.connect(backend).createValidation(0, 50)
     )
       .to.emit(contractValidationManager, "ValidationCreated")
-      .withArgs(ethers.BigNumber.from(1), ethers.BigNumber.from(1));
+      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1));
     await expect(
       contractValidationManager.connect(validator1).assignValidation(1)
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator1.address
       );
@@ -2449,7 +2371,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator2.address
       );
@@ -2458,7 +2380,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator3.address
       );
@@ -2467,7 +2389,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator4.address
       );
@@ -2476,7 +2398,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator5.address
       );
@@ -2486,7 +2408,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator1.address,
         true
@@ -2496,7 +2418,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator2.address,
         true
@@ -2506,7 +2428,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator3.address,
         true
@@ -2516,7 +2438,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator4.address,
         true
@@ -2526,7 +2448,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator5.address,
         false
@@ -2535,7 +2457,7 @@ describe("Platform Treasury Contract - Coaching", function () {
       contractValidationManager.connect(contentCreator).finalizeValidation(1)
     )
       .to.emit(contractValidationManager, "ValidationEnded")
-      .withArgs(ethers.BigNumber.from(1), ethers.BigNumber.from(1), true);
+      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), true);
 
     /// Send UDAO to the buyer's wallet
     await contractUDAO.transfer(
@@ -2553,17 +2475,12 @@ describe("Platform Treasury Contract - Coaching", function () {
       contract: contractPlatformTreasury,
       signer: backend,
     });
-    const coaching_voucher = [
-      1,
-      ethers.utils.parseEther("2"),
-      true,
-      contentBuyer.address,
-    ];
+    
 
     await contractPlatformTreasury
       .connect(contentBuyer)
-      .buyCoaching(coaching_voucher);
-    expect(await contractPlatformTreasury.getStudentListOfToken(1)).to.be.eql([
+      .buyCoaching(0);
+    expect(await contractPlatformTreasury.getStudentListOfToken(0)).to.be.eql([
       contentBuyer.address,
     ]);
 
@@ -2627,19 +2544,19 @@ describe("Platform Treasury Contract - Coaching", function () {
       .withArgs(
         "0x0000000000000000000000000000000000000000",
         contentCreator.address,
-        udaoc_voucher[0]
+        0
       );
     await expect(
-      contractValidationManager.connect(backend).createValidation(1, 50)
+      contractValidationManager.connect(backend).createValidation(0, 50)
     )
       .to.emit(contractValidationManager, "ValidationCreated")
-      .withArgs(ethers.BigNumber.from(1), ethers.BigNumber.from(1));
+      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1));
     await expect(
       contractValidationManager.connect(validator1).assignValidation(1)
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator1.address
       );
@@ -2648,7 +2565,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator2.address
       );
@@ -2657,7 +2574,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator3.address
       );
@@ -2666,7 +2583,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator4.address
       );
@@ -2675,7 +2592,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator5.address
       );
@@ -2685,7 +2602,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator1.address,
         true
@@ -2695,7 +2612,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator2.address,
         true
@@ -2705,7 +2622,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator3.address,
         true
@@ -2715,7 +2632,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator4.address,
         true
@@ -2725,7 +2642,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator5.address,
         false
@@ -2734,7 +2651,7 @@ describe("Platform Treasury Contract - Coaching", function () {
       contractValidationManager.connect(contentCreator).finalizeValidation(1)
     )
       .to.emit(contractValidationManager, "ValidationEnded")
-      .withArgs(ethers.BigNumber.from(1), ethers.BigNumber.from(1), true);
+      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), true);
 
     /// Send UDAO to the buyer's wallet
     await contractUDAO.transfer(
@@ -2752,17 +2669,12 @@ describe("Platform Treasury Contract - Coaching", function () {
       contract: contractPlatformTreasury,
       signer: backend,
     });
-    const coaching_voucher = [
-      1,
-      ethers.utils.parseEther("2"),
-      true,
-      contentBuyer.address,
-    ];
+    
 
     await contractPlatformTreasury
       .connect(contentBuyer)
-      .buyCoaching(coaching_voucher);
-    expect(await contractPlatformTreasury.getStudentListOfToken(1)).to.be.eql([
+      .buyCoaching(0);
+    expect(await contractPlatformTreasury.getStudentListOfToken(0)).to.be.eql([
       contentBuyer.address,
     ]);
 
@@ -2826,19 +2738,19 @@ describe("Platform Treasury Contract - Coaching", function () {
       .withArgs(
         "0x0000000000000000000000000000000000000000",
         contentCreator.address,
-        udaoc_voucher[0]
+        0
       );
     await expect(
-      contractValidationManager.connect(backend).createValidation(1, 50)
+      contractValidationManager.connect(backend).createValidation(0, 50)
     )
       .to.emit(contractValidationManager, "ValidationCreated")
-      .withArgs(ethers.BigNumber.from(1), ethers.BigNumber.from(1));
+      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1));
     await expect(
       contractValidationManager.connect(validator1).assignValidation(1)
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator1.address
       );
@@ -2847,7 +2759,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator2.address
       );
@@ -2856,7 +2768,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator3.address
       );
@@ -2865,7 +2777,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator4.address
       );
@@ -2874,7 +2786,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator5.address
       );
@@ -2884,7 +2796,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator1.address,
         true
@@ -2894,7 +2806,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator2.address,
         true
@@ -2904,7 +2816,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator3.address,
         true
@@ -2914,7 +2826,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator4.address,
         true
@@ -2924,7 +2836,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator5.address,
         false
@@ -2933,7 +2845,7 @@ describe("Platform Treasury Contract - Coaching", function () {
       contractValidationManager.connect(contentCreator).finalizeValidation(1)
     )
       .to.emit(contractValidationManager, "ValidationEnded")
-      .withArgs(ethers.BigNumber.from(1), ethers.BigNumber.from(1), true);
+      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), true);
 
     /// Send UDAO to the buyer's wallet
     await contractUDAO.transfer(
@@ -2947,21 +2859,16 @@ describe("Platform Treasury Contract - Coaching", function () {
         contractPlatformTreasury.address,
         ethers.utils.parseEther("999999999999.0")
       );
-    const coaching_voucher = [
-      1,
-      ethers.utils.parseEther("2"),
-      true,
-      contentBuyer.address,
-    ];
+    
 
     const tx = await contractPlatformTreasury
       .connect(contentBuyer)
-      .buyCoaching(coaching_voucher);
+      .buyCoaching(0);
     const result = await tx.wait();
     const timestamp = (
       await ethers.provider.getBlock(result.logs[0].blockNumber)
     ).timestamp;
-    expect(await contractPlatformTreasury.getStudentListOfToken(1)).to.be.eql([
+    expect(await contractPlatformTreasury.getStudentListOfToken(0)).to.be.eql([
       contentBuyer.address,
     ]);
     await network.provider.send("evm_increaseTime", [60 * 60 * 24 * 29]);
@@ -3028,19 +2935,19 @@ describe("Platform Treasury Contract - Coaching", function () {
       .withArgs(
         "0x0000000000000000000000000000000000000000",
         contentCreator.address,
-        udaoc_voucher[0]
+        0
       );
     await expect(
-      contractValidationManager.connect(backend).createValidation(1, 50)
+      contractValidationManager.connect(backend).createValidation(0, 50)
     )
       .to.emit(contractValidationManager, "ValidationCreated")
-      .withArgs(ethers.BigNumber.from(1), ethers.BigNumber.from(1));
+      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1));
     await expect(
       contractValidationManager.connect(validator1).assignValidation(1)
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator1.address
       );
@@ -3049,7 +2956,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator2.address
       );
@@ -3058,7 +2965,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator3.address
       );
@@ -3067,7 +2974,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator4.address
       );
@@ -3076,7 +2983,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator5.address
       );
@@ -3086,7 +2993,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator1.address,
         true
@@ -3096,7 +3003,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator2.address,
         true
@@ -3106,7 +3013,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator3.address,
         true
@@ -3116,7 +3023,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator4.address,
         true
@@ -3126,7 +3033,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator5.address,
         false
@@ -3135,7 +3042,7 @@ describe("Platform Treasury Contract - Coaching", function () {
       contractValidationManager.connect(contentCreator).finalizeValidation(1)
     )
       .to.emit(contractValidationManager, "ValidationEnded")
-      .withArgs(ethers.BigNumber.from(1), ethers.BigNumber.from(1), true);
+      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), true);
 
     /// Send UDAO to the buyer's wallet
     await contractUDAO.transfer(
@@ -3149,21 +3056,16 @@ describe("Platform Treasury Contract - Coaching", function () {
         contractPlatformTreasury.address,
         ethers.utils.parseEther("999999999999.0")
       );
-    const coaching_voucher = [
-      1,
-      ethers.utils.parseEther("2"),
-      true,
-      contentBuyer.address,
-    ];
+    
 
     const tx = await contractPlatformTreasury
       .connect(contentBuyer)
-      .buyCoaching(coaching_voucher);
+      .buyCoaching(0);
     const result = await tx.wait();
     const timestamp = (
       await ethers.provider.getBlock(result.logs[0].blockNumber)
     ).timestamp;
-    expect(await contractPlatformTreasury.getStudentListOfToken(1)).to.be.eql([
+    expect(await contractPlatformTreasury.getStudentListOfToken(0)).to.be.eql([
       contentBuyer.address,
     ]);
     await network.provider.send("evm_increaseTime", [60 * 60 * 24 * 29]);
@@ -3230,19 +3132,19 @@ describe("Platform Treasury Contract - Coaching", function () {
       .withArgs(
         "0x0000000000000000000000000000000000000000",
         contentCreator.address,
-        udaoc_voucher[0]
+        0
       );
     await expect(
-      contractValidationManager.connect(backend).createValidation(1, 50)
+      contractValidationManager.connect(backend).createValidation(0, 50)
     )
       .to.emit(contractValidationManager, "ValidationCreated")
-      .withArgs(ethers.BigNumber.from(1), ethers.BigNumber.from(1));
+      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1));
     await expect(
       contractValidationManager.connect(validator1).assignValidation(1)
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator1.address
       );
@@ -3251,7 +3153,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator2.address
       );
@@ -3260,7 +3162,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator3.address
       );
@@ -3269,7 +3171,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator4.address
       );
@@ -3278,7 +3180,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator5.address
       );
@@ -3288,7 +3190,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator1.address,
         true
@@ -3298,7 +3200,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator2.address,
         true
@@ -3308,7 +3210,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator3.address,
         true
@@ -3318,7 +3220,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator4.address,
         true
@@ -3328,7 +3230,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator5.address,
         false
@@ -3337,7 +3239,7 @@ describe("Platform Treasury Contract - Coaching", function () {
       contractValidationManager.connect(contentCreator).finalizeValidation(1)
     )
       .to.emit(contractValidationManager, "ValidationEnded")
-      .withArgs(ethers.BigNumber.from(1), ethers.BigNumber.from(1), true);
+      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), true);
 
     /// Send UDAO to the buyer's wallet
     await contractUDAO.transfer(
@@ -3351,21 +3253,16 @@ describe("Platform Treasury Contract - Coaching", function () {
         contractPlatformTreasury.address,
         ethers.utils.parseEther("999999999999.0")
       );
-    const coaching_voucher = [
-      1,
-      ethers.utils.parseEther("2"),
-      true,
-      contentBuyer.address,
-    ];
+    
 
     const tx = await contractPlatformTreasury
       .connect(contentBuyer)
-      .buyCoaching(coaching_voucher);
+      .buyCoaching(0);
     const result = await tx.wait();
     const timestamp = (
       await ethers.provider.getBlock(result.logs[0].blockNumber)
     ).timestamp;
-    expect(await contractPlatformTreasury.getStudentListOfToken(1)).to.be.eql([
+    expect(await contractPlatformTreasury.getStudentListOfToken(0)).to.be.eql([
       contentBuyer.address,
     ]);
     await expect(
@@ -3428,19 +3325,19 @@ describe("Platform Treasury Contract - Coaching", function () {
       .withArgs(
         "0x0000000000000000000000000000000000000000",
         contentCreator.address,
-        udaoc_voucher[0]
+        0
       );
     await expect(
-      contractValidationManager.connect(backend).createValidation(1, 50)
+      contractValidationManager.connect(backend).createValidation(0, 50)
     )
       .to.emit(contractValidationManager, "ValidationCreated")
-      .withArgs(ethers.BigNumber.from(1), ethers.BigNumber.from(1));
+      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1));
     await expect(
       contractValidationManager.connect(validator1).assignValidation(1)
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator1.address
       );
@@ -3449,7 +3346,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator2.address
       );
@@ -3458,7 +3355,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator3.address
       );
@@ -3467,7 +3364,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator4.address
       );
@@ -3476,7 +3373,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator5.address
       );
@@ -3486,7 +3383,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator1.address,
         true
@@ -3496,7 +3393,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator2.address,
         true
@@ -3506,7 +3403,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator3.address,
         true
@@ -3516,7 +3413,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator4.address,
         true
@@ -3526,7 +3423,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator5.address,
         false
@@ -3535,7 +3432,7 @@ describe("Platform Treasury Contract - Coaching", function () {
       contractValidationManager.connect(contentCreator).finalizeValidation(1)
     )
       .to.emit(contractValidationManager, "ValidationEnded")
-      .withArgs(ethers.BigNumber.from(1), ethers.BigNumber.from(1), true);
+      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), true);
 
     /// Send UDAO to the buyer's wallet
     await contractUDAO.transfer(
@@ -3549,21 +3446,16 @@ describe("Platform Treasury Contract - Coaching", function () {
         contractPlatformTreasury.address,
         ethers.utils.parseEther("999999999999.0")
       );
-    const coaching_voucher = [
-      1,
-      ethers.utils.parseEther("2"),
-      true,
-      contentBuyer.address,
-    ];
+    
 
     const tx = await contractPlatformTreasury
       .connect(contentBuyer)
-      .buyCoaching(coaching_voucher);
+      .buyCoaching(0);
     const result = await tx.wait();
     const timestamp = (
       await ethers.provider.getBlock(result.logs[0].blockNumber)
     ).timestamp;
-    expect(await contractPlatformTreasury.getStudentListOfToken(1)).to.be.eql([
+    expect(await contractPlatformTreasury.getStudentListOfToken(0)).to.be.eql([
       contentBuyer.address,
     ]);
     await expect(
@@ -3626,19 +3518,19 @@ describe("Platform Treasury Contract - Coaching", function () {
       .withArgs(
         "0x0000000000000000000000000000000000000000",
         contentCreator.address,
-        udaoc_voucher[0]
+        0
       );
     await expect(
-      contractValidationManager.connect(backend).createValidation(1, 50)
+      contractValidationManager.connect(backend).createValidation(0, 50)
     )
       .to.emit(contractValidationManager, "ValidationCreated")
-      .withArgs(ethers.BigNumber.from(1), ethers.BigNumber.from(1));
+      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1));
     await expect(
       contractValidationManager.connect(validator1).assignValidation(1)
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator1.address
       );
@@ -3647,7 +3539,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator2.address
       );
@@ -3656,7 +3548,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator3.address
       );
@@ -3665,7 +3557,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator4.address
       );
@@ -3674,7 +3566,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator5.address
       );
@@ -3684,7 +3576,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator1.address,
         true
@@ -3694,7 +3586,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator2.address,
         true
@@ -3704,7 +3596,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator3.address,
         true
@@ -3714,7 +3606,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator4.address,
         true
@@ -3724,7 +3616,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator5.address,
         false
@@ -3733,7 +3625,7 @@ describe("Platform Treasury Contract - Coaching", function () {
       contractValidationManager.connect(contentCreator).finalizeValidation(1)
     )
       .to.emit(contractValidationManager, "ValidationEnded")
-      .withArgs(ethers.BigNumber.from(1), ethers.BigNumber.from(1), true);
+      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), true);
 
     /// Send UDAO to the buyer's wallet
     await contractUDAO.transfer(
@@ -3747,21 +3639,16 @@ describe("Platform Treasury Contract - Coaching", function () {
         contractPlatformTreasury.address,
         ethers.utils.parseEther("999999999999.0")
       );
-    const coaching_voucher = [
-      1,
-      ethers.utils.parseEther("2"),
-      true,
-      contentBuyer.address,
-    ];
+    
 
     const tx = await contractPlatformTreasury
       .connect(contentBuyer)
-      .buyCoaching(coaching_voucher);
+      .buyCoaching(0);
     const result = await tx.wait();
     const timestamp = (
       await ethers.provider.getBlock(result.logs[0].blockNumber)
     ).timestamp;
-    expect(await contractPlatformTreasury.getStudentListOfToken(1)).to.be.eql([
+    expect(await contractPlatformTreasury.getStudentListOfToken(0)).to.be.eql([
       contentBuyer.address,
     ]);
     await expect(contractPlatformTreasury.connect(foundation).forcedPayment(0))
@@ -3824,19 +3711,19 @@ describe("Platform Treasury Contract - Coaching", function () {
       .withArgs(
         "0x0000000000000000000000000000000000000000",
         contentCreator.address,
-        udaoc_voucher[0]
+        0
       );
     await expect(
-      contractValidationManager.connect(backend).createValidation(1, 50)
+      contractValidationManager.connect(backend).createValidation(0, 50)
     )
       .to.emit(contractValidationManager, "ValidationCreated")
-      .withArgs(ethers.BigNumber.from(1), ethers.BigNumber.from(1));
+      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1));
     await expect(
       contractValidationManager.connect(validator1).assignValidation(1)
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator1.address
       );
@@ -3845,7 +3732,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator2.address
       );
@@ -3854,7 +3741,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator3.address
       );
@@ -3863,7 +3750,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator4.address
       );
@@ -3872,7 +3759,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator5.address
       );
@@ -3882,7 +3769,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator1.address,
         true
@@ -3892,7 +3779,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator2.address,
         true
@@ -3902,7 +3789,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator3.address,
         true
@@ -3912,7 +3799,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator4.address,
         true
@@ -3922,7 +3809,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator5.address,
         false
@@ -3931,7 +3818,7 @@ describe("Platform Treasury Contract - Coaching", function () {
       contractValidationManager.connect(contentCreator).finalizeValidation(1)
     )
       .to.emit(contractValidationManager, "ValidationEnded")
-      .withArgs(ethers.BigNumber.from(1), ethers.BigNumber.from(1), true);
+      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), true);
 
     /// Send UDAO to the buyer's wallet
     await contractUDAO.transfer(
@@ -3945,21 +3832,16 @@ describe("Platform Treasury Contract - Coaching", function () {
         contractPlatformTreasury.address,
         ethers.utils.parseEther("999999999999.0")
       );
-    const coaching_voucher = [
-      1,
-      ethers.utils.parseEther("2"),
-      true,
-      contentBuyer.address,
-    ];
+    
 
     const tx = await contractPlatformTreasury
       .connect(contentBuyer)
-      .buyCoaching(coaching_voucher);
+      .buyCoaching(0);
     const result = await tx.wait();
     const timestamp = (
       await ethers.provider.getBlock(result.logs[0].blockNumber)
     ).timestamp;
-    expect(await contractPlatformTreasury.getStudentListOfToken(1)).to.be.eql([
+    expect(await contractPlatformTreasury.getStudentListOfToken(0)).to.be.eql([
       contentBuyer.address,
     ]);
     await expect(
@@ -4026,19 +3908,19 @@ describe("Platform Treasury Contract - Coaching", function () {
       .withArgs(
         "0x0000000000000000000000000000000000000000",
         contentCreator.address,
-        udaoc_voucher[0]
+        0
       );
     await expect(
-      contractValidationManager.connect(backend).createValidation(1, 50)
+      contractValidationManager.connect(backend).createValidation(0, 50)
     )
       .to.emit(contractValidationManager, "ValidationCreated")
-      .withArgs(ethers.BigNumber.from(1), ethers.BigNumber.from(1));
+      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1));
     await expect(
       contractValidationManager.connect(validator1).assignValidation(1)
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator1.address
       );
@@ -4047,7 +3929,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator2.address
       );
@@ -4056,7 +3938,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator3.address
       );
@@ -4065,7 +3947,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator4.address
       );
@@ -4074,7 +3956,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator5.address
       );
@@ -4084,7 +3966,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator1.address,
         true
@@ -4094,7 +3976,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator2.address,
         true
@@ -4104,7 +3986,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator3.address,
         true
@@ -4114,7 +3996,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator4.address,
         true
@@ -4124,7 +4006,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator5.address,
         false
@@ -4133,7 +4015,7 @@ describe("Platform Treasury Contract - Coaching", function () {
       contractValidationManager.connect(contentCreator).finalizeValidation(1)
     )
       .to.emit(contractValidationManager, "ValidationEnded")
-      .withArgs(ethers.BigNumber.from(1), ethers.BigNumber.from(1), true);
+      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), true);
 
     /// Send UDAO to the buyer's wallet
     await contractUDAO.transfer(
@@ -4147,21 +4029,16 @@ describe("Platform Treasury Contract - Coaching", function () {
         contractPlatformTreasury.address,
         ethers.utils.parseEther("999999999999.0")
       );
-    const coaching_voucher = [
-      1,
-      ethers.utils.parseEther("2"),
-      true,
-      contentBuyer.address,
-    ];
+    
 
     const tx = await contractPlatformTreasury
       .connect(contentBuyer)
-      .buyCoaching(coaching_voucher);
+      .buyCoaching(0);
     const result = await tx.wait();
     const timestamp = (
       await ethers.provider.getBlock(result.logs[0].blockNumber)
     ).timestamp;
-    expect(await contractPlatformTreasury.getStudentListOfToken(1)).to.be.eql([
+    expect(await contractPlatformTreasury.getStudentListOfToken(0)).to.be.eql([
       contentBuyer.address,
     ]);
     await expect(contractPlatformTreasury.connect(contentCreator).refund(0))
@@ -4224,19 +4101,19 @@ describe("Platform Treasury Contract - Coaching", function () {
       .withArgs(
         "0x0000000000000000000000000000000000000000",
         contentCreator.address,
-        udaoc_voucher[0]
+        0
       );
     await expect(
-      contractValidationManager.connect(backend).createValidation(1, 50)
+      contractValidationManager.connect(backend).createValidation(0, 50)
     )
       .to.emit(contractValidationManager, "ValidationCreated")
-      .withArgs(ethers.BigNumber.from(1), ethers.BigNumber.from(1));
+      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1));
     await expect(
       contractValidationManager.connect(validator1).assignValidation(1)
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator1.address
       );
@@ -4245,7 +4122,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator2.address
       );
@@ -4254,7 +4131,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator3.address
       );
@@ -4263,7 +4140,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator4.address
       );
@@ -4272,7 +4149,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator5.address
       );
@@ -4282,7 +4159,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator1.address,
         true
@@ -4292,7 +4169,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator2.address,
         true
@@ -4302,7 +4179,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator3.address,
         true
@@ -4312,7 +4189,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator4.address,
         true
@@ -4322,7 +4199,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator5.address,
         false
@@ -4331,7 +4208,7 @@ describe("Platform Treasury Contract - Coaching", function () {
       contractValidationManager.connect(contentCreator).finalizeValidation(1)
     )
       .to.emit(contractValidationManager, "ValidationEnded")
-      .withArgs(ethers.BigNumber.from(1), ethers.BigNumber.from(1), true);
+      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), true);
 
     /// Send UDAO to the buyer's wallet
     await contractUDAO.transfer(
@@ -4345,21 +4222,16 @@ describe("Platform Treasury Contract - Coaching", function () {
         contractPlatformTreasury.address,
         ethers.utils.parseEther("999999999999.0")
       );
-    const coaching_voucher = [
-      1,
-      ethers.utils.parseEther("2"),
-      true,
-      contentBuyer.address,
-    ];
+    
 
     const tx = await contractPlatformTreasury
       .connect(contentBuyer)
-      .buyCoaching(coaching_voucher);
+      .buyCoaching(0);
     const result = await tx.wait();
     const timestamp = (
       await ethers.provider.getBlock(result.logs[0].blockNumber)
     ).timestamp;
-    expect(await contractPlatformTreasury.getStudentListOfToken(1)).to.be.eql([
+    expect(await contractPlatformTreasury.getStudentListOfToken(0)).to.be.eql([
       contentBuyer.address,
     ]);
     await expect(
@@ -4422,19 +4294,19 @@ describe("Platform Treasury Contract - Coaching", function () {
       .withArgs(
         "0x0000000000000000000000000000000000000000",
         contentCreator.address,
-        udaoc_voucher[0]
+        0
       );
     await expect(
-      contractValidationManager.connect(backend).createValidation(1, 50)
+      contractValidationManager.connect(backend).createValidation(0, 50)
     )
       .to.emit(contractValidationManager, "ValidationCreated")
-      .withArgs(ethers.BigNumber.from(1), ethers.BigNumber.from(1));
+      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1));
     await expect(
       contractValidationManager.connect(validator1).assignValidation(1)
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator1.address
       );
@@ -4443,7 +4315,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator2.address
       );
@@ -4452,7 +4324,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator3.address
       );
@@ -4461,7 +4333,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator4.address
       );
@@ -4470,7 +4342,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator5.address
       );
@@ -4480,7 +4352,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator1.address,
         true
@@ -4490,7 +4362,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator2.address,
         true
@@ -4500,7 +4372,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator3.address,
         true
@@ -4510,7 +4382,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator4.address,
         true
@@ -4520,7 +4392,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator5.address,
         false
@@ -4529,7 +4401,7 @@ describe("Platform Treasury Contract - Coaching", function () {
       contractValidationManager.connect(contentCreator).finalizeValidation(1)
     )
       .to.emit(contractValidationManager, "ValidationEnded")
-      .withArgs(ethers.BigNumber.from(1), ethers.BigNumber.from(1), true);
+      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), true);
 
     /// Send UDAO to the buyer's wallet
     await contractUDAO.transfer(
@@ -4543,21 +4415,16 @@ describe("Platform Treasury Contract - Coaching", function () {
         contractPlatformTreasury.address,
         ethers.utils.parseEther("999999999999.0")
       );
-    const coaching_voucher = [
-      1,
-      ethers.utils.parseEther("2"),
-      true,
-      contentBuyer.address,
-    ];
+    
 
     const tx = await contractPlatformTreasury
       .connect(contentBuyer)
-      .buyCoaching(coaching_voucher);
+      .buyCoaching(0);
     const result = await tx.wait();
     const timestamp = (
       await ethers.provider.getBlock(result.logs[0].blockNumber)
     ).timestamp;
-    expect(await contractPlatformTreasury.getStudentListOfToken(1)).to.be.eql([
+    expect(await contractPlatformTreasury.getStudentListOfToken(0)).to.be.eql([
       contentBuyer.address,
     ]);
     await expect(
@@ -4622,19 +4489,19 @@ describe("Platform Treasury Contract - Coaching", function () {
       .withArgs(
         "0x0000000000000000000000000000000000000000",
         contentCreator.address,
-        udaoc_voucher[0]
+        0
       );
     await expect(
-      contractValidationManager.connect(backend).createValidation(1, 50)
+      contractValidationManager.connect(backend).createValidation(0, 50)
     )
       .to.emit(contractValidationManager, "ValidationCreated")
-      .withArgs(ethers.BigNumber.from(1), ethers.BigNumber.from(1));
+      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1));
     await expect(
       contractValidationManager.connect(validator1).assignValidation(1)
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator1.address
       );
@@ -4643,7 +4510,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator2.address
       );
@@ -4652,7 +4519,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator3.address
       );
@@ -4661,7 +4528,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator4.address
       );
@@ -4670,7 +4537,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator5.address
       );
@@ -4680,7 +4547,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator1.address,
         true
@@ -4690,7 +4557,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator2.address,
         true
@@ -4700,7 +4567,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator3.address,
         true
@@ -4710,7 +4577,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator4.address,
         true
@@ -4720,7 +4587,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator5.address,
         false
@@ -4729,7 +4596,7 @@ describe("Platform Treasury Contract - Coaching", function () {
       contractValidationManager.connect(contentCreator).finalizeValidation(1)
     )
       .to.emit(contractValidationManager, "ValidationEnded")
-      .withArgs(ethers.BigNumber.from(1), ethers.BigNumber.from(1), true);
+      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), true);
 
     /// Send UDAO to the buyer's wallet
     await contractUDAO.transfer(
@@ -4743,21 +4610,16 @@ describe("Platform Treasury Contract - Coaching", function () {
         contractPlatformTreasury.address,
         ethers.utils.parseEther("999999999999.0")
       );
-    const coaching_voucher = [
-      1,
-      ethers.utils.parseEther("2"),
-      true,
-      contentBuyer.address,
-    ];
+    
 
     const tx = await contractPlatformTreasury
       .connect(contentBuyer)
-      .buyCoaching(coaching_voucher);
+      .buyCoaching(0);
     const result = await tx.wait();
     const timestamp = (
       await ethers.provider.getBlock(result.logs[0].blockNumber)
     ).timestamp;
-    expect(await contractPlatformTreasury.getStudentListOfToken(1)).to.be.eql([
+    expect(await contractPlatformTreasury.getStudentListOfToken(0)).to.be.eql([
       contentBuyer.address,
     ]);
     await expect(
@@ -4812,7 +4674,7 @@ describe("Platform Treasury Contract - Coaching", function () {
       ethers.utils.parseEther("2"),
       "udao",
       true,
-      true,
+      false,
       "Content Name",
       "Content Description",
     ];
@@ -4824,19 +4686,19 @@ describe("Platform Treasury Contract - Coaching", function () {
       .withArgs(
         "0x0000000000000000000000000000000000000000",
         contentCreator.address,
-        udaoc_voucher[0]
+        0
       );
     await expect(
-      contractValidationManager.connect(backend).createValidation(1, 50)
+      contractValidationManager.connect(backend).createValidation(0, 50)
     )
       .to.emit(contractValidationManager, "ValidationCreated")
-      .withArgs(ethers.BigNumber.from(1), ethers.BigNumber.from(1));
+      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1));
     await expect(
       contractValidationManager.connect(validator1).assignValidation(1)
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator1.address
       );
@@ -4845,7 +4707,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator2.address
       );
@@ -4854,7 +4716,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator3.address
       );
@@ -4863,7 +4725,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator4.address
       );
@@ -4872,7 +4734,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator5.address
       );
@@ -4882,7 +4744,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator1.address,
         true
@@ -4892,7 +4754,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator2.address,
         true
@@ -4902,7 +4764,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator3.address,
         true
@@ -4912,7 +4774,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator4.address,
         true
@@ -4922,7 +4784,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator5.address,
         false
@@ -4931,7 +4793,7 @@ describe("Platform Treasury Contract - Coaching", function () {
       contractValidationManager.connect(contentCreator).finalizeValidation(1)
     )
       .to.emit(contractValidationManager, "ValidationEnded")
-      .withArgs(ethers.BigNumber.from(1), ethers.BigNumber.from(1), true);
+      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), true);
 
     /// Send UDAO to the buyer's wallet
     await contractUDAO.transfer(
@@ -4946,25 +4808,14 @@ describe("Platform Treasury Contract - Coaching", function () {
         ethers.utils.parseEther("999999999999.0")
       );
 
-    const coaching_voucher = [1, false];
-
-    /// TODO below gives error in test. But above works.
-    /*
-    const coaching_voucher = [
-      1,
-      ethers.utils.parseEther("2"),
-      false,
-      contentBuyer.address,
-    ];
-    */
     const tx = await contractPlatformTreasury
       .connect(contentBuyer)
-      .buyCoaching(coaching_voucher);
+      .buyCoaching(0);
     const result = await tx.wait();
     const timestamp = (
       await ethers.provider.getBlock(result.logs[0].blockNumber)
     ).timestamp;
-    expect(await contractPlatformTreasury.getStudentListOfToken(1)).to.be.eql([
+    expect(await contractPlatformTreasury.getStudentListOfToken(0)).to.be.eql([
       contentBuyer.address,
     ]);
     await expect(
