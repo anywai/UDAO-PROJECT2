@@ -7,10 +7,12 @@ import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "./RoleController.sol";
 import "./IPriceGetter.sol";
-
 import "./IUDAOC.sol";
 
 contract UDAOContent is IUDAOC, ERC721, ERC721URIStorage, RoleController {
+    using Counters for Counters.Counter;
+    Counters.Counter private _tokenIds;
+
     /// @param irmAdress The address of the deployed role manager
     constructor(
         address irmAdress
@@ -26,8 +28,6 @@ contract UDAOContent is IUDAOC, ERC721, ERC721URIStorage, RoleController {
     /// @notice Represents an un-minted NFT, which has not yet been recorded into the blockchain.
     /// A signed voucher can be redeemed for a real NFT using the redeem function.
     struct ContentVoucher {
-        /// @notice The id of the token to be redeemed.
-        uint256 tokenId;
         /// @notice The price of the content, first price is the full price
         uint256[] contentPrice;
         /// @notice Name of the selling currency
@@ -62,33 +62,37 @@ contract UDAOContent is IUDAOC, ERC721, ERC721URIStorage, RoleController {
     /// @notice Redeems a ContentVoucher for an actual NFT, creating it in the process.
     /// @param voucher A signed ContentVoucher that describes the NFT to be redeemed.
     function redeem(ContentVoucher calldata voucher) public whenNotPaused {
+        uint tokenId = _tokenIds.current();
         // make sure redeemer is redeeming
         require(voucher.redeemer == msg.sender, "You are not the redeemer");
         //make sure redeemer is kyced
         require(IRM.isKYCed(msg.sender), "You are not KYCed");
         //make sure redeemer is not banned
         require(!IRM.isBanned(msg.sender), "Redeemer is banned!");
-        coachingEnabled[voucher.tokenId] = voucher.isCoachingEnabled;
-        coachingRefundable[voucher.tokenId] = voucher.isCoachingRefundable;
-        _mint(voucher.redeemer, voucher.tokenId);
-        _setTokenURI(voucher.tokenId, voucher.uri);
+        coachingEnabled[tokenId] = voucher.isCoachingEnabled;
+        coachingRefundable[tokenId] = voucher.isCoachingRefundable;
+
         // save the content price
         uint partLength = voucher.contentPrice.length;
-        partNumberOfContent[voucher.tokenId] = partLength;
+        partNumberOfContent[tokenId] = partLength;
 
-        currencyName[voucher.tokenId] = keccak256(
+        currencyName[tokenId] = keccak256(
             abi.encodePacked(voucher.currencyName)
         );
 
-        coachingPrice[voucher.tokenId] = voucher.coachingPrice;
-        coachingCurrency[voucher.tokenId] = keccak256(
+        coachingPrice[tokenId] = voucher.coachingPrice;
+        coachingCurrency[tokenId] = keccak256(
             abi.encodePacked(voucher.coachingCurrencyName)
         );
 
         /// @dev First index is the full price for the content
         for (uint i = 0; i < partLength; i++) {
-            contentPrice[voucher.tokenId][i] = voucher.contentPrice[i];
+            contentPrice[tokenId][i] = voucher.contentPrice[i];
         }
+
+        _mint(voucher.redeemer, tokenId);
+        _setTokenURI(tokenId, voucher.uri);
+        _tokenIds.increment();
     }
 
     /// @notice Allows instructers' to enable coaching for a specific content
