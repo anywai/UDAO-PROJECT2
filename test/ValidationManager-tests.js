@@ -367,13 +367,13 @@ describe("Validation Manageer Contract", function () {
       .withArgs(
         "0x0000000000000000000000000000000000000000",
         contentCreator.address,
-        udaoc_voucher[0]
+        0
       );
     await expect(
-      contractValidationManager.connect(backend).createValidation(1, 50)
+      contractValidationManager.connect(backend).createValidation(0, 50)
     )
       .to.emit(contractValidationManager, "ValidationCreated")
-      .withArgs(ethers.BigNumber.from(1), ethers.BigNumber.from(1));
+      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1));
   });
 
   it("Should assign content validation", async function () {
@@ -427,19 +427,19 @@ describe("Validation Manageer Contract", function () {
       .withArgs(
         "0x0000000000000000000000000000000000000000",
         contentCreator.address,
-        udaoc_voucher[0]
+        0
       );
     await expect(
-      contractValidationManager.connect(backend).createValidation(1, 50)
+      contractValidationManager.connect(backend).createValidation(0, 50)
     )
       .to.emit(contractValidationManager, "ValidationCreated")
-      .withArgs(ethers.BigNumber.from(1), ethers.BigNumber.from(1));
+      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1));
     await expect(
       contractValidationManager.connect(validator1).assignValidation(1)
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator1.address
       );
@@ -496,19 +496,19 @@ describe("Validation Manageer Contract", function () {
       .withArgs(
         "0x0000000000000000000000000000000000000000",
         contentCreator.address,
-        udaoc_voucher[0]
+        0
       );
     await expect(
-      contractValidationManager.connect(backend).createValidation(1, 50)
+      contractValidationManager.connect(backend).createValidation(0, 50)
     )
       .to.emit(contractValidationManager, "ValidationCreated")
-      .withArgs(ethers.BigNumber.from(1), ethers.BigNumber.from(1));
+      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1));
     await expect(
       contractValidationManager.connect(validator1).assignValidation(1)
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator1.address
       );
@@ -517,7 +517,7 @@ describe("Validation Manageer Contract", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator2.address
       );
@@ -526,7 +526,7 @@ describe("Validation Manageer Contract", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator3.address
       );
@@ -535,7 +535,7 @@ describe("Validation Manageer Contract", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator4.address
       );
@@ -544,7 +544,7 @@ describe("Validation Manageer Contract", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator5.address
       );
@@ -554,7 +554,7 @@ describe("Validation Manageer Contract", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator1.address,
         true
@@ -564,7 +564,7 @@ describe("Validation Manageer Contract", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator2.address,
         true
@@ -574,7 +574,7 @@ describe("Validation Manageer Contract", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator3.address,
         true
@@ -584,7 +584,7 @@ describe("Validation Manageer Contract", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator4.address,
         true
@@ -594,7 +594,7 @@ describe("Validation Manageer Contract", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator5.address,
         false
@@ -652,19 +652,19 @@ describe("Validation Manageer Contract", function () {
       .withArgs(
         "0x0000000000000000000000000000000000000000",
         contentCreator.address,
-        udaoc_voucher[0]
+        0
       );
     await expect(
-      contractValidationManager.connect(backend).createValidation(1, 50)
+      contractValidationManager.connect(backend).createValidation(0, 50)
     )
       .to.emit(contractValidationManager, "ValidationCreated")
-      .withArgs(ethers.BigNumber.from(1), ethers.BigNumber.from(1));
+      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1));
     await expect(
       contractValidationManager.connect(validator1).assignValidation(1)
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator1.address
       );
@@ -673,7 +673,7 @@ describe("Validation Manageer Contract", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator2.address
       );
@@ -682,7 +682,7 @@ describe("Validation Manageer Contract", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator3.address
       );
@@ -691,7 +691,7 @@ describe("Validation Manageer Contract", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator4.address
       );
@@ -700,7 +700,7 @@ describe("Validation Manageer Contract", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator5.address
       );
@@ -710,7 +710,7 @@ describe("Validation Manageer Contract", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator1.address,
         true
@@ -720,7 +720,7 @@ describe("Validation Manageer Contract", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator2.address,
         true
@@ -730,7 +730,7 @@ describe("Validation Manageer Contract", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator3.address,
         true
@@ -740,7 +740,7 @@ describe("Validation Manageer Contract", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator4.address,
         true
@@ -750,7 +750,7 @@ describe("Validation Manageer Contract", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator5.address,
         false
@@ -759,7 +759,7 @@ describe("Validation Manageer Contract", function () {
       contractValidationManager.connect(contentCreator).finalizeValidation(1)
     )
       .to.emit(contractValidationManager, "ValidationEnded")
-      .withArgs(ethers.BigNumber.from(1), ethers.BigNumber.from(1), true);
+      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), true);
   });
 
   it("Should return validator's score", async function () {
@@ -813,19 +813,19 @@ describe("Validation Manageer Contract", function () {
       .withArgs(
         "0x0000000000000000000000000000000000000000",
         contentCreator.address,
-        udaoc_voucher[0]
+        0
       );
     await expect(
-      contractValidationManager.connect(backend).createValidation(1, 50)
+      contractValidationManager.connect(backend).createValidation(0, 50)
     )
       .to.emit(contractValidationManager, "ValidationCreated")
-      .withArgs(ethers.BigNumber.from(1), ethers.BigNumber.from(1));
+      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1));
     await expect(
       contractValidationManager.connect(validator1).assignValidation(1)
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator1.address
       );
@@ -834,7 +834,7 @@ describe("Validation Manageer Contract", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator2.address
       );
@@ -843,7 +843,7 @@ describe("Validation Manageer Contract", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator3.address
       );
@@ -852,7 +852,7 @@ describe("Validation Manageer Contract", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator4.address
       );
@@ -861,7 +861,7 @@ describe("Validation Manageer Contract", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator5.address
       );
@@ -871,7 +871,7 @@ describe("Validation Manageer Contract", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator1.address,
         true
@@ -881,7 +881,7 @@ describe("Validation Manageer Contract", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator2.address,
         true
@@ -891,7 +891,7 @@ describe("Validation Manageer Contract", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator3.address,
         true
@@ -901,7 +901,7 @@ describe("Validation Manageer Contract", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator4.address,
         true
@@ -911,7 +911,7 @@ describe("Validation Manageer Contract", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator5.address,
         false
@@ -920,7 +920,7 @@ describe("Validation Manageer Contract", function () {
       contractValidationManager.connect(contentCreator).finalizeValidation(1)
     )
       .to.emit(contractValidationManager, "ValidationEnded")
-      .withArgs(ethers.BigNumber.from(1), ethers.BigNumber.from(1), true);
+      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), true);
     expect(
       await contractValidationManager.getValidatorScore(validator1.address, 0)
     ).to.eql(ethers.BigNumber.from(50));
@@ -977,19 +977,19 @@ describe("Validation Manageer Contract", function () {
       .withArgs(
         "0x0000000000000000000000000000000000000000",
         contentCreator.address,
-        udaoc_voucher[0]
+        0
       );
     await expect(
-      contractValidationManager.connect(backend).createValidation(1, 50)
+      contractValidationManager.connect(backend).createValidation(0, 50)
     )
       .to.emit(contractValidationManager, "ValidationCreated")
-      .withArgs(ethers.BigNumber.from(1), ethers.BigNumber.from(1));
+      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1));
     await expect(
       contractValidationManager.connect(validator1).assignValidation(1)
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator1.address
       );
@@ -998,7 +998,7 @@ describe("Validation Manageer Contract", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator2.address
       );
@@ -1007,7 +1007,7 @@ describe("Validation Manageer Contract", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator3.address
       );
@@ -1016,7 +1016,7 @@ describe("Validation Manageer Contract", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator4.address
       );
@@ -1025,7 +1025,7 @@ describe("Validation Manageer Contract", function () {
     )
       .to.emit(contractValidationManager, "ValidationAssigned")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator5.address
       );
@@ -1035,7 +1035,7 @@ describe("Validation Manageer Contract", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator1.address,
         true
@@ -1045,7 +1045,7 @@ describe("Validation Manageer Contract", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator2.address,
         true
@@ -1055,7 +1055,7 @@ describe("Validation Manageer Contract", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator3.address,
         true
@@ -1065,7 +1065,7 @@ describe("Validation Manageer Contract", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator4.address,
         true
@@ -1075,7 +1075,7 @@ describe("Validation Manageer Contract", function () {
     )
       .to.emit(contractValidationManager, "ValidationResultSent")
       .withArgs(
-        ethers.BigNumber.from(1),
+        ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator5.address,
         false
@@ -1084,7 +1084,7 @@ describe("Validation Manageer Contract", function () {
       contractValidationManager.connect(contentCreator).finalizeValidation(1)
     )
       .to.emit(contractValidationManager, "ValidationEnded")
-      .withArgs(ethers.BigNumber.from(1), ethers.BigNumber.from(1), true);
+      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), true);
     expect(await contractValidationManager.getTotalValidationScore()).to.eql(
       ethers.BigNumber.from(200)
     );
@@ -1121,7 +1121,7 @@ describe("Validation Manageer Contract", function () {
     } = await deploy();
     await contractRoleManager.setKYC(contentCreator.address, true);
     await expect(
-      contractValidationManager.connect(backend).createValidation(1, 50)
+      contractValidationManager.connect(backend).createValidation(0, 50)
     ).to.revertedWith("ERC721: invalid token ID");
   });
 });
