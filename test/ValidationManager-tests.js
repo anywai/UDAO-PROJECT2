@@ -118,12 +118,7 @@ async function deploy() {
   const result_2 = await tx_2.wait();
 
   let factoryPriceGetter = await ethers.getContractFactory("PriceGetter");
-  const contractPriceGetter = await factoryPriceGetter.deploy(
-    "0x1F98431c8aD98523631AE4a59f267346ea31F984",
-    contractUDAO.address,
-    "0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270",
-    3000
-  );
+  
 
   await helpers.time.increase(2);
   await helpers.time.increase(2);
@@ -143,6 +138,13 @@ async function deploy() {
 
   // Price Getter End
   const contractRoleManager = await factoryRoleManager.deploy();
+  const contractPriceGetter = await factoryPriceGetter.deploy(
+    "0x1F98431c8aD98523631AE4a59f267346ea31F984",
+    contractUDAO.address,
+    "0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270",
+    3000,
+    contractRoleManager.address
+  );
   const contractUDAOCertificate = await factoryUDAOCertificate.deploy(
     contractRoleManager.address
   );

@@ -92,11 +92,14 @@ async function deploy() {
     ]);
 
   const factoryPriceGetter = await ethers.getContractFactory("PriceGetter");
+  let factoryRoleManager = await ethers.getContractFactory("RoleManager");
+  const contractRoleManager = await factoryRoleManager.deploy();
   const contractPriceGetter = await factoryPriceGetter.deploy(
     "0x1F98431c8aD98523631AE4a59f267346ea31F984",
     contractUDAO.address,
     WMATICAddress,
-    3000
+    3000,
+    contractRoleManager.address
   );
 
   return {
