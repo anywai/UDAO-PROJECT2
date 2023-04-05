@@ -323,13 +323,13 @@ describe("Platform Treasury Contract - Coaching", function () {
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
     const udaoc_voucher = [
-      1,
       [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
       "udao",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       ethers.utils.parseEther("2"),
       "udao",
+      true,
       true,
       "Content Name",
       "Content Description",
@@ -517,13 +517,13 @@ describe("Platform Treasury Contract - Coaching", function () {
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
     const udaoc_voucher = [
-      1,
       [ethers.utils.parseEther("1")],
       "udao",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       ethers.utils.parseEther("2"),
       "udao",
+      true,
       true,
       "Content Name",
       "Content Description",
@@ -715,13 +715,13 @@ describe("Platform Treasury Contract - Coaching", function () {
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
     const udaoc_voucher = [
-      1,
       [ethers.utils.parseEther("1")],
       "udao",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       ethers.utils.parseEther("2"),
       "udao",
+      false,
       false,
       "Content Name",
       "Content Description",
@@ -956,13 +956,13 @@ describe("Platform Treasury Contract - Coaching", function () {
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
     const udaoc_voucher = [
-      1,
       [ethers.utils.parseEther("1")],
       "udao",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       ethers.utils.parseEther("2"),
       "udao",
+      true,
       true,
       "Content Name",
       "Content Description",
@@ -1039,13 +1039,13 @@ describe("Platform Treasury Contract - Coaching", function () {
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
     const udaoc_voucher = [
-      1,
       [ethers.utils.parseEther("1")],
       "udao",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       ethers.utils.parseEther("2"),
       "udao",
+      true,
       true,
       "Content Name",
       "Content Description",
@@ -1233,13 +1233,13 @@ describe("Platform Treasury Contract - Coaching", function () {
 
     /// Mint content with voucher
     const udaoc_voucher = [
-      1,
       [ethers.utils.parseEther("1")],
       "udao",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       ethers.utils.parseEther("2"),
       "udao",
+      true,
       true,
       "Content Name",
       "Content Description",
@@ -1427,13 +1427,13 @@ describe("Platform Treasury Contract - Coaching", function () {
 
     /// Mint content with voucher
     const udaoc_voucher = [
-      1,
       [ethers.utils.parseEther("1")],
       "udao",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       ethers.utils.parseEther("2"),
       "udao",
+      true,
       true,
       "Content Name",
       "Content Description",
@@ -1622,13 +1622,13 @@ describe("Platform Treasury Contract - Coaching", function () {
     /// Set BAN
     /// Mint content with voucher
     const udaoc_voucher = [
-      1,
       [ethers.utils.parseEther("1")],
       "udao",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       ethers.utils.parseEther("2"),
       "udao",
+      true,
       true,
       "Content Name",
       "Content Description",
@@ -1815,13 +1815,13 @@ describe("Platform Treasury Contract - Coaching", function () {
 
     /// Mint content with voucher
     const udaoc_voucher = [
-      1,
       [ethers.utils.parseEther("1")],
       "udao",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       ethers.utils.parseEther("2"),
       "udao",
+      true,
       true,
       "Content Name",
       "Content Description",
@@ -1957,9 +1957,8 @@ describe("Platform Treasury Contract - Coaching", function () {
         contractPlatformTreasury.address,
         ethers.utils.parseEther("999999999999.0")
       );
-    
-    
-      // TODO What IS THIS COACHING VOUCHER?
+
+    // TODO What IS THIS COACHING VOUCHER?
     const coaching_voucher = [
       1,
       ethers.utils.parseEther("2"),
@@ -2015,13 +2014,13 @@ describe("Platform Treasury Contract - Coaching", function () {
 
     /// Mint content with voucher
     const udaoc_voucher = [
-      1,
       [ethers.utils.parseEther("1")],
       "udao",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       ethers.utils.parseEther("2"),
       "udao",
+      true,
       true,
       "Content Name",
       "Content Description",
@@ -2213,13 +2212,13 @@ describe("Platform Treasury Contract - Coaching", function () {
 
     /// Mint content with voucher
     const udaoc_voucher = [
-      1,
       [ethers.utils.parseEther("1")],
       "udao",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       ethers.utils.parseEther("2"),
       "udao",
+      true,
       true,
       "Content Name",
       "Content Description",
@@ -2408,13 +2407,13 @@ describe("Platform Treasury Contract - Coaching", function () {
 
     /// Mint content with voucher
     const udaoc_voucher = [
-      1,
       [ethers.utils.parseEther("1")],
       "udao",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       ethers.utils.parseEther("2"),
       "udao",
+      true,
       true,
       "Content Name",
       "Content Description",
@@ -2607,13 +2606,13 @@ describe("Platform Treasury Contract - Coaching", function () {
 
     /// Mint content with voucher
     const udaoc_voucher = [
-      1,
       [ethers.utils.parseEther("1")],
       "udao",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       ethers.utils.parseEther("2"),
       "udao",
+      true,
       true,
       "Content Name",
       "Content Description",
@@ -2806,13 +2805,13 @@ describe("Platform Treasury Contract - Coaching", function () {
 
     /// Mint content with voucher
     const udaoc_voucher = [
-      1,
       [ethers.utils.parseEther("1")],
       "udao",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       ethers.utils.parseEther("2"),
       "udao",
+      true,
       true,
       "Content Name",
       "Content Description",
@@ -3008,13 +3007,13 @@ describe("Platform Treasury Contract - Coaching", function () {
 
     /// Mint content with voucher
     const udaoc_voucher = [
-      1,
       [ethers.utils.parseEther("1")],
       "udao",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       ethers.utils.parseEther("2"),
       "udao",
+      true,
       true,
       "Content Name",
       "Content Description",
@@ -3210,13 +3209,13 @@ describe("Platform Treasury Contract - Coaching", function () {
 
     /// Mint content with voucher
     const udaoc_voucher = [
-      1,
       [ethers.utils.parseEther("1")],
       "udao",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       ethers.utils.parseEther("2"),
       "udao",
+      true,
       true,
       "Content Name",
       "Content Description",
@@ -3408,13 +3407,13 @@ describe("Platform Treasury Contract - Coaching", function () {
 
     /// Mint content with voucher
     const udaoc_voucher = [
-      1,
       [ethers.utils.parseEther("1")],
       "udao",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       ethers.utils.parseEther("2"),
       "udao",
+      true,
       true,
       "Content Name",
       "Content Description",
@@ -3606,13 +3605,13 @@ describe("Platform Treasury Contract - Coaching", function () {
 
     /// Mint content with voucher
     const udaoc_voucher = [
-      1,
       [ethers.utils.parseEther("1")],
       "udao",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       ethers.utils.parseEther("2"),
       "udao",
+      true,
       true,
       "Content Name",
       "Content Description",
@@ -3804,13 +3803,13 @@ describe("Platform Treasury Contract - Coaching", function () {
 
     /// Mint content with voucher
     const udaoc_voucher = [
-      1,
       [ethers.utils.parseEther("1")],
       "udao",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       ethers.utils.parseEther("2"),
       "udao",
+      true,
       true,
       "Content Name",
       "Content Description",
@@ -4006,13 +4005,13 @@ describe("Platform Treasury Contract - Coaching", function () {
 
     /// Mint content with voucher
     const udaoc_voucher = [
-      1,
       [ethers.utils.parseEther("1")],
       "udao",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       ethers.utils.parseEther("2"),
       "udao",
+      true,
       true,
       "Content Name",
       "Content Description",
@@ -4204,13 +4203,13 @@ describe("Platform Treasury Contract - Coaching", function () {
 
     /// Mint content with voucher
     const udaoc_voucher = [
-      1,
       [ethers.utils.parseEther("1")],
       "udao",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       ethers.utils.parseEther("2"),
       "udao",
+      true,
       true,
       "Content Name",
       "Content Description",
@@ -4402,13 +4401,13 @@ describe("Platform Treasury Contract - Coaching", function () {
 
     /// Mint content with voucher
     const udaoc_voucher = [
-      1,
       [ethers.utils.parseEther("1")],
       "udao",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       ethers.utils.parseEther("2"),
       "udao",
+      true,
       true,
       "Content Name",
       "Content Description",
@@ -4602,13 +4601,13 @@ describe("Platform Treasury Contract - Coaching", function () {
 
     /// Mint content with voucher
     const udaoc_voucher = [
-      1,
       [ethers.utils.parseEther("1")],
       "udao",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       ethers.utils.parseEther("2"),
       "udao",
+      true,
       true,
       "Content Name",
       "Content Description",
@@ -4804,13 +4803,13 @@ describe("Platform Treasury Contract - Coaching", function () {
 
     /// Mint content with voucher
     const udaoc_voucher = [
-      1,
       [ethers.utils.parseEther("1")],
       "udao",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       ethers.utils.parseEther("2"),
       "udao",
+      true,
       true,
       "Content Name",
       "Content Description",
@@ -4945,12 +4944,8 @@ describe("Platform Treasury Contract - Coaching", function () {
         ethers.utils.parseEther("999999999999.0")
       );
 
-    
-      const coaching_voucher = [
-        1,
-        false
-      ];
-  
+    const coaching_voucher = [1, false];
+
     /// TODO below gives error in test. But above works.
     /*
     const coaching_voucher = [

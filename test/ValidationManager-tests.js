@@ -346,13 +346,13 @@ describe("Validation Manageer Contract", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
 
     const udaoc_voucher = [
-      1,
       [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
       "udao",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       ethers.utils.parseEther("2"),
       "udao",
+      true,
       true,
       "Content Name",
       "Content Description",
@@ -406,13 +406,13 @@ describe("Validation Manageer Contract", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
 
     const udaoc_voucher = [
-      1,
       [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
       "udao",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       ethers.utils.parseEther("2"),
       "udao",
+      true,
       true,
       "Content Name",
       "Content Description",
@@ -475,13 +475,13 @@ describe("Validation Manageer Contract", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
 
     const udaoc_voucher = [
-      1,
       [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
       "udao",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       ethers.utils.parseEther("2"),
       "udao",
+      true,
       true,
       "Content Name",
       "Content Description",
@@ -631,13 +631,13 @@ describe("Validation Manageer Contract", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
 
     const udaoc_voucher = [
-      1,
       [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
       "udao",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       ethers.utils.parseEther("2"),
       "udao",
+      true,
       true,
       "Content Name",
       "Content Description",
@@ -792,13 +792,13 @@ describe("Validation Manageer Contract", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
 
     const udaoc_voucher = [
-      1,
       [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
       "udao",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       ethers.utils.parseEther("2"),
       "udao",
+      true,
       true,
       "Content Name",
       "Content Description",
@@ -956,13 +956,13 @@ describe("Validation Manageer Contract", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
 
     const udaoc_voucher = [
-      1,
       [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
       "udao",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       ethers.utils.parseEther("2"),
       "udao",
+      true,
       true,
       "Content Name",
       "Content Description",
