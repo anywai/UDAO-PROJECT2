@@ -361,7 +361,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
         }
 
         foundationBalance += (priceToPayUdao * coachingFoundationCut) / 100000;
-        governanceBalance += (priceToPayUdao * coachingGovernancenCut) / 100000;
+        governanceBalance += (priceToPayUdao * coachingGovernanceCut) / 100000;
         coachingStructs[coachingIndex] = CoachingStruct({
             coach: instructor,
             learner: msg.sender,
@@ -468,7 +468,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
             (totalPaymentAmount * coachingFoundationCut) /
             100000;
         governanceBalance -=
-            (totalPaymentAmount * coachingGovernancenCut) /
+            (totalPaymentAmount * coachingGovernanceCut) /
             100000;
 
         currentCoaching.isDone = 2;
@@ -491,7 +491,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
             (totalPaymentAmount * coachingFoundationCut) /
             100000;
         governanceBalance -=
-            (totalPaymentAmount * coachingGovernancenCut) /
+            (totalPaymentAmount * coachingGovernanceCut) /
             100000;
 
         currentCoaching.isDone = 2;
@@ -532,7 +532,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
             (totalPaymentAmount * coachingFoundationCut) /
             100000;
         governanceBalance -=
-            (totalPaymentAmount * coachingGovernancenCut) /
+            (totalPaymentAmount * coachingGovernanceCut) /
             100000;
 
         currentCoaching.isDone = 2;
