@@ -67,7 +67,7 @@ abstract contract BasePlatform is Pausable, RoleController {
     // cut for foundation from coaching
     uint public coachingFoundationCut = 4000;
     // cut for governance from coaching
-    uint public coachingGovernancenCut = 700;
+    uint public coachingGovernanceCut = 700;
     // cut for foundation from content
     uint public contentFoundationCut = 4000;
     // cut for governance from content
@@ -82,28 +82,6 @@ abstract contract BasePlatform is Pausable, RoleController {
 
     IValidationManager public IVM;
     IJurorManager public IJM;
-
-    /// @notice Ensures the cut won't exceed %100
-    modifier checkCoachingCuts() {
-        require(
-            coachingFoundationCut + coachingGovernancenCut < 100000,
-            "Cuts cant be higher than %100"
-        );
-        _;
-    }
-
-    /// @notice Ensures the cut won't exceed %100
-    modifier checkContentCuts() {
-        require(
-            contentFoundationCut +
-                contentGovernancenCut +
-                contentJurorCut +
-                contentValidatorCut <
-                10000,
-            "Cuts cant be higher than %100"
-        );
-        _;
-    }
 
     /// @notice Triggered after every round is finalized and rewards are distributed 
     event RewardsDistributed(
@@ -156,11 +134,15 @@ abstract contract BasePlatform is Pausable, RoleController {
     /// @param _cut new cut (100000 -> 100% | 5000 -> 5%)
     function setCoachingFoundationCut(
         uint _cut
-    ) external onlyRole(GOVERNANCE_ROLE) checkCoachingCuts {
+    ) external onlyRole(GOVERNANCE_ROLE){
+        require(
+            _cut + coachingGovernanceCut < 100000,
+            "Cuts cant be higher than %100"
+        );
         coachingFoundationCut = _cut;
         emit CutsUpdated(
             coachingFoundationCut,
-            coachingGovernancenCut,
+            coachingGovernanceCut,
             contentFoundationCut,
             contentGovernancenCut,
             contentJurorCut,
@@ -172,11 +154,15 @@ abstract contract BasePlatform is Pausable, RoleController {
     /// @param _cut new cut (100000 -> 100% | 5000 -> 5%)
     function setCoachingGovernanceCut(
         uint _cut
-    ) external onlyRole(GOVERNANCE_ROLE) checkCoachingCuts {
-        coachingGovernancenCut = _cut;
+    ) external onlyRole(GOVERNANCE_ROLE) {
+        require(
+            coachingFoundationCut + _cut < 100000,
+            "Cuts cant be higher than %100"
+        );
+        coachingGovernanceCut = _cut;
         emit CutsUpdated(
             coachingFoundationCut,
-            coachingGovernancenCut,
+            coachingGovernanceCut,
             contentFoundationCut,
             contentGovernancenCut,
             contentJurorCut,
@@ -188,11 +174,19 @@ abstract contract BasePlatform is Pausable, RoleController {
     /// @param _cut new cut (100000 -> 100% | 5000 -> 5%)
     function setContentFoundationCut(
         uint _cut
-    ) external onlyRole(GOVERNANCE_ROLE) checkContentCuts {
+    ) external onlyRole(GOVERNANCE_ROLE) {
+        require(
+            _cut +
+                contentGovernancenCut +
+                contentJurorCut +
+                contentValidatorCut <
+                10000,
+            "Cuts cant be higher than %100"
+        );
         contentFoundationCut = _cut;
         emit CutsUpdated(
             coachingFoundationCut,
-            coachingGovernancenCut,
+            coachingGovernanceCut,
             contentFoundationCut,
             contentGovernancenCut,
             contentJurorCut,
@@ -204,11 +198,19 @@ abstract contract BasePlatform is Pausable, RoleController {
     /// @param _cut new cut (100000 -> 100% | 5000 -> 5%)
     function setContentGovernanceCut(
         uint _cut
-    ) external onlyRole(GOVERNANCE_ROLE) checkContentCuts {
+    ) external onlyRole(GOVERNANCE_ROLE) {
+        require(
+            contentFoundationCut +
+                _cut +
+                contentJurorCut +
+                contentValidatorCut <
+                10000,
+            "Cuts cant be higher than %100"
+        );
         contentGovernancenCut = _cut;
         emit CutsUpdated(
             coachingFoundationCut,
-            coachingGovernancenCut,
+            coachingGovernanceCut,
             contentFoundationCut,
             contentGovernancenCut,
             contentJurorCut,
@@ -220,11 +222,19 @@ abstract contract BasePlatform is Pausable, RoleController {
     /// @param _cut new cut (100000 -> 100% | 5000 -> 5%)
     function setContentJurorCut(
         uint _cut
-    ) external onlyRole(GOVERNANCE_ROLE) checkContentCuts {
+    ) external onlyRole(GOVERNANCE_ROLE) {
+        require(
+            contentFoundationCut +
+                contentGovernancenCut +
+                _cut +
+                contentValidatorCut <
+                10000,
+            "Cuts cant be higher than %100"
+        );
         contentJurorCut = _cut;
         emit CutsUpdated(
             coachingFoundationCut,
-            coachingGovernancenCut,
+            coachingGovernanceCut,
             contentFoundationCut,
             contentGovernancenCut,
             contentJurorCut,
@@ -236,11 +246,19 @@ abstract contract BasePlatform is Pausable, RoleController {
     /// @param _cut new cut (100000 -> 100% | 5000 -> 5%)
     function setContentValidatorCut(
         uint _cut
-    ) external onlyRole(GOVERNANCE_ROLE) checkContentCuts {
+    ) external onlyRole(GOVERNANCE_ROLE) {
+        require(
+            contentFoundationCut +
+                contentGovernancenCut +
+                contentJurorCut +
+                _cut <
+                10000,
+            "Cuts cant be higher than %100"
+        );
         contentValidatorCut = _cut;
         emit CutsUpdated(
             coachingFoundationCut,
-            coachingGovernancenCut,
+            coachingGovernanceCut,
             contentFoundationCut,
             contentGovernancenCut,
             contentJurorCut,
