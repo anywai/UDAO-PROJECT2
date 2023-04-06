@@ -204,6 +204,12 @@ async function deploy() {
     GOVERNANCE_ROLE,
     contractUDAOTimelockController.address
   );
+
+  await contractRoleManager.grantRole(
+    GOVERNANCE_ROLE,
+    superValidator.address
+  );
+
   const VALIDATION_MANAGER = ethers.utils.keccak256(
     ethers.utils.toUtf8Bytes("VALIDATION_MANAGER")
   );
@@ -284,7 +290,7 @@ describe("Governance Contract", function () {
     } = await deploy();
   });
 
-  it("Should set coaching foundation cut", async function () {
+  it("Timelock should set coaching foundation cut to 10%", async function () {
     const {
       backend,
       validatorCandidate,
@@ -307,5 +313,63 @@ describe("Governance Contract", function () {
       contractUDAOTimelockController,
       contractUDAOGovernor,
     } = await deploy();
+
+    // impersonate a whale
+    const address = "0xe7804c37c13166ff0b37f5ae0bb07a3aebb6e245";
+    await helpers.impersonateAccount(address);
+    const imporsonatedWhale = await ethers.getSigner(address);
+
+    // imporsonate timelock controller
+    await hre.network.provider.request({
+      method: "hardhat_impersonateAccount",
+      params: [contractUDAOTimelockController.address],
+    });
+    const signerTimelockController = await ethers.provider.getSigner(contractUDAOTimelockController.address);
+    // send some funds to timelock controller
+    await imporsonatedWhale.sendTransaction({to: contractUDAOTimelockController.address, value: ethers.utils.parseEther("1")})
+    // set coaching foundation cut
+    await contractPlatformTreasury.connect(signerTimelockController).setCoachingFoundationCut(10000);
+    expect(await contractPlatformTreasury.coachingFoundationCut()).to.equal(10000);
+
+  });
+
+  it("TimeLock should fail to set coaching foundation cut to more than 100%", async function () {
+    const {
+      backend,
+      validatorCandidate,
+      validator,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+    } = await deploy();
+    // impersonate a whale
+    const address = "0xe7804c37c13166ff0b37f5ae0bb07a3aebb6e245";
+    await helpers.impersonateAccount(address);
+    const imporsonatedWhale = await ethers.getSigner(address);
+
+    // imporsonate timelock controller
+    await hre.network.provider.request({
+      method: "hardhat_impersonateAccount",
+      params: [contractUDAOTimelockController.address],
+    });
+    const signerTimelockController = await ethers.provider.getSigner(contractUDAOTimelockController.address);
+    // send some funds to timelock controller
+    await imporsonatedWhale.sendTransaction({to: contractUDAOTimelockController.address, value: ethers.utils.parseEther("1")})
+    // set coaching foundation cut
+    await expect(contractPlatformTreasury.connect(signerTimelockController).setCoachingFoundationCut(100001)).to.be.revertedWith("Cuts cant be higher than %100");
   });
 });
