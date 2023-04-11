@@ -589,11 +589,9 @@ describe("Platform Treasury Contract - Content", function () {
         ethers.utils.parseEther("999999999999.0")
       );
 
-    const purchase_udaoc_voucher = [0, true, [1], ethers.constants.AddressZero];
-
     await contractPlatformTreasury
       .connect(contentBuyer)
-      .buyContent(purchase_udaoc_voucher);
+      .buyContent(0, true, [1], ethers.constants.AddressZero);
     const result = await contractPlatformTreasury
       .connect(contentBuyer)
       .getOwnedContent(contentBuyer.address);
@@ -929,17 +927,12 @@ describe("Platform Treasury Contract - Content", function () {
         ethers.utils.parseEther("999999999999.0")
       );
 
-    const purchase_udaoc_voucher = [
-      0,
-      false,
-      [1, 2, 3],
-      contentBuyer.address,
-      ethers.constants.AddressZero,
-    ];
-
     await contractPlatformTreasury
       .connect(contentBuyer)
-      .buyContent(purchase_udaoc_voucher);
+      .buyContent(0,
+        false,
+        [1, 2, 3],
+        contentBuyer.address);
     const result = await contractPlatformTreasury
       .connect(contentBuyer)
       .getOwnedContent(contentBuyer.address);
@@ -1133,30 +1126,22 @@ describe("Platform Treasury Contract - Content", function () {
         contractPlatformTreasury.address,
         ethers.utils.parseEther("999999999999.0")
       );
-    const purchase_udaoc_voucher = [
-      0,
-      false,
-      [2],
-      contentBuyer.address,
-      ethers.constants.AddressZero,
-    ];
+
 
     await contractPlatformTreasury
       .connect(contentBuyer)
-      .buyContent(purchase_udaoc_voucher);
-
-    const purchase_udaoc_voucher2 = [
-      0,
-      false,
-      [2],
-      contentBuyer.address,
-      ethers.constants.AddressZero,
-    ];
+      .buyContent(0,
+        false,
+        [2],
+        contentBuyer.address);
 
     await expect(
       contractPlatformTreasury
         .connect(contentBuyer)
-        .buyContent(purchase_udaoc_voucher2)
+        .buyContent(0,
+          false,
+          [2],
+          contentBuyer.address)
     ).to.revertedWith("Content part is already bought");
   });
 
@@ -1202,12 +1187,11 @@ describe("Platform Treasury Contract - Content", function () {
         contractPlatformTreasury.address,
         ethers.utils.parseEther("999999999999.0")
       );
-    const purchase_udaoc_voucher = [0, true, [1], ethers.constants.AddressZero];
 
     await expect(
       contractPlatformTreasury
         .connect(contentBuyer)
-        .buyContent(purchase_udaoc_voucher)
+        .buyContent(0, true, [1], ethers.constants.AddressZero)
     ).to.revertedWith("Content does not exist!");
   });
 
@@ -1391,12 +1375,11 @@ describe("Platform Treasury Contract - Content", function () {
         contractPlatformTreasury.address,
         ethers.utils.parseEther("999999999999.0")
       );
-    const purchase_udaoc_voucher = [0, true, [1], ethers.constants.AddressZero];
 
     await expect(
       contractPlatformTreasury
         .connect(contentBuyer)
-        .buyContent(purchase_udaoc_voucher)
+        .buyContent(0, true, [1], ethers.constants.AddressZero)
     ).to.revertedWith("You are banned");
   });
 
@@ -1581,12 +1564,10 @@ describe("Platform Treasury Contract - Content", function () {
     /// Set BAN
     await contractRoleManager.setBan(contentCreator.address, true);
 
-    const purchase_udaoc_voucher = [0, true, [1], ethers.constants.AddressZero];
-
     await expect(
       contractPlatformTreasury
         .connect(contentBuyer)
-        .buyContent(purchase_udaoc_voucher)
+        .buyContent(0, true, [1], ethers.constants.AddressZero)
     ).to.revertedWith("Instructor is banned");
   });
 
@@ -1770,12 +1751,10 @@ describe("Platform Treasury Contract - Content", function () {
     /// Set KYC to false
     await contractRoleManager.setKYC(contentCreator.address, false);
 
-    const purchase_udaoc_voucher = [0, true, [1], ethers.constants.AddressZero];
-
     await expect(
       contractPlatformTreasury
         .connect(contentBuyer)
-        .buyContent(purchase_udaoc_voucher)
+        .buyContent(0, true, [1], ethers.constants.AddressZero)
     ).to.revertedWith("Instructor is not KYCed");
   });
 
@@ -1958,12 +1937,10 @@ describe("Platform Treasury Contract - Content", function () {
 
     await contractRoleManager.setKYC(contentBuyer.address, false);
 
-    const purchase_udaoc_voucher = [0, true, [1], ethers.constants.AddressZero];
-
     await expect(
       contractPlatformTreasury
         .connect(contentBuyer)
-        .buyContent(purchase_udaoc_voucher)
+        .buyContent(0, true, [1], ethers.constants.AddressZero)
     ).to.revertedWith("You are not KYCed");
   });
 
@@ -2149,24 +2126,18 @@ describe("Platform Treasury Contract - Content", function () {
         contractPlatformTreasury.address,
         ethers.utils.parseEther("999999999999.0")
       );
-    const purchase_udaoc_voucher = [0, true, [1], ethers.constants.AddressZero];
 
     await contractPlatformTreasury
       .connect(contentBuyer)
-      .buyContent(purchase_udaoc_voucher);
-
-    const purchase_udaoc_voucher2 = [
-      0,
-      false,
-      [3],
-      contentBuyer.address,
-      ethers.constants.AddressZero,
-    ];
+      .buyContent(0, true, [1], ethers.constants.AddressZero);
 
     await expect(
       contractPlatformTreasury
         .connect(contentBuyer)
-        .buyContent(purchase_udaoc_voucher2)
+        .buyContent(0,
+          false,
+          [3],
+          contentBuyer.address)
     ).to.revertedWith("Full content is already bought");
   });
 
@@ -2352,12 +2323,11 @@ describe("Platform Treasury Contract - Content", function () {
         contractPlatformTreasury.address,
         ethers.utils.parseEther("999999999999.0")
       );
-    const purchase_udaoc_voucher = [0, true, [1], ethers.constants.AddressZero];
 
     await expect(
       contractPlatformTreasury
         .connect(contentBuyer)
-        .buyContent(purchase_udaoc_voucher)
+        .buyContent(0, true, [1], ethers.constants.AddressZero)
     ).to.revertedWith("Content is not validated yet");
   });
 
@@ -2543,17 +2513,14 @@ describe("Platform Treasury Contract - Content", function () {
         contractPlatformTreasury.address,
         ethers.utils.parseEther("999999999999.0")
       );
-    const purchase_udaoc_voucher = [
-      0,
-      false,
-      [0],
-      ethers.constants.AddressZero,
-    ];
 
     await expect(
       contractPlatformTreasury
         .connect(contentBuyer)
-        .buyContent(purchase_udaoc_voucher)
+        .buyContent(0,
+          false,
+          [0],
+          ethers.constants.AddressZero,)
     ).to.revertedWith(
       "Purchased parts says 0, but fullContentPurchase is false!"
     );
@@ -2741,17 +2708,14 @@ describe("Platform Treasury Contract - Content", function () {
         contractPlatformTreasury.address,
         ethers.utils.parseEther("999999999999.0")
       );
-    const purchase_udaoc_voucher = [
-      0,
-      false,
-      [20],
-      ethers.constants.AddressZero,
-    ];
 
     await expect(
       contractPlatformTreasury
         .connect(contentBuyer)
-        .buyContent(purchase_udaoc_voucher)
+        .buyContent(0,
+          false,
+          [20],
+          ethers.constants.AddressZero,)
     ).to.revertedWith("Part does not exist!");
   });
 
@@ -2934,11 +2898,9 @@ describe("Platform Treasury Contract - Content", function () {
         ethers.utils.parseEther("999999999999.0")
       );
 
-    const purchase_udaoc_voucher = [0, true, [1], validator1.address];
-
     await contractPlatformTreasury
       .connect(contentBuyer)
-      .buyContent(purchase_udaoc_voucher);
+      .buyContent(0, true, [1], validator1.address);
     const result = await contractPlatformTreasury
       .connect(contentBuyer)
       .getOwnedContent(validator1.address);
@@ -3130,11 +3092,9 @@ describe("Platform Treasury Contract - Content", function () {
         ethers.utils.parseEther("999999999999.0")
       );
 
-    const purchase_udaoc_voucher = [0, false, [1, 2], validator1.address];
-
     await contractPlatformTreasury
       .connect(contentBuyer)
-      .buyContent(purchase_udaoc_voucher);
+      .buyContent(0, false, [1, 2], validator1.address);
     const result = await contractPlatformTreasury
       .connect(contentBuyer)
       .getOwnedContent(validator1.address);
@@ -3324,12 +3284,10 @@ describe("Platform Treasury Contract - Content", function () {
         ethers.utils.parseEther("999999999999.0")
       );
 
-    const purchase_udaoc_voucher = [0, true, [1], validator1.address];
-
     await expect(
       contractPlatformTreasury
         .connect(contentBuyer)
-        .buyContent(purchase_udaoc_voucher)
+        .buyContent(0, true, [1], validator1.address)
     ).to.revertedWith("Gift receiver is not KYCed");
   });
 
@@ -3512,12 +3470,10 @@ describe("Platform Treasury Contract - Content", function () {
         ethers.utils.parseEther("999999999999.0")
       );
 
-    const purchase_udaoc_voucher = [0, true, [1], validator1.address];
-
     await expect(
       contractPlatformTreasury
         .connect(contentBuyer)
-        .buyContent(purchase_udaoc_voucher)
+        .buyContent(0, true, [1], validator1.address)
     ).to.revertedWith("Gift receiver is banned");
   });
 
