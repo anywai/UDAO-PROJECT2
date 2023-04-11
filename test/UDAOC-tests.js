@@ -115,12 +115,7 @@ async function deploy() {
   const result_2 = await tx_2.wait();
 
   let factoryPriceGetter = await ethers.getContractFactory("PriceGetter");
-  const contractPriceGetter = await factoryPriceGetter.deploy(
-    "0x1F98431c8aD98523631AE4a59f267346ea31F984",
-    contractUDAO.address,
-    "0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270",
-    3000
-  );
+  
 
   await helpers.time.increase(2);
   await helpers.time.increase(2);
@@ -140,6 +135,13 @@ async function deploy() {
 
   // Price Getter End
   const contractRoleManager = await factoryRoleManager.deploy();
+  const contractPriceGetter = await factoryPriceGetter.deploy(
+    "0x1F98431c8aD98523631AE4a59f267346ea31F984",
+    contractUDAO.address,
+    "0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270",
+    3000,
+    contractRoleManager.address
+  );
 
   const contractUDAOCertificate = await factoryUDAOCertificate.deploy(
     contractRoleManager.address
@@ -373,11 +375,13 @@ describe("UDAOC Contract", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
 
     const udaoc_voucher = [
-      1,
       [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
-      "usd",
+      "udao",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
+      ethers.utils.parseEther("2"),
+      "udao",
+      true,
       true,
       "Content Name",
       "Content Description",
@@ -390,7 +394,7 @@ describe("UDAOC Contract", function () {
       .withArgs(
         "0x0000000000000000000000000000000000000000",
         contentCreator.address,
-        udaoc_voucher[0]
+        0
       );
   });
 
@@ -422,11 +426,13 @@ describe("UDAOC Contract", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
 
     const udaoc_voucher = [
-      1,
       [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
-      "usd",
+      "udao",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
+      ethers.utils.parseEther("2"),
+      "udao",
+      true,
       true,
       "Content Name",
       "Content Description",
@@ -510,11 +516,13 @@ describe("UDAOC Contract", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
 
     const udaoc_voucher = [
-      1,
       [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
-      "usd",
+      "udao",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
+      ethers.utils.parseEther("2"),
+      "udao",
+      true,
       true,
       "Content Name",
       "Content Description",
@@ -527,9 +535,9 @@ describe("UDAOC Contract", function () {
       .withArgs(
         "0x0000000000000000000000000000000000000000",
         contentCreator.address,
-        udaoc_voucher[0]
+        0
       );
-    expect(await contractUDAOContent.tokenURI(1)).to.eql(
+    expect(await contractUDAOContent.tokenURI(0)).to.eql(
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi"
     );
   });
@@ -563,11 +571,13 @@ describe("UDAOC Contract", function () {
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
     const udaoc_voucher = [
-      1,
       [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
-      "usd",
+      "udao",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
+      ethers.utils.parseEther("2"),
+      "udao",
+      true,
       true,
       "Content Name",
       "Content Description",
@@ -580,15 +590,15 @@ describe("UDAOC Contract", function () {
       .withArgs(
         "0x0000000000000000000000000000000000000000",
         contentCreator.address,
-        udaoc_voucher[0]
+        0
       );
     await expect(
       contractUDAOContent
         .connect(contentCreator)
-        .transferFrom(contentCreator.address, contentBuyer.address, 1)
+        .transferFrom(contentCreator.address, contentBuyer.address, 0)
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
-      .withArgs(contentCreator.address, contentBuyer.address, 1);
+      .withArgs(contentCreator.address, contentBuyer.address, 0);
   });
   it("Should fail to transfer token if sender is not KYCed", async function () {
     const {
@@ -619,11 +629,13 @@ describe("UDAOC Contract", function () {
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
     const udaoc_voucher = [
-      1,
       [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
-      "usd",
+      "udao",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
+      ethers.utils.parseEther("2"),
+      "udao",
+      true,
       true,
       "Content Name",
       "Content Description",
@@ -636,14 +648,14 @@ describe("UDAOC Contract", function () {
       .withArgs(
         "0x0000000000000000000000000000000000000000",
         contentCreator.address,
-        udaoc_voucher[0]
+        0
       );
     await contractRoleManager.setKYC(contentCreator.address, false);
 
     await expect(
       contractUDAOContent
         .connect(contentCreator)
-        .transferFrom(contentCreator.address, contentBuyer.address, 1)
+        .transferFrom(contentCreator.address, contentBuyer.address, 0)
     ).to.revertedWith("Sender is not KYCed!");
   });
   it("Should fail to transfer token if sender is banned", async function () {
@@ -675,11 +687,13 @@ describe("UDAOC Contract", function () {
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
     const udaoc_voucher = [
-      1,
       [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
-      "usd",
+      "udao",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
+      ethers.utils.parseEther("2"),
+      "udao",
+      true,
       true,
       "Content Name",
       "Content Description",
@@ -692,14 +706,14 @@ describe("UDAOC Contract", function () {
       .withArgs(
         "0x0000000000000000000000000000000000000000",
         contentCreator.address,
-        udaoc_voucher[0]
+        0
       );
 
     await contractRoleManager.setBan(contentCreator.address, true);
     await expect(
       contractUDAOContent
         .connect(contentCreator)
-        .transferFrom(contentCreator.address, contentBuyer.address, 1)
+        .transferFrom(contentCreator.address, contentBuyer.address, 0)
     ).to.revertedWith("Sender is banned!");
   });
   it("Should fail to transfer token if receiver is banned", async function () {
@@ -732,11 +746,13 @@ describe("UDAOC Contract", function () {
     await contractRoleManager.setBan(contentBuyer.address, true);
 
     const udaoc_voucher = [
-      1,
       [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
-      "usd",
+      "udao",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
+      ethers.utils.parseEther("2"),
+      "udao",
+      true,
       true,
       "Content Name",
       "Content Description",
@@ -749,12 +765,12 @@ describe("UDAOC Contract", function () {
       .withArgs(
         "0x0000000000000000000000000000000000000000",
         contentCreator.address,
-        udaoc_voucher[0]
+        0
       );
     await expect(
       contractUDAOContent
         .connect(contentCreator)
-        .transferFrom(contentCreator.address, contentBuyer.address, 1)
+        .transferFrom(contentCreator.address, contentBuyer.address, 0)
     ).to.revertedWith("Receiver is banned!");
   });
   it("Should fail to transfer token if sender is not KYCed", async function () {
@@ -786,11 +802,13 @@ describe("UDAOC Contract", function () {
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
     const udaoc_voucher = [
-      1,
       [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
-      "usd",
+      "udao",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
+      ethers.utils.parseEther("2"),
+      "udao",
+      true,
       true,
       "Content Name",
       "Content Description",
@@ -803,14 +821,14 @@ describe("UDAOC Contract", function () {
       .withArgs(
         "0x0000000000000000000000000000000000000000",
         contentCreator.address,
-        udaoc_voucher[0]
+        0
       );
     await contractRoleManager.setKYC(contentCreator.address, false);
 
     await expect(
       contractUDAOContent
         .connect(contentCreator)
-        .transferFrom(contentCreator.address, contentBuyer.address, 1)
+        .transferFrom(contentCreator.address, contentBuyer.address, 0)
     ).to.revertedWith("Sender is not KYCed!");
   });
 
@@ -843,11 +861,13 @@ describe("UDAOC Contract", function () {
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
     const udaoc_voucher = [
-      1,
       [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
-      "usd",
+      "udao",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
+      ethers.utils.parseEther("2"),
+      "udao",
+      true,
       true,
       "Content Name",
       "Content Description",
@@ -860,14 +880,14 @@ describe("UDAOC Contract", function () {
       .withArgs(
         "0x0000000000000000000000000000000000000000",
         contentCreator.address,
-        udaoc_voucher[0]
+        0
       );
-    await expect(contractUDAOContent.connect(contentCreator).burn(1))
+    await expect(contractUDAOContent.connect(contentCreator).burn(0))
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
         contentCreator.address,
         "0x0000000000000000000000000000000000000000",
-        udaoc_voucher[0]
+        0
       );
   });
 
@@ -900,11 +920,13 @@ describe("UDAOC Contract", function () {
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
     const udaoc_voucher = [
-      1,
       [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
-      "usd",
+      "udao",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
+      ethers.utils.parseEther("2"),
+      "udao",
+      true,
       true,
       "Content Name",
       "Content Description",
@@ -917,11 +939,11 @@ describe("UDAOC Contract", function () {
       .withArgs(
         "0x0000000000000000000000000000000000000000",
         contentCreator.address,
-        udaoc_voucher[0]
+        0
       );
 
     await expect(
-      contractUDAOContent.connect(contentBuyer).burn(1)
+      contractUDAOContent.connect(contentBuyer).burn(0)
     ).to.revertedWith("You are not the owner of token");
   });
 
@@ -986,11 +1008,13 @@ describe("UDAOC Contract", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
 
     const udaoc_voucher = [
-      1,
       [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
-      "usd",
+      "udao",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
+      ethers.utils.parseEther("2"),
+      "udao",
+      false,
       false,
       "Content Name",
       "Content Description",
@@ -1003,10 +1027,10 @@ describe("UDAOC Contract", function () {
       .withArgs(
         "0x0000000000000000000000000000000000000000",
         contentCreator.address,
-        udaoc_voucher[0]
+        0
       );
-    await contractUDAOContent.connect(contentCreator).enableCoaching(1);
-    expect(await contractUDAOContent.isCoachingEnabled(1)).to.be.eql(true);
+    await contractUDAOContent.connect(contentCreator).enableCoaching(0);
+    expect(await contractUDAOContent.isCoachingEnabled(0)).to.be.eql(true);
   });
 
   it("Should disable coaching for content", async function () {
@@ -1037,11 +1061,13 @@ describe("UDAOC Contract", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
 
     const udaoc_voucher = [
-      1,
       [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
-      "usd",
+      "udao",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
+      ethers.utils.parseEther("2"),
+      "udao",
+      true,
       true,
       "Content Name",
       "Content Description",
@@ -1054,10 +1080,10 @@ describe("UDAOC Contract", function () {
       .withArgs(
         "0x0000000000000000000000000000000000000000",
         contentCreator.address,
-        udaoc_voucher[0]
+        0
       );
-    await contractUDAOContent.connect(contentCreator).disableCoaching(1);
-    expect(await contractUDAOContent.isCoachingEnabled(1)).to.be.eql(false);
+    await contractUDAOContent.connect(contentCreator).disableCoaching(0);
+    expect(await contractUDAOContent.isCoachingEnabled(0)).to.be.eql(false);
   });
 
   it("Should fail to enable coaching for content if not owner", async function () {
@@ -1088,11 +1114,13 @@ describe("UDAOC Contract", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
 
     const udaoc_voucher = [
-      1,
       [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
-      "usd",
+      "udao",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
+      ethers.utils.parseEther("2"),
+      "udao",
+      false,
       false,
       "Content Name",
       "Content Description",
@@ -1105,10 +1133,10 @@ describe("UDAOC Contract", function () {
       .withArgs(
         "0x0000000000000000000000000000000000000000",
         contentCreator.address,
-        udaoc_voucher[0]
+        0
       );
     await expect(
-      contractUDAOContent.connect(contentBuyer).enableCoaching(1)
+      contractUDAOContent.connect(contentBuyer).enableCoaching(0)
     ).to.revertedWith("You are not the owner of token");
   });
 
@@ -1140,11 +1168,13 @@ describe("UDAOC Contract", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
 
     const udaoc_voucher = [
-      1,
       [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
-      "usd",
+      "udao",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
+      ethers.utils.parseEther("2"),
+      "udao",
+      true,
       true,
       "Content Name",
       "Content Description",
@@ -1157,10 +1187,10 @@ describe("UDAOC Contract", function () {
       .withArgs(
         "0x0000000000000000000000000000000000000000",
         contentCreator.address,
-        udaoc_voucher[0]
+        0
       );
     await expect(
-      contractUDAOContent.connect(contentBuyer).disableCoaching(1)
+      contractUDAOContent.connect(contentBuyer).disableCoaching(0)
     ).to.revertedWith("You are not the owner of token");
   });
 });
