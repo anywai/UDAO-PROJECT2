@@ -452,6 +452,7 @@ contract UDAOStaker is RoleController, EIP712 {
     }
 
     /// @notice staking function to become a governance member
+    /// TODO No KYC check before staking
     function stakeForGovernance(
         GovernanceStakeVoucher calldata voucher
     ) public whenNotPaused {
