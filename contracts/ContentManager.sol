@@ -104,6 +104,10 @@ abstract contract ContentManager is EIP712, BasePlatform {
     }
 
     /// @notice allows users to purchase a content
+    /// @param tokenId id of the content
+    /// @param fullContentPurchase is full content purchased
+    /// @param purchasedParts parts of the content purchased
+    /// @param giftReceiver address of the gift receiver if purchase is a gift
     function buyContent(uint256 tokenId, bool fullContentPurchase, uint256[] calldata purchasedParts, address giftReceiver) external whenNotPaused {
         uint256 partIdLength = purchasedParts.length;
         uint256 priceToPayUdao;
