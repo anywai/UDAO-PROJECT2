@@ -14,4 +14,4 @@ pipelines:
               - node
             script:
               - npm install
-              - npx hardhat coverage
+              - npx hardhat test
