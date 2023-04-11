@@ -446,22 +446,18 @@ describe("Platform Treasury Contract - Content", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
-    /// Mint content with voucher
-    const udaoc_voucher = [
-      [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
+
+    
+
+    await expect(
+      contractUDAOContent.connect(contentCreator).redeem([ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
       "udao",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       ethers.utils.parseEther("2"),
       "udao",
       true,
-      true,
-      "Content Name",
-      "Content Description",
-    ];
-
-    await expect(
-      contractUDAOContent.connect(contentCreator).redeem(udaoc_voucher)
+      true,)
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
@@ -779,9 +775,11 @@ describe("Platform Treasury Contract - Content", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
-    /// Mint content with voucher
-    const udaoc_voucher = [
-      [
+
+    
+
+    await expect(
+      contractUDAOContent.connect(contentCreator).redeem([
         ethers.utils.parseEther("1"),
         ethers.utils.parseEther("1"),
         ethers.utils.parseEther("1"),
@@ -793,13 +791,7 @@ describe("Platform Treasury Contract - Content", function () {
       ethers.utils.parseEther("2"),
       "udao",
       true,
-      true,
-      "Content Name",
-      "Content Description",
-    ];
-
-    await expect(
-      contractUDAOContent.connect(contentCreator).redeem(udaoc_voucher)
+      true,)
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
@@ -979,9 +971,11 @@ describe("Platform Treasury Contract - Content", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
-    /// Mint content with voucher
-    const udaoc_voucher = [
-      [
+
+    
+
+    await expect(
+      contractUDAOContent.connect(contentCreator).redeem([
         ethers.utils.parseEther("1"),
         ethers.utils.parseEther("1"),
         ethers.utils.parseEther("1"),
@@ -993,13 +987,7 @@ describe("Platform Treasury Contract - Content", function () {
       ethers.utils.parseEther("2"),
       "udao",
       true,
-      true,
-      "Content Name",
-      "Content Description",
-    ];
-
-    await expect(
-      contractUDAOContent.connect(contentCreator).redeem(udaoc_voucher)
+      true,)
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
@@ -1233,22 +1221,18 @@ describe("Platform Treasury Contract - Content", function () {
     /// Set BAN
     await contractRoleManager.setBan(contentBuyer.address, true);
 
-    /// Mint content with voucher
-    const udaoc_voucher = [
-      [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
+
+    
+
+    await expect(
+      contractUDAOContent.connect(contentCreator).redeem([ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
       "udao",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       ethers.utils.parseEther("2"),
       "udao",
       true,
-      true,
-      "Content Name",
-      "Content Description",
-    ];
-
-    await expect(
-      contractUDAOContent.connect(contentCreator).redeem(udaoc_voucher)
+      true,)
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
@@ -1418,22 +1402,18 @@ describe("Platform Treasury Contract - Content", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
-    /// Mint content with voucher
-    const udaoc_voucher = [
-      [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
+
+    
+
+    await expect(
+      contractUDAOContent.connect(contentCreator).redeem([ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
       "udao",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       ethers.utils.parseEther("2"),
       "udao",
       true,
-      true,
-      "Content Name",
-      "Content Description",
-    ];
-
-    await expect(
-      contractUDAOContent.connect(contentCreator).redeem(udaoc_voucher)
+      true,)
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
@@ -1605,22 +1585,18 @@ describe("Platform Treasury Contract - Content", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
-    /// Mint content with voucher
-    const udaoc_voucher = [
-      [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
+
+    
+
+    await expect(
+      contractUDAOContent.connect(contentCreator).redeem([ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
       "udao",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       ethers.utils.parseEther("2"),
       "udao",
       true,
-      true,
-      "Content Name",
-      "Content Description",
-    ];
-
-    await expect(
-      contractUDAOContent.connect(contentCreator).redeem(udaoc_voucher)
+      true,)
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
@@ -1792,22 +1768,18 @@ describe("Platform Treasury Contract - Content", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
-    /// Mint content with voucher
-    const udaoc_voucher = [
-      [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
+
+    
+
+    await expect(
+      contractUDAOContent.connect(contentCreator).redeem([ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
       "udao",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       ethers.utils.parseEther("2"),
       "udao",
       true,
-      true,
-      "Content Name",
-      "Content Description",
-    ];
-
-    await expect(
-      contractUDAOContent.connect(contentCreator).redeem(udaoc_voucher)
+      true,)
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
@@ -1979,9 +1951,11 @@ describe("Platform Treasury Contract - Content", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
-    /// Mint content with voucher
-    const udaoc_voucher = [
-      [
+
+    
+
+    await expect(
+      contractUDAOContent.connect(contentCreator).redeem([
         ethers.utils.parseEther("1"),
         ethers.utils.parseEther("1"),
         ethers.utils.parseEther("1"),
@@ -1993,13 +1967,7 @@ describe("Platform Treasury Contract - Content", function () {
       ethers.utils.parseEther("2"),
       "udao",
       true,
-      true,
-      "Content Name",
-      "Content Description",
-    ];
-
-    await expect(
-      contractUDAOContent.connect(contentCreator).redeem(udaoc_voucher)
+      true,)
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
@@ -2176,9 +2144,11 @@ describe("Platform Treasury Contract - Content", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
-    /// Mint content with voucher
-    const udaoc_voucher = [
-      [
+
+    
+
+    await expect(
+      contractUDAOContent.connect(contentCreator).redeem([
         ethers.utils.parseEther("1"),
         ethers.utils.parseEther("1"),
         ethers.utils.parseEther("1"),
@@ -2190,13 +2160,7 @@ describe("Platform Treasury Contract - Content", function () {
       ethers.utils.parseEther("2"),
       "udao",
       true,
-      true,
-      "Content Name",
-      "Content Description",
-    ];
-
-    await expect(
-      contractUDAOContent.connect(contentCreator).redeem(udaoc_voucher)
+      true,)
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
@@ -2366,9 +2330,11 @@ describe("Platform Treasury Contract - Content", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
-    /// Mint content with voucher
-    const udaoc_voucher = [
-      [
+
+    
+
+    await expect(
+      contractUDAOContent.connect(contentCreator).redeem([
         ethers.utils.parseEther("1"),
         ethers.utils.parseEther("1"),
         ethers.utils.parseEther("1"),
@@ -2380,13 +2346,7 @@ describe("Platform Treasury Contract - Content", function () {
       ethers.utils.parseEther("2"),
       "udao",
       true,
-      true,
-      "Content Name",
-      "Content Description",
-    ];
-
-    await expect(
-      contractUDAOContent.connect(contentCreator).redeem(udaoc_voucher)
+      true,)
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
@@ -2561,9 +2521,11 @@ describe("Platform Treasury Contract - Content", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
-    /// Mint content with voucher
-    const udaoc_voucher = [
-      [
+
+    
+
+    await expect(
+      contractUDAOContent.connect(contentCreator).redeem([
         ethers.utils.parseEther("1"),
         ethers.utils.parseEther("1"),
         ethers.utils.parseEther("1"),
@@ -2575,13 +2537,7 @@ describe("Platform Treasury Contract - Content", function () {
       ethers.utils.parseEther("2"),
       "udao",
       true,
-      true,
-      "Content Name",
-      "Content Description",
-    ];
-
-    await expect(
-      contractUDAOContent.connect(contentCreator).redeem(udaoc_voucher)
+      true,)
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
@@ -2755,22 +2711,18 @@ describe("Platform Treasury Contract - Content", function () {
     await contractRoleManager.setKYC(contentBuyer.address, true);
     await contractRoleManager.setKYC(validator1.address, true);
 
-    /// Mint content with voucher
-    const udaoc_voucher = [
-      [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
+
+    
+
+    await expect(
+      contractUDAOContent.connect(contentCreator).redeem([ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
       "udao",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       ethers.utils.parseEther("2"),
       "udao",
       true,
-      true,
-      "Content Name",
-      "Content Description",
-    ];
-
-    await expect(
-      contractUDAOContent.connect(contentCreator).redeem(udaoc_voucher)
+      true,)
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
@@ -2945,9 +2897,11 @@ describe("Platform Treasury Contract - Content", function () {
     await contractRoleManager.setKYC(contentBuyer.address, true);
     await contractRoleManager.setKYC(validator1.address, true);
 
-    /// Mint content with voucher
-    const udaoc_voucher = [
-      [
+
+    
+
+    await expect(
+      contractUDAOContent.connect(contentCreator).redeem( [
         ethers.utils.parseEther("1"),
         ethers.utils.parseEther("1"),
         ethers.utils.parseEther("1"),
@@ -2958,13 +2912,7 @@ describe("Platform Treasury Contract - Content", function () {
       ethers.utils.parseEther("2"),
       "udao",
       true,
-      true,
-      "Content Name",
-      "Content Description",
-    ];
-
-    await expect(
-      contractUDAOContent.connect(contentCreator).redeem(udaoc_voucher)
+      true,)
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
@@ -3141,22 +3089,18 @@ describe("Platform Treasury Contract - Content", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
-    /// Mint content with voucher
-    const udaoc_voucher = [
-      [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
+
+    
+
+    await expect(
+      contractUDAOContent.connect(contentCreator).redeem([ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
       "udao",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       ethers.utils.parseEther("2"),
       "udao",
       true,
-      true,
-      "Content Name",
-      "Content Description",
-    ];
-
-    await expect(
-      contractUDAOContent.connect(contentCreator).redeem(udaoc_voucher)
+      true,)
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
@@ -3327,22 +3271,18 @@ describe("Platform Treasury Contract - Content", function () {
     await contractRoleManager.setKYC(contentBuyer.address, true);
     await contractRoleManager.setBan(validator1.address, true);
 
-    /// Mint content with voucher
-    const udaoc_voucher = [
-      [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
+
+    
+
+    await expect(
+      contractUDAOContent.connect(contentCreator).redeem([ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
       "udao",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       ethers.utils.parseEther("2"),
       "udao",
       true,
-      true,
-      "Content Name",
-      "Content Description",
-    ];
-
-    await expect(
-      contractUDAOContent.connect(contentCreator).redeem(udaoc_voucher)
+      true,)
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
@@ -3512,22 +3452,18 @@ describe("Platform Treasury Contract - Content", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
-    /// Mint content with voucher
-    const udaoc_voucher = [
-      [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
+
+    
+
+    await expect(
+      contractUDAOContent.connect(contentCreator).redeem([ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
       "udao",
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
       contentCreator.address,
       ethers.utils.parseEther("2"),
       "udao",
       true,
-      true,
-      "Content Name",
-      "Content Description",
-    ];
-
-    await expect(
-      contractUDAOContent.connect(contentCreator).redeem(udaoc_voucher)
+      true,)
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
