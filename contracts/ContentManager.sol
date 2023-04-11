@@ -34,18 +34,6 @@ abstract contract ContentManager is EIP712, BasePlatform {
     );
 
     /// @notice Represents usage rights for a content (or part)
-    struct ContentPurchaseVoucher {
-        /// @notice The id of the token (content) to be redeemed.
-        uint256 tokenId;
-        /// @notice True, if full content is purchased
-        bool fullContentPurchase;
-        /// @notice Purchased parts
-        uint256[] purchasedParts;
-        /// @notice Address of the gift receiver if purhcase is a gift
-        address giftReceiver;
-    }
-
-    /// @notice Represents usage rights for a content (or part)
     /**
      * @notice struct to hold content discount voucher information
      * @param tokenId id of the content
@@ -74,15 +62,6 @@ abstract contract ContentManager is EIP712, BasePlatform {
         address giftReceiver;
         /// @notice the EIP-712 signature of all other fields in the ContentDiscountVoucher struct.
         bytes signature;
-    }
-
-    /// @notice Represents usage rights for a coaching service
-    struct CoachingPurchaseVoucher {
-        /// @notice The id of the token (content) to be redeemed.
-        uint256 tokenId;
-        // TODO isRefundable should not be here
-        /// @notice if the coaching service is refundable or not
-        bool isRefundable;
     }
 
     // wallet => content token Ids
@@ -125,12 +104,8 @@ abstract contract ContentManager is EIP712, BasePlatform {
     }
 
     /// @notice allows users to purchase a content
-    /// @param voucher voucher for the content purchase
-    function buyContent(
-        ContentPurchaseVoucher calldata voucher
-    ) external whenNotPaused {
-        uint256 tokenId = voucher.tokenId;
-        uint256 partIdLength = voucher.purchasedParts.length;
+    function buyContent(uint256 tokenId, bool fullContentPurchase, uint256[] calldata purchasedParts, address giftReceiver) external whenNotPaused {
+        uint256 partIdLength = purchasedParts.length;
         uint256 priceToPayUdao;
         uint256 priceToPay;
         uint256 pricePerPart;
@@ -138,8 +113,8 @@ abstract contract ContentManager is EIP712, BasePlatform {
         address contentReceiver = msg.sender;
 
         require(udaoc.exists(tokenId), "Content does not exist!");
-        if (voucher.giftReceiver != address(0)) {
-            contentReceiver = voucher.giftReceiver;
+        if (giftReceiver != address(0)) {
+            contentReceiver = giftReceiver;
             require(!IRM.isBanned(contentReceiver), "Gift receiver is banned");
             require(IRM.isKYCed(contentReceiver), "Gift receiver is not KYCed");
         }
@@ -155,26 +130,26 @@ abstract contract ContentManager is EIP712, BasePlatform {
         );
 
         /// @dev Get the total payment amount first
-        if (voucher.fullContentPurchase) {
+        if (fullContentPurchase) {
             (priceToPay, sellingCurrency) = udaoc.getContentPriceAndCurrency(
                 tokenId,
                 0
             );
         } else {
             require(
-                voucher.purchasedParts[0] != 0,
+                purchasedParts[0] != 0,
                 "Purchased parts says 0, but fullContentPurchase is false!"
             );
             for (uint256 j; j < partIdLength; j++) {
                 require(
-                    voucher.purchasedParts[j] <
+                    purchasedParts[j] <
                         udaoc.getPartNumberOfContent(tokenId),
                     "Part does not exist!"
                 );
                 (pricePerPart, sellingCurrency) = udaoc
                     .getContentPriceAndCurrency(
                         tokenId,
-                        voucher.purchasedParts[j]
+                        purchasedParts[j]
                     );
                 priceToPay += pricePerPart;
             }
@@ -196,21 +171,21 @@ abstract contract ContentManager is EIP712, BasePlatform {
         /// @dev transfer the tokens from buyer to contract
         udao.transferFrom(msg.sender, address(this), priceToPayUdao);
 
-        if (voucher.fullContentPurchase) {
+        if (fullContentPurchase) {
             _updateOwned(tokenId, 0, contentReceiver);
         } else {
             for (uint256 j; j < partIdLength; j++) {
                 _updateOwned(
                     tokenId,
-                    voucher.purchasedParts[j],
+                    purchasedParts[j],
                     contentReceiver
                 );
             }
         }
 
         emit ContentBought(
-            voucher.tokenId,
-            voucher.purchasedParts,
+            tokenId,
+            purchasedParts,
             priceToPayUdao,
             msg.sender
         );
