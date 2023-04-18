@@ -25,6 +25,7 @@ contract UDAOGovernor is
 {
     IUDAOStaker stakingContract;
 
+    
     constructor(
         IVotes _token,
         TimelockController _timelock,
@@ -32,6 +33,7 @@ contract UDAOGovernor is
         address rmAddress
     )
         Governor("UDAOGovernor")
+        /// @dev 1 block mined in 2 seconds in Polygon
         GovernorSettings(
             302400, /* 1 week voting delay */
             302400, /* 1 week voting period duration*/

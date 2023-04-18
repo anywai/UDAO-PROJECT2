@@ -25,31 +25,6 @@ contract UDAOContent is IUDAOC, ERC721, ERC721URIStorage, RoleController {
     // tokenId => number of Parts
     mapping(uint => uint) private partNumberOfContent;
 
-    /// @notice Represents an un-minted NFT, which has not yet been recorded into the blockchain.
-    /// A signed voucher can be redeemed for a real NFT using the redeem function.
-    struct ContentVoucher {
-        /// @notice The price of the content, first price is the full price
-        uint256[] contentPrice;
-        /// @notice Name of the selling currency
-        string currencyName;
-        /// @notice The metadata URI to associate with this token.
-        string uri;
-        /// @notice Address of the redeemer
-        address redeemer;
-        /// @notice The price of the coaching service
-        uint256 coachingPrice;
-        /// @notice Name of the coaching currency
-        string coachingCurrencyName;
-        /// @notice Whether learner can buy coaching or not
-        bool isCoachingEnabled;
-        /// @notice Whether coaching is refundable or not
-        bool isCoachingRefundable;
-        /// @notice The name of the NFT
-        string name;
-        /// @notice The description of the NFT
-        string description;
-    }
-
     // tokenId => is coaching service buyable
     mapping(uint => bool) public coachingEnabled;
     // tokenId => coaching price
@@ -59,39 +34,55 @@ contract UDAOContent is IUDAOC, ERC721, ERC721URIStorage, RoleController {
     // tokenId => is coaching refundable
     mapping(uint => bool) public coachingRefundable;
 
+    // TODO No name or description for individual NFT. Is this a problem?
     /// @notice Redeems a ContentVoucher for an actual NFT, creating it in the process.
-    /// @param voucher A signed ContentVoucher that describes the NFT to be redeemed.
-    function redeem(ContentVoucher calldata voucher) public whenNotPaused {
+    /// @param _contentPrice The price of the content, first price is the full price
+    /// @param _currencyName Name of the selling currency
+    /// @param _uri The metadata URI to associate with this token.
+    /// @param _redeemer Address of the redeemer
+    /// @param _coachingPrice The price of the coaching service
+    /// @param _coachingCurrencyName Name of the coaching currency
+    /// @param _isCoachingEnabled Whether learner can buy coaching or not
+    /// @param _isCoachingRefundable Whether coaching is refundable or not
+    function redeem(
+        uint256[] calldata _contentPrice,
+        string calldata _currencyName,
+        string calldata _uri,
+        address _redeemer,
+        uint256 _coachingPrice,
+        string calldata _coachingCurrencyName,
+        bool _isCoachingEnabled,
+        bool _isCoachingRefundable) public whenNotPaused {
         uint tokenId = _tokenIds.current();
         // make sure redeemer is redeeming
-        require(voucher.redeemer == msg.sender, "You are not the redeemer");
+        require(_redeemer == msg.sender, "You are not the redeemer");
         //make sure redeemer is kyced
         require(IRM.isKYCed(msg.sender), "You are not KYCed");
         //make sure redeemer is not banned
         require(!IRM.isBanned(msg.sender), "Redeemer is banned!");
-        coachingEnabled[tokenId] = voucher.isCoachingEnabled;
-        coachingRefundable[tokenId] = voucher.isCoachingRefundable;
+        coachingEnabled[tokenId] = _isCoachingEnabled;
+        coachingRefundable[tokenId] = _isCoachingRefundable;
 
         // save the content price
-        uint partLength = voucher.contentPrice.length;
+        uint partLength = _contentPrice.length;
         partNumberOfContent[tokenId] = partLength;
 
         currencyName[tokenId] = keccak256(
-            abi.encodePacked(voucher.currencyName)
+            abi.encodePacked(_currencyName)
         );
 
-        coachingPrice[tokenId] = voucher.coachingPrice;
+        coachingPrice[tokenId] = _coachingPrice;
         coachingCurrency[tokenId] = keccak256(
-            abi.encodePacked(voucher.coachingCurrencyName)
+            abi.encodePacked(_coachingCurrencyName)
         );
 
         /// @dev First index is the full price for the content
         for (uint i = 0; i < partLength; i++) {
-            contentPrice[tokenId][i] = voucher.contentPrice[i];
+            contentPrice[tokenId][i] = _contentPrice[i];
         }
 
-        _mint(voucher.redeemer, tokenId);
-        _setTokenURI(tokenId, voucher.uri);
+        _mint(_redeemer, tokenId);
+        _setTokenURI(tokenId, _uri);
         _tokenIds.increment();
     }
 

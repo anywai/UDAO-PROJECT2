@@ -451,20 +451,24 @@ contract UDAOStaker is RoleController, EIP712 {
         return withdrawableBalance;
     }
 
+    /// TODO No KYC check before staking
     /// @notice staking function to become a governance member
+    /// @param _amount amount of UDAO token that will be staked
+    /// @param _days amount of days UDAO token that will be staked for
     function stakeForGovernance(
-        GovernanceStakeVoucher calldata voucher
+        uint256 _amount,
+        uint256 _days
     ) public whenNotPaused {
         require(!IRM.isBanned(msg.sender), "Address is banned");
-        udao.transferFrom(msg.sender, address(this), voucher.amount);
+        udao.transferFrom(msg.sender, address(this), _amount);
 
         GovernanceLock storage lock = governanceStakes[msg.sender].push();
-        lock.amount = voucher.amount;
-        lock.expire = block.timestamp + (voucher._days * (1 days));
-        lock.vpamount = voucher.amount * voucher._days;
+        lock.amount = _amount;
+        lock.expire = block.timestamp + (_days * (1 days));
+        lock.vpamount = _amount * _days;
         totalVotingPower += lock.vpamount;
         udaovp.mint(msg.sender, lock.vpamount);
-        emit GovernanceStake(msg.sender, voucher.amount, lock.vpamount);
+        emit GovernanceStake(msg.sender, _amount, lock.vpamount);
     }
 
     /// @notice withdraw function for released UDAO tokens
@@ -516,6 +520,7 @@ contract UDAOStaker is RoleController, EIP712 {
     function addVoteRewards(
         address voter
     ) external whenNotPaused onlyRole(GOVERNANCE_ROLE) {
+        require(udaovp.balanceOf(voter) > 0, "Voter has no voting power");
         uint256 votingPowerRatio = (udaovp.balanceOf(voter) * 10000) /
             totalVotingPower;
         rewardBalanceOf[voter] += votingPowerRatio * voteReward;

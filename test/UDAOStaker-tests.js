@@ -439,17 +439,11 @@ describe("UDAOStaker Contract", function () {
         ethers.utils.parseEther("999999999999.0")
       );
 
-    // Generate governance stake voucher
-    const staking_voucher = [
-      validatorCandidate.address,
-      ethers.utils.parseEther("10"),
-      30,
-    ];
-
     await expect(
       contractUDAOStaker
         .connect(governanceCandidate)
-        .stakeForGovernance(staking_voucher)
+        .stakeForGovernance(ethers.utils.parseEther("10"),
+        30)
     )
       .to.emit(contractUDAOStaker, "GovernanceStake") // transfer from null address to minter
       .withArgs(
@@ -496,17 +490,11 @@ describe("UDAOStaker Contract", function () {
         ethers.utils.parseEther("999999999999.0")
       );
 
-    // Generate governance stake voucher
-    const staking_voucher = [
-      validatorCandidate.address,
-      ethers.utils.parseEther("10"),
-      30,
-    ];
-
     await expect(
       contractUDAOStaker
         .connect(validatorCandidate)
-        .stakeForGovernance(staking_voucher)
+        .stakeForGovernance(ethers.utils.parseEther("10"),
+        30)
     )
       .to.emit(contractUDAOStaker, "GovernanceStake") // transfer from null address to minter
       .withArgs(
@@ -558,18 +546,12 @@ describe("UDAOStaker Contract", function () {
         ethers.utils.parseEther("999999999999.0")
       );
 
-    // Generate governance stake voucher
-    const staking_voucher = [
-      validatorCandidate.address,
-      ethers.utils.parseEther("10"),
-      30,
-    ];
-
     // Staking
     await expect(
       contractUDAOStaker
         .connect(validatorCandidate)
-        .stakeForGovernance(staking_voucher)
+        .stakeForGovernance( ethers.utils.parseEther("10"),
+        30)
     )
       .to.emit(contractUDAOStaker, "GovernanceStake") // transfer from null address to minter
       .withArgs(
@@ -677,18 +659,12 @@ describe("UDAOStaker Contract", function () {
         ethers.utils.parseEther("999999999999.0")
       );
 
-    // Generate governance stake voucher
-    const staking_voucher = [
-      validatorCandidate.address,
-      ethers.utils.parseEther("10"),
-      30,
-    ];
-
     // Staking
     await expect(
       contractUDAOStaker
         .connect(validatorCandidate)
-        .stakeForGovernance(staking_voucher)
+        .stakeForGovernance(ethers.utils.parseEther("10"),
+        30)
     )
       .to.emit(contractUDAOStaker, "GovernanceStake") // transfer from null address to minter
       .withArgs(
