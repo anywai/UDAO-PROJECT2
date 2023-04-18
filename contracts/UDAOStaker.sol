@@ -451,7 +451,7 @@ contract UDAOStaker is RoleController, EIP712 {
         return withdrawableBalance;
     }
 
-    /// TODO No KYC check before staking
+    
     /// @notice staking function to become a governance member
     /// @param _amount amount of UDAO token that will be staked
     /// @param _days amount of days UDAO token that will be staked for
@@ -459,6 +459,7 @@ contract UDAOStaker is RoleController, EIP712 {
         uint256 _amount,
         uint256 _days
     ) public whenNotPaused {
+        require(IRM.isKYCed(msg.sender), "Address is not KYCed");
         require(!IRM.isBanned(msg.sender), "Address is banned");
         udao.transferFrom(msg.sender, address(this), _amount);
 
