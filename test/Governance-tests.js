@@ -227,6 +227,9 @@ async function deploy() {
   const GOVERNANCE_ROLE = ethers.utils.keccak256(
     ethers.utils.toUtf8Bytes("GOVERNANCE_ROLE")
   );
+  const GOVERNANCE_CONTRACT = ethers.utils.keccak256(
+    ethers.utils.toUtf8Bytes("GOVERNANCE_CONTRACT")
+  );
   await contractRoleManager.grantRole(
     GOVERNANCE_ROLE,
     contractUDAOTimelockController.address
@@ -234,7 +237,7 @@ async function deploy() {
   
   // TODO IS THIS NECESSARY?
   await contractRoleManager.grantRole(
-    GOVERNANCE_ROLE,
+    GOVERNANCE_CONTRACT,
     contractUDAOGovernor.address
   );
 

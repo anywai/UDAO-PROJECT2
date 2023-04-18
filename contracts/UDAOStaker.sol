@@ -520,7 +520,7 @@ contract UDAOStaker is RoleController, EIP712 {
      */
     function addVoteRewards(
         address voter
-    ) external whenNotPaused onlyRole(GOVERNANCE_ROLE) {
+    ) external whenNotPaused onlyRole(GOVERNANCE_CONTRACT) {
         require(udaovp.balanceOf(voter) > 0, "Voter has no voting power");
         uint256 votingPowerRatio = (udaovp.balanceOf(voter) * 10000) /
             totalVotingPower;
