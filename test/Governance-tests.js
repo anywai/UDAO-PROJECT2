@@ -688,7 +688,7 @@ describe("Governance Contract", function () {
     const proposalStateAfterExecution = await contractUDAOGovernor.state(proposalId);
     await expect(proposalStateAfterExecution).to.equal(7);
     /// @dev Check if the required validators was set to 2
-    const requiredValidators = await contractValidationManager.requiredValidator();
+    const requiredValidators = await contractValidationManager.requiredValidators();
     await expect(requiredValidators).to.equal(2);
 
   

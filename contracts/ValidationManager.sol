@@ -56,7 +56,7 @@ contract ValidationManager is RoleController {
         uint validatorScore; // successfulValidation * validationScore
     }
 
-    uint128 public requiredValidator = 5;
+    uint128 public requiredValidators = 5;
     uint128 public minRequiredAcceptVote = 3;
     // validator => round => score
     mapping(address => mapping(uint256 => uint256))
@@ -126,7 +126,7 @@ contract ValidationManager is RoleController {
         /// @notice finalizes validation if enough validation is sent
         /// @param validationId id of the validation
         require(
-            validations[validationId].validationCount >= requiredValidator,
+            validations[validationId].validationCount >= requiredValidators,
             "Not enough validation"
         );
         if (
@@ -195,11 +195,11 @@ contract ValidationManager is RoleController {
     }
 
     /// @notice sets required validator vote count per content
-    /// @param _requiredValidator new required vote count
+    /// @param _requiredValidators new required vote count
     function setRequiredValidators(
-        uint128 _requiredValidator
+        uint128 _requiredValidators
     ) external onlyRole(GOVERNANCE_ROLE) {
-        requiredValidator = _requiredValidator;
+        requiredValidators = _requiredValidators;
     }
 
     /// @notice starts new validation for content
@@ -276,7 +276,7 @@ contract ValidationManager is RoleController {
             "You already have an assigned content"
         );
         require(
-            validations[validationId].validators.length < requiredValidator,
+            validations[validationId].validators.length < requiredValidators,
             "Content already have enough validators!"
         );
         require(
