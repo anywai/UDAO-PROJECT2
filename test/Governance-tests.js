@@ -44,7 +44,7 @@ async function setupGovernanceMember(contractRoleManager, contractUDAO, contract
     contractUDAOStaker
       .connect(governanceCandidate)
       .stakeForGovernance(ethers.utils.parseEther("10"),
-      30)
+        30)
   )
     .to.emit(contractUDAOStaker, "GovernanceStake") // transfer from null address to minter
     .withArgs(
@@ -150,7 +150,7 @@ async function deploy() {
   const result_2 = await tx_2.wait();
 
   let factoryPriceGetter = await ethers.getContractFactory("PriceGetter");
-  
+
   // Price Getter End
   const contractRoleManager = await factoryRoleManager.deploy();
   const contractPriceGetter = await factoryPriceGetter.deploy(
@@ -256,7 +256,7 @@ async function deploy() {
     GOVERNANCE_ROLE,
     contractUDAOTimelockController.address
   );
-  
+
   // TODO IS THIS NECESSARY?
   await contractRoleManager.grantRole(
     GOVERNANCE_CONTRACT,
@@ -379,7 +379,7 @@ describe("Governance Contract", function () {
     });
     const signerTimelockController = await ethers.provider.getSigner(contractUDAOTimelockController.address);
     // send some funds to timelock controller
-    await imporsonatedWhale.sendTransaction({to: contractUDAOTimelockController.address, value: ethers.utils.parseEther("1")})
+    await imporsonatedWhale.sendTransaction({ to: contractUDAOTimelockController.address, value: ethers.utils.parseEther("1") })
     // set coaching foundation cut
     await contractPlatformTreasury.connect(signerTimelockController).setCoachingFoundationCut(10000);
     expect(await contractPlatformTreasury.coachingFoundationCut()).to.equal(10000);
@@ -421,7 +421,7 @@ describe("Governance Contract", function () {
     });
     const signerTimelockController = await ethers.provider.getSigner(contractUDAOTimelockController.address);
     // send some funds to timelock controller
-    await imporsonatedWhale.sendTransaction({to: contractUDAOTimelockController.address, value: ethers.utils.parseEther("1")})
+    await imporsonatedWhale.sendTransaction({ to: contractUDAOTimelockController.address, value: ethers.utils.parseEther("1") })
     // set coaching foundation cut
     await expect(contractPlatformTreasury.connect(signerTimelockController).setCoachingFoundationCut(100001)).to.be.revertedWith("Cuts cant be higher than %100");
   });
@@ -460,7 +460,7 @@ describe("Governance Contract", function () {
     /// @dev Check votes for governance candidate on latest block
     const governanceCandidateVotes = await contractUDAOVp.getVotes(governanceCandidate.address);
     await expect(governanceCandidateVotes).to.equal(ethers.utils.parseEther("300"));
-    
+
     /// @dev Proposal settings
     const tokenAddress = contractUDAO.address;
     const token = await ethers.getContractAt("ERC20", tokenAddress);
@@ -469,23 +469,23 @@ describe("Governance Contract", function () {
     const transferCalldata = token.interface.encodeFunctionData("transfer", [teamAddress, grantAmount]);
     /// @dev Propose a new proposal
     const proposeTx = await contractUDAOGovernor.connect(governanceCandidate).propose([tokenAddress],
-        [0],
-        [transferCalldata],
-        "Proposal #1: Give grant to team",);
+      [0],
+      [transferCalldata],
+      "Proposal #1: Give grant to team",);
     /// @dev Wait for the transaction to be mined
     const tx = await proposeTx.wait();
 
     const proposerAddress = tx.events.find((e) => e.event == 'ProposalCreated').args.proposer;
     const targetInfo = tx.events.find((e) => e.event == 'ProposalCreated').args.targets;
     const returnedCallData = tx.events.find((e) => e.event == 'ProposalCreated').args.calldatas;
-    
+
     await expect(proposerAddress).to.equal(governanceCandidate.address);
     await expect(targetInfo).to.deep.equal([tokenAddress]);
     await expect(returnedCallData).to.deep.equal([transferCalldata]);
 
   });
-  
-  it ("Should allow governance members to vote on created proposal", async function () {
+
+  it("Should allow governance members to vote on created proposal", async function () {
     const {
       backend,
       validatorCandidate,
@@ -528,7 +528,7 @@ describe("Governance Contract", function () {
     /// @dev Check votes for superValidator on latest block
     const superValidatorVotes = await contractUDAOVp.getVotes(superValidator.address);
     await expect(superValidatorVotes).to.equal(ethers.utils.parseEther("300"));
-    
+
     /// @dev Proposal settings
     const tokenAddress = contractUDAO.address;
     const token = await ethers.getContractAt("ERC20", tokenAddress);
@@ -537,13 +537,13 @@ describe("Governance Contract", function () {
     const transferCalldata = token.interface.encodeFunctionData("transfer", [teamAddress, grantAmount]);
     /// @dev Propose a new proposal
     const proposeTx = await contractUDAOGovernor.connect(governanceCandidate).propose([tokenAddress],
-        [0],
-        [transferCalldata],
-        "Proposal #1: Give grant to team",);
+      [0],
+      [transferCalldata],
+      "Proposal #1: Give grant to team",);
     /// @dev Wait for the transaction to be mined
     const tx = await proposeTx.wait();
     const proposalId = tx.events.find((e) => e.event == 'ProposalCreated').args.proposalId;
-    
+
     // @dev (7 * 24 * 60 * 60) calculates the total number of seconds in 7 days.
     // @dev 2 is the number of seconds per block
     // @dev We divide the total number of seconds in 7 days by the number of seconds per block
@@ -558,7 +558,7 @@ describe("Governance Contract", function () {
     await expect(proposalState).to.equal(1);
   });
 
-  
+
   it("Should allow governance members to execute a proposal", async function () {
     const {
       backend,
@@ -624,7 +624,7 @@ describe("Governance Contract", function () {
     const validatorCandidateVotes = await contractUDAOVp.getVotes(validatorCandidate.address);
     await expect(validatorCandidateVotes).to.equal(ethers.utils.parseEther("300"));
 
-    
+
     /// @dev Proposal settings
     const contractAddress = contractValidationManager.address;
     const contractData = await ethers.getContractAt("ValidationManager", contractAddress);
@@ -633,13 +633,13 @@ describe("Governance Contract", function () {
     const transferCalldata = contractData.interface.encodeFunctionData("setRequiredValidators", [_requiredValidators]);
     /// @dev Propose a new proposal
     const proposeTx = await contractUDAOGovernor.connect(governanceCandidate).propose([contractAddress],
-        [0],
-        [transferCalldata],
-        "Proposal #1: Set required validators to 2");
+      [0],
+      [transferCalldata],
+      "Proposal #1: Set required validators to 2");
     /// @dev Wait for the transaction to be mined
     const tx = await proposeTx.wait();
     const proposalId = tx.events.find((e) => e.event == 'ProposalCreated').args.proposalId;
-    
+
     // @dev (7 * 24 * 60 * 60) calculates the total number of seconds in 7 days.
     // @dev 2 is the number of seconds per block
     // @dev We divide the total number of seconds in 7 days by the number of seconds per block
@@ -690,8 +690,6 @@ describe("Governance Contract", function () {
     /// @dev Check if the required validators was set to 2
     const requiredValidators = await contractValidationManager.requiredValidators();
     await expect(requiredValidators).to.equal(2);
-
-  
   });
-  
+
 });
