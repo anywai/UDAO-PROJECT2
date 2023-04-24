@@ -15,7 +15,19 @@ const {
 // Enable and inject BN dependency
 chai.use(require("chai-bn")(BN));
 
-
+// @dev Proposal states
+/*
+ enum ProposalState {
+        Pending,
+        Active,
+        Canceled,
+        Defeated,
+        Succeeded,
+        Queued,
+        Expired,
+        Executed
+    }
+*/
 async function setupGovernanceMember(contractRoleManager, contractUDAO, contractUDAOStaker, governanceCandidate) {
   await contractRoleManager.setKYC(governanceCandidate.address, true);
   await contractUDAO.transfer(
@@ -207,6 +219,16 @@ async function deploy() {
     contractUDAOGovernor.address
   );
 
+  const EXECUTOR_ROLE = ethers.utils.keccak256(
+    ethers.utils.toUtf8Bytes("EXECUTOR_ROLE")
+  );
+  // @dev Setting the zero address as the executor role will allow anyone to execute the proposal
+  await contractUDAOTimelockController.grantRole(
+    EXECUTOR_ROLE,
+    // zero address
+    "0x0000000000000000000000000000000000000000"
+  );
+
   // grant roles
   const BACKEND_ROLE = ethers.utils.keccak256(
     ethers.utils.toUtf8Bytes("BACKEND_ROLE")
@@ -227,6 +249,9 @@ async function deploy() {
   const GOVERNANCE_ROLE = ethers.utils.keccak256(
     ethers.utils.toUtf8Bytes("GOVERNANCE_ROLE")
   );
+  const GOVERNANCE_CONTRACT = ethers.utils.keccak256(
+    ethers.utils.toUtf8Bytes("GOVERNANCE_CONTRACT")
+  );
   await contractRoleManager.grantRole(
     GOVERNANCE_ROLE,
     contractUDAOTimelockController.address
@@ -234,7 +259,7 @@ async function deploy() {
   
   // TODO IS THIS NECESSARY?
   await contractRoleManager.grantRole(
-    GOVERNANCE_ROLE,
+    GOVERNANCE_CONTRACT,
     contractUDAOGovernor.address
   );
 
@@ -533,7 +558,7 @@ describe("Governance Contract", function () {
     await expect(proposalState).to.equal(1);
   });
 
-  /*
+  
   it("Should allow governance members to execute a proposal", async function () {
     const {
       backend,
@@ -601,17 +626,16 @@ describe("Governance Contract", function () {
 
     
     /// @dev Proposal settings
-    const tokenAddress = contractUDAO.address;
-    const token = await ethers.getContractAt("ERC20", tokenAddress);
-    const teamAddress = foundation.address;
-    const grantAmount = ethers.utils.parseEther("1")
-    const transferCalldata = token.interface.encodeFunctionData("transfer", [teamAddress, grantAmount]);
-    
+    const contractAddress = contractValidationManager.address;
+    const contractData = await ethers.getContractAt("ValidationManager", contractAddress);
+    // _requiredValidators is a uint128 integer and is 2
+    const _requiredValidators = ethers.utils.defaultAbiCoder.encode(["uint128"], [2]);
+    const transferCalldata = contractData.interface.encodeFunctionData("setRequiredValidators", [_requiredValidators]);
     /// @dev Propose a new proposal
-    const proposeTx = await contractUDAOGovernor.connect(governanceCandidate).propose([tokenAddress],
+    const proposeTx = await contractUDAOGovernor.connect(governanceCandidate).propose([contractAddress],
         [0],
         [transferCalldata],
-        ethers.utils.id("Proposal #1: Give grant to team"));
+        "Proposal #1: Set required validators to 2");
     /// @dev Wait for the transaction to be mined
     const tx = await proposeTx.wait();
     const proposalId = tx.events.find((e) => e.event == 'ProposalCreated').args.proposalId;
@@ -639,50 +663,35 @@ describe("Governance Contract", function () {
     /// @dev Check if the proposal was successful
     const proposalStateAtStart = await contractUDAOGovernor.state(proposalId);
     await expect(proposalStateAtStart).to.equal(4);
-    console.log("Proposal #1 was successful");
-    /// @dev Execute the proposal
-    console.log("step 1")
-    const executeTx = await contractUDAOGovernor.connect(governanceCandidate).execute([tokenAddress],
-      [0],
-      [transferCalldata],
-      ethers.utils.id("Proposal #1: Give grant to team"));
-    console.log("step 2")
-    const executeTxReceipt = await executeTx.wait();
-    console.log("step 3")
-    const executeTxEvent = executeTxReceipt.events.find((e) => e.event == 'ProposalExecuted');
-    console.log("step 4")
-    await expect(executeTxEvent.args.proposalId).to.equal(proposalId);
-    console.log("step 5")
-    console.log("Proposal #1 was executed");
     /// @dev Queue the proposal and Check the ProposalQueued event
-    const queueTx = await contractUDAOGovernor.connect(governanceCandidate).queue([tokenAddress],
+    const queueTx = await contractUDAOGovernor.connect(governanceCandidate).queue([contractAddress],
       [0],
       [transferCalldata],
-      ethers.utils.id("Proposal #1: Give grant to team"));
-    console.log("step 1")
+      ethers.utils.id("Proposal #1: Set required validators to 2"));
     const queueTxReceipt = await queueTx.wait();
-    console.log("step 2")
     const queueTxEvent = queueTxReceipt.events.find((e) => e.event == 'ProposalQueued');
-    console.log("step 3")
     await expect(queueTxEvent.args.proposalId).to.equal(proposalId);
-    console.log("step 4")
-    await expect(queueTxEvent.args.eta).to.equal(0);
-    console.log("step 5")
-    console.log("Proposal #1 was queued");
-    /// @dev Check the queue
-    const queue = await contractUDAOGovernor.getActions(proposalId);
-    await expect(queue[0].to).to.equal(tokenAddress);
-    await expect(queue[0].value).to.equal(0);
-    await expect(queue[0].data).to.equal(transferCalldata);
-    console.log("Proposal #1 was queued correctly");
+    //await expect(queueTxEvent.args.eta).to.equal(0);
     /// @dev Check if the proposal was queued
-    const proposalStateAtEnd = await contractUDAOGovernor.state(proposalId);
-    await expect(proposalStateAtEnd).to.equal(2);
+    const proposalStateAfterQueue = await contractUDAOGovernor.state(proposalId);
+    await expect(proposalStateAfterQueue).to.equal(5);
+    /// @dev Execute the proposal
+    const executeTx = await contractUDAOGovernor.connect(governanceCandidate).execute([contractAddress],
+      [0],
+      [transferCalldata],
+      ethers.utils.id("Proposal #1: Set required validators to 2"));
 
+    const executeTxReceipt = await executeTx.wait();
+    const executeTxEvent = executeTxReceipt.events.find((e) => e.event == 'ProposalExecuted');
+    await expect(executeTxEvent.args.proposalId).to.equal(proposalId);
+    /// @dev Check if the proposal was executed
+    const proposalStateAfterExecution = await contractUDAOGovernor.state(proposalId);
+    await expect(proposalStateAfterExecution).to.equal(7);
+    /// @dev Check if the required validators was set to 2
+    const requiredValidators = await contractValidationManager.requiredValidator();
+    await expect(requiredValidators).to.equal(2);
 
-
-
-
-  });*/
+  
+  });
   
 });
