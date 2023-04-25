@@ -71,7 +71,7 @@ abstract contract BasePlatform is Pausable, RoleController {
     // cut for foundation from content
     uint public contentFoundationCut = 4000;
     // cut for governance from content
-    uint public contentGovernancenCut = 700;
+    uint public contentGovernanceCut = 700;
     // cut for juror pool from content
     uint public contentJurorCut = 100;
     // cut for validator pool from content
@@ -144,7 +144,7 @@ abstract contract BasePlatform is Pausable, RoleController {
             coachingFoundationCut,
             coachingGovernanceCut,
             contentFoundationCut,
-            contentGovernancenCut,
+            contentGovernanceCut,
             contentJurorCut,
             contentValidatorCut
         );
@@ -164,7 +164,7 @@ abstract contract BasePlatform is Pausable, RoleController {
             coachingFoundationCut,
             coachingGovernanceCut,
             contentFoundationCut,
-            contentGovernancenCut,
+            contentGovernanceCut,
             contentJurorCut,
             contentValidatorCut
         );
@@ -177,7 +177,7 @@ abstract contract BasePlatform is Pausable, RoleController {
     ) external onlyRole(GOVERNANCE_ROLE) {
         require(
             _cut +
-                contentGovernancenCut +
+                contentGovernanceCut +
                 contentJurorCut +
                 contentValidatorCut <
                 10000,
@@ -188,7 +188,7 @@ abstract contract BasePlatform is Pausable, RoleController {
             coachingFoundationCut,
             coachingGovernanceCut,
             contentFoundationCut,
-            contentGovernancenCut,
+            contentGovernanceCut,
             contentJurorCut,
             contentValidatorCut
         );
@@ -207,12 +207,12 @@ abstract contract BasePlatform is Pausable, RoleController {
                 10000,
             "Cuts cant be higher than %100"
         );
-        contentGovernancenCut = _cut;
+        contentGovernanceCut = _cut;
         emit CutsUpdated(
             coachingFoundationCut,
             coachingGovernanceCut,
             contentFoundationCut,
-            contentGovernancenCut,
+            contentGovernanceCut,
             contentJurorCut,
             contentValidatorCut
         );
@@ -225,7 +225,7 @@ abstract contract BasePlatform is Pausable, RoleController {
     ) external onlyRole(GOVERNANCE_ROLE) {
         require(
             contentFoundationCut +
-                contentGovernancenCut +
+                contentGovernanceCut +
                 _cut +
                 contentValidatorCut <
                 10000,
@@ -236,7 +236,7 @@ abstract contract BasePlatform is Pausable, RoleController {
             coachingFoundationCut,
             coachingGovernanceCut,
             contentFoundationCut,
-            contentGovernancenCut,
+            contentGovernanceCut,
             contentJurorCut,
             contentValidatorCut
         );
@@ -249,7 +249,7 @@ abstract contract BasePlatform is Pausable, RoleController {
     ) external onlyRole(GOVERNANCE_ROLE) {
         require(
             contentFoundationCut +
-                contentGovernancenCut +
+                contentGovernanceCut +
                 contentJurorCut +
                 _cut <
                 10000,
@@ -260,7 +260,7 @@ abstract contract BasePlatform is Pausable, RoleController {
             coachingFoundationCut,
             coachingGovernanceCut,
             contentFoundationCut,
-            contentGovernancenCut,
+            contentGovernanceCut,
             contentJurorCut,
             contentValidatorCut
         );
