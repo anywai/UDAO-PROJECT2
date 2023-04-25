@@ -322,6 +322,7 @@ async function deploy() {
     contractUDAOStaker,
     contractUDAOTimelockController,
     contractUDAOGovernor,
+    contractJurorManager
   };
 }
 
@@ -348,6 +349,7 @@ describe("Governance Contract", function () {
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
+      contractJurorManager
     } = await deploy();
   });
 
@@ -373,6 +375,7 @@ describe("Governance Contract", function () {
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
+      contractJurorManager
     } = await deploy();
 
     // impersonate a whale
@@ -416,6 +419,7 @@ describe("Governance Contract", function () {
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
+      contractJurorManager
     } = await deploy();
     // impersonate a whale
     const address = "0xe7804c37c13166ff0b37f5ae0bb07a3aebb6e245";
@@ -456,6 +460,7 @@ describe("Governance Contract", function () {
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
+      contractJurorManager
     } = await deploy();
     /// @dev Setup governance member
     await setupGovernanceMember(contractRoleManager, contractUDAO, contractUDAOStaker, governanceCandidate);
@@ -515,6 +520,7 @@ describe("Governance Contract", function () {
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
+      contractJurorManager
     } = await deploy();
     /// @dev Setup governance member
     await setupGovernanceMember(contractRoleManager, contractUDAO, contractUDAOStaker, governanceCandidate);
@@ -589,6 +595,7 @@ describe("Governance Contract", function () {
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
+      contractJurorManager
     } = await deploy();
     /// @dev Setup governance member
     await setupGovernanceMember(contractRoleManager, contractUDAO, contractUDAOStaker, governanceCandidate);
@@ -670,6 +677,105 @@ describe("Governance Contract", function () {
     await expect(requiredValidators).to.equal(2);
   });
 
+  it("Should set required jurors to 10", async function () {
+    const {
+      backend,
+      validatorCandidate,
+      validator,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+      contractJurorManager
+    } = await deploy();
+    /// @dev Setup governance member
+    await setupGovernanceMember(contractRoleManager, contractUDAO, contractUDAOStaker, governanceCandidate);
+    await setupGovernanceMember(contractRoleManager, contractUDAO, contractUDAOStaker, superValidator);
+    await setupGovernanceMember(contractRoleManager, contractUDAO, contractUDAOStaker, superValidatorCandidate);
+    await setupGovernanceMember(contractRoleManager, contractUDAO, contractUDAOStaker, validatorCandidate);
+    await setupGovernanceMember(contractRoleManager, contractUDAO, contractUDAOStaker, validator);
+    
+    /// @dev Check account UDAO-vp balance and delegate to themselves
+    await checkAccountUDAOVpBalanceAndDelegate(contractUDAOVp, governanceCandidate);
+    await checkAccountUDAOVpBalanceAndDelegate(contractUDAOVp, superValidator);
+    await checkAccountUDAOVpBalanceAndDelegate(contractUDAOVp, validator);
+    await checkAccountUDAOVpBalanceAndDelegate(contractUDAOVp, validatorCandidate);
+
+    /// @dev Proposal settings
+    const contractAddress = contractJurorManager.address;
+    const contractData = await ethers.getContractAt("JurorManager", contractAddress);
+    // requiredJurors is a uint128 integer and is set to 10
+    const _requiredJurors = ethers.utils.defaultAbiCoder.encode(["uint128"], [10]);
+    const transferCalldata = contractData.interface.encodeFunctionData("setRequiredJurors", [_requiredJurors]);
+    /// @dev Propose a new proposal
+    const proposeTx = await contractUDAOGovernor.connect(governanceCandidate).propose([contractAddress],
+      [0],
+      [transferCalldata],
+      "Proposal #1: Set required jurors to 10");
+    /// @dev Wait for the transaction to be mined
+    const tx = await proposeTx.wait();
+    const proposalId = tx.events.find((e) => e.event == 'ProposalCreated').args.proposalId;
+
+    const numBlocksToMine = Math.ceil((7 * 24 * 60 * 60) / 2);
+    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine.toString(16)}`, "0x2"]);
+    /// @dev Vote on the proposal
+    await contractUDAOGovernor.connect(superValidator).castVote(proposalId, 1);
+    await contractUDAOGovernor.connect(superValidatorCandidate).castVote(proposalId, 1);
+    await contractUDAOGovernor.connect(validator).castVote(proposalId, 1);
+    await contractUDAOGovernor.connect(validatorCandidate).castVote(proposalId, 1);
+
+    /// @dev Check if the vote was casted
+    const proposalState = await contractUDAOGovernor.state(proposalId);
+    await expect(proposalState).to.equal(1);
+
+    /// @dev Skip to the end of the voting period
+    const numBlocksToMineToEnd = Math.ceil((7 * 24 * 60 * 60) / 2);
+    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMineToEnd.toString(16)}`, "0x2"]);
+    /// @dev Check if the proposal was successful
+    const proposalStateAtStart = await contractUDAOGovernor.state(proposalId);
+    await expect(proposalStateAtStart).to.equal(4);
+    /// @dev Queue the proposal and Check the ProposalQueued event
+    const queueTx = await contractUDAOGovernor.connect(governanceCandidate).queue([contractAddress],
+      [0],
+      [transferCalldata],
+      ethers.utils.id("Proposal #1: Set required jurors to 10"));
+    const queueTxReceipt = await queueTx.wait();
+    const queueTxEvent = queueTxReceipt.events.find((e) => e.event == 'ProposalQueued');
+    await expect(queueTxEvent.args.proposalId).to.equal(proposalId);
+    //await expect(queueTxEvent.args.eta).to.equal(0);
+    /// @dev Check if the proposal was queued
+    const proposalStateAfterQueue = await contractUDAOGovernor.state(proposalId);
+    await expect(proposalStateAfterQueue).to.equal(5);
+    /// @dev Execute the proposal
+    const executeTx = await contractUDAOGovernor.connect(governanceCandidate).execute([contractAddress],
+      [0],
+      [transferCalldata],
+      ethers.utils.id("Proposal #1: Set required jurors to 10"));
+
+    const executeTxReceipt = await executeTx.wait();
+    const executeTxEvent = executeTxReceipt.events.find((e) => e.event == 'ProposalExecuted');
+    await expect(executeTxEvent.args.proposalId).to.equal(proposalId);
+    /// @dev Check if the proposal was executed
+    const proposalStateAfterExecution = await contractUDAOGovernor.state(proposalId);
+    await expect(proposalStateAfterExecution).to.equal(7);
+    /// @dev Check if the required validators was set to 2
+    const requiredJurors = await contractJurorManager.requiredJurors();
+    await expect(requiredJurors).to.equal(10);
+  });
+
   it("Should setCoachingFoundationCut to 1% with proposal execution", async function () {
     const {
       backend,
@@ -692,6 +798,7 @@ describe("Governance Contract", function () {
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
+      contractJurorManager
     } = await deploy();
     /// @dev Setup governance member
     await setupGovernanceMember(contractRoleManager, contractUDAO, contractUDAOStaker, governanceCandidate);
@@ -795,6 +902,7 @@ describe("Governance Contract", function () {
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
+      contractJurorManager
     } = await deploy();
     /// @dev Setup governance member
     await setupGovernanceMember(contractRoleManager, contractUDAO, contractUDAOStaker, governanceCandidate);
@@ -894,6 +1002,7 @@ describe("Governance Contract", function () {
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
+      contractJurorManager
     } = await deploy();
     /// @dev Setup governance member
     await setupGovernanceMember(contractRoleManager, contractUDAO, contractUDAOStaker, governanceCandidate);
@@ -994,6 +1103,7 @@ describe("Governance Contract", function () {
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
+      contractJurorManager
     } = await deploy();
     /// @dev Setup governance member
     await setupGovernanceMember(contractRoleManager, contractUDAO, contractUDAOStaker, governanceCandidate);
@@ -1094,6 +1204,7 @@ describe("Governance Contract", function () {
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
+      contractJurorManager
     } = await deploy();
     /// @dev Setup governance member
     await setupGovernanceMember(contractRoleManager, contractUDAO, contractUDAOStaker, governanceCandidate);
@@ -1194,6 +1305,7 @@ describe("Governance Contract", function () {
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
+      contractJurorManager
     } = await deploy();
     /// @dev Setup governance member
     await setupGovernanceMember(contractRoleManager, contractUDAO, contractUDAOStaker, governanceCandidate);
