@@ -16,6 +16,115 @@ const {
 // Enable and inject BN dependency
 chai.use(require("chai-bn")(BN));
 
+async function runValidation(contractValidationManager, backend, validator1, validator2, validator3, validator4, validator5, contentCreator) {
+  await expect(
+    contractValidationManager.connect(backend).createValidation(0, 50)
+  )
+    .to.emit(contractValidationManager, "ValidationCreated")
+    .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1));
+  await expect(
+    contractValidationManager.connect(validator1).assignValidation(1)
+  )
+    .to.emit(contractValidationManager, "ValidationAssigned")
+    .withArgs(
+      ethers.BigNumber.from(0),
+      ethers.BigNumber.from(1),
+      validator1.address
+    );
+  await expect(
+    contractValidationManager.connect(validator2).assignValidation(1)
+  )
+    .to.emit(contractValidationManager, "ValidationAssigned")
+    .withArgs(
+      ethers.BigNumber.from(0),
+      ethers.BigNumber.from(1),
+      validator2.address
+    );
+  await expect(
+    contractValidationManager.connect(validator3).assignValidation(1)
+  )
+    .to.emit(contractValidationManager, "ValidationAssigned")
+    .withArgs(
+      ethers.BigNumber.from(0),
+      ethers.BigNumber.from(1),
+      validator3.address
+    );
+  await expect(
+    contractValidationManager.connect(validator4).assignValidation(1)
+  )
+    .to.emit(contractValidationManager, "ValidationAssigned")
+    .withArgs(
+      ethers.BigNumber.from(0),
+      ethers.BigNumber.from(1),
+      validator4.address
+    );
+  await expect(
+    contractValidationManager.connect(validator5).assignValidation(1)
+  )
+    .to.emit(contractValidationManager, "ValidationAssigned")
+    .withArgs(
+      ethers.BigNumber.from(0),
+      ethers.BigNumber.from(1),
+      validator5.address
+    );
+
+  await expect(
+    contractValidationManager.connect(validator1).sendValidation(1, true)
+  )
+    .to.emit(contractValidationManager, "ValidationResultSent")
+    .withArgs(
+      ethers.BigNumber.from(0),
+      ethers.BigNumber.from(1),
+      validator1.address,
+      true
+    );
+  await expect(
+    contractValidationManager.connect(validator2).sendValidation(1, true)
+  )
+    .to.emit(contractValidationManager, "ValidationResultSent")
+    .withArgs(
+      ethers.BigNumber.from(0),
+      ethers.BigNumber.from(1),
+      validator2.address,
+      true
+    );
+  await expect(
+    contractValidationManager.connect(validator3).sendValidation(1, true)
+  )
+    .to.emit(contractValidationManager, "ValidationResultSent")
+    .withArgs(
+      ethers.BigNumber.from(0),
+      ethers.BigNumber.from(1),
+      validator3.address,
+      true
+    );
+  await expect(
+    contractValidationManager.connect(validator4).sendValidation(1, true)
+  )
+    .to.emit(contractValidationManager, "ValidationResultSent")
+    .withArgs(
+      ethers.BigNumber.from(0),
+      ethers.BigNumber.from(1),
+      validator4.address,
+      true
+    );
+  await expect(
+    contractValidationManager.connect(validator5).sendValidation(1, false)
+  )
+    .to.emit(contractValidationManager, "ValidationResultSent")
+    .withArgs(
+      ethers.BigNumber.from(0),
+      ethers.BigNumber.from(1),
+      validator5.address,
+      false
+    );
+  await expect(
+    contractValidationManager.connect(contentCreator).finalizeValidation(1)
+  )
+    .to.emit(contractValidationManager, "ValidationEnded")
+    .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), true);
+}
+
 async function deploy() {
   helpers.reset(
     "https://polygon-mainnet.g.alchemy.com/v2/OsNaN43nxvV85Kk1JpU-a5qduFwjcIGJ",
@@ -354,112 +463,8 @@ describe("Platform Treasury Contract - Coaching", function () {
         0
       );
     
-    await expect(
-      contractValidationManager.connect(backend).createValidation(0, 50)
-    )
-      .to.emit(contractValidationManager, "ValidationCreated")
-      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1));
-    await expect(
-      contractValidationManager.connect(validator1).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator1.address
-      );
-    await expect(
-      contractValidationManager.connect(validator2).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator2.address
-      );
-    await expect(
-      contractValidationManager.connect(validator3).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator3.address
-      );
-    await expect(
-      contractValidationManager.connect(validator4).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator4.address
-      );
-    await expect(
-      contractValidationManager.connect(validator5).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator5.address
-      );
-
-    await expect(
-      contractValidationManager.connect(validator1).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator1.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator2).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator2.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator3).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator3.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator4).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator4.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator5).sendValidation(1, false)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator5.address,
-        false
-      );
-    await expect(
-      contractValidationManager.connect(contentCreator).finalizeValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationEnded")
-      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), true);
+    /// Start validation and finalize it
+    await runValidation(contractValidationManager, backend, validator1, validator2, validator3, validator4, validator5, contentCreator);
 
     /// Send UDAO to the buyer's wallet
     await contractUDAO.transfer(
@@ -536,112 +541,8 @@ describe("Platform Treasury Contract - Coaching", function () {
         contentCreator.address,
         0
       );
-    await expect(
-      contractValidationManager.connect(backend).createValidation(0, 50)
-    )
-      .to.emit(contractValidationManager, "ValidationCreated")
-      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1));
-    await expect(
-      contractValidationManager.connect(validator1).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator1.address
-      );
-    await expect(
-      contractValidationManager.connect(validator2).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator2.address
-      );
-    await expect(
-      contractValidationManager.connect(validator3).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator3.address
-      );
-    await expect(
-      contractValidationManager.connect(validator4).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator4.address
-      );
-    await expect(
-      contractValidationManager.connect(validator5).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator5.address
-      );
-
-    await expect(
-      contractValidationManager.connect(validator1).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator1.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator2).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator2.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator3).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator3.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator4).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator4.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator5).sendValidation(1, false)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator5.address,
-        false
-      );
-    await expect(
-      contractValidationManager.connect(contentCreator).finalizeValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationEnded")
-      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), true);
+    /// Start validation and finalize it
+    await runValidation(contractValidationManager, backend, validator1, validator2, validator3, validator4, validator5, contentCreator);
 
     /// Send UDAO to the buyer's wallet
     await contractUDAO.transfer(
@@ -735,112 +636,8 @@ describe("Platform Treasury Contract - Coaching", function () {
         contentCreator.address,
         0
       );
-    await expect(
-      contractValidationManager.connect(backend).createValidation(0, 50)
-    )
-      .to.emit(contractValidationManager, "ValidationCreated")
-      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1));
-    await expect(
-      contractValidationManager.connect(validator1).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator1.address
-      );
-    await expect(
-      contractValidationManager.connect(validator2).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator2.address
-      );
-    await expect(
-      contractValidationManager.connect(validator3).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator3.address
-      );
-    await expect(
-      contractValidationManager.connect(validator4).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator4.address
-      );
-    await expect(
-      contractValidationManager.connect(validator5).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator5.address
-      );
-
-    await expect(
-      contractValidationManager.connect(validator1).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator1.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator2).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator2.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator3).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator3.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator4).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator4.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator5).sendValidation(1, false)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator5.address,
-        false
-      );
-    await expect(
-      contractValidationManager.connect(contentCreator).finalizeValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationEnded")
-      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), true);
+    /// Start validation and finalize it
+    await runValidation(contractValidationManager, backend, validator1, validator2, validator3, validator4, validator5, contentCreator);
 
     /// Send UDAO to the buyer's wallet
     await contractUDAO.transfer(
@@ -1028,112 +825,8 @@ describe("Platform Treasury Contract - Coaching", function () {
         contentCreator.address,
         0
       );
-    await expect(
-      contractValidationManager.connect(backend).createValidation(0, 50)
-    )
-      .to.emit(contractValidationManager, "ValidationCreated")
-      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1));
-    await expect(
-      contractValidationManager.connect(validator1).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator1.address
-      );
-    await expect(
-      contractValidationManager.connect(validator2).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator2.address
-      );
-    await expect(
-      contractValidationManager.connect(validator3).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator3.address
-      );
-    await expect(
-      contractValidationManager.connect(validator4).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator4.address
-      );
-    await expect(
-      contractValidationManager.connect(validator5).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator5.address
-      );
-
-    await expect(
-      contractValidationManager.connect(validator1).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator1.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator2).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator2.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator3).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator3.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator4).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator4.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator5).sendValidation(1, false)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator5.address,
-        false
-      );
-    await expect(
-      contractValidationManager.connect(contentCreator).finalizeValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationEnded")
-      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), true);
+    /// Start validation and finalize it
+    await runValidation(contractValidationManager, backend, validator1, validator2, validator3, validator4, validator5, contentCreator);
 
     /// Send UDAO to the buyer's wallet
     await contractUDAO.transfer(
@@ -1213,112 +906,8 @@ describe("Platform Treasury Contract - Coaching", function () {
         contentCreator.address,
         0
       );
-    await expect(
-      contractValidationManager.connect(backend).createValidation(0, 50)
-    )
-      .to.emit(contractValidationManager, "ValidationCreated")
-      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1));
-    await expect(
-      contractValidationManager.connect(validator1).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator1.address
-      );
-    await expect(
-      contractValidationManager.connect(validator2).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator2.address
-      );
-    await expect(
-      contractValidationManager.connect(validator3).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator3.address
-      );
-    await expect(
-      contractValidationManager.connect(validator4).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator4.address
-      );
-    await expect(
-      contractValidationManager.connect(validator5).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator5.address
-      );
-
-    await expect(
-      contractValidationManager.connect(validator1).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator1.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator2).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator2.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator3).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator3.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator4).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator4.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator5).sendValidation(1, false)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator5.address,
-        false
-      );
-    await expect(
-      contractValidationManager.connect(contentCreator).finalizeValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationEnded")
-      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), true);
+    /// Start validation and finalize it
+    await runValidation(contractValidationManager, backend, validator1, validator2, validator3, validator4, validator5, contentCreator);
 
     /// Send UDAO to the buyer's wallet
     await contractUDAO.transfer(
@@ -1396,112 +985,8 @@ describe("Platform Treasury Contract - Coaching", function () {
         contentCreator.address,
         0
       );
-    await expect(
-      contractValidationManager.connect(backend).createValidation(0, 50)
-    )
-      .to.emit(contractValidationManager, "ValidationCreated")
-      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1));
-    await expect(
-      contractValidationManager.connect(validator1).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator1.address
-      );
-    await expect(
-      contractValidationManager.connect(validator2).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator2.address
-      );
-    await expect(
-      contractValidationManager.connect(validator3).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator3.address
-      );
-    await expect(
-      contractValidationManager.connect(validator4).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator4.address
-      );
-    await expect(
-      contractValidationManager.connect(validator5).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator5.address
-      );
-
-    await expect(
-      contractValidationManager.connect(validator1).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator1.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator2).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator2.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator3).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator3.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator4).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator4.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator5).sendValidation(1, false)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator5.address,
-        false
-      );
-    await expect(
-      contractValidationManager.connect(contentCreator).finalizeValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationEnded")
-      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), true);
+    /// Start validation and finalize it
+    await runValidation(contractValidationManager, backend, validator1, validator2, validator3, validator4, validator5, contentCreator);
 
     /// Send UDAO to the buyer's wallet
     await contractUDAO.transfer(
@@ -1583,112 +1068,8 @@ describe("Platform Treasury Contract - Coaching", function () {
         contentCreator.address,
         0
       );
-    await expect(
-      contractValidationManager.connect(backend).createValidation(0, 50)
-    )
-      .to.emit(contractValidationManager, "ValidationCreated")
-      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1));
-    await expect(
-      contractValidationManager.connect(validator1).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator1.address
-      );
-    await expect(
-      contractValidationManager.connect(validator2).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator2.address
-      );
-    await expect(
-      contractValidationManager.connect(validator3).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator3.address
-      );
-    await expect(
-      contractValidationManager.connect(validator4).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator4.address
-      );
-    await expect(
-      contractValidationManager.connect(validator5).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator5.address
-      );
-
-    await expect(
-      contractValidationManager.connect(validator1).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator1.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator2).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator2.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator3).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator3.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator4).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator4.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator5).sendValidation(1, false)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator5.address,
-        false
-      );
-    await expect(
-      contractValidationManager.connect(contentCreator).finalizeValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationEnded")
-      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), true);
+    /// Start validation and finalize it
+    await runValidation(contractValidationManager, backend, validator1, validator2, validator3, validator4, validator5, contentCreator);
 
     /// Send UDAO to the buyer's wallet
     await contractUDAO.transfer(
@@ -1769,112 +1150,8 @@ describe("Platform Treasury Contract - Coaching", function () {
         0
       );
 
-    await expect(
-      contractValidationManager.connect(backend).createValidation(0, 50)
-    )
-      .to.emit(contractValidationManager, "ValidationCreated")
-      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1));
-    await expect(
-      contractValidationManager.connect(validator1).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator1.address
-      );
-    await expect(
-      contractValidationManager.connect(validator2).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator2.address
-      );
-    await expect(
-      contractValidationManager.connect(validator3).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator3.address
-      );
-    await expect(
-      contractValidationManager.connect(validator4).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator4.address
-      );
-    await expect(
-      contractValidationManager.connect(validator5).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator5.address
-      );
-
-    await expect(
-      contractValidationManager.connect(validator1).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator1.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator2).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator2.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator3).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator3.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator4).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator4.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator5).sendValidation(1, false)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator5.address,
-        false
-      );
-    await expect(
-      contractValidationManager.connect(contentCreator).finalizeValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationEnded")
-      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), true);
+    /// Start validation and finalize it
+    await runValidation(contractValidationManager, backend, validator1, validator2, validator3, validator4, validator5, contentCreator);
 
     /// Send UDAO to the buyer's wallet
     await contractUDAO.transfer(
@@ -1959,112 +1236,8 @@ describe("Platform Treasury Contract - Coaching", function () {
         contentCreator.address,
         0
       );
-    await expect(
-      contractValidationManager.connect(backend).createValidation(0, 50)
-    )
-      .to.emit(contractValidationManager, "ValidationCreated")
-      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1));
-    await expect(
-      contractValidationManager.connect(validator1).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator1.address
-      );
-    await expect(
-      contractValidationManager.connect(validator2).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator2.address
-      );
-    await expect(
-      contractValidationManager.connect(validator3).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator3.address
-      );
-    await expect(
-      contractValidationManager.connect(validator4).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator4.address
-      );
-    await expect(
-      contractValidationManager.connect(validator5).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator5.address
-      );
-
-    await expect(
-      contractValidationManager.connect(validator1).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator1.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator2).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator2.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator3).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator3.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator4).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator4.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator5).sendValidation(1, false)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator5.address,
-        false
-      );
-    await expect(
-      contractValidationManager.connect(contentCreator).finalizeValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationEnded")
-      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), true);
+    /// Start validation and finalize it
+    await runValidation(contractValidationManager, backend, validator1, validator2, validator3, validator4, validator5, contentCreator);
 
     /// Send UDAO to the buyer's wallet
     await contractUDAO.transfer(
@@ -2149,112 +1322,8 @@ describe("Platform Treasury Contract - Coaching", function () {
         contentCreator.address,
         0
       );
-    await expect(
-      contractValidationManager.connect(backend).createValidation(0, 50)
-    )
-      .to.emit(contractValidationManager, "ValidationCreated")
-      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1));
-    await expect(
-      contractValidationManager.connect(validator1).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator1.address
-      );
-    await expect(
-      contractValidationManager.connect(validator2).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator2.address
-      );
-    await expect(
-      contractValidationManager.connect(validator3).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator3.address
-      );
-    await expect(
-      contractValidationManager.connect(validator4).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator4.address
-      );
-    await expect(
-      contractValidationManager.connect(validator5).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator5.address
-      );
-
-    await expect(
-      contractValidationManager.connect(validator1).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator1.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator2).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator2.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator3).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator3.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator4).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator4.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator5).sendValidation(1, false)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator5.address,
-        false
-      );
-    await expect(
-      contractValidationManager.connect(contentCreator).finalizeValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationEnded")
-      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), true);
+    /// Start validation and finalize it
+    await runValidation(contractValidationManager, backend, validator1, validator2, validator3, validator4, validator5, contentCreator);
 
     /// Send UDAO to the buyer's wallet
     await contractUDAO.transfer(
@@ -2336,112 +1405,8 @@ describe("Platform Treasury Contract - Coaching", function () {
         contentCreator.address,
         0
       );
-    await expect(
-      contractValidationManager.connect(backend).createValidation(0, 50)
-    )
-      .to.emit(contractValidationManager, "ValidationCreated")
-      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1));
-    await expect(
-      contractValidationManager.connect(validator1).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator1.address
-      );
-    await expect(
-      contractValidationManager.connect(validator2).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator2.address
-      );
-    await expect(
-      contractValidationManager.connect(validator3).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator3.address
-      );
-    await expect(
-      contractValidationManager.connect(validator4).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator4.address
-      );
-    await expect(
-      contractValidationManager.connect(validator5).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator5.address
-      );
-
-    await expect(
-      contractValidationManager.connect(validator1).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator1.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator2).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator2.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator3).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator3.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator4).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator4.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator5).sendValidation(1, false)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator5.address,
-        false
-      );
-    await expect(
-      contractValidationManager.connect(contentCreator).finalizeValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationEnded")
-      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), true);
+    /// Start validation and finalize it
+    await runValidation(contractValidationManager, backend, validator1, validator2, validator3, validator4, validator5, contentCreator);
 
     /// Send UDAO to the buyer's wallet
     await contractUDAO.transfer(
@@ -2527,112 +1492,8 @@ describe("Platform Treasury Contract - Coaching", function () {
         contentCreator.address,
         0
       );
-    await expect(
-      contractValidationManager.connect(backend).createValidation(0, 50)
-    )
-      .to.emit(contractValidationManager, "ValidationCreated")
-      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1));
-    await expect(
-      contractValidationManager.connect(validator1).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator1.address
-      );
-    await expect(
-      contractValidationManager.connect(validator2).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator2.address
-      );
-    await expect(
-      contractValidationManager.connect(validator3).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator3.address
-      );
-    await expect(
-      contractValidationManager.connect(validator4).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator4.address
-      );
-    await expect(
-      contractValidationManager.connect(validator5).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator5.address
-      );
-
-    await expect(
-      contractValidationManager.connect(validator1).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator1.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator2).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator2.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator3).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator3.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator4).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator4.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator5).sendValidation(1, false)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator5.address,
-        false
-      );
-    await expect(
-      contractValidationManager.connect(contentCreator).finalizeValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationEnded")
-      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), true);
+    /// Start validation and finalize it
+    await runValidation(contractValidationManager, backend, validator1, validator2, validator3, validator4, validator5, contentCreator);
 
     /// Send UDAO to the buyer's wallet
     await contractUDAO.transfer(
@@ -2718,112 +1579,8 @@ describe("Platform Treasury Contract - Coaching", function () {
         contentCreator.address,
         0
       );
-    await expect(
-      contractValidationManager.connect(backend).createValidation(0, 50)
-    )
-      .to.emit(contractValidationManager, "ValidationCreated")
-      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1));
-    await expect(
-      contractValidationManager.connect(validator1).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator1.address
-      );
-    await expect(
-      contractValidationManager.connect(validator2).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator2.address
-      );
-    await expect(
-      contractValidationManager.connect(validator3).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator3.address
-      );
-    await expect(
-      contractValidationManager.connect(validator4).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator4.address
-      );
-    await expect(
-      contractValidationManager.connect(validator5).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator5.address
-      );
-
-    await expect(
-      contractValidationManager.connect(validator1).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator1.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator2).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator2.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator3).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator3.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator4).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator4.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator5).sendValidation(1, false)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator5.address,
-        false
-      );
-    await expect(
-      contractValidationManager.connect(contentCreator).finalizeValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationEnded")
-      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), true);
+    /// Start validation and finalize it
+    await runValidation(contractValidationManager, backend, validator1, validator2, validator3, validator4, validator5, contentCreator);
 
     /// Send UDAO to the buyer's wallet
     await contractUDAO.transfer(
@@ -2912,112 +1669,8 @@ describe("Platform Treasury Contract - Coaching", function () {
         contentCreator.address,
         0
       );
-    await expect(
-      contractValidationManager.connect(backend).createValidation(0, 50)
-    )
-      .to.emit(contractValidationManager, "ValidationCreated")
-      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1));
-    await expect(
-      contractValidationManager.connect(validator1).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator1.address
-      );
-    await expect(
-      contractValidationManager.connect(validator2).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator2.address
-      );
-    await expect(
-      contractValidationManager.connect(validator3).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator3.address
-      );
-    await expect(
-      contractValidationManager.connect(validator4).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator4.address
-      );
-    await expect(
-      contractValidationManager.connect(validator5).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator5.address
-      );
-
-    await expect(
-      contractValidationManager.connect(validator1).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator1.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator2).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator2.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator3).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator3.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator4).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator4.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator5).sendValidation(1, false)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator5.address,
-        false
-      );
-    await expect(
-      contractValidationManager.connect(contentCreator).finalizeValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationEnded")
-      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), true);
+    /// Start validation and finalize it
+    await runValidation(contractValidationManager, backend, validator1, validator2, validator3, validator4, validator5, contentCreator);
 
     /// Send UDAO to the buyer's wallet
     await contractUDAO.transfer(
@@ -3106,112 +1759,8 @@ describe("Platform Treasury Contract - Coaching", function () {
         contentCreator.address,
         0
       );
-    await expect(
-      contractValidationManager.connect(backend).createValidation(0, 50)
-    )
-      .to.emit(contractValidationManager, "ValidationCreated")
-      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1));
-    await expect(
-      contractValidationManager.connect(validator1).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator1.address
-      );
-    await expect(
-      contractValidationManager.connect(validator2).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator2.address
-      );
-    await expect(
-      contractValidationManager.connect(validator3).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator3.address
-      );
-    await expect(
-      contractValidationManager.connect(validator4).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator4.address
-      );
-    await expect(
-      contractValidationManager.connect(validator5).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator5.address
-      );
-
-    await expect(
-      contractValidationManager.connect(validator1).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator1.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator2).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator2.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator3).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator3.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator4).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator4.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator5).sendValidation(1, false)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator5.address,
-        false
-      );
-    await expect(
-      contractValidationManager.connect(contentCreator).finalizeValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationEnded")
-      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), true);
+    /// Start validation and finalize it
+    await runValidation(contractValidationManager, backend, validator1, validator2, validator3, validator4, validator5, contentCreator);
 
     /// Send UDAO to the buyer's wallet
     await contractUDAO.transfer(
@@ -3296,112 +1845,8 @@ describe("Platform Treasury Contract - Coaching", function () {
         contentCreator.address,
         0
       );
-    await expect(
-      contractValidationManager.connect(backend).createValidation(0, 50)
-    )
-      .to.emit(contractValidationManager, "ValidationCreated")
-      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1));
-    await expect(
-      contractValidationManager.connect(validator1).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator1.address
-      );
-    await expect(
-      contractValidationManager.connect(validator2).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator2.address
-      );
-    await expect(
-      contractValidationManager.connect(validator3).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator3.address
-      );
-    await expect(
-      contractValidationManager.connect(validator4).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator4.address
-      );
-    await expect(
-      contractValidationManager.connect(validator5).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator5.address
-      );
-
-    await expect(
-      contractValidationManager.connect(validator1).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator1.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator2).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator2.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator3).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator3.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator4).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator4.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator5).sendValidation(1, false)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator5.address,
-        false
-      );
-    await expect(
-      contractValidationManager.connect(contentCreator).finalizeValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationEnded")
-      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), true);
+    /// Start validation and finalize it
+    await runValidation(contractValidationManager, backend, validator1, validator2, validator3, validator4, validator5, contentCreator);
 
     /// Send UDAO to the buyer's wallet
     await contractUDAO.transfer(
@@ -3486,112 +1931,8 @@ describe("Platform Treasury Contract - Coaching", function () {
         contentCreator.address,
         0
       );
-    await expect(
-      contractValidationManager.connect(backend).createValidation(0, 50)
-    )
-      .to.emit(contractValidationManager, "ValidationCreated")
-      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1));
-    await expect(
-      contractValidationManager.connect(validator1).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator1.address
-      );
-    await expect(
-      contractValidationManager.connect(validator2).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator2.address
-      );
-    await expect(
-      contractValidationManager.connect(validator3).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator3.address
-      );
-    await expect(
-      contractValidationManager.connect(validator4).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator4.address
-      );
-    await expect(
-      contractValidationManager.connect(validator5).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator5.address
-      );
-
-    await expect(
-      contractValidationManager.connect(validator1).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator1.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator2).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator2.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator3).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator3.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator4).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator4.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator5).sendValidation(1, false)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator5.address,
-        false
-      );
-    await expect(
-      contractValidationManager.connect(contentCreator).finalizeValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationEnded")
-      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), true);
+    /// Start validation and finalize it
+    await runValidation(contractValidationManager, backend, validator1, validator2, validator3, validator4, validator5, contentCreator);
 
     /// Send UDAO to the buyer's wallet
     await contractUDAO.transfer(
@@ -3676,112 +2017,8 @@ describe("Platform Treasury Contract - Coaching", function () {
         contentCreator.address,
         0
       );
-    await expect(
-      contractValidationManager.connect(backend).createValidation(0, 50)
-    )
-      .to.emit(contractValidationManager, "ValidationCreated")
-      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1));
-    await expect(
-      contractValidationManager.connect(validator1).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator1.address
-      );
-    await expect(
-      contractValidationManager.connect(validator2).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator2.address
-      );
-    await expect(
-      contractValidationManager.connect(validator3).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator3.address
-      );
-    await expect(
-      contractValidationManager.connect(validator4).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator4.address
-      );
-    await expect(
-      contractValidationManager.connect(validator5).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator5.address
-      );
-
-    await expect(
-      contractValidationManager.connect(validator1).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator1.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator2).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator2.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator3).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator3.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator4).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator4.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator5).sendValidation(1, false)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator5.address,
-        false
-      );
-    await expect(
-      contractValidationManager.connect(contentCreator).finalizeValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationEnded")
-      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), true);
+    /// Start validation and finalize it
+    await runValidation(contractValidationManager, backend, validator1, validator2, validator3, validator4, validator5, contentCreator);
 
     /// Send UDAO to the buyer's wallet
     await contractUDAO.transfer(
@@ -3870,112 +2107,8 @@ describe("Platform Treasury Contract - Coaching", function () {
         contentCreator.address,
         0
       );
-    await expect(
-      contractValidationManager.connect(backend).createValidation(0, 50)
-    )
-      .to.emit(contractValidationManager, "ValidationCreated")
-      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1));
-    await expect(
-      contractValidationManager.connect(validator1).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator1.address
-      );
-    await expect(
-      contractValidationManager.connect(validator2).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator2.address
-      );
-    await expect(
-      contractValidationManager.connect(validator3).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator3.address
-      );
-    await expect(
-      contractValidationManager.connect(validator4).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator4.address
-      );
-    await expect(
-      contractValidationManager.connect(validator5).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator5.address
-      );
-
-    await expect(
-      contractValidationManager.connect(validator1).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator1.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator2).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator2.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator3).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator3.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator4).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator4.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator5).sendValidation(1, false)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator5.address,
-        false
-      );
-    await expect(
-      contractValidationManager.connect(contentCreator).finalizeValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationEnded")
-      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), true);
+    /// Start validation and finalize it
+    await runValidation(contractValidationManager, backend, validator1, validator2, validator3, validator4, validator5, contentCreator);
 
     /// Send UDAO to the buyer's wallet
     await contractUDAO.transfer(
@@ -4060,112 +2193,8 @@ describe("Platform Treasury Contract - Coaching", function () {
         contentCreator.address,
         0
       );
-    await expect(
-      contractValidationManager.connect(backend).createValidation(0, 50)
-    )
-      .to.emit(contractValidationManager, "ValidationCreated")
-      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1));
-    await expect(
-      contractValidationManager.connect(validator1).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator1.address
-      );
-    await expect(
-      contractValidationManager.connect(validator2).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator2.address
-      );
-    await expect(
-      contractValidationManager.connect(validator3).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator3.address
-      );
-    await expect(
-      contractValidationManager.connect(validator4).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator4.address
-      );
-    await expect(
-      contractValidationManager.connect(validator5).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator5.address
-      );
-
-    await expect(
-      contractValidationManager.connect(validator1).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator1.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator2).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator2.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator3).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator3.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator4).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator4.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator5).sendValidation(1, false)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator5.address,
-        false
-      );
-    await expect(
-      contractValidationManager.connect(contentCreator).finalizeValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationEnded")
-      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), true);
+    /// Start validation and finalize it
+    await runValidation(contractValidationManager, backend, validator1, validator2, validator3, validator4, validator5, contentCreator);
 
     /// Send UDAO to the buyer's wallet
     await contractUDAO.transfer(
@@ -4250,112 +2279,8 @@ describe("Platform Treasury Contract - Coaching", function () {
         contentCreator.address,
         0
       );
-    await expect(
-      contractValidationManager.connect(backend).createValidation(0, 50)
-    )
-      .to.emit(contractValidationManager, "ValidationCreated")
-      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1));
-    await expect(
-      contractValidationManager.connect(validator1).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator1.address
-      );
-    await expect(
-      contractValidationManager.connect(validator2).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator2.address
-      );
-    await expect(
-      contractValidationManager.connect(validator3).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator3.address
-      );
-    await expect(
-      contractValidationManager.connect(validator4).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator4.address
-      );
-    await expect(
-      contractValidationManager.connect(validator5).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator5.address
-      );
-
-    await expect(
-      contractValidationManager.connect(validator1).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator1.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator2).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator2.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator3).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator3.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator4).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator4.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator5).sendValidation(1, false)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator5.address,
-        false
-      );
-    await expect(
-      contractValidationManager.connect(contentCreator).finalizeValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationEnded")
-      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), true);
+    /// Start validation and finalize it
+    await runValidation(contractValidationManager, backend, validator1, validator2, validator3, validator4, validator5, contentCreator);
 
     /// Send UDAO to the buyer's wallet
     await contractUDAO.transfer(
@@ -4442,112 +2367,8 @@ describe("Platform Treasury Contract - Coaching", function () {
         contentCreator.address,
         0
       );
-    await expect(
-      contractValidationManager.connect(backend).createValidation(0, 50)
-    )
-      .to.emit(contractValidationManager, "ValidationCreated")
-      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1));
-    await expect(
-      contractValidationManager.connect(validator1).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator1.address
-      );
-    await expect(
-      contractValidationManager.connect(validator2).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator2.address
-      );
-    await expect(
-      contractValidationManager.connect(validator3).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator3.address
-      );
-    await expect(
-      contractValidationManager.connect(validator4).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator4.address
-      );
-    await expect(
-      contractValidationManager.connect(validator5).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator5.address
-      );
-
-    await expect(
-      contractValidationManager.connect(validator1).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator1.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator2).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator2.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator3).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator3.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator4).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator4.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator5).sendValidation(1, false)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator5.address,
-        false
-      );
-    await expect(
-      contractValidationManager.connect(contentCreator).finalizeValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationEnded")
-      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), true);
+    /// Start validation and finalize it
+    await runValidation(contractValidationManager, backend, validator1, validator2, validator3, validator4, validator5, contentCreator);
 
     /// Send UDAO to the buyer's wallet
     await contractUDAO.transfer(
@@ -4646,112 +2467,8 @@ describe("Platform Treasury Contract - Coaching", function () {
         contentCreator.address,
         0
       );
-    await expect(
-      contractValidationManager.connect(backend).createValidation(0, 50)
-    )
-      .to.emit(contractValidationManager, "ValidationCreated")
-      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1));
-    await expect(
-      contractValidationManager.connect(validator1).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator1.address
-      );
-    await expect(
-      contractValidationManager.connect(validator2).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator2.address
-      );
-    await expect(
-      contractValidationManager.connect(validator3).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator3.address
-      );
-    await expect(
-      contractValidationManager.connect(validator4).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator4.address
-      );
-    await expect(
-      contractValidationManager.connect(validator5).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator5.address
-      );
-
-    await expect(
-      contractValidationManager.connect(validator1).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator1.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator2).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator2.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator3).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator3.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator4).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator4.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator5).sendValidation(1, false)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator5.address,
-        false
-      );
-    await expect(
-      contractValidationManager.connect(contentCreator).finalizeValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationEnded")
-      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), true);
+    /// Start validation and finalize it
+    await runValidation(contractValidationManager, backend, validator1, validator2, validator3, validator4, validator5, contentCreator);
 
     /// Send UDAO to the buyer's wallet
     await contractUDAO.transfer(
