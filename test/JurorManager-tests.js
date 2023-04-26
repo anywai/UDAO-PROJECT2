@@ -364,6 +364,13 @@ async function deploy() {
     STAKING_CONTRACT,
     contractUDAOStaker.address
   );
+  const TREASURY_CONTRACT = ethers.utils.keccak256(
+    ethers.utils.toUtf8Bytes("TREASURY_CONTRACT")
+  );
+  await contractRoleManager.grantRole(
+    TREASURY_CONTRACT,
+    contractPlatformTreasury.address
+  );
   const GOVERNANCE_ROLE = ethers.utils.keccak256(
     ethers.utils.toUtf8Bytes("GOVERNANCE_ROLE")
   );
@@ -981,6 +988,359 @@ describe("Juror Manager", function () {
     /// @dev Finalize dispute
     const disputeVerdict = true;
     await expect(contractJurorManager.connect(backend).finalizeDispute(disputeId)).to.emit(contractJurorManager, "DisputeEnded").withArgs(disputeId, disputeVerdict);
+
+  });
+
+  it("Should allow treasury contract to switch to the next round", async function () {
+    const {
+      backend,
+      contentCreator,
+      contentBuyer,
+      validatorCandidate,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember1,
+      jurorMember2,
+      jurorMember3,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+      contractJurorManager
+    } = await deploy();
+    // send some eth to the contractPlatformTreasury and impersonate it
+    await helpers.setBalance(contractPlatformTreasury.address, hre.ethers.utils.parseEther("1"));
+    const signerTreasuryContract = await ethers.getImpersonatedSigner(contractPlatformTreasury.address);
+    // get the current distribution round
+    const currentDistributionRound = await contractJurorManager.distributionRound();
+    expect(currentDistributionRound).to.equal(0);
+    // call the next round from contractJurorManager
+    const nextDistributionRound = currentDistributionRound + 1;
+    await expect(contractJurorManager.connect(signerTreasuryContract).nextRound()).to.emit(contractJurorManager, "NextRound").withArgs(nextDistributionRound);
+    
+  });
+
+  it("Should return successful and unsuccessful dispute results of jurors correctly", async function () {
+    const {
+      backend,
+      contentCreator,
+      contentBuyer,
+      validatorCandidate,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember1,
+      jurorMember2,
+      jurorMember3,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+      contractJurorManager
+    } = await deploy();
+
+    /// @dev Dispute settings
+    const caseScope = 1;
+    const caseQuestion = "Should we remove this content?";
+    const caseTokenRelated = true;
+    const caseTokenId = 0;
+
+    /// @dev Create content
+    await createContent(contentCreator, contractValidationManager, contractRoleManager, contractUDAOContent, backend, validator1, validator2, validator3, validator4, validator5)
+    /// @dev Create dispute
+    await contractJurorManager.connect(backend).createDispute(caseScope, caseQuestion, caseTokenRelated, caseTokenId);
+    /// @dev Assign dispute to juror
+    const disputeId = 1;
+    await contractJurorManager.connect(jurorMember1).assignDispute(disputeId);
+    await contractJurorManager.connect(jurorMember2).assignDispute(disputeId);
+    await contractJurorManager.connect(jurorMember3).assignDispute(disputeId);
+    /// @dev Send dispute result
+    const disputeResultOfJurorMember1 = 1;
+    const disputeResultOfJurorMember2 = 0;
+    const disputeResultOfJurorMember3 = 0;
+    await contractJurorManager.connect(jurorMember1).sendDisputeResult(disputeId, disputeResultOfJurorMember1);
+    await contractJurorManager.connect(jurorMember2).sendDisputeResult(disputeId, disputeResultOfJurorMember2);
+    await contractJurorManager.connect(jurorMember3).sendDisputeResult(disputeId, disputeResultOfJurorMember3);
+    /// @dev Finalize dispute
+    const disputeVerdict = false;
+    await expect(contractJurorManager.connect(backend).finalizeDispute(disputeId)).to.emit(contractJurorManager, "DisputeEnded").withArgs(disputeId, disputeVerdict);
+    /// @dev Check number of successful and unsuccessful dispute results of jurors
+    const disputeResultsOfJuror1 = await contractJurorManager.getCaseResults(jurorMember1.address);
+    const disputeResultsOfJuror2 = await contractJurorManager.getCaseResults(jurorMember2.address);
+    const disputeResultsOfJuror3 = await contractJurorManager.getCaseResults(jurorMember3.address);
+    const successfulIndex = 0;
+    const unsuccessfulIndex = 1;
+    expect(disputeResultsOfJuror1[successfulIndex]).to.equal(0);
+    expect(disputeResultsOfJuror1[unsuccessfulIndex]).to.equal(1);
+    expect(disputeResultsOfJuror2[successfulIndex]).to.equal(1);
+    expect(disputeResultsOfJuror2[unsuccessfulIndex]).to.equal(0);
+    expect(disputeResultsOfJuror3[successfulIndex]).to.equal(1);
+    expect(disputeResultsOfJuror3[unsuccessfulIndex]).to.equal(0);
+  });
+
+  it("Should return the scores of jurors correctly", async function () {
+    const {
+      backend,
+      contentCreator,
+      contentBuyer,
+      validatorCandidate,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember1,
+      jurorMember2,
+      jurorMember3,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+      contractJurorManager
+    } = await deploy();
+
+    /// @dev Dispute settings
+    const caseScope = 1;
+    const caseQuestion = "Should we remove this content?";
+    const caseTokenRelated = true;
+    const caseTokenId = 0;
+
+    /// @dev Create content
+    await createContent(contentCreator, contractValidationManager, contractRoleManager, contractUDAOContent, backend, validator1, validator2, validator3, validator4, validator5)
+    /// @dev Create dispute
+    await contractJurorManager.connect(backend).createDispute(caseScope, caseQuestion, caseTokenRelated, caseTokenId);
+    /// @dev Assign dispute to juror
+    const disputeId = 1;
+    await contractJurorManager.connect(jurorMember1).assignDispute(disputeId);
+    await contractJurorManager.connect(jurorMember2).assignDispute(disputeId);
+    await contractJurorManager.connect(jurorMember3).assignDispute(disputeId);
+    /// @dev Send dispute result
+    const disputeResultOfJurorMember1 = 1;
+    const disputeResultOfJurorMember2 = 0;
+    const disputeResultOfJurorMember3 = 0;
+    await contractJurorManager.connect(jurorMember1).sendDisputeResult(disputeId, disputeResultOfJurorMember1);
+    await contractJurorManager.connect(jurorMember2).sendDisputeResult(disputeId, disputeResultOfJurorMember2);
+    await contractJurorManager.connect(jurorMember3).sendDisputeResult(disputeId, disputeResultOfJurorMember3);
+    /// @dev Finalize dispute
+    const disputeVerdict = false;
+    await expect(contractJurorManager.connect(backend).finalizeDispute(disputeId)).to.emit(contractJurorManager, "DisputeEnded").withArgs(disputeId, disputeVerdict);
+    /// @dev Check scores of jurors in this round
+    const currentDistributionRound = await contractJurorManager.distributionRound();
+    const scoreOfJuror1 = await contractJurorManager.getJurorScore(jurorMember1.address, currentDistributionRound);
+    const scoreOfJuror2 = await contractJurorManager.getJurorScore(jurorMember2.address, currentDistributionRound);
+    const scoreOfJuror3 = await contractJurorManager.getJurorScore(jurorMember3.address, currentDistributionRound);
+    expect(scoreOfJuror1).to.equal(0);
+    expect(scoreOfJuror2).to.equal(1);
+    expect(scoreOfJuror3).to.equal(1);
+
+  });
+
+  it("Should return the scores of jurors correctly after multiple rounds", async function () {
+    const {
+      backend,
+      contentCreator,
+      contentBuyer,
+      validatorCandidate,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember1,
+      jurorMember2,
+      jurorMember3,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+      contractJurorManager
+    } = await deploy();
+
+    /// @dev Dispute settings
+    const caseScope = 1;
+    const caseQuestion = "Should we remove this content?";
+    const caseTokenRelated = true;
+    const caseTokenId = 0;
+
+    /// @dev Create content
+    await createContent(contentCreator, contractValidationManager, contractRoleManager, contractUDAOContent, backend, validator1, validator2, validator3, validator4, validator5)
+    /// @dev Create dispute
+    await contractJurorManager.connect(backend).createDispute(caseScope, caseQuestion, caseTokenRelated, caseTokenId);
+    /// @dev Assign dispute to juror
+    const disputeId = 1;
+    await contractJurorManager.connect(jurorMember1).assignDispute(disputeId);
+    await contractJurorManager.connect(jurorMember2).assignDispute(disputeId);
+    await contractJurorManager.connect(jurorMember3).assignDispute(disputeId);
+    /// @dev Send dispute result
+    const disputeResultOfJurorMember1 = 1;
+    const disputeResultOfJurorMember2 = 0;
+    const disputeResultOfJurorMember3 = 0;
+    await contractJurorManager.connect(jurorMember1).sendDisputeResult(disputeId, disputeResultOfJurorMember1);
+    await contractJurorManager.connect(jurorMember2).sendDisputeResult(disputeId, disputeResultOfJurorMember2);
+    await contractJurorManager.connect(jurorMember3).sendDisputeResult(disputeId, disputeResultOfJurorMember3);
+    /// @dev Finalize dispute
+    const disputeVerdict = false;
+    await expect(contractJurorManager.connect(backend).finalizeDispute(disputeId)).to.emit(contractJurorManager, "DisputeEnded").withArgs(disputeId, disputeVerdict);
+    /// @dev Check scores of jurors in this round
+    const currentDistributionRound = await contractJurorManager.distributionRound();
+    const scoreOfJuror1 = await contractJurorManager.getJurorScore(jurorMember1.address, currentDistributionRound);
+    const scoreOfJuror2 = await contractJurorManager.getJurorScore(jurorMember2.address, currentDistributionRound);
+    const scoreOfJuror3 = await contractJurorManager.getJurorScore(jurorMember3.address, currentDistributionRound);
+    expect(scoreOfJuror1).to.equal(0);
+    expect(scoreOfJuror2).to.equal(1);
+    expect(scoreOfJuror3).to.equal(1);
+
+    /// @dev Create dispute
+    await contractJurorManager.connect(backend).createDispute(caseScope, caseQuestion, caseTokenRelated, caseTokenId);
+    /// @dev Assign dispute to juror
+    const disputeId2 = 2;
+    await contractJurorManager.connect(jurorMember1).assignDispute(disputeId2);
+    await contractJurorManager.connect(jurorMember2).assignDispute(disputeId2);
+    await contractJurorManager.connect(jurorMember3).assignDispute(disputeId2);
+    /// @dev Send dispute result
+    const disputeResultOfJurorMember1_2 = 1;
+    const disputeResultOfJurorMember2_2 = 0;
+    const disputeResultOfJurorMember3_2 = 0;
+    await contractJurorManager.connect(jurorMember1).sendDisputeResult(disputeId2, disputeResultOfJurorMember1_2);
+    await contractJurorManager.connect(jurorMember2).sendDisputeResult(disputeId2, disputeResultOfJurorMember2_2);
+    await contractJurorManager.connect(jurorMember3).sendDisputeResult(disputeId2, disputeResultOfJurorMember3_2);
+    /// @dev Finalize dispute
+    const disputeVerdict2 = false;
+    await expect(contractJurorManager.connect(backend).finalizeDispute(disputeId2)).to.emit(contractJurorManager, "DisputeEnded").withArgs(disputeId2, disputeVerdict2);
+    /// @dev Check scores of jurors in this round
+    const currentDistributionRound2 = await contractJurorManager.distributionRound();
+    const scoreOfJuror1_2 = await contractJurorManager.getJurorScore(jurorMember1.address, currentDistributionRound2);
+    const scoreOfJuror2_2 = await contractJurorManager.getJurorScore(jurorMember2.address, currentDistributionRound2);
+    const scoreOfJuror3_2 = await contractJurorManager.getJurorScore(jurorMember3.address, currentDistributionRound2);
+    expect(scoreOfJuror1_2).to.equal(0);
+    expect(scoreOfJuror2_2).to.equal(2);
+    expect(scoreOfJuror3_2).to.equal(2);
+
+  });
+
+  it("Should return the total juror score correctly", async function () {
+    const {
+      backend,
+      contentCreator,
+      contentBuyer,
+      validatorCandidate,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember1,
+      jurorMember2,
+      jurorMember3,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+      contractJurorManager
+    } = await deploy();
+
+    /// @dev Dispute settings
+    const caseScope = 1;
+    const caseQuestion = "Should we remove this content?";
+    const caseTokenRelated = true;
+    const caseTokenId = 0;
+
+    /// @dev Create content
+    await createContent(contentCreator, contractValidationManager, contractRoleManager, contractUDAOContent, backend, validator1, validator2, validator3, validator4, validator5)
+    /// @dev Create dispute
+    await contractJurorManager.connect(backend).createDispute(caseScope, caseQuestion, caseTokenRelated, caseTokenId);
+    /// @dev Assign dispute to juror
+    const disputeId = 1;
+    await contractJurorManager.connect(jurorMember1).assignDispute(disputeId);
+    await contractJurorManager.connect(jurorMember2).assignDispute(disputeId);
+    await contractJurorManager.connect(jurorMember3).assignDispute(disputeId);
+    /// @dev Send dispute result
+    const disputeResultOfJurorMember1 = 1;
+    const disputeResultOfJurorMember2 = 0;
+    const disputeResultOfJurorMember3 = 0;
+    await contractJurorManager.connect(jurorMember1).sendDisputeResult(disputeId, disputeResultOfJurorMember1);
+    await contractJurorManager.connect(jurorMember2).sendDisputeResult(disputeId, disputeResultOfJurorMember2);
+    await contractJurorManager.connect(jurorMember3).sendDisputeResult(disputeId, disputeResultOfJurorMember3);
+    /// @dev Finalize dispute
+    const disputeVerdict = false;
+    await expect(contractJurorManager.connect(backend).finalizeDispute(disputeId)).to.emit(contractJurorManager, "DisputeEnded").withArgs(disputeId, disputeVerdict);
+    /// @dev Check scores of jurors in this round
+    const currentDistributionRound = await contractJurorManager.distributionRound();
+    const scoreOfJuror1 = await contractJurorManager.getJurorScore(jurorMember1.address, currentDistributionRound);
+    const scoreOfJuror2 = await contractJurorManager.getJurorScore(jurorMember2.address, currentDistributionRound);
+    const scoreOfJuror3 = await contractJurorManager.getJurorScore(jurorMember3.address, currentDistributionRound);
+    expect(scoreOfJuror1).to.equal(0);
+    expect(scoreOfJuror2).to.equal(1);
+    expect(scoreOfJuror3).to.equal(1);
+
+    /// @dev Get total juror score
+    const totalJurorScore = await contractJurorManager.getTotalJurorScore();
+    expect(totalJurorScore).to.equal(2);
     
   });
 
