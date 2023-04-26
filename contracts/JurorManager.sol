@@ -46,6 +46,7 @@ contract JurorManager is RoleController {
     }
 
     /// @notice Get the updated addresses from contract manager
+    /// TODO is this correct?
     function updateAddresses() external onlyRole(BACKEND_ROLE) {
         IRM = IRoleManager(contractManager.IrmAddress());
     }

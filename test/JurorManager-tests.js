@@ -381,6 +381,10 @@ async function deploy() {
     GOVERNANCE_ROLE,
     contractUDAOTimelockController.address
   );
+  await contractRoleManager.grantRole(
+    GOVERNANCE_ROLE,
+    governanceMember.address
+  );
 
   // TODO IS THIS NECESSARY?
   await contractRoleManager.grantRole(
@@ -1341,7 +1345,47 @@ describe("Juror Manager", function () {
     /// @dev Get total juror score
     const totalJurorScore = await contractJurorManager.getTotalJurorScore();
     expect(totalJurorScore).to.equal(2);
-    
+
   });
 
+  it("Should a use with GOVERNANCE_MEMBER role be able to change the number of required jurors", async function () {
+    const {
+      backend,
+      contentCreator,
+      contentBuyer,
+      validatorCandidate,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember1,
+      jurorMember2,
+      jurorMember3,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+      contractJurorManager
+    } = await deploy();
+    
+    /// @dev Change the number of required jurors
+    const newRequiredJurors = 5;
+    await contractJurorManager.connect(governanceMember).setRequiredJurors(newRequiredJurors);
+    const requiredJurors = await contractJurorManager.requiredJurors();
+    expect(requiredJurors).to.equal(newRequiredJurors);
+
+  });
 });
