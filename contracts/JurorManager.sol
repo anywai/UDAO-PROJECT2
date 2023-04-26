@@ -18,7 +18,7 @@ contract JurorManager is RoleController {
     event NextRound(uint256 newRoundId);
     event DisputeCreated(uint256 caseId, uint256 caseScope, string question);
     event DisputeAssigned(uint256 caseId, address juror);
-    event DisputeResultSent(uint256 caseId, address juror, bool result);
+    event DisputeResultSent(uint256 caseId, bool result, address juror);
     event DisputeEnded(uint256 caseId, bool verdict);
     // juror => round => score
     mapping(address => mapping(uint256 => uint256)) public jurorScorePerRound;
@@ -164,14 +164,14 @@ contract JurorManager is RoleController {
         disputes[caseId].isVoted[msg.sender] = true;
         disputes[caseId].vote[msg.sender] = result;
         disputes[caseId].voteCount++;
-        emit DisputeResultSent(caseId, msg.sender, result);
+        emit DisputeResultSent(caseId,result, msg.sender);
     }
 
     /// @notice finalizes dispute if enough juror vote is sent
     /// @param caseId id of the dispute
     function finalizeDispute(uint256 caseId) external {
         /// @dev Check if the caller is in the list of jurors
-        _checkJuror(disputes[caseId].jurors);
+        //_checkJuror(disputes[caseId].jurors);
 
         require(
             disputes[caseId].voteCount >= requiredJurors,
