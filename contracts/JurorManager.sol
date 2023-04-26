@@ -127,13 +127,12 @@ contract JurorManager is RoleController {
             "You are the instructor of this course."
         );
 
+        /// @dev Ensure that a juror cannot assign a dispute that they have validated
         uint validationId = IVM.getLatestValidationIdOfToken(
             disputes[caseId].tokenId
         );
         address[] memory validators = IVM.getValidatorsOfVal(validationId);
-
         uint validatorLength = validators.length;
-
         for (uint i = 0; i < validatorLength; i++) {
             require(
                 msg.sender != validators[i],
@@ -141,6 +140,7 @@ contract JurorManager is RoleController {
             );
         }
 
+        /// @dev Assign the dispute to the juror
         activeDispute[msg.sender] = caseId;
         disputes[caseId].jurors.push(msg.sender);
         emit DisputeAssigned(caseId, msg.sender);
