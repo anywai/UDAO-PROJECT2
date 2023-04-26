@@ -231,6 +231,7 @@ contract JurorManager is RoleController {
 
     /// @notice Makes sure if the end dispute caller is a juror participated in a certain case.
     /// @param _jurors list of jurors contained in voucher
+    /*
     function _checkJuror(address[] memory _jurors) internal view {
         /// Check if the caller is juror recorded for this case
         uint256 jurorsNum = _jurors.length;
@@ -241,7 +242,8 @@ contract JurorManager is RoleController {
         }
         revert("Sender is not in juror list");
     }
-
+    */
+   
     /// @notice Starts the new reward round
     function nextRound() external whenNotPaused onlyRole(TREASURY_CONTRACT) {
         distributionRound++;
