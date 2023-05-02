@@ -18,7 +18,7 @@ contract JurorManager is RoleController {
     event NextRound(uint256 newRoundId);
     event DisputeCreated(uint256 caseId, uint256 caseScope, string question);
     event DisputeAssigned(uint256 caseId, address juror);
-    event DisputeResultSent(uint256 caseId, address juror, bool result);
+    event DisputeResultSent(uint256 caseId, bool result, address juror);
     event DisputeEnded(uint256 caseId, bool verdict);
     // juror => round => score
     mapping(address => mapping(uint256 => uint256)) public jurorScorePerRound;
@@ -46,6 +46,7 @@ contract JurorManager is RoleController {
     }
 
     /// @notice Get the updated addresses from contract manager
+    /// TODO is this correct?
     function updateAddresses() external onlyRole(BACKEND_ROLE) {
         IRM = IRoleManager(contractManager.IrmAddress());
     }
@@ -127,13 +128,12 @@ contract JurorManager is RoleController {
             "You are the instructor of this course."
         );
 
+        /// @dev Ensure that a juror cannot assign a dispute that they have validated
         uint validationId = IVM.getLatestValidationIdOfToken(
             disputes[caseId].tokenId
         );
         address[] memory validators = IVM.getValidatorsOfVal(validationId);
-
         uint validatorLength = validators.length;
-
         for (uint i = 0; i < validatorLength; i++) {
             require(
                 msg.sender != validators[i],
@@ -141,6 +141,7 @@ contract JurorManager is RoleController {
             );
         }
 
+        /// @dev Assign the dispute to the juror
         activeDispute[msg.sender] = caseId;
         disputes[caseId].jurors.push(msg.sender);
         emit DisputeAssigned(caseId, msg.sender);
@@ -164,14 +165,14 @@ contract JurorManager is RoleController {
         disputes[caseId].isVoted[msg.sender] = true;
         disputes[caseId].vote[msg.sender] = result;
         disputes[caseId].voteCount++;
-        emit DisputeResultSent(caseId, msg.sender, result);
+        emit DisputeResultSent(caseId,result, msg.sender);
     }
 
     /// @notice finalizes dispute if enough juror vote is sent
     /// @param caseId id of the dispute
     function finalizeDispute(uint256 caseId) external {
         /// @dev Check if the caller is in the list of jurors
-        _checkJuror(disputes[caseId].jurors);
+        //_checkJuror(disputes[caseId].jurors);
 
         require(
             disputes[caseId].voteCount >= requiredJurors,
@@ -231,6 +232,7 @@ contract JurorManager is RoleController {
 
     /// @notice Makes sure if the end dispute caller is a juror participated in a certain case.
     /// @param _jurors list of jurors contained in voucher
+    /*
     function _checkJuror(address[] memory _jurors) internal view {
         /// Check if the caller is juror recorded for this case
         uint256 jurorsNum = _jurors.length;
@@ -241,7 +243,8 @@ contract JurorManager is RoleController {
         }
         revert("Sender is not in juror list");
     }
-
+    */
+   
     /// @notice Starts the new reward round
     function nextRound() external whenNotPaused onlyRole(TREASURY_CONTRACT) {
         distributionRound++;
