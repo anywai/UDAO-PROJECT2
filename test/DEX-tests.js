@@ -29,14 +29,9 @@ async function deploy() {
   //DEPLOYMENTS
   const contractUDAO = await factoryUDAO.deploy();
 
-  const address = "0xe7804c37c13166ff0b37f5ae0bb07a3aebb6e245";
-  await helpers.impersonateAccount(address);
-  const impersonatedSigner = await ethers.getSigner(address);
-
-  await impersonatedSigner.sendTransaction({
-    to: owner.address,
-    value: ethers.utils.parseEther("1000000.0"), // Sends exactly 1000000.0 ether
-  });
+  // send some eth to the owner 
+  await helpers.setBalance(owner.address, hre.ethers.utils.parseEther("100000"));
+  
 
   const positionManager = await ethers.getContractAt(
     NonFunbiblePositionABI,
