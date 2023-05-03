@@ -110,46 +110,39 @@ contract JurorManager is RoleController {
         }
         emit DisputeCreated(dispute.caseId, caseScope, question);
     }
-
+    
     /// @notice assign a dispute to self
     /// @param caseId id of the dispute
     function assignDispute(uint256 caseId) external onlyRole(JUROR_ROLE) {
         require(caseId < disputes.length, "Dispute does not exist!");
-        require(
-            activeDispute[msg.sender] == 0,
-            "You already have an assigned dispute"
-        );
-        require(
-            disputes[caseId].jurors.length < requiredJurors,
-            "Dispute already have enough jurors!"
-        );
-        require(
-            udaoc.ownerOf(disputes[caseId].tokenId) != msg.sender,
-            "You are the instructor of this course."
-        );
+        require(activeDispute[msg.sender] == 0, "You already have an assigned dispute");
+        require(disputes[caseId].jurors.length < requiredJurors, "Dispute already have enough jurors!");
+        require(udaoc.ownerOf(disputes[caseId].tokenId) != msg.sender, "You are the instructor of this course.");
+        require(_canAssignDispute(caseId), "You can't assign content you validated!");
 
-        /// @dev Ensure that a juror cannot assign a dispute that they have validated
-        uint validationId = IVM.getLatestValidationIdOfToken(
-            disputes[caseId].tokenId
-        );
-        address[] memory validators = IVM.getValidatorsOfVal(validationId);
-        uint validatorLength = validators.length;
-        for (uint i = 0; i < validatorLength; i++) {
-            require(
-                msg.sender != validators[i],
-                "You can't assign content you validated!"
-            );
-        }
-
-        /// @dev Assign the dispute to the juror
         activeDispute[msg.sender] = caseId;
         disputes[caseId].jurors.push(msg.sender);
         emit DisputeAssigned(caseId, msg.sender);
     }
 
+    /// @dev Checks if a juror was also validator of the content
+    /// @param caseId id of the dispute
+    /// @return true if the juror has not validated the content, false otherwise
+    function _canAssignDispute(uint256 caseId) internal view returns (bool) {
+        uint validationId = IVM.getLatestValidationIdOfToken(disputes[caseId].tokenId);
+        address[] memory validators = IVM.getValidatorsOfVal(validationId);
+        uint validatorLength = validators.length;
+        for (uint i = 0; i < validatorLength; i++) {
+            if (msg.sender == validators[i]) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     /// @notice Allows jurors to send dipsute result
     /// @param caseId id of the dispute
-    /// @param result result of validation
+    /// @param result result of dispute
     function sendDisputeResult(
         uint256 caseId,
         bool result
@@ -197,10 +190,10 @@ contract JurorManager is RoleController {
                     distributionRound
                 ]++;
                 totalJurorScore++;
-                /// @dev Record success point of a validator
+                /// @dev Record success point of a juror
                 successfulDispute[disputes[caseId].jurors[i]]++;
             } else {
-                /// @dev Record unsuccess point of a validator
+                /// @dev Record unsuccess point of a juror
                 unsuccessfulDispute[disputes[caseId].jurors[i]]++;
             }
         }
