@@ -390,7 +390,7 @@ describe("UDAOStaker Contract", function () {
 
     await expect(
       contractUDAOStaker
-        .connect(foundation)
+        .connect(backend)
         .setPlatformTreasuryAddress(foundation.address)
     )
       .to.emit(contractUDAOStaker, "SetPlatformTreasuryAddress") // transfer from null address to minter
