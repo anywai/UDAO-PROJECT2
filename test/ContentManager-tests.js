@@ -59,16 +59,10 @@ async function deploy() {
     "ContractManager"
   );
 
-  // IMPERSONATION
-  const address = "0xe7804c37c13166ff0b37f5ae0bb07a3aebb6e245";
-  await helpers.impersonateAccount(address);
-  const impersonatedSigner = await ethers.getSigner(address);
 
-  await impersonatedSigner.sendTransaction({
-    to: backend.address,
-    value: ethers.utils.parseEther("1000000.0"), // Sends exactly 1000000.0 ether
-  });
-
+  // send some eth to the backend 
+  await helpers.setBalance(backend.address, hre.ethers.utils.parseEther("1000000"));
+  
   //DEPLOYMENTS
   const contractUDAO = await factoryUDAO.deploy();
 
