@@ -657,6 +657,57 @@ describe("Juror Manager", function () {
     await expect(contractJurorManager.connect(jurorMember1).assignDispute(disputeId)).to.be.revertedWith("You already have an assigned dispute");
 
   });
+  it("Should not allow a juror to assign the dispute to himself if he was also the validator of the content", async function () {
+    const {
+      backend,
+      contentCreator,
+      contentBuyer,
+      validatorCandidate,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember1,
+      jurorMember2,
+      jurorMember3,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+      contractJurorManager
+    } = await deploy();
+
+    /// @dev Dispute settings
+    const caseScope = 1;
+    const caseQuestion = "Should we remove this content?";
+    const caseTokenRelated = true;
+    const caseTokenId = 0;
+    /// @dev Give validator role to jurorMember1
+    const VALIDATOR_ROLE = ethers.utils.keccak256(
+      ethers.utils.toUtf8Bytes("VALIDATOR_ROLE")
+    );
+    await contractRoleManager.grantRole(VALIDATOR_ROLE, jurorMember1.address);
+    /// @dev Create content, here jurorMember1 is also the validator
+    await createContent(contentCreator, contractValidationManager, contractRoleManager, contractUDAOContent, backend, jurorMember1, validator2, validator3, validator4, validator5)
+    /// @dev Create dispute
+    await contractJurorManager.connect(backend).createDispute(caseScope, caseQuestion, caseTokenRelated, caseTokenId);
+    /// @dev Assign dispute to juror and fail
+    const disputeId = 1;
+    await expect(contractJurorManager.connect(jurorMember1).assignDispute(disputeId)).to.be.revertedWith("You can't assign content you validated!");
+  });
 
   it("Should not allow non-jurors to assign the dispute to themselves", async function () {
     const {
@@ -1388,4 +1439,6 @@ describe("Juror Manager", function () {
     expect(requiredJurors).to.equal(newRequiredJurors);
 
   });
+
+  
 });
