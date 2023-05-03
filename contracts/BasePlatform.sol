@@ -270,7 +270,7 @@ abstract contract BasePlatform is Pausable, RoleController {
      * @notice distributes rewards for round
      * Gets balance accumulated this round and distributes it per point
      * for validators to claim it later.
-     *
+     * TODO Automate this process with sentinels?
      */
     function distributeRewards() external whenNotPaused onlyRoles(administrator_roles) {
         // Validator reward distribution
