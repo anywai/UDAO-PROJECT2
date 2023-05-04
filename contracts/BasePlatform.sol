@@ -115,6 +115,19 @@ abstract contract BasePlatform is Pausable, RoleController {
 
     // SETTERS
 
+    /// @notice Sets the address of the governance treasury
+    /// @param _newAddress New address of the governance treasury
+    function setGovernanceTreasuryAddress(address _newAddress) external onlyRole(BACKEND_ROLE){
+        governanceTreasury = _newAddress;
+    }
+
+    /// @notice Sets the address of the foundation wallet
+    /// @param _newAddress New address of the foundation wallet
+    function setFoundationWalletAddress(address _newAddress) external onlyRole(BACKEND_ROLE){
+        foundationWallet = _newAddress;
+    }
+
+
     /// @notice Sets the address of the contract manager
     /// @param _newAddress New address of the contract manager
     function setContractManagerAddress(address _newAddress) external onlyRole(BACKEND_ROLE){
