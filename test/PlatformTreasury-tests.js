@@ -766,8 +766,70 @@ describe("Contract Manager", function () {
 
     /// Check if the governance treasury balance is equal to the expected governance treasury balance
     await expect(currentGovernanceTreasuryBalance).to.equal(expectedGovernanceTreasuryBalance);
+  });
+  it("Should allow foundation to withdraw funds from the treasury after a content purchase", async function () {
+    const {
+      backend,
+      contentCreator,
+      contentBuyer,
+      validatorCandidate,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember1,
+      jurorMember2,
+      jurorMember3,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+      contractJurorManager
+    } = await deploy();
+    
+    // Make a content purchase to gather funds for governance
+    await makeContentPurchase(contractPlatformTreasury, contentCreator, contentBuyer, contractUDAOContent, contractRoleManager, contractUDAO, contractValidationManager, backend, validator1, validator2, validator3, validator4, validator5, contractValidationManager, backend);
 
+    // new dummy governance treasury address
+    const newGovernanceTreasur = await ethers.Wallet.createRandom();
 
+    // set new governance treasury address
+    await contractPlatformTreasury.connect(backend).setGovernanceTreasuryAddress(newGovernanceTreasur.address);
+    const governanceTreasuryAddress = await contractPlatformTreasury.governanceTreasury();
+    expect(governanceTreasuryAddress).to.equal(newGovernanceTreasur.address);
+    // set foundation wallet address
+    await contractPlatformTreasury.connect(backend).setFoundationWalletAddress(foundation.address);
+    const foundationWalletAddress = await contractPlatformTreasury.foundationWallet();
+    expect(foundationWalletAddress).to.equal(foundation.address);
 
+    /// @dev Withdraw foundation funds from the treasury
+    await contractPlatformTreasury.connect(foundation).withdrawFoundation();
+
+    /// @dev Get the current percent cut of the foundation 
+    const currentFoundationCut = await contractPlatformTreasury.contentFoundationCut();
+
+    /// Get the current foundation balance
+    const currentFoundationBalance = await contractUDAO.balanceOf(foundation.address);
+    /// Get the content price of token Id 0 from UDAOC (first 0 is token ID, second 0 is full price of content)
+    const contentPrice = await contractUDAOContent.contentPrice(0, 0);
+    /// Multiply the content price with the current foundation cut and divide by 100000 to get the expected foundation balance
+    const expectedFoundationBalanceBeforePercentage = contentPrice.mul(currentFoundationCut);
+    const expectedFoundationBalance = expectedFoundationBalanceBeforePercentage.div(100000);
+
+    /// Check if the governance treasury balance is equal to the expected governance treasury balance
+    await expect(currentFoundationBalance).to.equal(expectedFoundationBalance);
   });
 });
