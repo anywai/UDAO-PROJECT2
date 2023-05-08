@@ -619,7 +619,7 @@ describe("Contract Manager", function () {
     const foundationAddress = await contractPlatformTreasury.foundationWallet();
     expect(foundationAddress).to.equal(newFoundation.address);
   });
-  it("Should allow governance to withraw funds from the treasury after a content purchase", async function () {
+  it("Should allow governance to withdraw funds from the treasury after a content purchase", async function () {
     const {
       backend,
       contentCreator,
@@ -663,13 +663,13 @@ describe("Contract Manager", function () {
     await checkAccountUDAOVpBalanceAndDelegate(contractUDAOVp, superValidator);
     await checkAccountUDAOVpBalanceAndDelegate(contractUDAOVp, validator1);
     await checkAccountUDAOVpBalanceAndDelegate(contractUDAOVp, validatorCandidate);
-    
+
     // Make a content purchase to gather funds for governance
     await makeContentPurchase(contractPlatformTreasury, contentCreator, contentBuyer, contractUDAOContent, contractRoleManager, contractUDAO, contractValidationManager, backend, validator1, validator2, validator3, validator4, validator5, contractValidationManager, backend);
 
     // new dummy governance treasury address
     const newGovernanceTreasur = await ethers.Wallet.createRandom();
-    
+
     // set new governance treasury address
     await contractPlatformTreasury.connect(backend).setGovernanceTreasuryAddress(newGovernanceTreasur.address);
     const governanceTreasuryAddress = await contractPlatformTreasury.governanceTreasury();
@@ -678,24 +678,24 @@ describe("Contract Manager", function () {
     /// @dev Check if the governance candidate has the correct amount of UDAO-vp tokens
     const governanceCandidateBalance = await contractUDAOVp.balanceOf(governanceCandidate.address);
     await expect(governanceCandidateBalance).to.equal(ethers.utils.parseEther("300"));
-    
+
     /// @dev delegate governance candidate's UDAO-vp tokens to himself
     await contractUDAOVp.connect(governanceCandidate).delegate(governanceCandidate.address);
-    
+
     /// @dev Check votes for governance candidate on latest block
     const governanceCandidateVotes = await contractUDAOVp.getVotes(governanceCandidate.address);
     await expect(governanceCandidateVotes).to.equal(ethers.utils.parseEther("300"));
-    
+
     // Create proposal settings to withdraw funds from the treasury
     const targetContractAddress = contractPlatformTreasury.address;
     const targetContract = await ethers.getContractAt("PlatformTreasury", contractPlatformTreasury.address);
     const proposalValues = 0;
     const proposalCalldata = targetContract.interface.encodeFunctionData("withdrawGovernance");
     const proposalDescription = "Withdraw funds from the treasury";
-    
+
     // propose
     const proposeTx = await contractUDAOGovernor.connect(governanceCandidate).propose([targetContractAddress], [proposalValues], [proposalCalldata], proposalDescription);
-    
+
     /// @dev Wait for the transaction to be mined
     const tx = await proposeTx.wait();
     const proposalId = tx.events.find((e) => e.event == 'ProposalCreated').args.proposalId;
@@ -748,19 +748,26 @@ describe("Contract Manager", function () {
     const executeTxReceipt = await executeTx.wait();
     const executeTxEvent = executeTxReceipt.events.find((e) => e.event == 'ProposalExecuted');
     await expect(executeTxEvent.args.proposalId).to.equal(proposalId);
-    
+
     /// @dev Check if the proposal was executed
     const proposalStateAfterExecution = await contractUDAOGovernor.state(proposalId);
     await expect(proposalStateAfterExecution).to.equal(7);
-    
-    /// @dev Check if the funds were withdrawn from the treasury
-    const treasuryBalanceAfterWithdrawal = await contractUDAO.balanceOf(contractPlatformTreasury.address);
-    // convert treasuryBalanceAfterWithdrawal to ether
-    const treasuryBalanceAfterWithdrawalInEther = ethers.utils.formatEther(treasuryBalanceAfterWithdrawal);
-    await expect(treasuryBalanceAfterWithdrawalInEther).to.equal("0.993");
-    /// @dev Check if the funds were deposited to the governance candidate
-    const governanceCandidateBalanceAfterWithdrawal = await contractUDAO.balanceOf(governanceCandidate.address);
-    await expect(governanceCandidateBalanceAfterWithdrawal).to.equal(ethers.utils.parseEther("90"));
+
+    /// @dev Get the current percent cut of the governance treasury 
+    const currentGovernanceTreasuryCut = await contractPlatformTreasury.contentGovernanceCut();
+
+    /// Get the current governance treasury balance
+    const currentGovernanceTreasuryBalance = await contractUDAO.balanceOf(governanceTreasuryAddress);
+    /// Get the content price of token Id 0 from UDAOC (first 0 is token ID, second 0 is full price of content)
+    const contentPrice = await contractUDAOContent.contentPrice(0, 0);
+    /// Multiply the content price with the current governance treasury cut and divide by 100000 to get the expected governance treasury balance
+    const expectedGovernanceTreasuryBalanceBeforePercentage = contentPrice.mul(currentGovernanceTreasuryCut);
+    const expectedGovernanceTreasuryBalance = expectedGovernanceTreasuryBalanceBeforePercentage.div(100000);
+
+    /// Check if the governance treasury balance is equal to the expected governance treasury balance
+    await expect(currentGovernanceTreasuryBalance).to.equal(expectedGovernanceTreasuryBalance);
+
+
 
   });
 });
