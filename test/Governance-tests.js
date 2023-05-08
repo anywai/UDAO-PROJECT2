@@ -378,19 +378,10 @@ describe("Governance Contract", function () {
       contractJurorManager
     } = await deploy();
 
-    // impersonate a whale
-    const address = "0xe7804c37c13166ff0b37f5ae0bb07a3aebb6e245";
-    await helpers.impersonateAccount(address);
-    const imporsonatedWhale = await ethers.getSigner(address);
+    // send some eth to the contractPlatformTreasury and impersonate it
+    await helpers.setBalance(contractUDAOTimelockController.address, hre.ethers.utils.parseEther("1"));
+    const signerTimelockController = await ethers.getImpersonatedSigner(contractUDAOTimelockController.address);
 
-    // imporsonate timelock controller
-    await hre.network.provider.request({
-      method: "hardhat_impersonateAccount",
-      params: [contractUDAOTimelockController.address],
-    });
-    const signerTimelockController = await ethers.provider.getSigner(contractUDAOTimelockController.address);
-    // send some funds to timelock controller
-    await imporsonatedWhale.sendTransaction({ to: contractUDAOTimelockController.address, value: ethers.utils.parseEther("1") })
     // set coaching foundation cut
     await contractPlatformTreasury.connect(signerTimelockController).setCoachingFoundationCut(10000);
     expect(await contractPlatformTreasury.coachingFoundationCut()).to.equal(10000);
@@ -421,19 +412,9 @@ describe("Governance Contract", function () {
       contractUDAOGovernor,
       contractJurorManager
     } = await deploy();
-    // impersonate a whale
-    const address = "0xe7804c37c13166ff0b37f5ae0bb07a3aebb6e245";
-    await helpers.impersonateAccount(address);
-    const imporsonatedWhale = await ethers.getSigner(address);
-
-    // imporsonate timelock controller
-    await hre.network.provider.request({
-      method: "hardhat_impersonateAccount",
-      params: [contractUDAOTimelockController.address],
-    });
-    const signerTimelockController = await ethers.provider.getSigner(contractUDAOTimelockController.address);
-    // send some funds to timelock controller
-    await imporsonatedWhale.sendTransaction({ to: contractUDAOTimelockController.address, value: ethers.utils.parseEther("1") })
+    // send some eth to the contractPlatformTreasury and impersonate it
+    await helpers.setBalance(contractUDAOTimelockController.address, hre.ethers.utils.parseEther("1"));
+    const signerTimelockController = await ethers.getImpersonatedSigner(contractUDAOTimelockController.address);
     // set coaching foundation cut
     await expect(contractPlatformTreasury.connect(signerTimelockController).setCoachingFoundationCut(100001)).to.be.revertedWith("Cuts cant be higher than %100");
   });

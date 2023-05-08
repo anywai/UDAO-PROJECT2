@@ -165,7 +165,7 @@ contract UDAOStaker is RoleController, EIP712 {
      */
     function setPlatformTreasuryAddress(
         address _platformTreasuryAddress
-    ) external onlyRoles(administrator_roles) {
+    ) external onlyRole(BACKEND_ROLE) {
         platformTreasuryAddress = _platformTreasuryAddress;
         emit SetPlatformTreasuryAddress(_platformTreasuryAddress);
     }

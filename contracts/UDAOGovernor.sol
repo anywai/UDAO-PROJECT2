@@ -47,11 +47,11 @@ contract UDAOGovernor is
         stakingContract = IUDAOStaker(stakingContractAddress);
     }
 
-    /// @notice Allows administrator_roles to set the staking contract address.
+    /// @notice Allows backend to set the staking contract address.
     /// @param stakingContractAddress Address to set to
     function setStakingContract(address stakingContractAddress)
         external
-        onlyRoles(administrator_roles)
+        onlyRole(BACKEND_ROLE)
     {
         stakingContract = IUDAOStaker(stakingContractAddress);
     }
