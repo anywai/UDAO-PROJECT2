@@ -217,8 +217,8 @@ contract UDAOStaker is RoleController, EIP712 {
         ValidationApplication
             storage validationApplication = validatorApplications.push();
         validationApplication.applicant = msg.sender;
-        validatorApplicationId[msg.sender] = validationApplicationIndex;
         validationApplication.expire = block.timestamp + validatorLockTime;
+        validatorApplicationId[msg.sender] = validationApplicationIndex;
         validationApplicationIndex++;
         validationBalanceOf[msg.sender] += validatorLockAmount;
         udao.transferFrom(msg.sender, address(this), validatorLockAmount);
@@ -314,6 +314,15 @@ contract UDAOStaker is RoleController, EIP712 {
             jurorApplication.isFinished = true;
         } else if (roleId == 2) {
             IRM.grantRoleStaker(CORPORATE_ROLE, voucher.redeemer);
+        } else if (roleId == 3) {
+            ValidationApplication
+                storage validationApplication = validatorApplications[
+                    validatorApplicationId[voucher.redeemer]
+                ];
+
+            IRM.grantRoleStaker(SUPER_VALIDATOR_ROLE, voucher.redeemer);
+
+            validationApplication.isFinished = true;
         } else {
             revert("Undefined role ID!");
         }
@@ -451,7 +460,6 @@ contract UDAOStaker is RoleController, EIP712 {
         return withdrawableBalance;
     }
 
-    
     /// @notice staking function to become a governance member
     /// @param _amount amount of UDAO token that will be staked
     /// @param _days amount of days UDAO token that will be staked for
