@@ -92,7 +92,6 @@ contract UDAOStaker is RoleController, EIP712 {
 
     struct ValidationApplication {
         address applicant;
-        bool isSuper;
         bool isFinished;
         uint256 expire;
     }
@@ -245,7 +244,6 @@ contract UDAOStaker is RoleController, EIP712 {
         ValidationApplication
             storage validationApplication = validatorApplications.push();
         validationApplication.applicant = msg.sender;
-        validationApplication.isSuper = true;
         validatorApplicationId[msg.sender] = validationApplicationIndex;
         validationApplicationIndex++;
 
@@ -293,12 +291,7 @@ contract UDAOStaker is RoleController, EIP712 {
                     validatorApplicationId[voucher.redeemer]
                 ];
 
-            if (validationApplication.isSuper) {
-                IRM.grantRoleStaker(SUPER_VALIDATOR_ROLE, voucher.redeemer);
-                roleId = 3; // supervalidator
-            } else {
-                IRM.grantRoleStaker(VALIDATOR_ROLE, voucher.redeemer);
-            }
+            IRM.grantRoleStaker(VALIDATOR_ROLE, voucher.redeemer);
             validationApplication.isFinished = true;
         } else if (roleId == 1) {
             require(
