@@ -49,7 +49,7 @@ abstract contract BasePlatform is Pausable, RoleController {
     mapping(uint => uint) payPerValidationScore;
 
     // round => pay per juror since there won't be a juror point
-    mapping(uint => uint) payPerJuror;
+    mapping(uint => uint) public payPerJuror;
 
     // validator => last claimed round
     mapping(address => uint) lastValidatorClaim;

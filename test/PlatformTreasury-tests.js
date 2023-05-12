@@ -238,7 +238,9 @@ async function deploy() {
     governanceCandidate,
     governanceMember,
     jurorCandidate,
-    jurorMember,
+    jurorMember1,
+    jurorMember2,
+    jurorMember3
   ] = await ethers.getSigners();
 
   // FACTORIES
@@ -391,6 +393,21 @@ async function deploy() {
   const EXECUTOR_ROLE = ethers.utils.keccak256(
     ethers.utils.toUtf8Bytes("EXECUTOR_ROLE")
   );
+  const JUROR_ROLE = ethers.utils.keccak256(
+    ethers.utils.toUtf8Bytes("JUROR_ROLE")
+  );
+  await contractRoleManager.grantRole(
+    JUROR_ROLE,
+    jurorMember1.address
+  );
+  await contractRoleManager.grantRole(
+    JUROR_ROLE,
+    jurorMember2.address
+  );
+  await contractRoleManager.grantRole(
+    JUROR_ROLE,
+    jurorMember3.address
+  );
   // @dev Setting the zero address as the executor role will allow anyone to execute the proposal
   await contractUDAOTimelockController.grantRole(
     EXECUTOR_ROLE,
@@ -499,7 +516,9 @@ async function deploy() {
     governanceCandidate,
     governanceMember,
     jurorCandidate,
-    jurorMember,
+    jurorMember1,
+    jurorMember2,
+    jurorMember3,
     contractUDAO,
     contractRoleManager,
     contractUDAOCertificate,
@@ -528,7 +547,9 @@ describe("Platform Treasury General", function () {
       governanceCandidate,
       governanceMember,
       jurorCandidate,
-      jurorMember,
+      jurorMember1,
+      jurorMember2,
+      jurorMember3,
       contractUDAO,
       contractRoleManager,
       contractUDAOCertificate,
@@ -803,7 +824,7 @@ describe("Platform Treasury General", function () {
       contractUDAOGovernor,
       contractJurorManager
     } = await deploy();
-    
+
     // Make a content purchase to gather funds for governance
     await makeContentPurchase(contractPlatformTreasury, contentCreator, contentBuyer, contractUDAOContent, contractRoleManager, contractUDAO, contractValidationManager, backend, validator1, validator2, validator3, validator4, validator5, contractValidationManager, backend);
 
@@ -869,7 +890,7 @@ describe("Platform Treasury General", function () {
       contractUDAOGovernor,
       contractJurorManager
     } = await deploy();
-    
+
     // Make a content purchase to gather funds for governance
     await makeContentPurchase(contractPlatformTreasury, contentCreator, contentBuyer, contractUDAOContent, contractRoleManager, contractUDAO, contractValidationManager, backend, validator1, validator2, validator3, validator4, validator5, contractValidationManager, backend);
 
@@ -932,8 +953,195 @@ describe("Platform Treasury General", function () {
     await expect(validator4BalanceAfter).to.equal(expectedValidator4Cut);
     await expect(validator5BalanceAfter).to.equal(expectedValidator5Cut);
 
-   
+    
+  });
 
+  it("Should allow jurors to withdraw funds from the treasury after a dispute is resolved", async function () {
+    const {
+      backend,
+      contentCreator,
+      contentBuyer,
+      validatorCandidate,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember1,
+      jurorMember2,
+      jurorMember3,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+      contractJurorManager
+    } = await deploy();
 
+    /// @dev Dispute settings
+    const caseScope = 1;
+    const caseQuestion = "Should we remove this content?";
+    const caseTokenRelated = true;
+    const caseTokenId = 0;
+
+    // Make a content purchase to gather funds for governance
+    await makeContentPurchase(contractPlatformTreasury, contentCreator, contentBuyer, contractUDAOContent, contractRoleManager, contractUDAO, contractValidationManager, backend, validator1, validator2, validator3, validator4, validator5, contractValidationManager, backend);
+
+    /// @dev Create dispute
+    await contractJurorManager.connect(backend).createDispute(caseScope, caseQuestion, caseTokenRelated, caseTokenId);
+    /// @dev Assign dispute to juror
+    const disputeId = 1;
+    await contractJurorManager.connect(jurorMember1).assignDispute(disputeId);
+    await contractJurorManager.connect(jurorMember2).assignDispute(disputeId);
+    await contractJurorManager.connect(jurorMember3).assignDispute(disputeId);
+    /// @dev Send dispute result
+    const disputeResultOfJurorMember1 = 1;
+    const disputeResultOfJurorMember2 = 0;
+    const disputeResultOfJurorMember3 = 0;
+    await contractJurorManager.connect(jurorMember1).sendDisputeResult(disputeId, disputeResultOfJurorMember1);
+    await contractJurorManager.connect(jurorMember2).sendDisputeResult(disputeId, disputeResultOfJurorMember2);
+    await contractJurorManager.connect(jurorMember3).sendDisputeResult(disputeId, disputeResultOfJurorMember3);
+    /// @dev Finalize dispute
+    const disputeVerdict = false;
+    await expect(contractJurorManager.connect(backend).finalizeDispute(disputeId)).to.emit(contractJurorManager, "DisputeEnded").withArgs(disputeId, disputeVerdict);
+
+    // Get the ID of the current distribution round
+    const currentDistributionRound = await contractValidationManager.distributionRound();
+
+    /// @dev Check scores of jurors in this round
+    const scoreOfJuror1 = await contractJurorManager.getJurorScore(jurorMember1.address, currentDistributionRound);
+    const scoreOfJuror2 = await contractJurorManager.getJurorScore(jurorMember2.address, currentDistributionRound);
+    const scoreOfJuror3 = await contractJurorManager.getJurorScore(jurorMember3.address, currentDistributionRound);
+    expect(scoreOfJuror1).to.equal(0);
+    expect(scoreOfJuror2).to.equal(1);
+    expect(scoreOfJuror3).to.equal(1);
+
+    /// @dev Check account balances of jurors before withdrawal
+    const jurorMember1BalanceBefore = await contractUDAO.balanceOf(jurorMember1.address);
+    const jurorMember2BalanceBefore = await contractUDAO.balanceOf(jurorMember2.address);
+    const jurorMember3BalanceBefore = await contractUDAO.balanceOf(jurorMember3.address);
+    /// @dev Expect that the account balances of jurors are 0 before withdrawal
+    await expect(jurorMember1BalanceBefore).to.equal(0);
+    await expect(jurorMember2BalanceBefore).to.equal(0);
+    await expect(jurorMember3BalanceBefore).to.equal(0);
+
+    // Get the current juror balance for a round (calculated in content manager)
+    const jurorBalanceForRound = await contractPlatformTreasury.jurorBalanceForRound();
+    // Foundation should call distributeRewards to distribute rewards to jurors
+    await contractPlatformTreasury.connect(foundation).distributeRewards();
+ 
+
+    // Call withdrawJuror from platformtreasury contract for each juror
+    await contractPlatformTreasury.connect(jurorMember1).withdrawJuror();
+    await contractPlatformTreasury.connect(jurorMember2).withdrawJuror();
+    await contractPlatformTreasury.connect(jurorMember3).withdrawJuror();
+
+    /// @dev Check account balances of jurors after withdrawal
+    const jurorMember1BalanceAfter = await contractUDAO.balanceOf(jurorMember1.address);
+    const jurorMember2BalanceAfter = await contractUDAO.balanceOf(jurorMember2.address);
+    const jurorMember3BalanceAfter = await contractUDAO.balanceOf(jurorMember3.address);
+    /// @dev Calculate how much each juror should receive
+    // Get the juror cut
+    const jurorCut = await contractPlatformTreasury.contentJurorCut();
+    // Get the content price of token Id 0 from UDAOC (first 0 is token ID, second 0 is full price of content)
+    const contentPrice = await contractUDAOContent.contentPrice(0, 0);
+    // Get the total juror score
+    const totalJurorScore = scoreOfJuror1.add(scoreOfJuror2).add(scoreOfJuror3);
+    // Check if this matches with getTotalJurorScore result
+    const getCumulativeJurorScore = await contractJurorManager.getTotalJurorScore();
+    expect(getCumulativeJurorScore).to.equal(totalJurorScore);
+    // Expect calculated juror balance for round to be equal to content price * juror cut / 100000
+    expect(jurorBalanceForRound).to.equal(contentPrice.mul(jurorCut).div(100000));
+    // Calculate payPerJuror
+    const calculatedPayPerJuror = jurorBalanceForRound.div(totalJurorScore);
+    // Get payPerJuror from contract
+    const payPerJuror = await contractPlatformTreasury.payPerJuror(currentDistributionRound);
+    // Check if calculated payPerJuror matches with payPerJuror from contract
+    expect(calculatedPayPerJuror).to.equal(payPerJuror);
+    // Calculate the expected juror balances
+    const expectedJurorMember1Balance = payPerJuror.mul(scoreOfJuror1);
+    const expectedJurorMember2Balance = payPerJuror.mul(scoreOfJuror2);
+    const expectedJurorMember3Balance = payPerJuror.mul(scoreOfJuror3);
+    // Expect that the account balances of jurors are equal to the expected balances
+    await expect(jurorMember1BalanceAfter).to.equal(expectedJurorMember1Balance);
+    await expect(jurorMember2BalanceAfter).to.equal(expectedJurorMember2Balance);
+    await expect(jurorMember3BalanceAfter).to.equal(expectedJurorMember3Balance);
+  });
+
+  it("Should distribute rewards to jurors when there are multiple disputes", async function () {});
+  it("Should allow instructers to withdraw their rewards", async function () {
+    const {
+      backend,
+      contentCreator,
+      contentBuyer,
+      validatorCandidate,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember1,
+      jurorMember2,
+      jurorMember3,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+      contractJurorManager
+    } = await deploy();
+    // Make a content purchase 
+    await makeContentPurchase(contractPlatformTreasury, contentCreator, contentBuyer, contractUDAOContent, contractRoleManager, contractUDAO, contractValidationManager, backend, validator1, validator2, validator3, validator4, validator5, contractValidationManager, backend);
+    
+    // Get the instructer balance before withdrawal
+    const instructerBalanceBefore = await contractUDAO.balanceOf(contentCreator.address);
+    // Expect that the instructer balance is 0 before withdrawal
+    await expect(instructerBalanceBefore).to.equal(0);
+    // Instructer should call withdrawInstructor from platformtreasury contract
+    await contractPlatformTreasury.connect(contentCreator).withdrawInstructor();
+    // Get the instructer balance after withdrawal
+    const instructerBalanceAfter = await contractUDAO.balanceOf(contentCreator.address);
+    // Expect that the instructer balance is not 0 after withdrawal
+    await expect(instructerBalanceAfter).to.not.equal(0);
+
+    /// @dev Calculate how much the instructer should receive
+    const contentPrice = await contractUDAOContent.contentPrice(0, 0);
+    // Calculate the foundation cut    
+    const currentFoundationCut = await contractPlatformTreasury.contentFoundationCut();
+    const expectedFoundationBalanceBeforePercentage = contentPrice.mul(currentFoundationCut);
+    const expectedFoundationBalance = expectedFoundationBalanceBeforePercentage.div(100000);
+    // Calculate the governance cut
+    const currentGovernanceTreasuryCut = await contractPlatformTreasury.contentGovernanceCut();
+    const expectedGovernanceTreasuryBalanceBeforePercentage = contentPrice.mul(currentGovernanceTreasuryCut);
+    const expectedGovernanceTreasuryBalance = expectedGovernanceTreasuryBalanceBeforePercentage.div(100000);
+    // Calculate the validator cut
+    const validatorBalanceForRound = await contractPlatformTreasury.validatorBalanceForRound();
+    // Calculate the juror cut
+    const jurorBalanceForRound = await contractPlatformTreasury.jurorBalanceForRound();
+    // Expect instructerBalance to be equal to priceToPay minus the sum of all cuts
+    await expect(instructerBalanceAfter).to.equal(contentPrice.sub(expectedFoundationBalance).sub(expectedGovernanceTreasuryBalance).sub(validatorBalanceForRound).sub(jurorBalanceForRound));
+    
   });
 });
