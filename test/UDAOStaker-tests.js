@@ -264,6 +264,7 @@ async function deploy() {
     contractUDAOStaker,
     contractUDAOTimelockController,
     contractUDAOGovernor,
+    BACKEND_ROLE,
   };
 }
 
@@ -1504,6 +1505,125 @@ describe("UDAOStaker Contract", function () {
       .withArgs(1, jurorCandidate.address); // transfer from null address to minter
   });
 
+  it("Should fail rejecting if role id does not exist", async function () {
+    const {
+      backend,
+      validatorCandidate,
+      validator,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+    } = await deploy();
+    await contractRoleManager.setKYC(jurorCandidate.address, true);
+
+    await contractUDAO.transfer(
+      jurorCandidate.address,
+      ethers.utils.parseEther("10000.0")
+    );
+
+    await contractUDAO
+      .connect(jurorCandidate)
+      .approve(
+        contractUDAOStaker.address,
+        ethers.utils.parseEther("999999999999.0")
+      );
+
+    await expect(
+      contractUDAOStaker
+        .connect(jurorCandidate)
+        .stakeForGovernance(ethers.utils.parseEther("10"), 30)
+    )
+      .to.emit(contractUDAOStaker, "GovernanceStake") // transfer from null address to minter
+      .withArgs(
+        jurorCandidate.address,
+        ethers.utils.parseEther("10"),
+        ethers.utils.parseEther("300")
+      );
+    await expect(contractUDAOStaker.connect(jurorCandidate).applyForJuror(5))
+      .to.emit(contractUDAOStaker, "RoleApplied") // transfer from null address to minter
+      .withArgs(1, jurorCandidate.address, 5);
+    await expect(
+      contractUDAOStaker
+        .connect(backend)
+        .rejectApplication(jurorCandidate.address, 4)
+    ).to.revertedWith("Role Id does not exist!");
+  });
+
+  it("Should fail rejecting if sender is not backend", async function () {
+    const {
+      backend,
+      validatorCandidate,
+      validator,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+      BACKEND_ROLE,
+    } = await deploy();
+    await contractRoleManager.setKYC(jurorCandidate.address, true);
+
+    await contractUDAO.transfer(
+      jurorCandidate.address,
+      ethers.utils.parseEther("10000.0")
+    );
+
+    await contractUDAO
+      .connect(jurorCandidate)
+      .approve(
+        contractUDAOStaker.address,
+        ethers.utils.parseEther("999999999999.0")
+      );
+
+    await expect(
+      contractUDAOStaker
+        .connect(jurorCandidate)
+        .stakeForGovernance(ethers.utils.parseEther("10"), 30)
+    )
+      .to.emit(contractUDAOStaker, "GovernanceStake") // transfer from null address to minter
+      .withArgs(
+        jurorCandidate.address,
+        ethers.utils.parseEther("10"),
+        ethers.utils.parseEther("300")
+      );
+    await expect(contractUDAOStaker.connect(jurorCandidate).applyForJuror(5))
+      .to.emit(contractUDAOStaker, "RoleApplied") // transfer from null address to minter
+      .withArgs(1, jurorCandidate.address, 5);
+    await expect(
+      contractUDAOStaker
+        .connect(jurorCandidate)
+        .rejectApplication(jurorCandidate.address, 1)
+    ).to.revertedWith(
+      `AccessControl: account ${jurorCandidate.address.toLowerCase()} is missing role ${BACKEND_ROLE}`
+    );
+  });
+
   it("Should unstake to stop being a governance member", async function () {
     const {
       backend,
@@ -1565,5 +1685,291 @@ describe("UDAOStaker Contract", function () {
         ethers.utils.parseEther("10"),
         ethers.utils.parseEther("300")
       );
+  });
+
+  it("Should withdraw validator stake when approved", async function () {
+    const {
+      backend,
+      validatorCandidate,
+      validator,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+    } = await deploy();
+    await contractRoleManager.setKYC(validatorCandidate.address, true);
+
+    await contractUDAO.transfer(
+      validatorCandidate.address,
+      ethers.utils.parseEther("10000.0")
+    );
+
+    await contractUDAO
+      .connect(validatorCandidate)
+      .approve(
+        contractUDAOStaker.address,
+        ethers.utils.parseEther("999999999999.0")
+      );
+
+    // Staking
+    await expect(
+      contractUDAOStaker
+        .connect(validatorCandidate)
+        .stakeForGovernance(ethers.utils.parseEther("10"), 30)
+    )
+      .to.emit(contractUDAOStaker, "GovernanceStake") // transfer from null address to minter
+      .withArgs(
+        validatorCandidate.address,
+        ethers.utils.parseEther("10"),
+        ethers.utils.parseEther("300")
+      );
+    await expect(
+      contractUDAOStaker.connect(validatorCandidate).applyForValidator()
+    )
+      .to.emit(contractUDAOStaker, "RoleApplied") // transfer from null address to minter
+      .withArgs(0, validatorCandidate.address, ethers.utils.parseEther("150"));
+    const lazyRole = new LazyRole({
+      contract: contractUDAOStaker,
+      signer: backend,
+    });
+    const role_voucher = await lazyRole.createVoucher(
+      validatorCandidate.address,
+      Date.now() + 999999999,
+      0
+    );
+    await expect(
+      contractUDAOStaker.connect(validatorCandidate).getApproved(role_voucher)
+    )
+      .to.emit(contractUDAOStaker, "RoleApproved") // transfer from null address to minter
+      .withArgs(0, validatorCandidate.address);
+
+    await helpers.time.increase(259200200);
+    await expect(
+      contractUDAOStaker.connect(validatorCandidate).withdrawValidatorStake()
+    )
+      .to.emit(contractUDAOStaker, "ValidatorStakeWithdrawn")
+      .withArgs(validatorCandidate.address, ethers.utils.parseEther("150"));
+  });
+
+  it("Should withdraw validator stake when rejected", async function () {
+    const {
+      backend,
+      validatorCandidate,
+      validator,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+    } = await deploy();
+    await contractRoleManager.setKYC(validatorCandidate.address, true);
+
+    await contractUDAO.transfer(
+      validatorCandidate.address,
+      ethers.utils.parseEther("10000.0")
+    );
+
+    await contractUDAO
+      .connect(validatorCandidate)
+      .approve(
+        contractUDAOStaker.address,
+        ethers.utils.parseEther("999999999999.0")
+      );
+
+    // Staking
+    await expect(
+      contractUDAOStaker
+        .connect(validatorCandidate)
+        .stakeForGovernance(ethers.utils.parseEther("10"), 30)
+    )
+      .to.emit(contractUDAOStaker, "GovernanceStake") // transfer from null address to minter
+      .withArgs(
+        validatorCandidate.address,
+        ethers.utils.parseEther("10"),
+        ethers.utils.parseEther("300")
+      );
+    await expect(
+      contractUDAOStaker.connect(validatorCandidate).applyForValidator()
+    )
+      .to.emit(contractUDAOStaker, "RoleApplied") // transfer from null address to minter
+      .withArgs(0, validatorCandidate.address, ethers.utils.parseEther("150"));
+    await expect(
+      contractUDAOStaker
+        .connect(backend)
+        .rejectApplication(validatorCandidate.address, 0)
+    )
+      .to.emit(contractUDAOStaker, "RoleRejected")
+      .withArgs(0, validatorCandidate.address); // transfer from null address to minter
+    await expect(
+      contractUDAOStaker.connect(validatorCandidate).withdrawValidatorStake()
+    )
+      .to.emit(contractUDAOStaker, "ValidatorStakeWithdrawn")
+      .withArgs(validatorCandidate.address, ethers.utils.parseEther("150"));
+  });
+
+  it("Should withdraw juror stake when approved", async function () {
+    const {
+      backend,
+      validatorCandidate,
+      validator,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+    } = await deploy();
+    await contractRoleManager.setKYC(jurorCandidate.address, true);
+
+    await contractUDAO.transfer(
+      jurorCandidate.address,
+      ethers.utils.parseEther("10000.0")
+    );
+
+    await contractUDAO
+      .connect(jurorCandidate)
+      .approve(
+        contractUDAOStaker.address,
+        ethers.utils.parseEther("999999999999.0")
+      );
+
+    await expect(
+      contractUDAOStaker
+        .connect(jurorCandidate)
+        .stakeForGovernance(ethers.utils.parseEther("10"), 30)
+    )
+      .to.emit(contractUDAOStaker, "GovernanceStake") // transfer from null address to minter
+      .withArgs(
+        jurorCandidate.address,
+        ethers.utils.parseEther("10"),
+        ethers.utils.parseEther("300")
+      );
+    await expect(contractUDAOStaker.connect(jurorCandidate).applyForJuror(5))
+      .to.emit(contractUDAOStaker, "RoleApplied") // transfer from null address to minter
+      .withArgs(1, jurorCandidate.address, 5);
+
+    const lazyRole = new LazyRole({
+      contract: contractUDAOStaker,
+      signer: backend,
+    });
+    const role_voucher = await lazyRole.createVoucher(
+      jurorCandidate.address,
+      Date.now() + 999999999,
+      1
+    );
+    await expect(
+      contractUDAOStaker.connect(jurorCandidate).getApproved(role_voucher)
+    )
+      .to.emit(contractUDAOStaker, "RoleApproved") // transfer from null address to minter
+      .withArgs(1, jurorCandidate.address);
+
+    await helpers.time.increase(259200200);
+    await expect(
+      contractUDAOStaker.connect(jurorCandidate).withdrawJurorStake()
+    )
+      .to.emit(contractUDAOStaker, "JurorStakeWithdrawn")
+      .withArgs(jurorCandidate.address, ethers.utils.parseEther("150"));
+  });
+
+  it("Should withdraw juror stake when rejected", async function () {
+    const {
+      backend,
+      validatorCandidate,
+      validator,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+    } = await deploy();
+    await contractRoleManager.setKYC(jurorCandidate.address, true);
+
+    await contractUDAO.transfer(
+      jurorCandidate.address,
+      ethers.utils.parseEther("10000.0")
+    );
+
+    await contractUDAO
+      .connect(jurorCandidate)
+      .approve(
+        contractUDAOStaker.address,
+        ethers.utils.parseEther("999999999999.0")
+      );
+
+    await expect(
+      contractUDAOStaker
+        .connect(jurorCandidate)
+        .stakeForGovernance(ethers.utils.parseEther("10"), 30)
+    )
+      .to.emit(contractUDAOStaker, "GovernanceStake") // transfer from null address to minter
+      .withArgs(
+        jurorCandidate.address,
+        ethers.utils.parseEther("10"),
+        ethers.utils.parseEther("300")
+      );
+    await expect(contractUDAOStaker.connect(jurorCandidate).applyForJuror(5))
+      .to.emit(contractUDAOStaker, "RoleApplied") // transfer from null address to minter
+      .withArgs(1, jurorCandidate.address, 5);
+    await expect(
+      contractUDAOStaker
+        .connect(backend)
+        .rejectApplication(jurorCandidate.address, 1)
+    )
+      .to.emit(contractUDAOStaker, "RoleRejected")
+      .withArgs(1, jurorCandidate.address); // transfer from null address to minter
+
+    await expect(
+      contractUDAOStaker.connect(jurorCandidate).withdrawJurorStake()
+    )
+      .to.emit(contractUDAOStaker, "JurorStakeWithdrawn")
+      .withArgs(jurorCandidate.address, ethers.utils.parseEther("150"));
   });
 });
