@@ -7,8 +7,8 @@ import "@openzeppelin/contracts/governance/utils/IVotes.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
-import "./RoleController.sol";
-import "./ContractManager.sol";
+import "../RoleController.sol";
+import "../ContractManager.sol";
 
 import "hardhat/console.sol";
 

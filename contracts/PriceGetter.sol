@@ -5,7 +5,7 @@ pragma solidity ^0.8.4;
 import "./uniswap-0.8/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
 import "./uniswap-0.8/v3-periphery/contracts/libraries/OracleLibrary.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
-import "./IPriceGetter.sol";
+import "./interfaces/IPriceGetter.sol";
 import "./RoleController.sol";
 
 contract PriceGetter is IPriceGetter, RoleController {
@@ -14,7 +14,7 @@ contract PriceGetter is IPriceGetter, RoleController {
     address public pool;
     /// fiat name => aggregator interface
     mapping(bytes32 => AggregatorV3Interface) public fiatToPriceFeed;
-    
+
     /// @dev token0 = tokenIn (matic) and token1 = tokenOut(udao)
     constructor(
         address _factory,
@@ -22,8 +22,7 @@ contract PriceGetter is IPriceGetter, RoleController {
         address _token1,
         uint24 _fee,
         address rmAddress
-    )RoleController(rmAddress) 
-    {    
+    ) RoleController(rmAddress) {
         token0 = _token0;
         token1 = _token1;
 
@@ -37,38 +36,41 @@ contract PriceGetter is IPriceGetter, RoleController {
         pool = _pool;
 
         /// Initialize the contract with the price feed addresses
-        fiatToPriceFeed[keccak256(abi.encodePacked("usd"))] = AggregatorV3Interface(
-                    0xAB594600376Ec9fD91F8e885dADF0CE036862dE0
-                );
-        fiatToPriceFeed[keccak256(abi.encodePacked("eur"))] = AggregatorV3Interface(
-                    0x73366Fe0AA0Ded304479862808e02506FE556a98
-                );
-        fiatToPriceFeed[keccak256(abi.encodePacked("jpy"))] = AggregatorV3Interface(
-                    0xD647a6fC9BC6402301583C91decC5989d8Bc382D
-                );
-        fiatToPriceFeed[keccak256(abi.encodePacked("gbp"))] = AggregatorV3Interface(
-                    0x099a2540848573e94fb1Ca0Fa420b00acbBc845a
-                );
-        fiatToPriceFeed[keccak256(abi.encodePacked("aud"))] = AggregatorV3Interface(
-                    0x062Df9C4efd2030e243ffCc398b652e8b8F95C6f
-                );
-        fiatToPriceFeed[keccak256(abi.encodePacked("cad"))] = AggregatorV3Interface(
-                    0xACA44ABb8B04D07D883202F99FA5E3c53ed57Fb5
-                );
-        fiatToPriceFeed[keccak256(abi.encodePacked("chf"))] = AggregatorV3Interface(
-                    0xc76f762CedF0F78a439727861628E0fdfE1e70c2
-                );
+        fiatToPriceFeed[
+            keccak256(abi.encodePacked("usd"))
+        ] = AggregatorV3Interface(0xAB594600376Ec9fD91F8e885dADF0CE036862dE0);
+        fiatToPriceFeed[
+            keccak256(abi.encodePacked("eur"))
+        ] = AggregatorV3Interface(0x73366Fe0AA0Ded304479862808e02506FE556a98);
+        fiatToPriceFeed[
+            keccak256(abi.encodePacked("jpy"))
+        ] = AggregatorV3Interface(0xD647a6fC9BC6402301583C91decC5989d8Bc382D);
+        fiatToPriceFeed[
+            keccak256(abi.encodePacked("gbp"))
+        ] = AggregatorV3Interface(0x099a2540848573e94fb1Ca0Fa420b00acbBc845a);
+        fiatToPriceFeed[
+            keccak256(abi.encodePacked("aud"))
+        ] = AggregatorV3Interface(0x062Df9C4efd2030e243ffCc398b652e8b8F95C6f);
+        fiatToPriceFeed[
+            keccak256(abi.encodePacked("cad"))
+        ] = AggregatorV3Interface(0xACA44ABb8B04D07D883202F99FA5E3c53ed57Fb5);
+        fiatToPriceFeed[
+            keccak256(abi.encodePacked("chf"))
+        ] = AggregatorV3Interface(0xc76f762CedF0F78a439727861628E0fdfE1e70c2);
     }
 
-     /// @notice Get fiat to UDAO token amount
-     /// @param amountIn Amount of fiat
-     /// @param fiat Name of the fiat currency
-    function getUdaoOut(uint128 amountIn, bytes32 fiat) external view returns (uint udaoPayment) {
+    /// @notice Get fiat to UDAO token amount
+    /// @param amountIn Amount of fiat
+    /// @param fiat Name of the fiat currency
+    function getUdaoOut(
+        uint128 amountIn,
+        bytes32 fiat
+    ) external view returns (uint udaoPayment) {
         /// @dev Get amount of matic in return of given amount of fiat
         uint128 _fiatToMaticAmount = convertFiatToMatic(amountIn, fiat);
         /// @dev Get amount of udao in return of given amount of matic
         udaoPayment = convertMaticToUdao(_fiatToMaticAmount);
-        return(udaoPayment);
+        return (udaoPayment);
     }
 
     /// @notice Converts given amount of matic to udao
@@ -145,7 +147,9 @@ contract PriceGetter is IPriceGetter, RoleController {
     /// @param fiat Name of the fiat currency
     function getLatestPrice(bytes32 fiat) public view returns (int) {
         /// @dev MATIC / USD address on Mumbai
-        AggregatorV3Interface priceFeed = fiatToPriceFeed[keccak256(abi.encodePacked("usd"))];
+        AggregatorV3Interface priceFeed = fiatToPriceFeed[
+            keccak256(abi.encodePacked("usd"))
+        ];
 
         (
             ,
@@ -171,10 +175,14 @@ contract PriceGetter is IPriceGetter, RoleController {
 
         return (price);
     }
+
     /// @notice Add new fiat currency to the contract can also be used for modifying existing ones
     /// @param fiat Name of the fiat currency
     /// @param priceFeedAddress Address of the price feed of the fiat currency
-    function addNewFiat(bytes32 fiat, address priceFeedAddress) external onlyRoles(administrator_roles) {
+    function addNewFiat(
+        bytes32 fiat,
+        address priceFeedAddress
+    ) external onlyRoles(administrator_roles) {
         fiatToPriceFeed[fiat] = AggregatorV3Interface(priceFeedAddress);
     }
 

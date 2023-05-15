@@ -8,7 +8,7 @@ import "@openzeppelin/contracts/governance/extensions/GovernorVotes.sol";
 import "@openzeppelin/contracts/governance/extensions/GovernorVotesQuorumFraction.sol";
 import "@openzeppelin/contracts/governance/extensions/GovernorTimelockControl.sol";
 
-import "./RoleController.sol";
+import "../RoleController.sol";
 
 interface IUDAOStaker {
     function addVoteRewards(address voter) external;
@@ -25,7 +25,6 @@ contract UDAOGovernor is
 {
     IUDAOStaker stakingContract;
 
-    
     constructor(
         IVotes _token,
         TimelockController _timelock,
@@ -35,8 +34,8 @@ contract UDAOGovernor is
         Governor("UDAOGovernor")
         /// @dev 1 block mined in 2 seconds in Polygon
         GovernorSettings(
-            302400, /* 1 week voting delay */
-            302400, /* 1 week voting period duration*/
+            302400 /* 1 week voting delay */,
+            302400 /* 1 week voting period duration*/,
             1 /*proposal threshold*/
         )
         GovernorVotes(_token)
@@ -49,10 +48,9 @@ contract UDAOGovernor is
 
     /// @notice Allows backend to set the staking contract address.
     /// @param stakingContractAddress Address to set to
-    function setStakingContract(address stakingContractAddress)
-        external
-        onlyRole(BACKEND_ROLE)
-    {
+    function setStakingContract(
+        address stakingContractAddress
+    ) external onlyRole(BACKEND_ROLE) {
         stakingContract = IUDAOStaker(stakingContractAddress);
     }
 
@@ -87,7 +85,9 @@ contract UDAOGovernor is
         return super.votingPeriod();
     }
 
-    function quorum(uint256 blockNumber)
+    function quorum(
+        uint256 blockNumber
+    )
         public
         view
         override(IGovernor, GovernorVotesQuorumFraction)
@@ -96,7 +96,9 @@ contract UDAOGovernor is
         return super.quorum(blockNumber);
     }
 
-    function state(uint256 proposalId)
+    function state(
+        uint256 proposalId
+    )
         public
         view
         override(Governor, GovernorTimelockControl)
@@ -142,12 +144,9 @@ contract UDAOGovernor is
         return super._executor();
     }
 
-    function supportsInterface(bytes4 interfaceId)
-        public
-        view
-        override(Governor, GovernorTimelockControl)
-        returns (bool)
-    {
+    function supportsInterface(
+        bytes4 interfaceId
+    ) public view override(Governor, GovernorTimelockControl) returns (bool) {
         return super.supportsInterface(interfaceId);
     }
 }

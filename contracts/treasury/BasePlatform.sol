@@ -4,14 +4,13 @@ pragma solidity ^0.8.4;
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
-import "./ContractManager.sol";
-import "./IUDAOC.sol";
-import "./RoleController.sol";
-import "./IVM.sol";
-import "./IJM.sol";
+import "../ContractManager.sol";
+import "../interfaces/IUDAOC.sol";
+import "../RoleController.sol";
+import "../interfaces/IVM.sol";
+import "../interfaces/IJM.sol";
 
 abstract contract BasePlatform is Pausable, RoleController {
-
     ContractManager public contractManager;
 
     // content id => content balance
@@ -83,7 +82,7 @@ abstract contract BasePlatform is Pausable, RoleController {
     IValidationManager public IVM;
     IJurorManager public IJM;
 
-    /// @notice Triggered after every round is finalized and rewards are distributed 
+    /// @notice Triggered after every round is finalized and rewards are distributed
     event RewardsDistributed(
         uint payPerValidationScore,
         uint payPerJurorPoint,
@@ -104,7 +103,8 @@ abstract contract BasePlatform is Pausable, RoleController {
 
      */
     constructor(
-        address _contractManager, address _rmAddress
+        address _contractManager,
+        address _rmAddress
     ) RoleController(_rmAddress) {
         contractManager = ContractManager(_contractManager);
         udao = IERC20(contractManager.UdaoAddress());
@@ -117,25 +117,30 @@ abstract contract BasePlatform is Pausable, RoleController {
 
     /// @notice Sets the address of the governance treasury
     /// @param _newAddress New address of the governance treasury
-    function setGovernanceTreasuryAddress(address _newAddress) external onlyRole(BACKEND_ROLE){
+    function setGovernanceTreasuryAddress(
+        address _newAddress
+    ) external onlyRole(BACKEND_ROLE) {
         governanceTreasury = _newAddress;
     }
 
     /// @notice Sets the address of the foundation wallet
     /// @param _newAddress New address of the foundation wallet
-    function setFoundationWalletAddress(address _newAddress) external onlyRole(BACKEND_ROLE){
+    function setFoundationWalletAddress(
+        address _newAddress
+    ) external onlyRole(BACKEND_ROLE) {
         foundationWallet = _newAddress;
     }
 
-
     /// @notice Sets the address of the contract manager
     /// @param _newAddress New address of the contract manager
-    function setContractManagerAddress(address _newAddress) external onlyRole(BACKEND_ROLE){
+    function setContractManagerAddress(
+        address _newAddress
+    ) external onlyRole(BACKEND_ROLE) {
         contractManager = ContractManager(_newAddress);
     }
 
     /// @notice Get the updated addresses from contract manager
-    function updateAddresses() external onlyRole(BACKEND_ROLE){        
+    function updateAddresses() external onlyRole(BACKEND_ROLE) {
         udao = IERC20(contractManager.UdaoAddress());
         udaoc = IUDAOC(contractManager.UdaocAddress());
         IVM = IValidationManager(contractManager.IVMAddress());
@@ -147,7 +152,7 @@ abstract contract BasePlatform is Pausable, RoleController {
     /// @param _cut new cut (100000 -> 100% | 5000 -> 5%)
     function setCoachingFoundationCut(
         uint _cut
-    ) external onlyRole(GOVERNANCE_ROLE){
+    ) external onlyRole(GOVERNANCE_ROLE) {
         require(
             _cut + coachingGovernanceCut < 100000,
             "Cuts cant be higher than %100"
@@ -233,9 +238,7 @@ abstract contract BasePlatform is Pausable, RoleController {
 
     /// @notice changes cut from content for juror pool
     /// @param _cut new cut (100000 -> 100% | 5000 -> 5%)
-    function setContentJurorCut(
-        uint _cut
-    ) external onlyRole(GOVERNANCE_ROLE) {
+    function setContentJurorCut(uint _cut) external onlyRole(GOVERNANCE_ROLE) {
         require(
             contentFoundationCut +
                 contentGovernanceCut +
@@ -285,21 +288,31 @@ abstract contract BasePlatform is Pausable, RoleController {
      * for validators to claim it later.
      * TODO Automate this process with sentinels?
      */
-    function distributeRewards() external whenNotPaused onlyRoles(administrator_roles) {
+    function distributeRewards()
+        external
+        whenNotPaused
+        onlyRoles(administrator_roles)
+    {
         // Validator reward distribution
         uint currentTotalValidatorScore = IVM.getTotalValidationScore();
-        if(validatorBalanceForRound > 0 && currentTotalValidatorScore > 0){payPerValidationScore[distributionRound] =
-            validatorBalanceForRound /
-            currentTotalValidatorScore;
-            validatorBalanceForRound = 0;}
+        if (validatorBalanceForRound > 0 && currentTotalValidatorScore > 0) {
+            payPerValidationScore[distributionRound] =
+                validatorBalanceForRound /
+                currentTotalValidatorScore;
+            validatorBalanceForRound = 0;
+        }
         IVM.nextRound();
-        
+
         // Juror reward distribution
         uint currentJurorTotalScore = IJM.getTotalJurorScore();
-        if(jurorBalanceForRound > 0 && currentJurorTotalScore > 0){payPerJuror[distributionRound] =jurorBalanceForRound /currentJurorTotalScore;
-            jurorBalanceForRound = 0;}
+        if (jurorBalanceForRound > 0 && currentJurorTotalScore > 0) {
+            payPerJuror[distributionRound] =
+                jurorBalanceForRound /
+                currentJurorTotalScore;
+            jurorBalanceForRound = 0;
+        }
         IJM.nextRound();
-        
+
         distributionRound++;
 
         emit RewardsDistributed(

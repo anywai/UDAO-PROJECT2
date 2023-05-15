@@ -3,10 +3,10 @@ pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
-import "./ContractManager.sol";
-import "./RoleController.sol";
-import "./IUDAOC.sol";
-import "./IVM.sol";
+import "../ContractManager.sol";
+import "../RoleController.sol";
+import "../interfaces/IUDAOC.sol";
+import "../interfaces/IVM.sol";
 
 contract JurorManager is RoleController {
     IUDAOC udaoc;
@@ -110,15 +110,27 @@ contract JurorManager is RoleController {
         }
         emit DisputeCreated(dispute.caseId, caseScope, question);
     }
-    
+
     /// @notice assign a dispute to self
     /// @param caseId id of the dispute
     function assignDispute(uint256 caseId) external onlyRole(JUROR_ROLE) {
         require(caseId < disputes.length, "Dispute does not exist!");
-        require(activeDispute[msg.sender] == 0, "You already have an assigned dispute");
-        require(disputes[caseId].jurors.length < requiredJurors, "Dispute already have enough jurors!");
-        require(udaoc.ownerOf(disputes[caseId].tokenId) != msg.sender, "You are the instructor of this course.");
-        require(_canAssignDispute(caseId), "You can't assign content you validated!");
+        require(
+            activeDispute[msg.sender] == 0,
+            "You already have an assigned dispute"
+        );
+        require(
+            disputes[caseId].jurors.length < requiredJurors,
+            "Dispute already have enough jurors!"
+        );
+        require(
+            udaoc.ownerOf(disputes[caseId].tokenId) != msg.sender,
+            "You are the instructor of this course."
+        );
+        require(
+            _canAssignDispute(caseId),
+            "You can't assign content you validated!"
+        );
 
         activeDispute[msg.sender] = caseId;
         disputes[caseId].jurors.push(msg.sender);
@@ -129,7 +141,9 @@ contract JurorManager is RoleController {
     /// @param caseId id of the dispute
     /// @return true if the juror has not validated the content, false otherwise
     function _canAssignDispute(uint256 caseId) internal view returns (bool) {
-        uint validationId = IVM.getLatestValidationIdOfToken(disputes[caseId].tokenId);
+        uint validationId = IVM.getLatestValidationIdOfToken(
+            disputes[caseId].tokenId
+        );
         address[] memory validators = IVM.getValidatorsOfVal(validationId);
         uint validatorLength = validators.length;
         for (uint i = 0; i < validatorLength; i++) {
@@ -158,7 +172,7 @@ contract JurorManager is RoleController {
         disputes[caseId].isVoted[msg.sender] = true;
         disputes[caseId].vote[msg.sender] = result;
         disputes[caseId].voteCount++;
-        emit DisputeResultSent(caseId,result, msg.sender);
+        emit DisputeResultSent(caseId, result, msg.sender);
     }
 
     /// @notice finalizes dispute if enough juror vote is sent
@@ -237,7 +251,7 @@ contract JurorManager is RoleController {
         revert("Sender is not in juror list");
     }
     */
-   
+
     /// @notice Starts the new reward round
     function nextRound() external whenNotPaused onlyRole(TREASURY_CONTRACT) {
         distributionRound++;
