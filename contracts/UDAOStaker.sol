@@ -10,8 +10,12 @@ import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
 import "./RoleController.sol";
 import "./ContractManager.sol";
 
+import "hardhat/console.sol";
+
 interface IUDAOVP is IVotes, IERC20 {
     function mint(address to, uint256 amount) external;
+
+    function burnFrom(address account, uint256 amount) external;
 }
 
 contract UDAOStaker is RoleController, EIP712 {
@@ -92,7 +96,6 @@ contract UDAOStaker is RoleController, EIP712 {
 
     struct ValidationApplication {
         address applicant;
-        bool isSuper;
         bool isFinished;
         uint256 expire;
     }
@@ -217,8 +220,8 @@ contract UDAOStaker is RoleController, EIP712 {
         ValidationApplication
             storage validationApplication = validatorApplications.push();
         validationApplication.applicant = msg.sender;
-        validatorApplicationId[msg.sender] = validationApplicationIndex;
         validationApplication.expire = block.timestamp + validatorLockTime;
+        validatorApplicationId[msg.sender] = validationApplicationIndex;
         validationApplicationIndex++;
         validationBalanceOf[msg.sender] += validatorLockAmount;
         udao.transferFrom(msg.sender, address(this), validatorLockAmount);
@@ -245,7 +248,6 @@ contract UDAOStaker is RoleController, EIP712 {
         ValidationApplication
             storage validationApplication = validatorApplications.push();
         validationApplication.applicant = msg.sender;
-        validationApplication.isSuper = true;
         validatorApplicationId[msg.sender] = validationApplicationIndex;
         validationApplicationIndex++;
 
@@ -293,12 +295,7 @@ contract UDAOStaker is RoleController, EIP712 {
                     validatorApplicationId[voucher.redeemer]
                 ];
 
-            if (validationApplication.isSuper) {
-                IRM.grantRoleStaker(SUPER_VALIDATOR_ROLE, voucher.redeemer);
-                roleId = 3; // supervalidator
-            } else {
-                IRM.grantRoleStaker(VALIDATOR_ROLE, voucher.redeemer);
-            }
+            IRM.grantRoleStaker(VALIDATOR_ROLE, voucher.redeemer);
             validationApplication.isFinished = true;
         } else if (roleId == 1) {
             require(
@@ -314,6 +311,15 @@ contract UDAOStaker is RoleController, EIP712 {
             jurorApplication.isFinished = true;
         } else if (roleId == 2) {
             IRM.grantRoleStaker(CORPORATE_ROLE, voucher.redeemer);
+        } else if (roleId == 3) {
+            ValidationApplication
+                storage validationApplication = validatorApplications[
+                    validatorApplicationId[voucher.redeemer]
+                ];
+
+            IRM.grantRoleStaker(SUPER_VALIDATOR_ROLE, voucher.redeemer);
+
+            validationApplication.isFinished = true;
         } else {
             revert("Undefined role ID!");
         }
@@ -451,7 +457,6 @@ contract UDAOStaker is RoleController, EIP712 {
         return withdrawableBalance;
     }
 
-    
     /// @notice staking function to become a governance member
     /// @param _amount amount of UDAO token that will be staked
     /// @param _days amount of days UDAO token that will be staked for
@@ -479,12 +484,22 @@ contract UDAOStaker is RoleController, EIP712 {
         uint256 withdrawableBalance;
         uint256 vpBalance;
         uint256 stakingsLength = governanceStakes[msg.sender].length;
+        console.log("stakingsLength: %s", stakingsLength);
         for (int256 i = 0; uint256(i) < stakingsLength; i++) {
+            console.log("i: %s", uint256(i));
             GovernanceLock storage lock = governanceStakes[msg.sender][
                 uint256(i)
             ];
             if (block.timestamp >= lock.expire) {
-                if (_amount < (withdrawableBalance + lock.amount)) {
+                if ((_amount - withdrawableBalance) >= lock.amount) {
+                    withdrawableBalance += lock.amount;
+                    vpBalance += lock.vpamount;
+                    governanceStakes[msg.sender][uint256(i)] = governanceStakes[
+                        msg.sender
+                    ][governanceStakes[msg.sender].length - 1];
+                    governanceStakes[msg.sender].pop();
+                    i--;
+                } else {
                     uint256 vpFromLatest = ((lock.vpamount *
                         (((_amount - withdrawableBalance) * 100) /
                             lock.amount)) / 100);
@@ -494,7 +509,10 @@ contract UDAOStaker is RoleController, EIP712 {
                     lock.vpamount -= vpFromLatest;
                     vpBalance += vpFromLatest;
                     totalVotingPower -= vpBalance;
-                    udaovp.transferFrom(msg.sender, address(0x0), vpBalance);
+                    withdrawableBalance += udaoFromLatest;
+                }
+                if (_amount <= withdrawableBalance) {
+                    udaovp.burnFrom(msg.sender, vpBalance);
                     udao.transfer(msg.sender, _amount);
                     emit GovernanceStakeWithdraw(
                         msg.sender,
@@ -503,15 +521,9 @@ contract UDAOStaker is RoleController, EIP712 {
                     );
                     return;
                 }
-                withdrawableBalance += lock.amount;
-                vpBalance += lock.vpamount;
-                governanceStakes[msg.sender][uint256(i)] = governanceStakes[
-                    msg.sender
-                ][governanceStakes[msg.sender].length - 1];
-                governanceStakes[msg.sender].pop();
-                i--;
             }
         }
+        revert("You don't have enough withdrawable balance");
     }
 
     /**

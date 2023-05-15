@@ -49,7 +49,7 @@ abstract contract BasePlatform is Pausable, RoleController {
     mapping(uint => uint) payPerValidationScore;
 
     // round => pay per juror since there won't be a juror point
-    mapping(uint => uint) payPerJuror;
+    mapping(uint => uint) public payPerJuror;
 
     // validator => last claimed round
     mapping(address => uint) lastValidatorClaim;
@@ -287,18 +287,19 @@ abstract contract BasePlatform is Pausable, RoleController {
      */
     function distributeRewards() external whenNotPaused onlyRoles(administrator_roles) {
         // Validator reward distribution
-        payPerValidationScore[distributionRound] =
+        uint currentTotalValidatorScore = IVM.getTotalValidationScore();
+        if(validatorBalanceForRound > 0 && currentTotalValidatorScore > 0){payPerValidationScore[distributionRound] =
             validatorBalanceForRound /
-            IVM.getTotalValidationScore();
+            currentTotalValidatorScore;
+            validatorBalanceForRound = 0;}
         IVM.nextRound();
-        validatorBalanceForRound = 0;
-
+        
         // Juror reward distribution
-        payPerJuror[distributionRound] =
-            jurorBalanceForRound /
-            IJM.getTotalJurorScore();
+        uint currentJurorTotalScore = IJM.getTotalJurorScore();
+        if(jurorBalanceForRound > 0 && currentJurorTotalScore > 0){payPerJuror[distributionRound] =jurorBalanceForRound /currentJurorTotalScore;
+            jurorBalanceForRound = 0;}
         IJM.nextRound();
-        jurorBalanceForRound = 0;
+        
         distributionRound++;
 
         emit RewardsDistributed(

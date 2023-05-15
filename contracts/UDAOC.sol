@@ -19,7 +19,7 @@ contract UDAOContent is IUDAOC, ERC721, ERC721URIStorage, RoleController {
     ) ERC721("UDAO Content", "UDAOC") RoleController(irmAdress) {}
 
     // tokenId => (partId => price), first part is the full price
-    mapping(uint => mapping(uint => uint)) contentPrice;
+    mapping(uint => mapping(uint => uint)) public contentPrice;
     // tokenId => currency name
     mapping(uint => bytes32) currencyName;
     // tokenId => number of Parts

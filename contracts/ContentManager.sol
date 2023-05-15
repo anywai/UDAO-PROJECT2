@@ -169,11 +169,13 @@ abstract contract ContentManager is EIP712, BasePlatform {
             );
         }
 
+        /// @dev transfer the tokens from buyer to contract
+        udao.transferFrom(msg.sender, address(this), priceToPayUdao);
+        
         /// @dev Calculate and assign the cuts
         _updateBalancesContent(priceToPayUdao, instructor);
 
-        /// @dev transfer the tokens from buyer to contract
-        udao.transferFrom(msg.sender, address(this), priceToPayUdao);
+        
 
         if (fullContentPurchase) {
             _updateOwned(tokenId, 0, contentReceiver);
@@ -231,12 +233,13 @@ abstract contract ContentManager is EIP712, BasePlatform {
         );
         require(msg.sender == voucher.redeemer, "You are not redeemer.");
 
-        /// @dev Calculate and assing the cuts
+        
         uint256 priceToPay = voucher.priceToPay;
-        _updateBalancesContent(priceToPay, instructor);
-
         /// @dev transfer the tokens from buyer to contract
         udao.transferFrom(msg.sender, address(this), priceToPay);
+
+        /// @dev Calculate and assing the cuts
+        _updateBalancesContent(priceToPay, instructor);
 
         /// @dev Get the total payment amount first
         if (voucher.fullContentPurchase) {
@@ -277,7 +280,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
     ) internal {
         uint256 foundationCalc = (priceToPay * contentFoundationCut) / 100000;
         uint256 governanceCalc = (priceToPay * contentGovernanceCut) / 100000;
-        uint256 validatorCalc = (priceToPay * validatorBalance) / 100000;
+        uint256 validatorCalc = (priceToPay * contentValidatorCut) / 100000;
         uint256 jurorCalc = (priceToPay * contentJurorCut) / 100000;
 
         foundationBalance += foundationCalc;
