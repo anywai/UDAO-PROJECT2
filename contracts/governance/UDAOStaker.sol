@@ -552,8 +552,9 @@ contract UDAOStaker is RoleController, EIP712 {
         require(udaovp.balanceOf(voter) > 0, "Voter has no voting power");
         uint256 votingPowerRatio = (udaovp.balanceOf(voter) * 10000) /
             totalVotingPower;
-        rewardBalanceOf[voter] += votingPowerRatio * voteReward;
-        emit VoteRewardAdded(voter, votingPowerRatio * voteReward);
+
+        rewardBalanceOf[voter] += (votingPowerRatio * voteReward) / 10000;
+        emit VoteRewardAdded(voter, (votingPowerRatio * voteReward) / 10000);
     }
 
     /**
