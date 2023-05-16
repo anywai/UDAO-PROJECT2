@@ -169,11 +169,10 @@ async function setupGovernanceMember(contractRoleManager, contractUDAO, contract
       ethers.utils.parseEther("300")
     );
 }
-async function makeContentPurchase(contractPlatformTreasury, contentCreator, contentBuyer, contractUDAOContent, contractRoleManager, contractUDAO, contractValidationManager, backend, validator1, validator2, validator3, validator4, validator5, contractValidationManager, backend) {
-  /// Set KYC
+async function createContent(contractRoleManager, contractUDAOContent, contentCreator, contractValidationManager, backend, validator1, validator2, validator3, validator4, validator5, contentCreator){
+  /// Set KYC 
   await contractRoleManager.setKYC(contentCreator.address, true);
-  await contractRoleManager.setKYC(contentBuyer.address, true);
-
+  /// Redeem content
   await expect(
     contractUDAOContent.connect(contentCreator).redeem([ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
       "udao",
@@ -194,6 +193,14 @@ async function makeContentPurchase(contractPlatformTreasury, contentCreator, con
   /// Start validation and finalize it
   await runValidation(contractValidationManager, backend, validator1, validator2, validator3, validator4, validator5, contentCreator);
 
+}
+async function makeContentPurchase(contractPlatformTreasury, contentBuyer, contractRoleManager, contractUDAO) {
+  /// Set KYC
+  await contractRoleManager.setKYC(contentBuyer.address, true);
+
+  
+
+  
   /// Send UDAO to the buyer's wallet
   await contractUDAO.transfer(
     contentBuyer.address,
@@ -225,7 +232,9 @@ async function deploy() {
   const [
     backend,
     contentCreator,
-    contentBuyer,
+    contentBuyer1,
+    contentBuyer2,
+    contentBuyer3,
     validatorCandidate,
     validator1,
     validator2,
@@ -503,7 +512,9 @@ async function deploy() {
   return {
     backend,
     contentCreator,
-    contentBuyer,
+    contentBuyer1,
+    contentBuyer2,
+    contentBuyer3,
     validatorCandidate,
     validator1,
     validator2,
@@ -568,7 +579,9 @@ describe("Platform Treasury General", function () {
     const {
       backend,
       contentCreator,
-      contentBuyer,
+      contentBuyer1,
+      contentBuyer2,
+      contentBuyer3,
       validatorCandidate,
       validator1,
       validator2,
@@ -594,7 +607,8 @@ describe("Platform Treasury General", function () {
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
-      contractJurorManager
+      contractJurorManager,
+      contractContractManager
     } = await deploy();
 
     // new dummy governance treasury address
@@ -607,34 +621,37 @@ describe("Platform Treasury General", function () {
   it("Should allow backend to set new foundation wallet address", async function () {
     const {
       backend,
-      contentCreator,
-      contentBuyer,
-      validatorCandidate,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractValidationManager,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      contractJurorManager
+    contentCreator,
+    contentBuyer1,
+    contentBuyer2,
+    contentBuyer3,
+    validatorCandidate,
+    validator1,
+    validator2,
+    validator3,
+    validator4,
+    validator5,
+    superValidatorCandidate,
+    superValidator,
+    foundation,
+    governanceCandidate,
+    governanceMember,
+    jurorCandidate,
+    jurorMember1,
+    jurorMember2,
+    jurorMember3,
+    contractUDAO,
+    contractRoleManager,
+    contractUDAOCertificate,
+    contractUDAOContent,
+    contractValidationManager,
+    contractPlatformTreasury,
+    contractUDAOVp,
+    contractUDAOStaker,
+    contractUDAOTimelockController,
+    contractUDAOGovernor,
+    contractJurorManager,
+    contractContractManager
     } = await deploy();
 
     // new dummy foundation address
@@ -647,34 +664,37 @@ describe("Platform Treasury General", function () {
   it("Should allow governance to withdraw funds from the treasury after a content purchase", async function () {
     const {
       backend,
-      contentCreator,
-      contentBuyer,
-      validatorCandidate,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractValidationManager,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      contractJurorManager
+    contentCreator,
+    contentBuyer1,
+    contentBuyer2,
+    contentBuyer3,
+    validatorCandidate,
+    validator1,
+    validator2,
+    validator3,
+    validator4,
+    validator5,
+    superValidatorCandidate,
+    superValidator,
+    foundation,
+    governanceCandidate,
+    governanceMember,
+    jurorCandidate,
+    jurorMember1,
+    jurorMember2,
+    jurorMember3,
+    contractUDAO,
+    contractRoleManager,
+    contractUDAOCertificate,
+    contractUDAOContent,
+    contractValidationManager,
+    contractPlatformTreasury,
+    contractUDAOVp,
+    contractUDAOStaker,
+    contractUDAOTimelockController,
+    contractUDAOGovernor,
+    contractJurorManager,
+    contractContractManager
     } = await deploy();
     /// @dev Setup governance member
     await setupGovernanceMember(contractRoleManager, contractUDAO, contractUDAOStaker, governanceCandidate);
@@ -688,9 +708,10 @@ describe("Platform Treasury General", function () {
     await checkAccountUDAOVpBalanceAndDelegate(contractUDAOVp, superValidator);
     await checkAccountUDAOVpBalanceAndDelegate(contractUDAOVp, validator1);
     await checkAccountUDAOVpBalanceAndDelegate(contractUDAOVp, validatorCandidate);
-
+ // Create content
+ await createContent(contractRoleManager, contractUDAOContent, contentCreator, contractValidationManager, backend, validator1, validator2, validator3, validator4, validator5, contentCreator);
     // Make a content purchase to gather funds for governance
-    await makeContentPurchase(contractPlatformTreasury, contentCreator, contentBuyer, contractUDAOContent, contractRoleManager, contractUDAO, contractValidationManager, backend, validator1, validator2, validator3, validator4, validator5, contractValidationManager, backend);
+    await makeContentPurchase(contractPlatformTreasury, contentBuyer1, contractRoleManager, contractUDAO);
 
     // new dummy governance treasury address
     const newGovernanceTreasur = await ethers.Wallet.createRandom();
@@ -792,41 +813,201 @@ describe("Platform Treasury General", function () {
     /// Check if the governance treasury balance is equal to the expected governance treasury balance
     await expect(currentGovernanceTreasuryBalance).to.equal(expectedGovernanceTreasuryBalance);
   });
+  it("Should allow governance to withdraw funds from the treasury after multiple content purchases", async function () {
+    const {
+      backend,
+    contentCreator,
+    contentBuyer1,
+    contentBuyer2,
+    contentBuyer3,
+    validatorCandidate,
+    validator1,
+    validator2,
+    validator3,
+    validator4,
+    validator5,
+    superValidatorCandidate,
+    superValidator,
+    foundation,
+    governanceCandidate,
+    governanceMember,
+    jurorCandidate,
+    jurorMember1,
+    jurorMember2,
+    jurorMember3,
+    contractUDAO,
+    contractRoleManager,
+    contractUDAOCertificate,
+    contractUDAOContent,
+    contractValidationManager,
+    contractPlatformTreasury,
+    contractUDAOVp,
+    contractUDAOStaker,
+    contractUDAOTimelockController,
+    contractUDAOGovernor,
+    contractJurorManager,
+    contractContractManager
+    } = await deploy();
+    /// @dev Setup governance member
+    await setupGovernanceMember(contractRoleManager, contractUDAO, contractUDAOStaker, governanceCandidate);
+    await setupGovernanceMember(contractRoleManager, contractUDAO, contractUDAOStaker, superValidator);
+    await setupGovernanceMember(contractRoleManager, contractUDAO, contractUDAOStaker, superValidatorCandidate);
+    await setupGovernanceMember(contractRoleManager, contractUDAO, contractUDAOStaker, validatorCandidate);
+    await setupGovernanceMember(contractRoleManager, contractUDAO, contractUDAOStaker, validator1);
+
+    /// @dev Check account UDAO-vp balance and delegate to themselves
+    await checkAccountUDAOVpBalanceAndDelegate(contractUDAOVp, governanceCandidate);
+    await checkAccountUDAOVpBalanceAndDelegate(contractUDAOVp, superValidator);
+    await checkAccountUDAOVpBalanceAndDelegate(contractUDAOVp, validator1);
+    await checkAccountUDAOVpBalanceAndDelegate(contractUDAOVp, validatorCandidate);
+ // Create content
+ await createContent(contractRoleManager, contractUDAOContent, contentCreator, contractValidationManager, backend, validator1, validator2, validator3, validator4, validator5, contentCreator);
+    // Make a content purchase to gather funds for governance
+    await makeContentPurchase(contractPlatformTreasury, contentBuyer1, contractRoleManager, contractUDAO);
+    await makeContentPurchase(contractPlatformTreasury, contentBuyer2, contractRoleManager, contractUDAO);
+    await makeContentPurchase(contractPlatformTreasury, contentBuyer3, contractRoleManager, contractUDAO);
+
+    // new dummy governance treasury address
+    const newGovernanceTreasur = await ethers.Wallet.createRandom();
+
+    // set new governance treasury address
+    await contractPlatformTreasury.connect(backend).setGovernanceTreasuryAddress(newGovernanceTreasur.address);
+    const governanceTreasuryAddress = await contractPlatformTreasury.governanceTreasury();
+    expect(governanceTreasuryAddress).to.equal(newGovernanceTreasur.address);
+
+    /// @dev Check if the governance candidate has the correct amount of UDAO-vp tokens
+    const governanceCandidateBalance = await contractUDAOVp.balanceOf(governanceCandidate.address);
+    await expect(governanceCandidateBalance).to.equal(ethers.utils.parseEther("300"));
+
+    /// @dev delegate governance candidate's UDAO-vp tokens to himself
+    await contractUDAOVp.connect(governanceCandidate).delegate(governanceCandidate.address);
+
+    /// @dev Check votes for governance candidate on latest block
+    const governanceCandidateVotes = await contractUDAOVp.getVotes(governanceCandidate.address);
+    await expect(governanceCandidateVotes).to.equal(ethers.utils.parseEther("300"));
+
+    // Create proposal settings to withdraw funds from the treasury
+    const targetContractAddress = contractPlatformTreasury.address;
+    const targetContract = await ethers.getContractAt("PlatformTreasury", contractPlatformTreasury.address);
+    const proposalValues = 0;
+    const proposalCalldata = targetContract.interface.encodeFunctionData("withdrawGovernance");
+    const proposalDescription = "Withdraw funds from the treasury";
+
+    // propose
+    const proposeTx = await contractUDAOGovernor.connect(governanceCandidate).propose([targetContractAddress], [proposalValues], [proposalCalldata], proposalDescription);
+
+    /// @dev Wait for the transaction to be mined
+    const tx = await proposeTx.wait();
+    const proposalId = tx.events.find((e) => e.event == 'ProposalCreated').args.proposalId;
+
+    /// @dev Check if the proposal was created propoerly
+    const proposerAddress = tx.events.find((e) => e.event == 'ProposalCreated').args.proposer;
+    const targetInfo = tx.events.find((e) => e.event == 'ProposalCreated').args.targets;
+    const returnedCallData = tx.events.find((e) => e.event == 'ProposalCreated').args.calldatas;
+    await expect(proposerAddress).to.equal(governanceCandidate.address);
+    await expect(targetInfo).to.deep.equal([targetContractAddress]);
+    await expect(returnedCallData).to.deep.equal([proposalCalldata]);
+
+    /// @dev get to the start of the voting period
+    const numBlocksToMine = Math.ceil((7 * 24 * 60 * 60) / 2);
+    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine.toString(16)}`, "0x2"]);
+
+    /// @dev Vote on the proposal
+    await contractUDAOGovernor.connect(superValidator).castVote(proposalId, 1);
+    await contractUDAOGovernor.connect(superValidatorCandidate).castVote(proposalId, 1);
+    await contractUDAOGovernor.connect(validator1).castVote(proposalId, 1);
+    await contractUDAOGovernor.connect(validatorCandidate).castVote(proposalId, 1);
+
+    /// @dev Check if the vote was casted
+    const proposalState = await contractUDAOGovernor.state(proposalId);
+    await expect(proposalState).to.equal(1);
+
+    /// @dev Skip to the end of the voting period
+    const numBlocksToMineToEnd = Math.ceil((7 * 24 * 60 * 60) / 2);
+    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMineToEnd.toString(16)}`, "0x2"]);
+    /// @dev Check if the proposal was successful
+    const proposalStateAtStart = await contractUDAOGovernor.state(proposalId);
+    await expect(proposalStateAtStart).to.equal(4);
+    /// @dev Queue the proposal and Check the ProposalQueued event
+    const queueTx = await contractUDAOGovernor.connect(governanceCandidate).queue([targetContractAddress],
+      [proposalValues],
+      [proposalCalldata],
+      ethers.utils.id(proposalDescription));
+    const queueTxReceipt = await queueTx.wait();
+    const queueTxEvent = queueTxReceipt.events.find((e) => e.event == 'ProposalQueued');
+    await expect(queueTxEvent.args.proposalId).to.equal(proposalId);
+    //await expect(queueTxEvent.args.eta).to.equal(0);
+    /// @dev Check if the proposal was queued
+    const proposalStateAfterQueue = await contractUDAOGovernor.state(proposalId);
+    await expect(proposalStateAfterQueue).to.equal(5);
+    /// @dev Execute the proposal
+    const executeTx = await contractUDAOGovernor.connect(governanceCandidate).execute([targetContractAddress],
+      [proposalValues],
+      [proposalCalldata],
+      ethers.utils.id(proposalDescription));
+    const executeTxReceipt = await executeTx.wait();
+    const executeTxEvent = executeTxReceipt.events.find((e) => e.event == 'ProposalExecuted');
+    await expect(executeTxEvent.args.proposalId).to.equal(proposalId);
+
+    /// @dev Check if the proposal was executed
+    const proposalStateAfterExecution = await contractUDAOGovernor.state(proposalId);
+    await expect(proposalStateAfterExecution).to.equal(7);
+
+    /// @dev Get the current percent cut of the governance treasury 
+    const currentGovernanceTreasuryCut = await contractPlatformTreasury.contentGovernanceCut();
+
+    /// Get the current governance treasury balance
+    const currentGovernanceTreasuryBalance = await contractUDAO.balanceOf(governanceTreasuryAddress);
+    /// Get the content price of token Id 0 from UDAOC (first 0 is token ID, second 0 is full price of content)
+    const contentPrice = await contractUDAOContent.contentPrice(0, 0);
+    /// Multiply contentPrice with 3 since we have 3 content buyers 
+    const contentPriceWithThreeBuyers = contentPrice.mul(3);
+    /// Multiply the content price with the current governance treasury cut and divide by 100000 to get the expected governance treasury balance
+    const expectedGovernanceTreasuryBalanceBeforePercentage = contentPriceWithThreeBuyers.mul(currentGovernanceTreasuryCut);
+    const expectedGovernanceTreasuryBalance = expectedGovernanceTreasuryBalanceBeforePercentage.div(100000);
+
+    /// Check if the governance treasury balance is equal to the expected governance treasury balance
+    await expect(currentGovernanceTreasuryBalance).to.equal(expectedGovernanceTreasuryBalance);
+  });
   it("Should allow foundation to withdraw funds from the treasury after a content purchase", async function () {
     const {
       backend,
-      contentCreator,
-      contentBuyer,
-      validatorCandidate,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractValidationManager,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      contractJurorManager
+    contentCreator,
+    contentBuyer1,
+    contentBuyer2,
+    contentBuyer3,
+    validatorCandidate,
+    validator1,
+    validator2,
+    validator3,
+    validator4,
+    validator5,
+    superValidatorCandidate,
+    superValidator,
+    foundation,
+    governanceCandidate,
+    governanceMember,
+    jurorCandidate,
+    jurorMember1,
+    jurorMember2,
+    jurorMember3,
+    contractUDAO,
+    contractRoleManager,
+    contractUDAOCertificate,
+    contractUDAOContent,
+    contractValidationManager,
+    contractPlatformTreasury,
+    contractUDAOVp,
+    contractUDAOStaker,
+    contractUDAOTimelockController,
+    contractUDAOGovernor,
+    contractJurorManager,
+    contractContractManager
     } = await deploy();
-
+ // Create content
+ await createContent(contractRoleManager, contractUDAOContent, contentCreator, contractValidationManager, backend, validator1, validator2, validator3, validator4, validator5, contentCreator);
     // Make a content purchase to gather funds for governance
-    await makeContentPurchase(contractPlatformTreasury, contentCreator, contentBuyer, contractUDAOContent, contractRoleManager, contractUDAO, contractValidationManager, backend, validator1, validator2, validator3, validator4, validator5, contractValidationManager, backend);
+    await makeContentPurchase(contractPlatformTreasury, contentBuyer1, contractRoleManager, contractUDAO);
 
     // new dummy governance treasury address
     const newGovernanceTreasur = await ethers.Wallet.createRandom();
@@ -861,38 +1042,42 @@ describe("Platform Treasury General", function () {
   it("Should allow validator to withdraw funds from the treasury after a content purchase", async function () {
     const {
       backend,
-      contentCreator,
-      contentBuyer,
-      validatorCandidate,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractValidationManager,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      contractJurorManager
+    contentCreator,
+    contentBuyer1,
+    contentBuyer2,
+    contentBuyer3,
+    validatorCandidate,
+    validator1,
+    validator2,
+    validator3,
+    validator4,
+    validator5,
+    superValidatorCandidate,
+    superValidator,
+    foundation,
+    governanceCandidate,
+    governanceMember,
+    jurorCandidate,
+    jurorMember1,
+    jurorMember2,
+    jurorMember3,
+    contractUDAO,
+    contractRoleManager,
+    contractUDAOCertificate,
+    contractUDAOContent,
+    contractValidationManager,
+    contractPlatformTreasury,
+    contractUDAOVp,
+    contractUDAOStaker,
+    contractUDAOTimelockController,
+    contractUDAOGovernor,
+    contractJurorManager,
+    contractContractManager
     } = await deploy();
-
+ // Create content
+ await createContent(contractRoleManager, contractUDAOContent, contentCreator, contractValidationManager, backend, validator1, validator2, validator3, validator4, validator5, contentCreator);
     // Make a content purchase to gather funds for governance
-    await makeContentPurchase(contractPlatformTreasury, contentCreator, contentBuyer, contractUDAOContent, contractRoleManager, contractUDAO, contractValidationManager, backend, validator1, validator2, validator3, validator4, validator5, contractValidationManager, backend);
+    await makeContentPurchase(contractPlatformTreasury, contentBuyer1, contractRoleManager, contractUDAO);
 
     // Check account balances of validators before withdrawal
     const validator1BalanceBefore = await contractUDAO.balanceOf(validator1.address);
@@ -959,34 +1144,37 @@ describe("Platform Treasury General", function () {
   it("Should allow jurors to withdraw funds from the treasury after a dispute is resolved", async function () {
     const {
       backend,
-      contentCreator,
-      contentBuyer,
-      validatorCandidate,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractValidationManager,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      contractJurorManager
+    contentCreator,
+    contentBuyer1,
+    contentBuyer2,
+    contentBuyer3,
+    validatorCandidate,
+    validator1,
+    validator2,
+    validator3,
+    validator4,
+    validator5,
+    superValidatorCandidate,
+    superValidator,
+    foundation,
+    governanceCandidate,
+    governanceMember,
+    jurorCandidate,
+    jurorMember1,
+    jurorMember2,
+    jurorMember3,
+    contractUDAO,
+    contractRoleManager,
+    contractUDAOCertificate,
+    contractUDAOContent,
+    contractValidationManager,
+    contractPlatformTreasury,
+    contractUDAOVp,
+    contractUDAOStaker,
+    contractUDAOTimelockController,
+    contractUDAOGovernor,
+    contractJurorManager,
+    contractContractManager
     } = await deploy();
 
     /// @dev Dispute settings
@@ -994,9 +1182,10 @@ describe("Platform Treasury General", function () {
     const caseQuestion = "Should we remove this content?";
     const caseTokenRelated = true;
     const caseTokenId = 0;
-
+     // Create content
+     await createContent(contractRoleManager, contractUDAOContent, contentCreator, contractValidationManager, backend, validator1, validator2, validator3, validator4, validator5, contentCreator);
     // Make a content purchase to gather funds for governance
-    await makeContentPurchase(contractPlatformTreasury, contentCreator, contentBuyer, contractUDAOContent, contractRoleManager, contractUDAO, contractValidationManager, backend, validator1, validator2, validator3, validator4, validator5, contractValidationManager, backend);
+    await makeContentPurchase(contractPlatformTreasury, contentBuyer1, contractRoleManager, contractUDAO);
 
     /// @dev Create dispute
     await contractJurorManager.connect(backend).createDispute(caseScope, caseQuestion, caseTokenRelated, caseTokenId);
@@ -1083,37 +1272,42 @@ describe("Platform Treasury General", function () {
   it("Should allow instructers to withdraw their rewards", async function () {
     const {
       backend,
-      contentCreator,
-      contentBuyer,
-      validatorCandidate,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractValidationManager,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      contractJurorManager
+    contentCreator,
+    contentBuyer1,
+    contentBuyer2,
+    contentBuyer3,
+    validatorCandidate,
+    validator1,
+    validator2,
+    validator3,
+    validator4,
+    validator5,
+    superValidatorCandidate,
+    superValidator,
+    foundation,
+    governanceCandidate,
+    governanceMember,
+    jurorCandidate,
+    jurorMember1,
+    jurorMember2,
+    jurorMember3,
+    contractUDAO,
+    contractRoleManager,
+    contractUDAOCertificate,
+    contractUDAOContent,
+    contractValidationManager,
+    contractPlatformTreasury,
+    contractUDAOVp,
+    contractUDAOStaker,
+    contractUDAOTimelockController,
+    contractUDAOGovernor,
+    contractJurorManager,
+    contractContractManager
     } = await deploy();
+    // Create content
+    await createContent(contractRoleManager, contractUDAOContent, contentCreator, contractValidationManager, backend, validator1, validator2, validator3, validator4, validator5, contentCreator);
     // Make a content purchase 
-    await makeContentPurchase(contractPlatformTreasury, contentCreator, contentBuyer, contractUDAOContent, contractRoleManager, contractUDAO, contractValidationManager, backend, validator1, validator2, validator3, validator4, validator5, contractValidationManager, backend);
+    await makeContentPurchase(contractPlatformTreasury, contentBuyer1, contractRoleManager, contractUDAO);
     
     // Get the instructer balance before withdrawal
     const instructerBalanceBefore = await contractUDAO.balanceOf(contentCreator.address);
