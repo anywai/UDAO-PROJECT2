@@ -124,4 +124,11 @@ contract PlatformTreasury is Pausable, ContentManager {
             emit InstructorWithdrawn(msg.sender, withdrawableBalance);
         }
     }
+
+    function transferGovernanceRewards(
+        address _to,
+        uint _amount
+    ) external whenNotPaused onlyRole(STAKING_CONTRACT) {
+        udao.transfer(_to, _amount);
+    }
 }

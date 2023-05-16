@@ -9,8 +9,7 @@ import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
 import "../RoleController.sol";
 import "../ContractManager.sol";
-
-import "hardhat/console.sol";
+import "../interfaces/IPlatformTreasury.sol";
 
 interface IUDAOVP is IVotes, IERC20 {
     function mint(address to, uint256 amount) external;
@@ -567,16 +566,11 @@ contract UDAOStaker is RoleController, EIP712 {
         );
         uint256 voteRewards = rewardBalanceOf[msg.sender];
         rewardBalanceOf[msg.sender] = 0;
-        udao.transferFrom(platformTreasuryAddress, msg.sender, voteRewards);
+        IPlatformTreasury(platformTreasuryAddress).transferGovernanceRewards(
+            msg.sender,
+            voteRewards
+        );
         emit VoteRewardsWithdrawn(msg.sender, voteRewards);
-    }
-
-    /// @notice Allows corporate accounts to stake. Staker and staked amount returned with event.
-    /// @param amount The amount of stake
-    function stakeForJobListing(
-        uint256 amount
-    ) external onlyRole(CORPORATE_ROLE) whenNotPaused {
-        emit StakeForJobListing(msg.sender, amount);
     }
 
     mapping(address => mapping(uint => uint)) corporateListingId;
