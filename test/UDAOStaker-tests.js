@@ -1624,69 +1624,6 @@ describe("UDAOStaker Contract", function () {
     );
   });
 
-  it("Should unstake to stop being a governance member", async function () {
-    const {
-      backend,
-      validatorCandidate,
-      validator,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractValidationManager,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-    } = await deploy();
-
-    await contractRoleManager.setKYC(governanceCandidate.address, true);
-
-    await contractUDAO.transfer(
-      governanceCandidate.address,
-      ethers.utils.parseEther("100.0")
-    );
-
-    await contractUDAO
-      .connect(governanceCandidate)
-      .approve(
-        contractUDAOStaker.address,
-        ethers.utils.parseEther("999999999999.0")
-      );
-
-    await expect(
-      contractUDAOStaker
-        .connect(governanceCandidate)
-        .stakeForGovernance(ethers.utils.parseEther("10"), 30)
-    )
-      .to.emit(contractUDAOStaker, "GovernanceStake") // transfer from null address to minter
-      .withArgs(
-        governanceCandidate.address,
-        ethers.utils.parseEther("10"),
-        ethers.utils.parseEther("300")
-      );
-    await helpers.time.increase(2592002);
-    await expect(
-      contractUDAOStaker
-        .connect(governanceCandidate)
-        .withdrawGovernanceStake(ethers.utils.parseEther("10"))
-    )
-      .to.emit(contractUDAOStaker, "GovernanceStakeWithdraw") // transfer from null address to minter
-      .withArgs(
-        governanceCandidate.address,
-        ethers.utils.parseEther("10"),
-        ethers.utils.parseEther("300")
-      );
-  });
-
   it("Should withdraw validator stake when approved", async function () {
     const {
       backend,
@@ -1971,5 +1908,333 @@ describe("UDAOStaker Contract", function () {
     )
       .to.emit(contractUDAOStaker, "JurorStakeWithdrawn")
       .withArgs(jurorCandidate.address, ethers.utils.parseEther("150"));
+  });
+
+  it("Should return withdrawable validator stake when approved", async function () {
+    const {
+      backend,
+      validatorCandidate,
+      validator,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+    } = await deploy();
+    await contractRoleManager.setKYC(validatorCandidate.address, true);
+
+    await contractUDAO.transfer(
+      validatorCandidate.address,
+      ethers.utils.parseEther("10000.0")
+    );
+
+    await contractUDAO
+      .connect(validatorCandidate)
+      .approve(
+        contractUDAOStaker.address,
+        ethers.utils.parseEther("999999999999.0")
+      );
+
+    // Staking
+    await expect(
+      contractUDAOStaker
+        .connect(validatorCandidate)
+        .stakeForGovernance(ethers.utils.parseEther("10"), 30)
+    )
+      .to.emit(contractUDAOStaker, "GovernanceStake") // transfer from null address to minter
+      .withArgs(
+        validatorCandidate.address,
+        ethers.utils.parseEther("10"),
+        ethers.utils.parseEther("300")
+      );
+    await expect(
+      contractUDAOStaker.connect(validatorCandidate).applyForValidator()
+    )
+      .to.emit(contractUDAOStaker, "RoleApplied") // transfer from null address to minter
+      .withArgs(0, validatorCandidate.address, ethers.utils.parseEther("150"));
+    const lazyRole = new LazyRole({
+      contract: contractUDAOStaker,
+      signer: backend,
+    });
+    const role_voucher = await lazyRole.createVoucher(
+      validatorCandidate.address,
+      Date.now() + 999999999,
+      0
+    );
+    await expect(
+      contractUDAOStaker.connect(validatorCandidate).getApproved(role_voucher)
+    )
+      .to.emit(contractUDAOStaker, "RoleApproved") // transfer from null address to minter
+      .withArgs(0, validatorCandidate.address);
+
+    await helpers.time.increase(259200200);
+    expect(
+      await contractUDAOStaker
+        .connect(validatorCandidate)
+        .withdrawableValidatorStake()
+    ).to.equal(ethers.utils.parseEther("150"));
+  });
+
+  it("Should return withdrawable validator stake when rejected", async function () {
+    const {
+      backend,
+      validatorCandidate,
+      validator,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+    } = await deploy();
+    await contractRoleManager.setKYC(validatorCandidate.address, true);
+
+    await contractUDAO.transfer(
+      validatorCandidate.address,
+      ethers.utils.parseEther("10000.0")
+    );
+
+    await contractUDAO
+      .connect(validatorCandidate)
+      .approve(
+        contractUDAOStaker.address,
+        ethers.utils.parseEther("999999999999.0")
+      );
+
+    // Staking
+    await expect(
+      contractUDAOStaker
+        .connect(validatorCandidate)
+        .stakeForGovernance(ethers.utils.parseEther("10"), 30)
+    )
+      .to.emit(contractUDAOStaker, "GovernanceStake") // transfer from null address to minter
+      .withArgs(
+        validatorCandidate.address,
+        ethers.utils.parseEther("10"),
+        ethers.utils.parseEther("300")
+      );
+    await expect(
+      contractUDAOStaker.connect(validatorCandidate).applyForValidator()
+    )
+      .to.emit(contractUDAOStaker, "RoleApplied") // transfer from null address to minter
+      .withArgs(0, validatorCandidate.address, ethers.utils.parseEther("150"));
+    await expect(
+      contractUDAOStaker
+        .connect(backend)
+        .rejectApplication(validatorCandidate.address, 0)
+    )
+      .to.emit(contractUDAOStaker, "RoleRejected")
+      .withArgs(0, validatorCandidate.address); // transfer from null address to minter
+    expect(
+      await contractUDAOStaker
+        .connect(validatorCandidate)
+        .withdrawableValidatorStake()
+    ).to.equal(ethers.utils.parseEther("150"));
+  });
+
+  it("Should unstake to stop being a governance member (full withdraw)", async function () {
+    const {
+      backend,
+      validatorCandidate,
+      validator,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+    } = await deploy();
+
+    await contractRoleManager.setKYC(governanceCandidate.address, true);
+
+    await contractUDAO.transfer(
+      governanceCandidate.address,
+      ethers.utils.parseEther("100.0")
+    );
+
+    await contractUDAO
+      .connect(governanceCandidate)
+      .approve(
+        contractUDAOStaker.address,
+        ethers.utils.parseEther("999999999999.0")
+      );
+
+    await expect(
+      contractUDAOStaker
+        .connect(governanceCandidate)
+        .stakeForGovernance(ethers.utils.parseEther("10"), 30)
+    )
+      .to.emit(contractUDAOStaker, "GovernanceStake") // transfer from null address to minter
+      .withArgs(
+        governanceCandidate.address,
+        ethers.utils.parseEther("10"),
+        ethers.utils.parseEther("300")
+      );
+    await helpers.time.increase(2592002);
+    await expect(
+      contractUDAOStaker
+        .connect(governanceCandidate)
+        .withdrawGovernanceStake(ethers.utils.parseEther("10"))
+    )
+      .to.emit(contractUDAOStaker, "GovernanceStakeWithdraw") // transfer from null address to minter
+      .withArgs(
+        governanceCandidate.address,
+        ethers.utils.parseEther("10"),
+        ethers.utils.parseEther("300")
+      );
+  });
+
+  it("Should unstake to stop being a governance member (partial withdraw)", async function () {
+    const {
+      backend,
+      validatorCandidate,
+      validator,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+    } = await deploy();
+
+    await contractRoleManager.setKYC(governanceCandidate.address, true);
+
+    await contractUDAO.transfer(
+      governanceCandidate.address,
+      ethers.utils.parseEther("100.0")
+    );
+
+    await contractUDAO
+      .connect(governanceCandidate)
+      .approve(
+        contractUDAOStaker.address,
+        ethers.utils.parseEther("999999999999.0")
+      );
+
+    await expect(
+      contractUDAOStaker
+        .connect(governanceCandidate)
+        .stakeForGovernance(ethers.utils.parseEther("10"), 30)
+    )
+      .to.emit(contractUDAOStaker, "GovernanceStake") // transfer from null address to minter
+      .withArgs(
+        governanceCandidate.address,
+        ethers.utils.parseEther("10"),
+        ethers.utils.parseEther("300")
+      );
+    await helpers.time.increase(2592002);
+    await expect(
+      contractUDAOStaker
+        .connect(governanceCandidate)
+        .withdrawGovernanceStake(ethers.utils.parseEther("5"))
+    )
+      .to.emit(contractUDAOStaker, "GovernanceStakeWithdraw") // transfer from null address to minter
+      .withArgs(
+        governanceCandidate.address,
+        ethers.utils.parseEther("5"),
+        ethers.utils.parseEther("150")
+      );
+  });
+
+  it("Should fail to unstake to stop being a governance member when amount is higher than staked", async function () {
+    const {
+      backend,
+      validatorCandidate,
+      validator,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+    } = await deploy();
+
+    await contractRoleManager.setKYC(governanceCandidate.address, true);
+
+    await contractUDAO.transfer(
+      governanceCandidate.address,
+      ethers.utils.parseEther("100.0")
+    );
+
+    await contractUDAO
+      .connect(governanceCandidate)
+      .approve(
+        contractUDAOStaker.address,
+        ethers.utils.parseEther("999999999999.0")
+      );
+
+    await expect(
+      contractUDAOStaker
+        .connect(governanceCandidate)
+        .stakeForGovernance(ethers.utils.parseEther("10"), 30)
+    )
+      .to.emit(contractUDAOStaker, "GovernanceStake") // transfer from null address to minter
+      .withArgs(
+        governanceCandidate.address,
+        ethers.utils.parseEther("10"),
+        ethers.utils.parseEther("300")
+      );
+    await helpers.time.increase(2592002);
+    await expect(
+      contractUDAOStaker
+        .connect(governanceCandidate)
+        .withdrawGovernanceStake(ethers.utils.parseEther("15"))
+    ).to.revertedWith("You don't have enough withdrawable balance");
   });
 });
