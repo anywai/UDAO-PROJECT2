@@ -49,7 +49,7 @@ contract UDAOStaker is RoleController, EIP712 {
     event JobListingRegistered(address corporate, uint amountPerListing);
     event JobListingUnregistered(
         address corporate,
-        uint listingId,
+        uint[] listingId,
         uint amount
     );
     event JurorStakeWithdrawn(address _juror, uint256 _amount);
@@ -66,10 +66,6 @@ contract UDAOStaker is RoleController, EIP712 {
     );
     event VoteRewardAdded(address _rewardee, uint256 _amount);
     event VoteRewardsWithdrawn(address _rewardee, uint256 _amount);
-
-    event StakeForJobListing(address corporateAddress, uint256 amount);
-
-    event UnstakeForJobListing(address corporateAddress, uint256 amount);
 
     mapping(address => uint256) validationBalanceOf;
     mapping(address => uint256) jurorBalanceOf;
@@ -91,7 +87,7 @@ contract UDAOStaker is RoleController, EIP712 {
     mapping(address => GovernanceLock[]) governanceStakes;
     mapping(address => uint256) rewardBalanceOf;
     mapping(address => uint256) lastRewardBlock;
-    uint256 public voteReward;
+    uint256 public voteReward = 0.0001 ether; // SHOULD BE UPDATED
 
     struct ValidationApplication {
         address applicant;
@@ -594,22 +590,24 @@ contract UDAOStaker is RoleController, EIP712 {
                 corporateLatestListingId[msg.sender]
             ] = corporateStakePerListing;
             corporateLatestListingId[msg.sender]++;
-            emit JobListingRegistered(msg.sender, corporateStakePerListing);
         }
-        emit StakeForJobListing(
+        emit JobListingRegistered(
             msg.sender,
             jobListingCount * corporateStakePerListing
         );
     }
 
     function unregisterJobListing(
-        uint listingId
+        uint[] calldata listingIds
     ) external onlyRole(CORPORATE_ROLE) {
-        uint withdrawAmount = corporateListingId[msg.sender][listingId];
-        require(withdrawAmount > 0, "Amount should be higher than 0");
-        corporateListingId[msg.sender][listingId] = 0;
-        udao.transferFrom(address(this), msg.sender, withdrawAmount);
-        emit JobListingUnregistered(msg.sender, listingId, withdrawAmount);
+        uint totalUnstakeAmount;
+        for (uint i = 0; i < listingIds.length; i++) {
+            totalUnstakeAmount += corporateListingId[msg.sender][listingIds[i]];
+            corporateListingId[msg.sender][listingIds[i]] = 0;
+        }
+        require(totalUnstakeAmount > 0, "Cannot unstake zero tokens");
+        udao.transfer(msg.sender, totalUnstakeAmount);
+        emit JobListingUnregistered(msg.sender, listingIds, totalUnstakeAmount);
     }
 
     /// @notice Returns a hash of the given ContentVoucher, prepared using EIP712 typed data hashing rules.
