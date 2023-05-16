@@ -187,7 +187,9 @@ abstract contract ContentManager is EIP712, BasePlatform {
         emit ContentBought(tokenId, purchasedParts, priceToPayUdao, msg.sender);
     }
 
-    /// @notice allows users to purchase a content
+    /// @notice allows users to purchase a content. Notice that there is no price conversion
+    /// since the total payment amount is coming from backend with voucher where 
+    /// the total amount of payment in UDAO is calculated.
     /// @param voucher voucher for the content purchase
     function buyDiscountedContent(
         ContentDiscountVoucher calldata voucher
