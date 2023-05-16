@@ -480,6 +480,22 @@ contract UDAOStaker is RoleController, EIP712 {
     /// @notice withdraw function for released UDAO tokens
     /// @param _amount amount of UDAO token that will be unstaked
     function withdrawGovernanceStake(uint256 _amount) public whenNotPaused {
+        /** 
+        Here is the explanation for the code above:
+        1. First we check if the amount is greater than 0 or not. If it is 0 then throw an error.
+        2. Second we declare 2 variables withdrawableBalance and vpBalance. withdrawableBalance is 
+        the amount of udao that can be withdrawn and vpBalance is the amount of voting power that can be withdrawn.
+        3. Then we loop over the governanceStakes[msg.sender] array and check if the lock is expired or not. 
+        If it is expired then we check if the amount is greater than the lock.amount or not. If it is greater 
+        then we add the lock.amount to the withdrawableBalance and lock.vpamount to vpBalance, and then we 
+        remove the lock from the array. If the amount is not greater then we calculate how much udao and 
+        voting power can be withdrawn from the lock and then we reduce the lock.amount and lock.vpamount 
+        by that much and then we add the udao and voting power to withdrawableBalance and vpBalance respectively. 
+        And then we check if the _amount is less than or equal to withdrawableBalance or not. If it is then we burn 
+        the voting power and transfer the udao to the user and then emit an event. If it is not then we revert with an error.
+        4. If we reach the end of the loop and the _amount is still not less than or equal to withdrawableBalance then 
+        it means that the user doesn't have enough withdrawable balance. So we revert with an error. 
+        */
         require(_amount > 0, "Stake amount can't be 0");
         uint256 withdrawableBalance;
         uint256 vpBalance;
