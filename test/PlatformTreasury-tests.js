@@ -1215,6 +1215,111 @@ describe("Platform Treasury General", function () {
 
     
   });
+  it("Should allow validator to withdraw funds from the treasury after multiple content purchases", async function () {
+    const {
+      backend,
+    contentCreator,
+    contentBuyer1,
+    contentBuyer2,
+    contentBuyer3,
+    validatorCandidate,
+    validator1,
+    validator2,
+    validator3,
+    validator4,
+    validator5,
+    superValidatorCandidate,
+    superValidator,
+    foundation,
+    governanceCandidate,
+    governanceMember,
+    jurorCandidate,
+    jurorMember1,
+    jurorMember2,
+    jurorMember3,
+    contractUDAO,
+    contractRoleManager,
+    contractUDAOCertificate,
+    contractUDAOContent,
+    contractValidationManager,
+    contractPlatformTreasury,
+    contractUDAOVp,
+    contractUDAOStaker,
+    contractUDAOTimelockController,
+    contractUDAOGovernor,
+    contractJurorManager,
+    contractContractManager
+    } = await deploy();
+    // Create content
+    await createContent(contractRoleManager, contractUDAOContent, contentCreator, contractValidationManager, backend, validator1, validator2, validator3, validator4, validator5, contentCreator);
+    // Make a content purchase to gather funds for governance
+    await makeContentPurchase(contractPlatformTreasury, contentBuyer1, contractRoleManager, contractUDAO);
+    await makeContentPurchase(contractPlatformTreasury, contentBuyer2, contractRoleManager, contractUDAO);
+    await makeContentPurchase(contractPlatformTreasury, contentBuyer3, contractRoleManager, contractUDAO);
+
+    // Check account balances of validators before withdrawal
+    const validator1BalanceBefore = await contractUDAO.balanceOf(validator1.address);
+    const validator2BalanceBefore = await contractUDAO.balanceOf(validator2.address);
+    const validator3BalanceBefore = await contractUDAO.balanceOf(validator3.address);
+    const validator4BalanceBefore = await contractUDAO.balanceOf(validator4.address);
+    const validator5BalanceBefore = await contractUDAO.balanceOf(validator5.address);
+    // expect balances to be equal to zero
+    await expect(validator1BalanceBefore).to.equal(0);
+    await expect(validator2BalanceBefore).to.equal(0);
+    await expect(validator3BalanceBefore).to.equal(0);
+    await expect(validator4BalanceBefore).to.equal(0);
+    await expect(validator5BalanceBefore).to.equal(0);
+
+    // Get the ID of the current distribution round
+    const currentDistributionRound = await contractValidationManager.distributionRound();
+    // Foundation should call distributeRewards to distribute rewards to validators
+    await contractPlatformTreasury.connect(foundation).distributeRewards();
+
+    // Call withdrawValidator from platformtreasury contract for each validator
+    await contractPlatformTreasury.connect(validator1).withdrawValidator();
+    await contractPlatformTreasury.connect(validator2).withdrawValidator();
+    await contractPlatformTreasury.connect(validator3).withdrawValidator();
+    await contractPlatformTreasury.connect(validator4).withdrawValidator();
+    await contractPlatformTreasury.connect(validator5).withdrawValidator();
+
+    // Check account balances of validators after withdrawal
+    const validator1BalanceAfter = await contractUDAO.balanceOf(validator1.address);
+    const validator2BalanceAfter = await contractUDAO.balanceOf(validator2.address);
+    const validator3BalanceAfter = await contractUDAO.balanceOf(validator3.address);
+    const validator4BalanceAfter = await contractUDAO.balanceOf(validator4.address);
+    const validator5BalanceAfter = await contractUDAO.balanceOf(validator5.address);
+
+    /// @dev Calculate how much each validator should receive
+    // Get the current validator cut
+    const currentValidatorCut = await contractPlatformTreasury.contentValidatorCut();
+    // Get the content price of token Id 0 from UDAOC (first 0 is token ID, second 0 is full price of content)
+    const contentPrice = await contractUDAOContent.contentPrice(0, 0);
+    // Multiply content price with 3 since there are 3 content purchases
+    const totalContentPrice = contentPrice.mul(3);
+    // Get the total validation score
+    const totalValidationScore = await contractValidationManager.totalValidationScore();
+    // Get the validator scores of validators
+    const validator1Score = await contractValidationManager.getValidatorScore(validator1.address, currentDistributionRound);
+    const validator2Score = await contractValidationManager.getValidatorScore(validator2.address, currentDistributionRound);
+    const validator3Score = await contractValidationManager.getValidatorScore(validator3.address, currentDistributionRound);
+    const validator4Score = await contractValidationManager.getValidatorScore(validator4.address, currentDistributionRound);
+    const validator5Score = await contractValidationManager.getValidatorScore(validator5.address, currentDistributionRound);
+    // Calculate the expected validators cut
+    const expectedValidator1Cut = totalContentPrice.mul(currentValidatorCut).mul(validator1Score).div(totalValidationScore).div(100000);
+    const expectedValidator2Cut = totalContentPrice.mul(currentValidatorCut).mul(validator2Score).div(totalValidationScore).div(100000);
+    const expectedValidator3Cut = totalContentPrice.mul(currentValidatorCut).mul(validator3Score).div(totalValidationScore).div(100000);
+    const expectedValidator4Cut = totalContentPrice.mul(currentValidatorCut).mul(validator4Score).div(totalValidationScore).div(100000);
+    const expectedValidator5Cut = totalContentPrice.mul(currentValidatorCut).mul(validator5Score).div(totalValidationScore).div(100000);
+
+    /// @dev Check if the validator balances are equal to the expected validator balances
+    await expect(validator1BalanceAfter).to.equal(expectedValidator1Cut);
+    await expect(validator2BalanceAfter).to.equal(expectedValidator2Cut);
+    await expect(validator3BalanceAfter).to.equal(expectedValidator3Cut);
+    await expect(validator4BalanceAfter).to.equal(expectedValidator4Cut);
+    await expect(validator5BalanceAfter).to.equal(expectedValidator5Cut);
+
+    
+  });
 
   it("Should allow jurors to withdraw funds from the treasury after a dispute is resolved", async function () {
     const {
@@ -1343,6 +1448,7 @@ describe("Platform Treasury General", function () {
     await expect(jurorMember3BalanceAfter).to.equal(expectedJurorMember3Balance);
   });
 
+  /// TODO
   it("Should distribute rewards to jurors when there are multiple disputes", async function () {});
   it("Should allow instructers to withdraw their rewards", async function () {
     const {
