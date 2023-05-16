@@ -483,10 +483,11 @@ contract UDAOStaker is RoleController, EIP712 {
         require(_amount > 0, "Stake amount can't be 0");
         uint256 withdrawableBalance;
         uint256 vpBalance;
-        uint256 stakingsLength = governanceStakes[msg.sender].length;
-        console.log("stakingsLength: %s", stakingsLength);
-        for (int256 i = 0; uint256(i) < stakingsLength; i++) {
-            console.log("i: %s", uint256(i));
+        for (
+            int256 i = 0;
+            uint256(i) < governanceStakes[msg.sender].length;
+            i++
+        ) {
             GovernanceLock storage lock = governanceStakes[msg.sender][
                 uint256(i)
             ];
