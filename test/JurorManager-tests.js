@@ -500,6 +500,7 @@ async function deploy() {
     contractUDAOGovernor,
     contractJurorManager,
     GOVERNANCE_ROLE,
+    BACKEND_ROLE,
   };
 }
 
@@ -1791,6 +1792,56 @@ describe("Juror Manager", function () {
       .setRequiredJurors(newRequiredJurors);
     const requiredJurors = await contractJurorManager.requiredJurors();
     expect(requiredJurors).to.equal(newRequiredJurors);
+  });
+
+  it("Should fail to a use without BACKEND_ROLE role be able to create new dispute", async function () {
+    const {
+      backend,
+      contentCreator,
+      contentBuyer,
+      validatorCandidate,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember1,
+      jurorMember2,
+      jurorMember3,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+      contractJurorManager,
+      BACKEND_ROLE,
+    } = await deploy();
+
+    /// @dev Case settings
+    const caseScope = 1;
+    const caseQuestion = "Should we remove this content?";
+    const caseTokenRelated = true;
+    const caseTokenId = 0;
+
+    /// @dev Create dispute
+    await expect(
+      contractJurorManager
+        .connect(jurorMember1)
+        .createDispute(caseScope, caseQuestion, caseTokenRelated, caseTokenId)
+    ).to.revertedWith(
+      `'AccessControl: account ${jurorMember1.address.toLowerCase()} is missing role ${BACKEND_ROLE}'`
+    );
   });
 
   it("Should fail to a use without GOVERNANCE_MEMBER role be able to change the number of required jurors", async function () {
