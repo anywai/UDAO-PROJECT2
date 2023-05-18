@@ -105,20 +105,17 @@ contract PlatformTreasury is Pausable, ContentManager {
             instructorBalance[msg.sender] >= instructorDebt[msg.sender],
             "Debt is larger than balance"
         );
-        uint debtAmount = 0;
-        if (instructorDebt[msg.sender] > 0) {
-            debtAmount = instructorDebt[msg.sender];
-        }
+
         uint withdrawableBalance = instructorBalance[msg.sender] -
             instructorDebt[msg.sender];
         instructorBalance[msg.sender] = 0;
         instructorDebt[msg.sender] = 0;
         udao.transfer(msg.sender, withdrawableBalance);
-        if (debtAmount > 0) {
+        if (instructorDebt[msg.sender] > 0) {
             emit InstructorWithdrawnWithDebt(
                 msg.sender,
                 withdrawableBalance,
-                debtAmount
+                instructorDebt[msg.sender]
             );
         } else {
             emit InstructorWithdrawn(msg.sender, withdrawableBalance);
