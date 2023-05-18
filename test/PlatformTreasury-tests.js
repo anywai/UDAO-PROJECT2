@@ -1739,4 +1739,71 @@ describe("Platform Treasury General", function () {
     /// Expect that the contentBuyer1 balance is equal to totalPaymentAmount plus contentBuyer1BalanceBefore
     await expect(contentBuyer1BalanceAfter).to.equal(totalPaymentAmount.add(contentBuyer1BalanceBefore));
   });
+
+  it("Should return InstructorWithdrawnWithDebt event when instructer withdraws rewards with debt", async function () {
+    const {
+      backend,
+    contentCreator,
+    contentBuyer1,
+    contentBuyer2,
+    contentBuyer3,
+    validatorCandidate,
+    validator1,
+    validator2,
+    validator3,
+    validator4,
+    validator5,
+    superValidatorCandidate,
+    superValidator,
+    foundation,
+    governanceCandidate,
+    governanceMember,
+    jurorCandidate,
+    jurorMember1,
+    jurorMember2,
+    jurorMember3,
+    contractUDAO,
+    contractRoleManager,
+    contractUDAOCertificate,
+    contractUDAOContent,
+    contractValidationManager,
+    contractPlatformTreasury,
+    contractUDAOVp,
+    contractUDAOStaker,
+    contractUDAOTimelockController,
+    contractUDAOGovernor,
+    contractJurorManager,
+    contractContractManager
+    } = await deploy();
+    /// Create content
+    await createContent(contractRoleManager, contractUDAOContent, contentCreator, contractValidationManager, backend, validator1, validator2, validator3, validator4, validator5, contentCreator);
+    /// Make coaching purchase 
+    const coachingId1 = await makeCoachingPurchase(contractRoleManager, contractUDAO, contractPlatformTreasury, contentBuyer1);
+    /// Get coachingPaymentAmount from coachingStructs
+    const coachingPaymentAmountTx = await contractPlatformTreasury.coachingStructs(coachingId1);
+    const coachingPaymentAmount = coachingPaymentAmountTx["coachingPaymentAmount"];
+    /// Force refund the coaching
+    await contractPlatformTreasury.connect(foundation).forcedRefundAdmin(coachingId1);
+    /// Get instructorDebt 
+    const instructorDebt = await contractPlatformTreasury.instructorDebt(contentCreator.address);
+    /// Make another coaching purchase and finalize it
+    const coachingId2 = await makeCoachingPurchase(contractRoleManager, contractUDAO, contractPlatformTreasury, contentBuyer2);
+    const coachingId3 = await makeCoachingPurchase(contractRoleManager, contractUDAO, contractPlatformTreasury, contentBuyer3);
+    await contractPlatformTreasury.connect(contentBuyer3).finalizeCoaching(coachingId3);
+    await contractPlatformTreasury.connect(contentBuyer2).finalizeCoaching(coachingId2);
+    /// Get instructer balance before withdrawal
+    const instructerBalanceBefore = await contractUDAO.balanceOf(contentCreator.address);
+    /// Instructer should call withdrawInstructor from platformtreasury contract
+    const withdrawInstructorTx = await contractPlatformTreasury.connect(contentCreator).withdrawInstructor();
+    /// Get the InstructorWithdrawnWithDebt event and check the debt amount
+    const withdrawInstructorTxReceipt = await withdrawInstructorTx.wait();
+    const withdrawInstructorTxEvent = withdrawInstructorTxReceipt.events.find((e) => e.event == 'InstructorWithdrawnWithDebt');
+    const debtAmount = withdrawInstructorTxEvent.args[2];
+    /// Expect that the debt amount from event is equal to instructorDebt
+    await expect(debtAmount).to.equal(instructorDebt);
+    /// Get instructer balance after withdrawal
+    const instructerBalanceAfter = await contractUDAO.balanceOf(contentCreator.address);
+    /// Expect that the instructer balance is equal to instructerBalanceBefore plus 2 coaching purchases minus instructorDebt
+    await expect(instructerBalanceAfter).to.equal(instructerBalanceBefore.add(coachingPaymentAmount.mul(2)).sub(instructorDebt))
+  });
 });
