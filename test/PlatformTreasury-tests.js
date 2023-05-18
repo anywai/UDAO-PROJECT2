@@ -245,7 +245,9 @@ async function makeCoachingPurchase(contractRoleManager, contractUDAO, contractP
     const coachingId = queueTxEvent.args[2];
     // Check if buyer is saved as a student
     const returnedStudentList = await contractPlatformTreasury.getStudentListOfToken(0);
-    expect(returnedStudentList[0]).to.equal(contentBuyer.address);
+    // Check if buyer addres is in the list
+    expect(returnedStudentList).to.include(contentBuyer.address);
+    return coachingId;
 }
 async function deploy() {
   helpers.reset(
@@ -1623,6 +1625,66 @@ describe("Platform Treasury General", function () {
     const coachingPaymentAmount = coachingPaymentAmountTx["coachingPaymentAmount"];
     // Expect that the instructer balance is equal to coachingPaymentAmount
     await expect(instructerBalanceAfter).to.equal(coachingPaymentAmount);
-
+  });
+  it("Should allow instructers to withdraw their rewards after multiple coachings are done", async function () {
+    const {
+      backend,
+    contentCreator,
+    contentBuyer1,
+    contentBuyer2,
+    contentBuyer3,
+    validatorCandidate,
+    validator1,
+    validator2,
+    validator3,
+    validator4,
+    validator5,
+    superValidatorCandidate,
+    superValidator,
+    foundation,
+    governanceCandidate,
+    governanceMember,
+    jurorCandidate,
+    jurorMember1,
+    jurorMember2,
+    jurorMember3,
+    contractUDAO,
+    contractRoleManager,
+    contractUDAOCertificate,
+    contractUDAOContent,
+    contractValidationManager,
+    contractPlatformTreasury,
+    contractUDAOVp,
+    contractUDAOStaker,
+    contractUDAOTimelockController,
+    contractUDAOGovernor,
+    contractJurorManager,
+    contractContractManager
+    } = await deploy();
+    /// Create content
+    await createContent(contractRoleManager, contractUDAOContent, contentCreator, contractValidationManager, backend, validator1, validator2, validator3, validator4, validator5, contentCreator);
+    /// Make multiple coaching purchases and finalize all
+    const coachingId1 = await makeCoachingPurchase(contractRoleManager, contractUDAO, contractPlatformTreasury, contentBuyer1);
+    const coachingId2 = await makeCoachingPurchase(contractRoleManager, contractUDAO, contractPlatformTreasury, contentBuyer2);
+    const coachingId3 = await makeCoachingPurchase(contractRoleManager, contractUDAO, contractPlatformTreasury, contentBuyer3);
+    // Finalize the coachings
+    await contractPlatformTreasury.connect(contentBuyer1).finalizeCoaching(coachingId1);
+    await contractPlatformTreasury.connect(contentBuyer2).finalizeCoaching(coachingId2);
+    await contractPlatformTreasury.connect(contentBuyer3).finalizeCoaching(coachingId3);
+    /// @dev Withdraw instructer rewards and check
+    // Get the instructer balance before withdrawal
+    const instructerBalanceBefore = await contractUDAO.balanceOf(contentCreator.address);
+    // Expect that the instructer balance is 0 before withdrawal
+    await expect(instructerBalanceBefore).to.equal(0);
+    // Instructer should call withdrawInstructor from platformtreasury contract
+    await contractPlatformTreasury.connect(contentCreator).withdrawInstructor();
+    // Get the instructer balance after withdrawal
+    const instructerBalanceAfter = await contractUDAO.balanceOf(contentCreator.address);
+    // Get coachingPaymentAmount from coachingStructs
+    const coachingPaymentAmountTx = await contractPlatformTreasury.coachingStructs(0);
+    const coachingPaymentAmount = coachingPaymentAmountTx["coachingPaymentAmount"];
+    // Expect that the instructer balance is equal to coachingPaymentAmount
+    await expect(instructerBalanceAfter).to.equal(coachingPaymentAmount.mul(3));
+    
   });
 });
