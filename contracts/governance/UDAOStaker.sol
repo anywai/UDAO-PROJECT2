@@ -42,9 +42,7 @@ contract UDAOStaker is RoleController, EIP712 {
     event RoleApproved(uint256 _roleId, address _user);
     event RoleRejected(uint256 _roleId, address _user);
     event ValidationAdded(uint256 _amount);
-    event CaseAdded(uint256 _amount);
     event ValidationRegistered(address _validator, uint256 _validationId);
-    event CaseRegistered(address _juror, uint256 _caseId);
     event ValidatorStakeWithdrawn(address _validator, uint256 _amount);
     event JobListingRegistered(address corporate, uint amountPerListing);
     event JobListingUnregistered(
@@ -250,8 +248,7 @@ contract UDAOStaker is RoleController, EIP712 {
     }
 
     /// @notice allows users to apply for juror role
-    /// @param caseAmount The amount of cases that a juror wants to do
-    function applyForJuror(uint256 caseAmount) external whenNotPaused {
+    function applyForJuror() external whenNotPaused {
         require(
             udaovp.balanceOf(msg.sender) > 0,
             "You have to be governance member to apply"
@@ -265,7 +262,7 @@ contract UDAOStaker is RoleController, EIP712 {
         jurorBalanceOf[msg.sender] += jurorLockAmount;
         udao.transferFrom(msg.sender, address(this), jurorLockAmount);
 
-        emit RoleApplied(1, msg.sender, caseAmount);
+        emit RoleApplied(1, msg.sender, jurorLockAmount);
     }
 
     /// @notice Users can use this function and assign validator or juror roles to themselves

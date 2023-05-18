@@ -1213,9 +1213,9 @@ describe("UDAOStaker Contract", function () {
         ethers.utils.parseEther("10"),
         ethers.utils.parseEther("300")
       );
-    await expect(contractUDAOStaker.connect(jurorCandidate).applyForJuror(5))
+    await expect(contractUDAOStaker.connect(jurorCandidate).applyForJuror())
       .to.emit(contractUDAOStaker, "RoleApplied") // transfer from null address to minter
-      .withArgs(1, jurorCandidate.address, 5);
+      .withArgs(1, jurorCandidate.address, ethers.utils.parseEther("150"));
   });
 
   it("Should approve for juror", async function () {
@@ -1266,9 +1266,9 @@ describe("UDAOStaker Contract", function () {
         ethers.utils.parseEther("10"),
         ethers.utils.parseEther("300")
       );
-    await expect(contractUDAOStaker.connect(jurorCandidate).applyForJuror(5))
+    await expect(contractUDAOStaker.connect(jurorCandidate).applyForJuror())
       .to.emit(contractUDAOStaker, "RoleApplied") // transfer from null address to minter
-      .withArgs(1, jurorCandidate.address, 5);
+      .withArgs(1, jurorCandidate.address, ethers.utils.parseEther("150"));
 
     const lazyRole = new LazyRole({
       contract: contractUDAOStaker,
@@ -1334,9 +1334,9 @@ describe("UDAOStaker Contract", function () {
         ethers.utils.parseEther("10"),
         ethers.utils.parseEther("300")
       );
-    await expect(contractUDAOStaker.connect(jurorCandidate).applyForJuror(5))
+    await expect(contractUDAOStaker.connect(jurorCandidate).applyForJuror())
       .to.emit(contractUDAOStaker, "RoleApplied") // transfer from null address to minter
-      .withArgs(1, jurorCandidate.address, 5);
+      .withArgs(1, jurorCandidate.address, ethers.utils.parseEther("150"));
 
     const lazyRole = new LazyRole({
       contract: contractUDAOStaker,
@@ -1545,9 +1545,9 @@ describe("UDAOStaker Contract", function () {
         ethers.utils.parseEther("10"),
         ethers.utils.parseEther("300")
       );
-    await expect(contractUDAOStaker.connect(jurorCandidate).applyForJuror(5))
+    await expect(contractUDAOStaker.connect(jurorCandidate).applyForJuror())
       .to.emit(contractUDAOStaker, "RoleApplied") // transfer from null address to minter
-      .withArgs(1, jurorCandidate.address, 5);
+      .withArgs(1, jurorCandidate.address, ethers.utils.parseEther("150"));
     await expect(
       contractUDAOStaker
         .connect(backend)
@@ -1605,9 +1605,9 @@ describe("UDAOStaker Contract", function () {
         ethers.utils.parseEther("10"),
         ethers.utils.parseEther("300")
       );
-    await expect(contractUDAOStaker.connect(jurorCandidate).applyForJuror(5))
+    await expect(contractUDAOStaker.connect(jurorCandidate).applyForJuror())
       .to.emit(contractUDAOStaker, "RoleApplied") // transfer from null address to minter
-      .withArgs(1, jurorCandidate.address, 5);
+      .withArgs(1, jurorCandidate.address, ethers.utils.parseEther("150"));
     await expect(
       contractUDAOStaker
         .connect(backend)
@@ -1664,9 +1664,9 @@ describe("UDAOStaker Contract", function () {
         ethers.utils.parseEther("10"),
         ethers.utils.parseEther("300")
       );
-    await expect(contractUDAOStaker.connect(jurorCandidate).applyForJuror(5))
+    await expect(contractUDAOStaker.connect(jurorCandidate).applyForJuror())
       .to.emit(contractUDAOStaker, "RoleApplied") // transfer from null address to minter
-      .withArgs(1, jurorCandidate.address, 5);
+      .withArgs(1, jurorCandidate.address, ethers.utils.parseEther("150"));
     await expect(
       contractUDAOStaker
         .connect(jurorCandidate)
@@ -1869,9 +1869,9 @@ describe("UDAOStaker Contract", function () {
         ethers.utils.parseEther("10"),
         ethers.utils.parseEther("300")
       );
-    await expect(contractUDAOStaker.connect(jurorCandidate).applyForJuror(5))
+    await expect(contractUDAOStaker.connect(jurorCandidate).applyForJuror())
       .to.emit(contractUDAOStaker, "RoleApplied") // transfer from null address to minter
-      .withArgs(1, jurorCandidate.address, 5);
+      .withArgs(1, jurorCandidate.address, ethers.utils.parseEther("150"));
 
     const lazyRole = new LazyRole({
       contract: contractUDAOStaker,
@@ -1944,9 +1944,9 @@ describe("UDAOStaker Contract", function () {
         ethers.utils.parseEther("10"),
         ethers.utils.parseEther("300")
       );
-    await expect(contractUDAOStaker.connect(jurorCandidate).applyForJuror(5))
+    await expect(contractUDAOStaker.connect(jurorCandidate).applyForJuror())
       .to.emit(contractUDAOStaker, "RoleApplied") // transfer from null address to minter
-      .withArgs(1, jurorCandidate.address, 5);
+      .withArgs(1, jurorCandidate.address, ethers.utils.parseEther("150"));
     await expect(
       contractUDAOStaker
         .connect(backend)
