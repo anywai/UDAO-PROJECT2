@@ -352,6 +352,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
         coachingIndex++;
 
         studentList[tokenId].push(msg.sender);
+        // TODO This transfer is prone to reentrancy attack. Fix it.
         udao.transferFrom(msg.sender, address(this), priceToPayUdao);
     }
 
