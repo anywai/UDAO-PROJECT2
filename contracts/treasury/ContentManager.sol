@@ -333,8 +333,10 @@ abstract contract ContentManager is EIP712, BasePlatform {
             );
         }
 
-        foundationBalance += (priceToPayUdao * coachingFoundationCut) / 100000;
-        governanceBalance += (priceToPayUdao * coachingGovernanceCut) / 100000;
+        uint256 foundationBalanceFromThisPurchase = (priceToPayUdao * coachingFoundationCut) / 100000;
+        uint256 governanceBalanceFromThisPurchase = (priceToPayUdao * coachingGovernanceCut) / 100000;
+        foundationBalance += foundationBalanceFromThisPurchase;
+        governanceBalance += governanceBalanceFromThisPurchase;
         coachingStructs[coachingIndex] = CoachingStruct({
             coach: instructor,
             learner: msg.sender,
@@ -342,8 +344,8 @@ abstract contract ContentManager is EIP712, BasePlatform {
             isRefundable: udaoc.coachingRefundable(tokenId),
             totalPaymentAmount: priceToPayUdao,
             coachingPaymentAmount: (priceToPayUdao -
-                foundationBalance -
-                governanceBalance),
+                foundationBalanceFromThisPurchase -
+                governanceBalanceFromThisPurchase),
             moneyLockDeadline: block.timestamp + 30 days
         });
 

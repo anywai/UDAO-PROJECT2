@@ -222,6 +222,7 @@ async function deploy() {
     jurorMember1,
     jurorMember2,
     jurorMember3,
+    jurorMember4,
   ] = await ethers.getSigners();
 
   // FACTORIES
@@ -456,6 +457,7 @@ async function deploy() {
   await contractRoleManager.grantRole(JUROR_ROLE, jurorMember1.address);
   await contractRoleManager.grantRole(JUROR_ROLE, jurorMember2.address);
   await contractRoleManager.grantRole(JUROR_ROLE, jurorMember3.address);
+  await contractRoleManager.grantRole(JUROR_ROLE, jurorMember4.address);
   // add missing contract addresses to the contract manager
   await contractContractManager
     .connect(backend)
@@ -488,6 +490,7 @@ async function deploy() {
     jurorMember1,
     jurorMember2,
     jurorMember3,
+    jurorMember4,
     contractUDAO,
     contractRoleManager,
     contractUDAOCertificate,
@@ -525,6 +528,7 @@ describe("Juror Manager", function () {
       jurorMember1,
       jurorMember2,
       jurorMember3,
+      jurorMember4,
       contractUDAO,
       contractRoleManager,
       contractUDAOCertificate,
@@ -1887,5 +1891,219 @@ describe("Juror Manager", function () {
     ).to.revertedWith(
       `AccessControl: account ${jurorMember1.address.toLowerCase()} is missing role ${GOVERNANCE_ROLE}`
     );
+  });
+
+  it("Should fail for too many juror assigned, a juror be unable to assign a dispute to himself", async function () {
+    const {
+      backend,
+      contentCreator,
+      contentBuyer,
+      validatorCandidate,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember1,
+      jurorMember2,
+      jurorMember3,
+      jurorMember4,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+      contractJurorManager,
+    } = await deploy();
+
+    /// @dev Dispute settings
+    const caseScope = 1;
+    const caseQuestion = "Should we remove this content?";
+    const caseTokenRelated = true;
+    const caseTokenId = 0;
+
+    /// @dev Create content
+    await createContent(
+      contentCreator,
+      contractValidationManager,
+      contractRoleManager,
+      contractUDAOContent,
+      backend,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5
+    );
+    /// @dev Create dispute
+    await contractJurorManager
+      .connect(backend)
+      .createDispute(caseScope, caseQuestion, caseTokenRelated, caseTokenId);
+    /// @dev Assign dispute to juror
+    const disputeId = 1;
+    await expect(
+      contractJurorManager.connect(jurorMember1).assignDispute(disputeId)
+    );
+    await expect(
+      contractJurorManager.connect(jurorMember2).assignDispute(disputeId)
+    );
+    await expect(
+      contractJurorManager.connect(jurorMember3).assignDispute(disputeId)
+    );
+    await expect(
+      contractJurorManager.connect(jurorMember4).assignDispute(disputeId)
+    ).to.revertedWith("Dispute already have enough jurors!");
+  });
+
+  it("Should fail juror have already assigned dispute, a juror be unable to assign a dispute to himself", async function () {
+    const {
+      backend,
+      contentCreator,
+      contentBuyer,
+      validatorCandidate,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember1,
+      jurorMember2,
+      jurorMember3,
+      jurorMember4,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+      contractJurorManager,
+    } = await deploy();
+
+    /// @dev Dispute settings for 1st dispute
+    const caseScope = 1;
+    const caseQuestion = "Should we remove this content?";
+    const caseTokenRelated = true;
+    var caseTokenId = 0;
+
+    /// @dev Create content for 1st dispute
+    await createContent(
+      contentCreator,
+      contractValidationManager,
+      contractRoleManager,
+      contractUDAOContent,
+      backend,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5
+    );
+    /// @dev Create dispute for 1st dispute
+    await contractJurorManager
+      .connect(backend)
+      .createDispute(caseScope, caseQuestion, caseTokenRelated, caseTokenId);
+
+    /// @dev arrange Dispute settings for 2nd dispute
+    caseTokenId = 1;
+
+    /// @dev Create dispute for 2nd dispute
+    await contractJurorManager
+      .connect(backend)
+      .createDispute(caseScope, caseQuestion, caseTokenRelated, caseTokenId);
+
+    /// @dev Assign dispute to juror
+    var disputeId = 1;
+    await expect(
+      contractJurorManager.connect(jurorMember1).assignDispute(disputeId)
+    );
+
+    disputeId = 2;
+    await expect(
+      contractJurorManager.connect(jurorMember1).assignDispute(disputeId)
+    ).to.revertedWith("You already have an assigned dispute");
+  });
+
+  it("Should fail for unexisting case id, a juror be unable to assign a dispute to himself", async function () {
+    const {
+      backend,
+      contentCreator,
+      contentBuyer,
+      validatorCandidate,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember1,
+      jurorMember2,
+      jurorMember3,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+      contractJurorManager,
+    } = await deploy();
+
+    /// @dev Dispute settings
+    const caseScope = 1;
+    const caseQuestion = "Should we remove this content";
+    const caseTokenRelated = true;
+    const caseTokenId = 0;
+
+    /// @dev Create content
+    await createContent(
+      contentCreator,
+      contractValidationManager,
+      contractRoleManager,
+      contractUDAOContent,
+      backend,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5
+    );
+    /// @dev Create dispute
+    await contractJurorManager
+      .connect(backend)
+      .createDispute(caseScope, caseQuestion, caseTokenRelated, caseTokenId);
+    /// @dev Assign dispute to juror
+    const disputeId = 2;
+    await expect(
+      contractJurorManager.connect(jurorMember1).assignDispute(disputeId)
+    ).to.revertedWith("Dispute does not exist");
   });
 });
