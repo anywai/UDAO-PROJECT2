@@ -71,6 +71,9 @@ contract UDAOStaker is RoleController, EIP712 {
     mapping(address => uint256) latestJurorStakeId;
     mapping(address => uint256) latestValidationLockId;
 
+    mapping(address => bool) public activeApplicationForValidator;
+    mapping(address => bool) public activeApplicationForJuror;
+
     uint256 public corporateStakePerListing = 500 ether; //setter getter, decider=adminler
     mapping(address => uint) corporateStakedUDAO;
     mapping(address => uint) corporateLockedUDAO;
@@ -192,6 +195,10 @@ contract UDAOStaker is RoleController, EIP712 {
             !IRM.hasRole(VALIDATOR_ROLE, msg.sender),
             "Address is already a Validator"
         );
+        require(
+            !activeApplicationForValidator[msg.sender],
+            "You already have an active application"
+        );
         ValidationApplication
             storage validationApplication = validatorApplications.push();
         validationApplication.applicant = msg.sender;
@@ -199,8 +206,8 @@ contract UDAOStaker is RoleController, EIP712 {
         validatorApplicationId[msg.sender] = validationApplicationIndex;
         validationApplicationIndex++;
         validationBalanceOf[msg.sender] += validatorLockAmount;
+        activeApplicationForValidator[msg.sender] = true;
         udao.transferFrom(msg.sender, address(this), validatorLockAmount);
-
         emit RoleApplied(0, msg.sender, validatorLockAmount);
     }
 
@@ -219,6 +226,10 @@ contract UDAOStaker is RoleController, EIP712 {
             !IRM.hasRole(SUPER_VALIDATOR_ROLE, msg.sender),
             "Address is a Super Validator"
         );
+        require(
+            !activeApplicationForValidator[msg.sender],
+            "You already have an active application"
+        );
 
         ValidationApplication
             storage validationApplication = validatorApplications.push();
@@ -226,6 +237,7 @@ contract UDAOStaker is RoleController, EIP712 {
         validatorApplicationId[msg.sender] = validationApplicationIndex;
         validationApplicationIndex++;
 
+        activeApplicationForValidator[msg.sender] = true;
         emit RoleApplied(3, msg.sender, 0);
     }
 
@@ -235,6 +247,10 @@ contract UDAOStaker is RoleController, EIP712 {
             udaovp.balanceOf(msg.sender) > 0,
             "You have to be governance member to apply"
         );
+        require(
+            !IRM.hasRole(JUROR_ROLE, msg.sender),
+            "Address is already a Juror"
+        );
 
         JurorApplication storage jurorApplication = jurorApplications.push();
         jurorApplication.applicant = msg.sender;
@@ -242,6 +258,7 @@ contract UDAOStaker is RoleController, EIP712 {
         jurorApplication.expire = block.timestamp + jurorLockTime;
         caseApplicationIndex++;
         jurorBalanceOf[msg.sender] += jurorLockAmount;
+        activeApplicationForJuror[msg.sender] = true;
         udao.transferFrom(msg.sender, address(this), jurorLockAmount);
 
         emit RoleApplied(1, msg.sender, jurorLockAmount);
@@ -270,6 +287,7 @@ contract UDAOStaker is RoleController, EIP712 {
                 ];
 
             IRM.grantRoleStaker(VALIDATOR_ROLE, voucher.redeemer);
+            activeApplicationForValidator[voucher.redeemer] = false;
             validationApplication.isFinished = true;
         } else if (roleId == 1) {
             require(
@@ -282,6 +300,7 @@ contract UDAOStaker is RoleController, EIP712 {
             ];
 
             IRM.grantRoleStaker(JUROR_ROLE, voucher.redeemer);
+            activeApplicationForJuror[voucher.redeemer] = false;
             jurorApplication.isFinished = true;
         } else if (roleId == 2) {
             IRM.grantRoleStaker(CORPORATE_ROLE, voucher.redeemer);
@@ -292,7 +311,7 @@ contract UDAOStaker is RoleController, EIP712 {
                 ];
 
             IRM.grantRoleStaker(SUPER_VALIDATOR_ROLE, voucher.redeemer);
-
+            activeApplicationForValidator[voucher.redeemer] = false;
             validationApplication.isFinished = true;
         } else {
             revert("Undefined role ID!");
