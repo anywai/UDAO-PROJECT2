@@ -104,6 +104,7 @@ contract JurorManager is RoleController {
         dispute.caseId = disputes.length - 1;
         dispute.caseScope = caseScope;
         dispute.question = question;
+        // TODO it seems like we are not using the info below
         dispute.isTokenRelated = isTokenRelated;
         if (isTokenRelated) {
             dispute.tokenId = tokenId;
