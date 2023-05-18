@@ -1687,4 +1687,56 @@ describe("Platform Treasury General", function () {
     await expect(instructerBalanceAfter).to.equal(coachingPaymentAmount.mul(3));
     
   });
+
+  it("Should allow foundation to force refund the coaching", async function () {
+    const {
+      backend,
+    contentCreator,
+    contentBuyer1,
+    contentBuyer2,
+    contentBuyer3,
+    validatorCandidate,
+    validator1,
+    validator2,
+    validator3,
+    validator4,
+    validator5,
+    superValidatorCandidate,
+    superValidator,
+    foundation,
+    governanceCandidate,
+    governanceMember,
+    jurorCandidate,
+    jurorMember1,
+    jurorMember2,
+    jurorMember3,
+    contractUDAO,
+    contractRoleManager,
+    contractUDAOCertificate,
+    contractUDAOContent,
+    contractValidationManager,
+    contractPlatformTreasury,
+    contractUDAOVp,
+    contractUDAOStaker,
+    contractUDAOTimelockController,
+    contractUDAOGovernor,
+    contractJurorManager,
+    contractContractManager
+    } = await deploy();
+    /// Create content
+    await createContent(contractRoleManager, contractUDAOContent, contentCreator, contractValidationManager, backend, validator1, validator2, validator3, validator4, validator5, contentCreator);
+    /// Make coaching purchase 
+    const coachingId1 = await makeCoachingPurchase(contractRoleManager, contractUDAO, contractPlatformTreasury, contentBuyer1);
+    /// Get balance of contentBuyer1 before refund
+    const contentBuyer1BalanceBefore = await contractUDAO.balanceOf(contentBuyer1.address);
+    /// Foundation should call forcedRefundAdmin from platformtreasury contract
+    await contractPlatformTreasury.connect(foundation).forcedRefundAdmin(coachingId1);
+    /// Get balance of contentBuyer1 after refund
+    const contentBuyer1BalanceAfter = await contractUDAO.balanceOf(contentBuyer1.address);
+    /// Get totalPaymentAmount from coachingStructs
+    const totalPaymentAmountTx = await contractPlatformTreasury.coachingStructs(coachingId1);
+    const totalPaymentAmount = totalPaymentAmountTx["totalPaymentAmount"];
+    /// Expect that the contentBuyer1 balance is equal to totalPaymentAmount plus contentBuyer1BalanceBefore
+    await expect(contentBuyer1BalanceAfter).to.equal(totalPaymentAmount.add(contentBuyer1BalanceBefore));
+  });
 });
