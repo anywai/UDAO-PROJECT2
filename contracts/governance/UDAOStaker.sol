@@ -178,24 +178,6 @@ contract UDAOStaker is RoleController, EIP712 {
         bytes signature;
     }
 
-    /// @notice Allows corporate accounts to unstake before lock time
-    struct CorporateWithdrawVoucher {
-        /// @notice Address of the corporate account
-        address redeemer;
-        /// @notice Amount of tokens they want to unstake
-        uint256 amount;
-    }
-
-    /// @notice Allows people to stake for governance (kyc)
-    struct GovernanceStakeVoucher {
-        /// @notice Address of the governance staker
-        address staker;
-        /// @notice Amount of UDAO token that will be staked
-        uint256 amount;
-        /// @notice Amount of days UDAO token that will be staked for
-        uint256 _days;
-    }
-
     /// @notice allows users to apply for validator role
     function applyForValidator() external whenNotPaused {
         require(
