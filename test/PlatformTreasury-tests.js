@@ -220,32 +220,32 @@ async function makeContentPurchase(contractPlatformTreasury, contentBuyer, contr
   const numArray = result.map((x) => x.map((y) => y.toNumber()));
   expect(numArray).to.eql([[0, 0]]);
 }
-async function makeCoachingPurchase(contractRoleManager, contractUDAO, contractPlatformTreasury, contentBuyer1){
+async function makeCoachingPurchase(contractRoleManager, contractUDAO, contractPlatformTreasury, contentBuyer){
   /// Make coaching purchase and finalize it
     // Set KYC
-    await contractRoleManager.setKYC(contentBuyer1.address, true);
-    // Send some UDAO to contentBuyer1
+    await contractRoleManager.setKYC(contentBuyer.address, true);
+    // Send some UDAO to contentBuyer
     await contractUDAO.transfer(
-      contentBuyer1.address,
+      contentBuyer.address,
       ethers.utils.parseEther("100.0")
     );
     // Content buyer needs to give approval to the platformtreasury
     await contractUDAO
-    .connect(contentBuyer1)
+    .connect(contentBuyer)
     .approve(
       contractPlatformTreasury.address,
       ethers.utils.parseEther("999999999999.0")
     );
     // Buy coaching
     const purchaseTx = await contractPlatformTreasury
-    .connect(contentBuyer1)
+    .connect(contentBuyer)
     .buyCoaching(0);
     const queueTxReceipt = await purchaseTx.wait();
     const queueTxEvent = queueTxReceipt.events.find((e) => e.event == 'CoachingBought');
     const coachingId = queueTxEvent.args[2];
     // Check if buyer is saved as a student
     const returnedStudentList = await contractPlatformTreasury.getStudentListOfToken(0);
-    expect(returnedStudentList[0]).to.equal(contentBuyer1.address);
+    expect(returnedStudentList[0]).to.equal(contentBuyer.address);
 }
 async function deploy() {
   helpers.reset(
