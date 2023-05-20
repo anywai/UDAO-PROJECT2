@@ -2312,4 +2312,67 @@ describe("Juror Manager", function () {
       `'AccessControl: account ${contentCreator.address.toLowerCase()} is missing role ${hashedTREASURY_CONTRACT}'`
     );
   });
+
+  it("Should fail a juror be unable to assign a dispute to himself if the instructor of course", async function () {
+    const {
+      backend,
+      contentCreator,
+      contentBuyer,
+      validatorCandidate,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember1,
+      jurorMember2,
+      jurorMember3,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+      contractJurorManager,
+    } = await deploy();
+
+    /// @dev Dispute settings
+    const caseScope = 1;
+    const caseQuestion = "Should we remove this content?";
+    const caseTokenRelated = true;
+    const caseTokenId = 0;
+
+    /// @dev Create content
+    await createContent(
+      jurorMember1,
+      contractValidationManager,
+      contractRoleManager,
+      contractUDAOContent,
+      backend,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5
+    );
+    /// @dev Create dispute
+    await contractJurorManager
+      .connect(backend)
+      .createDispute(caseScope, caseQuestion, caseTokenRelated, caseTokenId);
+    /// @dev Assign dispute to juror
+    const disputeId = 1;
+    await expect(
+      contractJurorManager.connect(jurorMember1).assignDispute(disputeId)
+    ).to.revertedWith("You are the instructor of this course.");
+  });
 });
