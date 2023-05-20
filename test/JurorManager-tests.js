@@ -2375,4 +2375,56 @@ describe("Juror Manager", function () {
       contractJurorManager.connect(jurorMember1).assignDispute(disputeId)
     ).to.revertedWith("You are the instructor of this course.");
   });
+
+  it("Should fail when paused, allow treasury contract to switch to the next round", async function () {
+    const {
+      backend,
+      contentCreator,
+      contentBuyer,
+      validatorCandidate,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember1,
+      jurorMember2,
+      jurorMember3,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+      contractJurorManager,
+    } = await deploy();
+    // send some eth to the contractPlatformTreasury and impersonate it
+    await helpers.setBalance(
+      contractPlatformTreasury.address,
+      hre.ethers.utils.parseEther("1")
+    );
+    const signerTreasuryContract = await ethers.getImpersonatedSigner(
+      contractPlatformTreasury.address
+    );
+    // get the current distribution round
+    const currentDistributionRound =
+      await contractJurorManager.distributionRound();
+    expect(currentDistributionRound).to.equal(0);
+    // call the next round from contractJurorManager
+    const nextDistributionRound = currentDistributionRound + 1;
+    await expect(contractJurorManager.pause());
+    await expect(
+      contractJurorManager.connect(signerTreasuryContract).nextRound()
+    ).to.revertedWith("Pausable: paused");
+  });
 });
