@@ -2106,4 +2106,155 @@ describe("Juror Manager", function () {
       contractJurorManager.connect(jurorMember1).assignDispute(disputeId)
     ).to.revertedWith("Dispute does not exist");
   });
+
+  it("Should fail allow to juror-else role to send dispute result", async function () {
+    const {
+      backend,
+      contentCreator,
+      contentBuyer,
+      validatorCandidate,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember1,
+      jurorMember2,
+      jurorMember3,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+      contractJurorManager,
+      JUROR_ROLE,
+    } = await deploy();
+
+    /// @dev Dispute settings
+    const caseScope = 1;
+    const caseQuestion = "Should we remove this content?";
+    const caseTokenRelated = true;
+    const caseTokenId = 0;
+
+    /// @dev Create content
+    await createContent(
+      contentCreator,
+      contractValidationManager,
+      contractRoleManager,
+      contractUDAOContent,
+      backend,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5
+    );
+    /// @dev Create dispute
+    await contractJurorManager
+      .connect(backend)
+      .createDispute(caseScope, caseQuestion, caseTokenRelated, caseTokenId);
+    /// @dev Assign dispute to juror
+    const hashedJUROR_ROLE =
+      "0x2ea44624af573c71d23003c0751808a79f405c6b5fddb794897688d59c07918b";
+    const disputeId = 1;
+    await contractJurorManager.connect(jurorMember1).assignDispute(disputeId);
+    /// @dev Send dispute result
+    const disputeResultOfJurorMember1 = 1;
+    await expect(
+      contractJurorManager
+        .connect(contentCreator)
+        .sendDisputeResult(disputeId, disputeResultOfJurorMember1)
+    ).to.revertedWith(
+      `'AccessControl: account ${contentCreator.address.toLowerCase()} is missing role ${hashedJUROR_ROLE}'`
+    );
+  });
+
+  it("Should fail allow to finalize without not enough juror send dispute results", async function () {
+    const {
+      backend,
+      contentCreator,
+      contentBuyer,
+      validatorCandidate,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember1,
+      jurorMember2,
+      jurorMember3,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+      contractJurorManager,
+    } = await deploy();
+
+    /// @dev Dispute settings
+    const caseScope = 1;
+    const caseQuestion = "Should we remove this content?";
+    const caseTokenRelated = true;
+    const caseTokenId = 0;
+
+    /// @dev Create content
+    await createContent(
+      contentCreator,
+      contractValidationManager,
+      contractRoleManager,
+      contractUDAOContent,
+      backend,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5
+    );
+    /// @dev Create dispute
+    await contractJurorManager
+      .connect(backend)
+      .createDispute(caseScope, caseQuestion, caseTokenRelated, caseTokenId);
+    /// @dev Assign dispute to juror
+    const disputeId = 1;
+    await contractJurorManager.connect(jurorMember1).assignDispute(disputeId);
+    await contractJurorManager.connect(jurorMember2).assignDispute(disputeId);
+    //await contractJurorManager.connect(jurorMember3).assignDispute(disputeId);
+    /// @dev Send dispute result
+    const disputeResultOfJurorMember1 = 1;
+    const disputeResultOfJurorMember2 = 1;
+
+    await contractJurorManager
+      .connect(jurorMember1)
+      .sendDisputeResult(disputeId, disputeResultOfJurorMember1);
+    await contractJurorManager
+      .connect(jurorMember2)
+      .sendDisputeResult(disputeId, disputeResultOfJurorMember2);
+    /// @dev Finalize dispute
+    const disputeVerdict = true;
+    await expect(
+      contractJurorManager.connect(backend).finalizeDispute(1)
+    ).to.revertedWith("Not enough juror votes to finalize the case");
+  });
 });
