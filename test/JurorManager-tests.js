@@ -2257,4 +2257,59 @@ describe("Juror Manager", function () {
       contractJurorManager.connect(backend).finalizeDispute(1)
     ).to.revertedWith("Not enough juror votes to finalize the case");
   });
+
+  it("Should fail allow to without treasury contract to switch to the next round", async function () {
+    const {
+      backend,
+      contentCreator,
+      contentBuyer,
+      validatorCandidate,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember1,
+      jurorMember2,
+      jurorMember3,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+      contractJurorManager,
+    } = await deploy();
+    // send some eth to the contractPlatformTreasury and impersonate it
+    await helpers.setBalance(
+      contractPlatformTreasury.address,
+      hre.ethers.utils.parseEther("1")
+    );
+    const signerTreasuryContract = await ethers.getImpersonatedSigner(
+      contractPlatformTreasury.address
+    );
+    const hashedTREASURY_CONTRACT =
+      "0xa34ea2ceed6e9b6dd50292aa3f34b931d342b9667303c6f313c588454bca7e8a";
+    // get the current distribution round
+    const currentDistributionRound =
+      await contractJurorManager.distributionRound();
+    expect(currentDistributionRound).to.equal(0);
+    // call the next round from contractJurorManager
+    const nextDistributionRound = currentDistributionRound + 1;
+    await expect(
+      contractJurorManager.connect(contentCreator).nextRound()
+    ).to.revertedWith(
+      `'AccessControl: account ${contentCreator.address.toLowerCase()} is missing role ${hashedTREASURY_CONTRACT}'`
+    );
+  });
 });
