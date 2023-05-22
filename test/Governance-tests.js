@@ -217,6 +217,8 @@ async function deploy() {
     contractUDAOStaker.address,
     contractRoleManager.address
   );
+  const CANCELLER_ROLE = await contractUDAOTimelockController.CANCELLER_ROLE();
+  await contractUDAOTimelockController.grantRole(CANCELLER_ROLE, foundation.address);
   //POST DEPLOYMENT
   // add proposer
   const PROPOSER_ROLE = ethers.utils.keccak256(
@@ -1363,5 +1365,106 @@ describe("Governance Contract", function () {
     const _newCut = await contractPlatformTreasury.contentValidatorCut();
     await expect(_newCut).to.equal(1000);
 
+  });
+  it("Should allow foundation to cancel a proposal during it is at pending state", async function () {
+    const {
+      backend,
+      validatorCandidate,
+      validator,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+      contractJurorManager
+    } = await deploy();
+    /// @dev Setup governance member
+    await setupGovernanceMember(contractRoleManager, contractUDAO, contractUDAOStaker, governanceCandidate);
+    await setupGovernanceMember(contractRoleManager, contractUDAO, contractUDAOStaker, superValidator);
+    await setupGovernanceMember(contractRoleManager, contractUDAO, contractUDAOStaker, superValidatorCandidate);
+    await setupGovernanceMember(contractRoleManager, contractUDAO, contractUDAOStaker, validatorCandidate);
+    await setupGovernanceMember(contractRoleManager, contractUDAO, contractUDAOStaker, validator);
+    /// @dev Check account UDAO-vp balance and delegate to themselves
+    await checkAccountUDAOVpBalanceAndDelegate(contractUDAOVp, governanceCandidate);
+    await checkAccountUDAOVpBalanceAndDelegate(contractUDAOVp, superValidator);
+    await checkAccountUDAOVpBalanceAndDelegate(contractUDAOVp, validator);
+    await checkAccountUDAOVpBalanceAndDelegate(contractUDAOVp, validatorCandidate);
+
+    /// @dev Proposal settings
+    const contractAddress = contractPlatformTreasury.address;
+    const contractData = await ethers.getContractAt("PlatformTreasury", contractAddress);
+
+    const _cut = ethers.utils.defaultAbiCoder.encode(["uint256"], [1000]);
+    const transferCalldata = contractData.interface.encodeFunctionData("setContentValidatorCut", [_cut]);
+    /// @dev Propose a new proposal
+    const proposeTx = await contractUDAOGovernor.connect(governanceCandidate).propose([contractAddress],
+      [0],
+      [transferCalldata],
+      "Proposal #1: Set content validator cut to %1");
+    /// @dev Wait for the transaction to be mined
+    const tx = await proposeTx.wait();
+    const proposalId = tx.events.find((e) => e.event == 'ProposalCreated').args.proposalId;
+    const status1 = await contractUDAOTimelockController.isOperationPending(proposalId);
+    console.log(status1);
+    /// @dev Get to start of the voting period
+    const numBlocksToMine = Math.ceil((7 * 24 * 60 * 60) / 2);
+    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine.toString(16)}`, "0x2"]);
+    const status2 = await contractUDAOTimelockController.isOperationPending(proposalId);
+    console.log(status2);
+    /// @dev Vote on the proposal
+    await contractUDAOGovernor.connect(superValidator).castVote(proposalId, 1);
+    await contractUDAOGovernor.connect(superValidatorCandidate).castVote(proposalId, 1);
+    await contractUDAOGovernor.connect(validator).castVote(proposalId, 1);
+    await contractUDAOGovernor.connect(validatorCandidate).castVote(proposalId, 1);
+    const status3 = await contractUDAOTimelockController.isOperationPending(proposalId);
+    console.log(status3);
+    /// @dev Check if the vote was casted
+    const proposalState = await contractUDAOGovernor.state(proposalId);
+    await expect(proposalState).to.equal(1);
+
+    /// @dev Skip to the end of the voting period
+    const numBlocksToMineToEnd = Math.ceil((7 * 24 * 60 * 60) / 2);
+    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMineToEnd.toString(16)}`, "0x2"]);
+    const status4 = await contractUDAOTimelockController.isOperationPending(proposalId);
+    console.log(status4);
+    /// @dev Check if the proposal was successful
+    const proposalStateAtStart = await contractUDAOGovernor.state(proposalId);
+    await expect(proposalStateAtStart).to.equal(4);
+    /// @dev Queue the proposal and Check the ProposalQueued event
+  
+    const queueTx = await contractUDAOGovernor.connect(governanceCandidate).queue([contractAddress],
+      [0],
+      [transferCalldata],
+      ethers.utils.id("Proposal #1: Set content validator cut to %1"));
+    const queueTxReceipt = await queueTx.wait();
+    const queueTxEvent = queueTxReceipt.events.find((e) => e.event == 'ProposalQueued');
+
+    await expect(queueTxEvent.args.proposalId).to.equal(proposalId);
+    // await expect(queueTxEvent.args.eta).to.equal(0);
+    /// @dev Check if the proposal was queued
+    const proposalStateAfterQueue = await contractUDAOGovernor.state(proposalId);
+    await expect(proposalStateAfterQueue).to.equal(5);
+
+    const timelockId = contractUDAOTimelockController.hashOperationBatch([contractAddress],
+      ["0"],
+      [transferCalldata],ethers.constants.HashZero,
+      ethers.utils.id("Proposal #1: Set content validator cut to %1"));
+  
+    const status6 = await contractUDAOTimelockController.isOperationPending(timelockId);
+    console.log(status6);
+    /// @dev cancel the proposal
+    const cancelTx = await contractUDAOTimelockController.connect(foundation).cancel(timelockId);
   });
 });
