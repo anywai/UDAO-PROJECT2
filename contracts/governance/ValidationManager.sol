@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.4;
 
-import "./RoleController.sol";
-import "./IUDAOC.sol";
+import "../RoleController.sol";
+import "../interfaces/IUDAOC.sol";
 
 interface IStakingContract {
     function registerValidation(uint256 validationId) external;

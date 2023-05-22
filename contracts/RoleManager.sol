@@ -3,12 +3,11 @@
 pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
-import "./IRoleManager.sol";
+import "./interfaces/IRoleManager.sol";
 
 contract RoleManager is AccessControl, IRoleManager {
     bytes32 public constant BACKEND_ROLE = keccak256("BACKEND_ROLE");
     bytes32 public constant STAKING_CONTRACT = keccak256("STAKING_CONTRACT");
-
 
     mapping(address => bool) KYCList;
     mapping(address => bool) BanList;
@@ -94,11 +93,17 @@ contract RoleManager is AccessControl, IRoleManager {
         return BanList[_address];
     }
 
-    function grantRoleStaker(bytes32 role, address user) external onlyRole(STAKING_CONTRACT) {
+    function grantRoleStaker(
+        bytes32 role,
+        address user
+    ) external onlyRole(STAKING_CONTRACT) {
         _grantRole(role, user);
     }
 
-    function revokeRoleStaker(bytes32 role, address user) external onlyRole(STAKING_CONTRACT) {
+    function revokeRoleStaker(
+        bytes32 role,
+        address user
+    ) external onlyRole(STAKING_CONTRACT) {
         _revokeRole(role, user);
     }
 }

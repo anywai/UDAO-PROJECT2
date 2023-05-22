@@ -5,7 +5,7 @@ import "./BasePlatform.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
 
-import "./IPriceGetter.sol";
+import "../interfaces/IPriceGetter.sol";
 
 abstract contract ContentManager is EIP712, BasePlatform {
     string private constant SIGNING_DOMAIN = "ContentManager";
@@ -108,7 +108,12 @@ abstract contract ContentManager is EIP712, BasePlatform {
     /// @param fullContentPurchase is full content purchased
     /// @param purchasedParts parts of the content purchased
     /// @param giftReceiver address of the gift receiver if purchase is a gift
-    function buyContent(uint256 tokenId, bool fullContentPurchase, uint256[] calldata purchasedParts, address giftReceiver) external whenNotPaused {
+    function buyContent(
+        uint256 tokenId,
+        bool fullContentPurchase,
+        uint256[] calldata purchasedParts,
+        address giftReceiver
+    ) external whenNotPaused {
         uint256 partIdLength = purchasedParts.length;
         uint256 priceToPayUdao;
         uint256 priceToPay;
@@ -146,15 +151,11 @@ abstract contract ContentManager is EIP712, BasePlatform {
             );
             for (uint256 j; j < partIdLength; j++) {
                 require(
-                    purchasedParts[j] <
-                        udaoc.getPartNumberOfContent(tokenId),
+                    purchasedParts[j] < udaoc.getPartNumberOfContent(tokenId),
                     "Part does not exist!"
                 );
                 (pricePerPart, sellingCurrency) = udaoc
-                    .getContentPriceAndCurrency(
-                        tokenId,
-                        purchasedParts[j]
-                    );
+                    .getContentPriceAndCurrency(tokenId, purchasedParts[j]);
                 priceToPay += pricePerPart;
             }
         }
@@ -171,33 +172,24 @@ abstract contract ContentManager is EIP712, BasePlatform {
 
         /// @dev transfer the tokens from buyer to contract
         udao.transferFrom(msg.sender, address(this), priceToPayUdao);
-        
+
         /// @dev Calculate and assign the cuts
         _updateBalancesContent(priceToPayUdao, instructor);
-
-        
 
         if (fullContentPurchase) {
             _updateOwned(tokenId, 0, contentReceiver);
         } else {
             for (uint256 j; j < partIdLength; j++) {
-                _updateOwned(
-                    tokenId,
-                    purchasedParts[j],
-                    contentReceiver
-                );
+                _updateOwned(tokenId, purchasedParts[j], contentReceiver);
             }
         }
 
-        emit ContentBought(
-            tokenId,
-            purchasedParts,
-            priceToPayUdao,
-            msg.sender
-        );
+        emit ContentBought(tokenId, purchasedParts, priceToPayUdao, msg.sender);
     }
 
-    /// @notice allows users to purchase a content
+    /// @notice allows users to purchase a content. Notice that there is no price conversion
+    /// since the total payment amount is coming from backend with voucher where 
+    /// the total amount of payment in UDAO is calculated.
     /// @param voucher voucher for the content purchase
     function buyDiscountedContent(
         ContentDiscountVoucher calldata voucher
@@ -233,7 +225,6 @@ abstract contract ContentManager is EIP712, BasePlatform {
         );
         require(msg.sender == voucher.redeemer, "You are not redeemer.");
 
-        
         uint256 priceToPay = voucher.priceToPay;
         /// @dev transfer the tokens from buyer to contract
         udao.transferFrom(msg.sender, address(this), priceToPay);
@@ -342,8 +333,10 @@ abstract contract ContentManager is EIP712, BasePlatform {
             );
         }
 
-        foundationBalance += (priceToPayUdao * coachingFoundationCut) / 100000;
-        governanceBalance += (priceToPayUdao * coachingGovernanceCut) / 100000;
+        uint256 foundationBalanceFromThisPurchase = (priceToPayUdao * coachingFoundationCut) / 100000;
+        uint256 governanceBalanceFromThisPurchase = (priceToPayUdao * coachingGovernanceCut) / 100000;
+        foundationBalance += foundationBalanceFromThisPurchase;
+        governanceBalance += governanceBalanceFromThisPurchase;
         coachingStructs[coachingIndex] = CoachingStruct({
             coach: instructor,
             learner: msg.sender,
@@ -351,8 +344,8 @@ abstract contract ContentManager is EIP712, BasePlatform {
             isRefundable: udaoc.coachingRefundable(tokenId),
             totalPaymentAmount: priceToPayUdao,
             coachingPaymentAmount: (priceToPayUdao -
-                foundationBalance -
-                governanceBalance),
+                foundationBalanceFromThisPurchase -
+                governanceBalanceFromThisPurchase),
             moneyLockDeadline: block.timestamp + 30 days
         });
 
@@ -361,6 +354,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
         coachingIndex++;
 
         studentList[tokenId].push(msg.sender);
+        // TODO This transfer is prone to reentrancy attack. Fix it.
         udao.transferFrom(msg.sender, address(this), priceToPayUdao);
     }
 

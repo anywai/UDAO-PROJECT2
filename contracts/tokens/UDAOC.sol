@@ -5,9 +5,9 @@ pragma solidity ^0.8.4;
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
-import "./RoleController.sol";
-import "./IPriceGetter.sol";
-import "./IUDAOC.sol";
+import "../RoleController.sol";
+import "../interfaces/IPriceGetter.sol";
+import "../interfaces/IUDAOC.sol";
 
 contract UDAOContent is IUDAOC, ERC721, ERC721URIStorage, RoleController {
     using Counters for Counters.Counter;
@@ -52,7 +52,8 @@ contract UDAOContent is IUDAOC, ERC721, ERC721URIStorage, RoleController {
         uint256 _coachingPrice,
         string calldata _coachingCurrencyName,
         bool _isCoachingEnabled,
-        bool _isCoachingRefundable) public whenNotPaused {
+        bool _isCoachingRefundable
+    ) public whenNotPaused {
         uint tokenId = _tokenIds.current();
         // make sure redeemer is redeeming
         require(_redeemer == msg.sender, "You are not the redeemer");
@@ -67,9 +68,7 @@ contract UDAOContent is IUDAOC, ERC721, ERC721URIStorage, RoleController {
         uint partLength = _contentPrice.length;
         partNumberOfContent[tokenId] = partLength;
 
-        currencyName[tokenId] = keccak256(
-            abi.encodePacked(_currencyName)
-        );
+        currencyName[tokenId] = keccak256(abi.encodePacked(_currencyName));
 
         coachingPrice[tokenId] = _coachingPrice;
         coachingCurrency[tokenId] = keccak256(

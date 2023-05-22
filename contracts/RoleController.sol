@@ -3,7 +3,7 @@
 pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/security/Pausable.sol";
-import "./IRoleManager.sol";
+import "./interfaces/IRoleManager.sol";
 import "@openzeppelin/contracts/utils/Context.sol";
 
 abstract contract RoleController is Context, Pausable {
@@ -14,14 +14,14 @@ abstract contract RoleController is Context, Pausable {
     bytes32 public constant FOUNDATION_ROLE = keccak256("FOUNDATION_ROLE");
     bytes32 public constant STAKING_CONTRACT = keccak256("STAKING_CONTRACT");
     bytes32 public constant GOVERNANCE_ROLE = keccak256("GOVERNANCE_ROLE");
-    bytes32 public constant GOVERNANCE_CONTRACT = keccak256("GOVERNANCE_CONTRACT");
+    bytes32 public constant GOVERNANCE_CONTRACT =
+        keccak256("GOVERNANCE_CONTRACT");
     bytes32 public constant JUROR_ROLE = keccak256("JUROR_ROLE");
     bytes32 public constant JUROR_CONTRACT = keccak256("JUROR_CONTRACT");
     bytes32 public constant TREASURY_CONTRACT = keccak256("TREASURY_CONTRACT");
     bytes32 public constant VALIDATION_MANAGER =
         keccak256("VALIDATION_MANAGER");
-    bytes32 public constant CORPORATE_ROLE =
-        keccak256("CORPORATE_ROLE");
+    bytes32 public constant CORPORATE_ROLE = keccak256("CORPORATE_ROLE");
 
     /// Role group for validators
     bytes32[] validator_roles;

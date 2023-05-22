@@ -105,12 +105,9 @@ contract PlatformTreasury is Pausable, ContentManager {
             instructorBalance[msg.sender] >= instructorDebt[msg.sender],
             "Debt is larger than balance"
         );
-        uint debtAmount = 0;
-        if (instructorDebt[msg.sender] > 0) {
-            debtAmount = instructorDebt[msg.sender];
-        }
+        uint debtAmount = instructorDebt[msg.sender];
         uint withdrawableBalance = instructorBalance[msg.sender] -
-            instructorDebt[msg.sender];
+            debtAmount;
         instructorBalance[msg.sender] = 0;
         instructorDebt[msg.sender] = 0;
         udao.transfer(msg.sender, withdrawableBalance);
@@ -123,5 +120,12 @@ contract PlatformTreasury is Pausable, ContentManager {
         } else {
             emit InstructorWithdrawn(msg.sender, withdrawableBalance);
         }
+    }
+
+    function transferGovernanceRewards(
+        address _to,
+        uint _amount
+    ) external whenNotPaused onlyRole(STAKING_CONTRACT) {
+        udao.transfer(_to, _amount);
     }
 }

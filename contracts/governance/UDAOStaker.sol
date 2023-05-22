@@ -7,10 +7,9 @@ import "@openzeppelin/contracts/governance/utils/IVotes.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
-import "./RoleController.sol";
-import "./ContractManager.sol";
-
-import "hardhat/console.sol";
+import "../RoleController.sol";
+import "../ContractManager.sol";
+import "../interfaces/IPlatformTreasury.sol";
 
 interface IUDAOVP is IVotes, IERC20 {
     function mint(address to, uint256 amount) external;
@@ -43,14 +42,12 @@ contract UDAOStaker is RoleController, EIP712 {
     event RoleApproved(uint256 _roleId, address _user);
     event RoleRejected(uint256 _roleId, address _user);
     event ValidationAdded(uint256 _amount);
-    event CaseAdded(uint256 _amount);
     event ValidationRegistered(address _validator, uint256 _validationId);
-    event CaseRegistered(address _juror, uint256 _caseId);
     event ValidatorStakeWithdrawn(address _validator, uint256 _amount);
     event JobListingRegistered(address corporate, uint amountPerListing);
     event JobListingUnregistered(
         address corporate,
-        uint listingId,
+        uint[] listingId,
         uint amount
     );
     event JurorStakeWithdrawn(address _juror, uint256 _amount);
@@ -68,15 +65,14 @@ contract UDAOStaker is RoleController, EIP712 {
     event VoteRewardAdded(address _rewardee, uint256 _amount);
     event VoteRewardsWithdrawn(address _rewardee, uint256 _amount);
 
-    event StakeForJobListing(address corporateAddress, uint256 amount);
-
-    event UnstakeForJobListing(address corporateAddress, uint256 amount);
-
     mapping(address => uint256) validationBalanceOf;
     mapping(address => uint256) jurorBalanceOf;
     mapping(address => uint256) latestValidatorStakeId;
     mapping(address => uint256) latestJurorStakeId;
     mapping(address => uint256) latestValidationLockId;
+
+    mapping(address => bool) public activeApplicationForValidator;
+    mapping(address => bool) public activeApplicationForJuror;
 
     uint256 public corporateStakePerListing = 500 ether; //setter getter, decider=adminler
     mapping(address => uint) corporateStakedUDAO;
@@ -92,7 +88,7 @@ contract UDAOStaker is RoleController, EIP712 {
     mapping(address => GovernanceLock[]) governanceStakes;
     mapping(address => uint256) rewardBalanceOf;
     mapping(address => uint256) lastRewardBlock;
-    uint256 public voteReward;
+    uint256 public voteReward = 0.0001 ether; // SHOULD BE UPDATED
 
     struct ValidationApplication {
         address applicant;
@@ -185,24 +181,6 @@ contract UDAOStaker is RoleController, EIP712 {
         bytes signature;
     }
 
-    /// @notice Allows corporate accounts to unstake before lock time
-    struct CorporateWithdrawVoucher {
-        /// @notice Address of the corporate account
-        address redeemer;
-        /// @notice Amount of tokens they want to unstake
-        uint256 amount;
-    }
-
-    /// @notice Allows people to stake for governance (kyc)
-    struct GovernanceStakeVoucher {
-        /// @notice Address of the governance staker
-        address staker;
-        /// @notice Amount of UDAO token that will be staked
-        uint256 amount;
-        /// @notice Amount of days UDAO token that will be staked for
-        uint256 _days;
-    }
-
     /// @notice allows users to apply for validator role
     function applyForValidator() external whenNotPaused {
         require(
@@ -217,6 +195,10 @@ contract UDAOStaker is RoleController, EIP712 {
             !IRM.hasRole(VALIDATOR_ROLE, msg.sender),
             "Address is already a Validator"
         );
+        require(
+            !activeApplicationForValidator[msg.sender],
+            "You already have an active application"
+        );
         ValidationApplication
             storage validationApplication = validatorApplications.push();
         validationApplication.applicant = msg.sender;
@@ -224,8 +206,8 @@ contract UDAOStaker is RoleController, EIP712 {
         validatorApplicationId[msg.sender] = validationApplicationIndex;
         validationApplicationIndex++;
         validationBalanceOf[msg.sender] += validatorLockAmount;
+        activeApplicationForValidator[msg.sender] = true;
         udao.transferFrom(msg.sender, address(this), validatorLockAmount);
-
         emit RoleApplied(0, msg.sender, validatorLockAmount);
     }
 
@@ -244,6 +226,10 @@ contract UDAOStaker is RoleController, EIP712 {
             !IRM.hasRole(SUPER_VALIDATOR_ROLE, msg.sender),
             "Address is a Super Validator"
         );
+        require(
+            !activeApplicationForValidator[msg.sender],
+            "You already have an active application"
+        );
 
         ValidationApplication
             storage validationApplication = validatorApplications.push();
@@ -251,15 +237,19 @@ contract UDAOStaker is RoleController, EIP712 {
         validatorApplicationId[msg.sender] = validationApplicationIndex;
         validationApplicationIndex++;
 
+        activeApplicationForValidator[msg.sender] = true;
         emit RoleApplied(3, msg.sender, 0);
     }
 
     /// @notice allows users to apply for juror role
-    /// @param caseAmount The amount of cases that a juror wants to do
-    function applyForJuror(uint256 caseAmount) external whenNotPaused {
+    function applyForJuror() external whenNotPaused {
         require(
             udaovp.balanceOf(msg.sender) > 0,
             "You have to be governance member to apply"
+        );
+        require(
+            !IRM.hasRole(JUROR_ROLE, msg.sender),
+            "Address is already a Juror"
         );
 
         JurorApplication storage jurorApplication = jurorApplications.push();
@@ -268,9 +258,10 @@ contract UDAOStaker is RoleController, EIP712 {
         jurorApplication.expire = block.timestamp + jurorLockTime;
         caseApplicationIndex++;
         jurorBalanceOf[msg.sender] += jurorLockAmount;
+        activeApplicationForJuror[msg.sender] = true;
         udao.transferFrom(msg.sender, address(this), jurorLockAmount);
 
-        emit RoleApplied(1, msg.sender, caseAmount);
+        emit RoleApplied(1, msg.sender, jurorLockAmount);
     }
 
     /// @notice Users can use this function and assign validator or juror roles to themselves
@@ -296,6 +287,7 @@ contract UDAOStaker is RoleController, EIP712 {
                 ];
 
             IRM.grantRoleStaker(VALIDATOR_ROLE, voucher.redeemer);
+            activeApplicationForValidator[voucher.redeemer] = false;
             validationApplication.isFinished = true;
         } else if (roleId == 1) {
             require(
@@ -308,6 +300,7 @@ contract UDAOStaker is RoleController, EIP712 {
             ];
 
             IRM.grantRoleStaker(JUROR_ROLE, voucher.redeemer);
+            activeApplicationForJuror[voucher.redeemer] = false;
             jurorApplication.isFinished = true;
         } else if (roleId == 2) {
             IRM.grantRoleStaker(CORPORATE_ROLE, voucher.redeemer);
@@ -318,7 +311,7 @@ contract UDAOStaker is RoleController, EIP712 {
                 ];
 
             IRM.grantRoleStaker(SUPER_VALIDATOR_ROLE, voucher.redeemer);
-
+            activeApplicationForValidator[voucher.redeemer] = false;
             validationApplication.isFinished = true;
         } else {
             revert("Undefined role ID!");
@@ -480,13 +473,30 @@ contract UDAOStaker is RoleController, EIP712 {
     /// @notice withdraw function for released UDAO tokens
     /// @param _amount amount of UDAO token that will be unstaked
     function withdrawGovernanceStake(uint256 _amount) public whenNotPaused {
+        /** 
+        Here is the explanation for the code above:
+        1. First we check if the amount is greater than 0 or not. If it is 0 then throw an error.
+        2. Second we declare 2 variables withdrawableBalance and vpBalance. withdrawableBalance is 
+        the amount of udao that can be withdrawn and vpBalance is the amount of voting power that can be withdrawn.
+        3. Then we loop over the governanceStakes[msg.sender] array and check if the lock is expired or not. 
+        If it is expired then we check if the amount is greater than the lock.amount or not. If it is greater 
+        then we add the lock.amount to the withdrawableBalance and lock.vpamount to vpBalance, and then we 
+        remove the lock from the array. If the amount is not greater then we calculate how much udao and 
+        voting power can be withdrawn from the lock and then we reduce the lock.amount and lock.vpamount 
+        by that much and then we add the udao and voting power to withdrawableBalance and vpBalance respectively. 
+        And then we check if the _amount is less than or equal to withdrawableBalance or not. If it is then we burn 
+        the voting power and transfer the udao to the user and then emit an event. If it is not then we revert with an error.
+        4. If we reach the end of the loop and the _amount is still not less than or equal to withdrawableBalance then 
+        it means that the user doesn't have enough withdrawable balance. So we revert with an error. 
+        */
         require(_amount > 0, "Stake amount can't be 0");
         uint256 withdrawableBalance;
         uint256 vpBalance;
-        uint256 stakingsLength = governanceStakes[msg.sender].length;
-        console.log("stakingsLength: %s", stakingsLength);
-        for (int256 i = 0; uint256(i) < stakingsLength; i++) {
-            console.log("i: %s", uint256(i));
+        for (
+            int256 i = 0;
+            uint256(i) < governanceStakes[msg.sender].length;
+            i++
+        ) {
             GovernanceLock storage lock = governanceStakes[msg.sender][
                 uint256(i)
             ];
@@ -536,8 +546,9 @@ contract UDAOStaker is RoleController, EIP712 {
         require(udaovp.balanceOf(voter) > 0, "Voter has no voting power");
         uint256 votingPowerRatio = (udaovp.balanceOf(voter) * 10000) /
             totalVotingPower;
-        rewardBalanceOf[voter] += votingPowerRatio * voteReward;
-        emit VoteRewardAdded(voter, votingPowerRatio * voteReward);
+
+        rewardBalanceOf[voter] += (votingPowerRatio * voteReward) / 10000;
+        emit VoteRewardAdded(voter, (votingPowerRatio * voteReward) / 10000);
     }
 
     /**
@@ -550,16 +561,11 @@ contract UDAOStaker is RoleController, EIP712 {
         );
         uint256 voteRewards = rewardBalanceOf[msg.sender];
         rewardBalanceOf[msg.sender] = 0;
-        udao.transferFrom(platformTreasuryAddress, msg.sender, voteRewards);
+        IPlatformTreasury(platformTreasuryAddress).transferGovernanceRewards(
+            msg.sender,
+            voteRewards
+        );
         emit VoteRewardsWithdrawn(msg.sender, voteRewards);
-    }
-
-    /// @notice Allows corporate accounts to stake. Staker and staked amount returned with event.
-    /// @param amount The amount of stake
-    function stakeForJobListing(
-        uint256 amount
-    ) external onlyRole(CORPORATE_ROLE) whenNotPaused {
-        emit StakeForJobListing(msg.sender, amount);
     }
 
     mapping(address => mapping(uint => uint)) corporateListingId;
@@ -582,22 +588,24 @@ contract UDAOStaker is RoleController, EIP712 {
                 corporateLatestListingId[msg.sender]
             ] = corporateStakePerListing;
             corporateLatestListingId[msg.sender]++;
-            emit JobListingRegistered(msg.sender, corporateStakePerListing);
         }
-        emit StakeForJobListing(
+        emit JobListingRegistered(
             msg.sender,
             jobListingCount * corporateStakePerListing
         );
     }
 
     function unregisterJobListing(
-        uint listingId
+        uint[] calldata listingIds
     ) external onlyRole(CORPORATE_ROLE) {
-        uint withdrawAmount = corporateListingId[msg.sender][listingId];
-        require(withdrawAmount > 0, "Amount should be higher than 0");
-        corporateListingId[msg.sender][listingId] = 0;
-        udao.transferFrom(address(this), msg.sender, withdrawAmount);
-        emit JobListingUnregistered(msg.sender, listingId, withdrawAmount);
+        uint totalUnstakeAmount;
+        for (uint i = 0; i < listingIds.length; i++) {
+            totalUnstakeAmount += corporateListingId[msg.sender][listingIds[i]];
+            corporateListingId[msg.sender][listingIds[i]] = 0;
+        }
+        require(totalUnstakeAmount > 0, "Cannot unstake zero tokens");
+        udao.transfer(msg.sender, totalUnstakeAmount);
+        emit JobListingUnregistered(msg.sender, listingIds, totalUnstakeAmount);
     }
 
     /// @notice Returns a hash of the given ContentVoucher, prepared using EIP712 typed data hashing rules.
