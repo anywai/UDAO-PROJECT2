@@ -115,7 +115,6 @@ async function deploy() {
   const result_2 = await tx_2.wait();
 
   let factoryPriceGetter = await ethers.getContractFactory("PriceGetter");
-  
 
   await helpers.time.increase(2);
   await helpers.time.increase(2);
@@ -242,6 +241,9 @@ async function deploy() {
   await contractContractManager
     .connect(backend)
     .setAddressUdaoVp(contractUDAOVp.address);
+  await contractJurorManager
+    .connect(backend)
+    .setContractManager(contractContractManager.address);
   // add staking contract to udao-vp
   await contractUDAOVp.connect(backend).updateAddresses();
 

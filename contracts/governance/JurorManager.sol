@@ -8,6 +8,7 @@ import "../RoleController.sol";
 import "../interfaces/IUDAOC.sol";
 import "../interfaces/IVM.sol";
 
+
 contract JurorManager is RoleController {
     IUDAOC udaoc;
     IValidationManager public IVM;
@@ -20,6 +21,8 @@ contract JurorManager is RoleController {
     event DisputeAssigned(uint256 caseId, address juror);
     event DisputeResultSent(uint256 caseId, bool result, address juror);
     event DisputeEnded(uint256 caseId, bool verdict);
+
+    event AddressesUpdated(address IRMAddress);
     // juror => round => score
     mapping(address => mapping(uint256 => uint256)) public jurorScorePerRound;
     // juror => caseId
@@ -45,10 +48,15 @@ contract JurorManager is RoleController {
         disputes.push();
     }
 
+    function setContractManager(address _contractManager) external onlyRole(BACKEND_ROLE) {
+        contractManager = ContractManager(_contractManager);
+    }
+
     /// @notice Get the updated addresses from contract manager
     /// TODO is this correct?
     function updateAddresses() external onlyRole(BACKEND_ROLE) {
         IRM = IRoleManager(contractManager.IrmAddress());
+        emit AddressesUpdated(address(IRM));
     }
 
     struct Dispute {
@@ -80,7 +88,8 @@ contract JurorManager is RoleController {
         bytes _data;
     }
 
-    Dispute[] disputes;
+    // TODO convert disputes to private before deployment
+    Dispute[] public disputes;
 
     uint256 public totalJurorScore;
 
