@@ -59,10 +59,12 @@ async function deploy() {
     "ContractManager"
   );
 
+  // send some eth to the backend
+  await helpers.setBalance(
+    backend.address,
+    hre.ethers.utils.parseEther("1000000")
+  );
 
-  // send some eth to the backend 
-  await helpers.setBalance(backend.address, hre.ethers.utils.parseEther("1000000"));
-  
   //DEPLOYMENTS
   const contractUDAO = await factoryUDAO.deploy();
 
@@ -115,7 +117,6 @@ async function deploy() {
   const result_2 = await tx_2.wait();
 
   let factoryPriceGetter = await ethers.getContractFactory("PriceGetter");
-  
 
   // Price Getter End
 
@@ -235,7 +236,9 @@ async function deploy() {
   await contractContractManager
     .connect(backend)
     .setAddressUdaoVp(contractUDAOVp.address);
-
+  await contractJurorManager
+    .connect(backend)
+    .setContractManager(contractContractManager.address);
   // add staking contract to udao-vp
   await contractUDAOVp.connect(backend).updateAddresses();
 

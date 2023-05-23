@@ -15,7 +15,16 @@ const {
 
 // Enable and inject BN dependency
 chai.use(require("chai-bn")(BN));
-async function runValidation(contractValidationManager, backend, validator1, validator2, validator3, validator4, validator5, contentCreator) {
+async function runValidation(
+  contractValidationManager,
+  backend,
+  validator1,
+  validator2,
+  validator3,
+  validator4,
+  validator5,
+  contentCreator
+) {
   await expect(
     contractValidationManager.connect(backend).createValidation(0, 50)
   )
@@ -227,7 +236,6 @@ async function deploy() {
 
   let factoryPriceGetter = await ethers.getContractFactory("PriceGetter");
 
-
   await helpers.time.increase(2);
   await helpers.time.increase(2);
   await helpers.time.increase(2);
@@ -363,6 +371,9 @@ async function deploy() {
   await contractValidationManager
     .connect(foundation)
     .setStaker(contractUDAOStaker.address);
+  await contractJurorManager
+    .connect(backend)
+    .setContractManager(contractContractManager.address);
   // add staking contract to udao-vp
   await contractUDAOVp.connect(backend).updateAddresses();
 
@@ -513,8 +524,8 @@ describe("Platform Treasury Contract - Content", function () {
       contractPlatformTreasury.connect(foundation).updateAddresses()
     ).to.revertedWith(
       "AccessControl: account " +
-      foundation.address.toLowerCase() +
-      " is missing role 0x25cf2b509f2a7f322675b2a5322b182f44ad2c03ac941a0af17c9b178f5d5d5f"
+        foundation.address.toLowerCase() +
+        " is missing role 0x25cf2b509f2a7f322675b2a5322b182f44ad2c03ac941a0af17c9b178f5d5d5f"
     );
   });
 
@@ -553,18 +564,19 @@ describe("Platform Treasury Contract - Content", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
-
-
-
     await expect(
-      contractUDAOContent.connect(contentCreator).redeem([ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
-        "udao",
-        "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
-        contentCreator.address,
-        ethers.utils.parseEther("2"),
-        "udao",
-        true,
-        true,)
+      contractUDAOContent
+        .connect(contentCreator)
+        .redeem(
+          [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
+          "udao",
+          "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
+          contentCreator.address,
+          ethers.utils.parseEther("2"),
+          "udao",
+          true,
+          true
+        )
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
@@ -574,7 +586,16 @@ describe("Platform Treasury Contract - Content", function () {
       );
 
     /// Start validation and finalize it
-    await runValidation(contractValidationManager, backend, validator1, validator2, validator3, validator4, validator5, contentCreator);
+    await runValidation(
+      contractValidationManager,
+      backend,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
+      contentCreator
+    );
 
     /// Send UDAO to the buyer's wallet
     await contractUDAO.transfer(
@@ -779,23 +800,24 @@ describe("Platform Treasury Contract - Content", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
-
-
-
     await expect(
-      contractUDAOContent.connect(contentCreator).redeem([
-        ethers.utils.parseEther("1"),
-        ethers.utils.parseEther("1"),
-        ethers.utils.parseEther("1"),
-        ethers.utils.parseEther("1"),
-      ],
-        "udao",
-        "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
-        contentCreator.address,
-        ethers.utils.parseEther("2"),
-        "udao",
-        true,
-        true,)
+      contractUDAOContent
+        .connect(contentCreator)
+        .redeem(
+          [
+            ethers.utils.parseEther("1"),
+            ethers.utils.parseEther("1"),
+            ethers.utils.parseEther("1"),
+            ethers.utils.parseEther("1"),
+          ],
+          "udao",
+          "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
+          contentCreator.address,
+          ethers.utils.parseEther("2"),
+          "udao",
+          true,
+          true
+        )
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
@@ -804,7 +826,16 @@ describe("Platform Treasury Contract - Content", function () {
         0
       );
     /// Start validation and finalize it
-    await runValidation(contractValidationManager, backend, validator1, validator2, validator3, validator4, validator5, contentCreator);
+    await runValidation(
+      contractValidationManager,
+      backend,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
+      contentCreator
+    );
 
     /// Send UDAO to the buyer's wallet
     await contractUDAO.transfer(
@@ -821,10 +852,7 @@ describe("Platform Treasury Contract - Content", function () {
 
     await contractPlatformTreasury
       .connect(contentBuyer)
-      .buyContent(0,
-        false,
-        [1, 2, 3],
-        contentBuyer.address);
+      .buyContent(0, false, [1, 2, 3], contentBuyer.address);
     const result = await contractPlatformTreasury
       .connect(contentBuyer)
       .getOwnedContent(contentBuyer.address);
@@ -871,23 +899,24 @@ describe("Platform Treasury Contract - Content", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
-
-
-
     await expect(
-      contractUDAOContent.connect(contentCreator).redeem([
-        ethers.utils.parseEther("1"),
-        ethers.utils.parseEther("1"),
-        ethers.utils.parseEther("1"),
-        ethers.utils.parseEther("1"),
-      ],
-        "udao",
-        "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
-        contentCreator.address,
-        ethers.utils.parseEther("2"),
-        "udao",
-        true,
-        true,)
+      contractUDAOContent
+        .connect(contentCreator)
+        .redeem(
+          [
+            ethers.utils.parseEther("1"),
+            ethers.utils.parseEther("1"),
+            ethers.utils.parseEther("1"),
+            ethers.utils.parseEther("1"),
+          ],
+          "udao",
+          "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
+          contentCreator.address,
+          ethers.utils.parseEther("2"),
+          "udao",
+          true,
+          true
+        )
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
@@ -896,7 +925,16 @@ describe("Platform Treasury Contract - Content", function () {
         0
       );
     /// Start validation and finalize it
-    await runValidation(contractValidationManager, backend, validator1, validator2, validator3, validator4, validator5, contentCreator);
+    await runValidation(
+      contractValidationManager,
+      backend,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
+      contentCreator
+    );
 
     /// Send UDAO to the buyer's wallet
     await contractUDAO.transfer(
@@ -911,21 +949,14 @@ describe("Platform Treasury Contract - Content", function () {
         ethers.utils.parseEther("999999999999.0")
       );
 
-
     await contractPlatformTreasury
       .connect(contentBuyer)
-      .buyContent(0,
-        false,
-        [2],
-        contentBuyer.address);
+      .buyContent(0, false, [2], contentBuyer.address);
 
     await expect(
       contractPlatformTreasury
         .connect(contentBuyer)
-        .buyContent(0,
-          false,
-          [2],
-          contentBuyer.address)
+        .buyContent(0, false, [2], contentBuyer.address)
     ).to.revertedWith("Content part is already bought");
   });
 
@@ -1017,18 +1048,19 @@ describe("Platform Treasury Contract - Content", function () {
     /// Set BAN
     await contractRoleManager.setBan(contentBuyer.address, true);
 
-
-
-
     await expect(
-      contractUDAOContent.connect(contentCreator).redeem([ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
-        "udao",
-        "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
-        contentCreator.address,
-        ethers.utils.parseEther("2"),
-        "udao",
-        true,
-        true,)
+      contractUDAOContent
+        .connect(contentCreator)
+        .redeem(
+          [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
+          "udao",
+          "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
+          contentCreator.address,
+          ethers.utils.parseEther("2"),
+          "udao",
+          true,
+          true
+        )
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
@@ -1037,7 +1069,16 @@ describe("Platform Treasury Contract - Content", function () {
         0
       );
     /// Start validation and finalize it
-    await runValidation(contractValidationManager, backend, validator1, validator2, validator3, validator4, validator5, contentCreator);
+    await runValidation(
+      contractValidationManager,
+      backend,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
+      contentCreator
+    );
 
     /// Send UDAO to the buyer's wallet
     await contractUDAO.transfer(
@@ -1094,18 +1135,19 @@ describe("Platform Treasury Contract - Content", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
-
-
-
     await expect(
-      contractUDAOContent.connect(contentCreator).redeem([ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
-        "udao",
-        "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
-        contentCreator.address,
-        ethers.utils.parseEther("2"),
-        "udao",
-        true,
-        true,)
+      contractUDAOContent
+        .connect(contentCreator)
+        .redeem(
+          [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
+          "udao",
+          "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
+          contentCreator.address,
+          ethers.utils.parseEther("2"),
+          "udao",
+          true,
+          true
+        )
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
@@ -1114,7 +1156,16 @@ describe("Platform Treasury Contract - Content", function () {
         0
       );
     /// Start validation and finalize it
-    await runValidation(contractValidationManager, backend, validator1, validator2, validator3, validator4, validator5, contentCreator);
+    await runValidation(
+      contractValidationManager,
+      backend,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
+      contentCreator
+    );
 
     /// Send UDAO to the buyer's wallet
     await contractUDAO.transfer(
@@ -1173,18 +1224,19 @@ describe("Platform Treasury Contract - Content", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
-
-
-
     await expect(
-      contractUDAOContent.connect(contentCreator).redeem([ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
-        "udao",
-        "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
-        contentCreator.address,
-        ethers.utils.parseEther("2"),
-        "udao",
-        true,
-        true,)
+      contractUDAOContent
+        .connect(contentCreator)
+        .redeem(
+          [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
+          "udao",
+          "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
+          contentCreator.address,
+          ethers.utils.parseEther("2"),
+          "udao",
+          true,
+          true
+        )
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
@@ -1193,7 +1245,16 @@ describe("Platform Treasury Contract - Content", function () {
         0
       );
     /// Start validation and finalize it
-    await runValidation(contractValidationManager, backend, validator1, validator2, validator3, validator4, validator5, contentCreator);
+    await runValidation(
+      contractValidationManager,
+      backend,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
+      contentCreator
+    );
 
     /// Send UDAO to the buyer's wallet
     await contractUDAO.transfer(
@@ -1252,18 +1313,19 @@ describe("Platform Treasury Contract - Content", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
-
-
-
     await expect(
-      contractUDAOContent.connect(contentCreator).redeem([ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
-        "udao",
-        "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
-        contentCreator.address,
-        ethers.utils.parseEther("2"),
-        "udao",
-        true,
-        true,)
+      contractUDAOContent
+        .connect(contentCreator)
+        .redeem(
+          [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
+          "udao",
+          "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
+          contentCreator.address,
+          ethers.utils.parseEther("2"),
+          "udao",
+          true,
+          true
+        )
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
@@ -1272,7 +1334,16 @@ describe("Platform Treasury Contract - Content", function () {
         0
       );
     /// Start validation and finalize it
-    await runValidation(contractValidationManager, backend, validator1, validator2, validator3, validator4, validator5, contentCreator);
+    await runValidation(
+      contractValidationManager,
+      backend,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
+      contentCreator
+    );
 
     /// Send UDAO to the buyer's wallet
     await contractUDAO.transfer(
@@ -1331,23 +1402,24 @@ describe("Platform Treasury Contract - Content", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
-
-
-
     await expect(
-      contractUDAOContent.connect(contentCreator).redeem([
-        ethers.utils.parseEther("1"),
-        ethers.utils.parseEther("1"),
-        ethers.utils.parseEther("1"),
-        ethers.utils.parseEther("1"),
-      ],
-        "udao",
-        "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
-        contentCreator.address,
-        ethers.utils.parseEther("2"),
-        "udao",
-        true,
-        true,)
+      contractUDAOContent
+        .connect(contentCreator)
+        .redeem(
+          [
+            ethers.utils.parseEther("1"),
+            ethers.utils.parseEther("1"),
+            ethers.utils.parseEther("1"),
+            ethers.utils.parseEther("1"),
+          ],
+          "udao",
+          "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
+          contentCreator.address,
+          ethers.utils.parseEther("2"),
+          "udao",
+          true,
+          true
+        )
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
@@ -1356,7 +1428,16 @@ describe("Platform Treasury Contract - Content", function () {
         0
       );
     /// Start validation and finalize it
-    await runValidation(contractValidationManager, backend, validator1, validator2, validator3, validator4, validator5, contentCreator);
+    await runValidation(
+      contractValidationManager,
+      backend,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
+      contentCreator
+    );
 
     /// Send UDAO to the buyer's wallet
     await contractUDAO.transfer(
@@ -1378,10 +1459,7 @@ describe("Platform Treasury Contract - Content", function () {
     await expect(
       contractPlatformTreasury
         .connect(contentBuyer)
-        .buyContent(0,
-          false,
-          [3],
-          contentBuyer.address)
+        .buyContent(0, false, [3], contentBuyer.address)
     ).to.revertedWith("Full content is already bought");
   });
 
@@ -1420,23 +1498,24 @@ describe("Platform Treasury Contract - Content", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
-
-
-
     await expect(
-      contractUDAOContent.connect(contentCreator).redeem([
-        ethers.utils.parseEther("1"),
-        ethers.utils.parseEther("1"),
-        ethers.utils.parseEther("1"),
-        ethers.utils.parseEther("1"),
-      ],
-        "udao",
-        "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
-        contentCreator.address,
-        ethers.utils.parseEther("2"),
-        "udao",
-        true,
-        true,)
+      contractUDAOContent
+        .connect(contentCreator)
+        .redeem(
+          [
+            ethers.utils.parseEther("1"),
+            ethers.utils.parseEther("1"),
+            ethers.utils.parseEther("1"),
+            ethers.utils.parseEther("1"),
+          ],
+          "udao",
+          "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
+          contentCreator.address,
+          ethers.utils.parseEther("2"),
+          "udao",
+          true,
+          true
+        )
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
@@ -1606,23 +1685,24 @@ describe("Platform Treasury Contract - Content", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
-
-
-
     await expect(
-      contractUDAOContent.connect(contentCreator).redeem([
-        ethers.utils.parseEther("1"),
-        ethers.utils.parseEther("1"),
-        ethers.utils.parseEther("1"),
-        ethers.utils.parseEther("1"),
-      ],
-        "udao",
-        "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
-        contentCreator.address,
-        ethers.utils.parseEther("2"),
-        "udao",
-        true,
-        true,)
+      contractUDAOContent
+        .connect(contentCreator)
+        .redeem(
+          [
+            ethers.utils.parseEther("1"),
+            ethers.utils.parseEther("1"),
+            ethers.utils.parseEther("1"),
+            ethers.utils.parseEther("1"),
+          ],
+          "udao",
+          "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
+          contentCreator.address,
+          ethers.utils.parseEther("2"),
+          "udao",
+          true,
+          true
+        )
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
@@ -1753,10 +1833,7 @@ describe("Platform Treasury Contract - Content", function () {
     await expect(
       contractPlatformTreasury
         .connect(contentBuyer)
-        .buyContent(0,
-          false,
-          [0],
-          ethers.constants.AddressZero,)
+        .buyContent(0, false, [0], ethers.constants.AddressZero)
     ).to.revertedWith(
       "Purchased parts says 0, but fullContentPurchase is false!"
     );
@@ -1797,23 +1874,24 @@ describe("Platform Treasury Contract - Content", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
-
-
-
     await expect(
-      contractUDAOContent.connect(contentCreator).redeem([
-        ethers.utils.parseEther("1"),
-        ethers.utils.parseEther("1"),
-        ethers.utils.parseEther("1"),
-        ethers.utils.parseEther("1"),
-      ],
-        "udao",
-        "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
-        contentCreator.address,
-        ethers.utils.parseEther("2"),
-        "udao",
-        true,
-        true,)
+      contractUDAOContent
+        .connect(contentCreator)
+        .redeem(
+          [
+            ethers.utils.parseEther("1"),
+            ethers.utils.parseEther("1"),
+            ethers.utils.parseEther("1"),
+            ethers.utils.parseEther("1"),
+          ],
+          "udao",
+          "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
+          contentCreator.address,
+          ethers.utils.parseEther("2"),
+          "udao",
+          true,
+          true
+        )
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
@@ -1944,10 +2022,7 @@ describe("Platform Treasury Contract - Content", function () {
     await expect(
       contractPlatformTreasury
         .connect(contentBuyer)
-        .buyContent(0,
-          false,
-          [20],
-          ethers.constants.AddressZero,)
+        .buyContent(0, false, [20], ethers.constants.AddressZero)
     ).to.revertedWith("Part does not exist!");
   });
 
@@ -1987,18 +2062,19 @@ describe("Platform Treasury Contract - Content", function () {
     await contractRoleManager.setKYC(contentBuyer.address, true);
     await contractRoleManager.setKYC(validator1.address, true);
 
-
-
-
     await expect(
-      contractUDAOContent.connect(contentCreator).redeem([ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
-        "udao",
-        "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
-        contentCreator.address,
-        ethers.utils.parseEther("2"),
-        "udao",
-        true,
-        true,)
+      contractUDAOContent
+        .connect(contentCreator)
+        .redeem(
+          [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
+          "udao",
+          "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
+          contentCreator.address,
+          ethers.utils.parseEther("2"),
+          "udao",
+          true,
+          true
+        )
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
@@ -2007,7 +2083,16 @@ describe("Platform Treasury Contract - Content", function () {
         0
       );
     /// Start validation and finalize it
-    await runValidation(contractValidationManager, backend, validator1, validator2, validator3, validator4, validator5, contentCreator);
+    await runValidation(
+      contractValidationManager,
+      backend,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
+      contentCreator
+    );
 
     /// Send UDAO to the buyer's wallet
     await contractUDAO.transfer(
@@ -2069,22 +2154,23 @@ describe("Platform Treasury Contract - Content", function () {
     await contractRoleManager.setKYC(contentBuyer.address, true);
     await contractRoleManager.setKYC(validator1.address, true);
 
-
-
-
     await expect(
-      contractUDAOContent.connect(contentCreator).redeem([
-        ethers.utils.parseEther("1"),
-        ethers.utils.parseEther("1"),
-        ethers.utils.parseEther("1"),
-      ],
-        "udao",
-        "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
-        contentCreator.address,
-        ethers.utils.parseEther("2"),
-        "udao",
-        true,
-        true,)
+      contractUDAOContent
+        .connect(contentCreator)
+        .redeem(
+          [
+            ethers.utils.parseEther("1"),
+            ethers.utils.parseEther("1"),
+            ethers.utils.parseEther("1"),
+          ],
+          "udao",
+          "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
+          contentCreator.address,
+          ethers.utils.parseEther("2"),
+          "udao",
+          true,
+          true
+        )
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
@@ -2093,7 +2179,16 @@ describe("Platform Treasury Contract - Content", function () {
         0
       );
     /// Start validation and finalize it
-    await runValidation(contractValidationManager, backend, validator1, validator2, validator3, validator4, validator5, contentCreator);
+    await runValidation(
+      contractValidationManager,
+      backend,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
+      contentCreator
+    );
 
     /// Send UDAO to the buyer's wallet
     await contractUDAO.transfer(
@@ -2157,18 +2252,19 @@ describe("Platform Treasury Contract - Content", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
-
-
-
     await expect(
-      contractUDAOContent.connect(contentCreator).redeem([ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
-        "udao",
-        "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
-        contentCreator.address,
-        ethers.utils.parseEther("2"),
-        "udao",
-        true,
-        true,)
+      contractUDAOContent
+        .connect(contentCreator)
+        .redeem(
+          [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
+          "udao",
+          "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
+          contentCreator.address,
+          ethers.utils.parseEther("2"),
+          "udao",
+          true,
+          true
+        )
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
@@ -2177,7 +2273,16 @@ describe("Platform Treasury Contract - Content", function () {
         0
       );
     /// Start validation and finalize it
-    await runValidation(contractValidationManager, backend, validator1, validator2, validator3, validator4, validator5, contentCreator);
+    await runValidation(
+      contractValidationManager,
+      backend,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
+      contentCreator
+    );
 
     /// Send UDAO to the buyer's wallet
     await contractUDAO.transfer(
@@ -2235,18 +2340,19 @@ describe("Platform Treasury Contract - Content", function () {
     await contractRoleManager.setKYC(contentBuyer.address, true);
     await contractRoleManager.setBan(validator1.address, true);
 
-
-
-
     await expect(
-      contractUDAOContent.connect(contentCreator).redeem([ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
-        "udao",
-        "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
-        contentCreator.address,
-        ethers.utils.parseEther("2"),
-        "udao",
-        true,
-        true,)
+      contractUDAOContent
+        .connect(contentCreator)
+        .redeem(
+          [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
+          "udao",
+          "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
+          contentCreator.address,
+          ethers.utils.parseEther("2"),
+          "udao",
+          true,
+          true
+        )
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
@@ -2255,7 +2361,16 @@ describe("Platform Treasury Contract - Content", function () {
         0
       );
     /// Start validation and finalize it
-    await runValidation(contractValidationManager, backend, validator1, validator2, validator3, validator4, validator5, contentCreator);
+    await runValidation(
+      contractValidationManager,
+      backend,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
+      contentCreator
+    );
 
     /// Send UDAO to the buyer's wallet
     await contractUDAO.transfer(
@@ -2312,18 +2427,19 @@ describe("Platform Treasury Contract - Content", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
-
-
-
     await expect(
-      contractUDAOContent.connect(contentCreator).redeem([ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
-        "udao",
-        "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
-        contentCreator.address,
-        ethers.utils.parseEther("2"),
-        "udao",
-        true,
-        true,)
+      contractUDAOContent
+        .connect(contentCreator)
+        .redeem(
+          [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
+          "udao",
+          "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
+          contentCreator.address,
+          ethers.utils.parseEther("2"),
+          "udao",
+          true,
+          true
+        )
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
@@ -2332,7 +2448,16 @@ describe("Platform Treasury Contract - Content", function () {
         0
       );
     /// Start validation and finalize it
-    await runValidation(contractValidationManager, backend, validator1, validator2, validator3, validator4, validator5, contentCreator);
+    await runValidation(
+      contractValidationManager,
+      backend,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
+      contentCreator
+    );
 
     /// Send UDAO to the buyer's wallet
     await contractUDAO.transfer(
