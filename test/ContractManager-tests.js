@@ -36,7 +36,12 @@ async function checkAccountUDAOVpBalanceAndDelegate(contractUDAOVp, account) {
   await expect(accountVotes).to.equal(ethers.utils.parseEther("300"));
 }
 
-async function setupGovernanceMember(contractRoleManager, contractUDAO, contractUDAOStaker, governanceCandidate) {
+async function setupGovernanceMember(
+  contractRoleManager,
+  contractUDAO,
+  contractUDAOStaker,
+  governanceCandidate
+) {
   await contractRoleManager.setKYC(governanceCandidate.address, true);
   await contractUDAO.transfer(
     governanceCandidate.address,
@@ -51,8 +56,7 @@ async function setupGovernanceMember(contractRoleManager, contractUDAO, contract
   await expect(
     contractUDAOStaker
       .connect(governanceCandidate)
-      .stakeForGovernance(ethers.utils.parseEther("10"),
-        30)
+      .stakeForGovernance(ethers.utils.parseEther("10"), 30)
   )
     .to.emit(contractUDAOStaker, "GovernanceStake") // transfer from null address to minter
     .withArgs(
@@ -296,6 +300,9 @@ async function deploy() {
   await contractContractManager
     .connect(backend)
     .setAddressUdaoVp(contractUDAOVp.address);
+  await contractJurorManager
+    .connect(backend)
+    .setContractManager(contractContractManager.address);
   // add staking contract to udao-vp
   await contractUDAOVp.connect(backend).updateAddresses();
 
@@ -323,280 +330,296 @@ async function deploy() {
     contractUDAOTimelockController,
     contractUDAOGovernor,
     contractJurorManager,
-    contractContractManager
+    contractContractManager,
   };
 }
 
 describe("Contract Manager", function () {
-    it("Should deploy", async function () {
-      const {
-        backend,
-        validatorCandidate,
-        validator,
-        superValidatorCandidate,
-        superValidator,
-        foundation,
-        governanceCandidate,
-        governanceMember,
-        jurorCandidate,
-        jurorMember,
-        contractUDAO,
-        contractRoleManager,
-        contractUDAOCertificate,
-        contractUDAOContent,
-        contractValidationManager,
-        contractPlatformTreasury,
-        contractUDAOVp,
-        contractUDAOStaker,
-        contractUDAOTimelockController,
-        contractUDAOGovernor,
-        contractJurorManager,
-        contractContractManager
-      } = await deploy();
-    });
-    
-    it("Should allow backend to set the platform treasury address", async function () {
-      const {
-        backend,
-        validatorCandidate,
-        validator,
-        superValidatorCandidate,
-        superValidator,
-        foundation,
-        governanceCandidate,
-        governanceMember,
-        jurorCandidate,
-        jurorMember,
-        contractUDAO,
-        contractRoleManager,
-        contractUDAOCertificate,
-        contractUDAOContent,
-        contractValidationManager,
-        contractPlatformTreasury,
-        contractUDAOVp,
-        contractUDAOStaker,
-        contractUDAOTimelockController,
-        contractUDAOGovernor,
-        contractJurorManager,
-        contractContractManager
-      } = await deploy();
-      // @dev Dummy contract address
-      const dummyAddress = "0x7D1AfA7B718fb893dB30A3aBc0Cfc608AaCfeBB0";
-      await contractContractManager
-        .connect(backend)
-        .setPlatformTreasuryAddress(dummyAddress);
-      expect(
-        await contractContractManager.PlatformTreasuryAddress()
-      ).to.equal(dummyAddress);
-    });
-    it("Should allow backend to set the IVM address", async function () {
-        const {
-            backend,
-            validatorCandidate,
-            validator,
-            superValidatorCandidate,
-            superValidator,
-            foundation,
-            governanceCandidate,
-            governanceMember,
-            jurorCandidate,
-            jurorMember,
-            contractUDAO,
-            contractRoleManager,
-            contractUDAOCertificate,
-            contractUDAOContent,
-            contractValidationManager,
-            contractPlatformTreasury,
-            contractUDAOVp,
-            contractUDAOStaker,
-            contractUDAOTimelockController,
-            contractUDAOGovernor,
-            contractJurorManager,
-            contractContractManager
-        } = await deploy();
-        // @dev Dummy contract address
-        const dummyAddress = "0x7D1AfA7B718fb893dB30A3aBc0Cfc608AaCfeBB0";
-        await contractContractManager.connect(backend).setAddressIVM(dummyAddress);
-        expect(await contractContractManager.IVMAddress()).to.equal(dummyAddress);
-    });
-    it("Should allow backend to set the staking address", async function () {
-        const {
-            backend,
-            validatorCandidate,
-            validator,
-            superValidatorCandidate,
-            superValidator,
-            foundation,
-            governanceCandidate,
-            governanceMember,
-            jurorCandidate,
-            jurorMember,
-            contractUDAO,
-            contractRoleManager,
-            contractUDAOCertificate,
-            contractUDAOContent,
-            contractValidationManager,
-            contractPlatformTreasury,
-            contractUDAOVp,
-            contractUDAOStaker,
-            contractUDAOTimelockController,
-            contractUDAOGovernor,
-            contractJurorManager,
-            contractContractManager
-        } = await deploy();
-        // @dev Dummy contract address
-        const dummyAddress = "0x7D1AfA7B718fb893dB30A3aBc0Cfc608AaCfeBB0";
-        await contractContractManager.connect(backend).setAddressStaking(dummyAddress);
-        expect(await contractContractManager.StakingContractAddress()).to.equal(dummyAddress);
-    });
-    it("Should allow backend to set the UDAO-VP address", async function () {
-        const {
-            backend,
-            validatorCandidate,
-            validator,
-            superValidatorCandidate,
-            superValidator,
-            foundation,
-            governanceCandidate,
-            governanceMember,
-            jurorCandidate,
-            jurorMember,
-            contractUDAO,
-            contractRoleManager,
-            contractUDAOCertificate,
-            contractUDAOContent,
-            contractValidationManager,
-            contractPlatformTreasury,
-            contractUDAOVp,
-            contractUDAOStaker,
-            contractUDAOTimelockController,
-            contractUDAOGovernor,
-            contractJurorManager,
-            contractContractManager
-        } = await deploy();
-        // @dev Dummy contract address
-        const dummyAddress = "0x7D1AfA7B718fb893dB30A3aBc0Cfc608AaCfeBB0";
-        await contractContractManager.connect(backend).setAddressUdaoVp(dummyAddress);
-        expect(await contractContractManager.UdaoVpAddress()).to.equal(dummyAddress);
-    });
-    it("Should allow backend to set the IJM address", async function () {
-        const {
-            backend,
-            validatorCandidate,
-            validator,
-            superValidatorCandidate,
-            superValidator,
-            foundation,
-            governanceCandidate,
-            governanceMember,
-            jurorCandidate,
-            jurorMember,
-            contractUDAO,
-            contractRoleManager,
-            contractUDAOCertificate,
-            contractUDAOContent,
-            contractValidationManager,
-            contractPlatformTreasury,
-            contractUDAOVp,
-            contractUDAOStaker,
-            contractUDAOTimelockController,
-            contractUDAOGovernor,
-            contractJurorManager,
-            contractContractManager
-        } = await deploy();
-        // @dev Dummy contract address
-        const dummyAddress = "0x7D1AfA7B718fb893dB30A3aBc0Cfc608AaCfeBB0";
-        await contractContractManager.connect(backend).setAddressIJMAddress(dummyAddress);
-        expect(await contractContractManager.IJMAddress()).to.equal(dummyAddress);
-    });
-    it("Should allow backend to set the UDAO address", async function () {
-        const {
-            backend,
-            validatorCandidate,
-            validator,
-            superValidatorCandidate,
-            superValidator,
-            foundation,
-            governanceCandidate,
-            governanceMember,
-            jurorCandidate,
-            jurorMember,
-            contractUDAO,
-            contractRoleManager,
-            contractUDAOCertificate,
-            contractUDAOContent,
-            contractValidationManager,
-            contractPlatformTreasury,
-            contractUDAOVp,
-            contractUDAOStaker,
-            contractUDAOTimelockController,
-            contractUDAOGovernor,
-            contractJurorManager,
-            contractContractManager
-        } = await deploy();
-        // @dev Dummy contract address
-        const dummyAddress = "0x7D1AfA7B718fb893dB30A3aBc0Cfc608AaCfeBB0";
-        await contractContractManager.connect(backend).setAddressUdaoAddress(dummyAddress);
-        expect(await contractContractManager.UdaoAddress()).to.equal(dummyAddress);
-    });
-    it("Should allow backend to set the UDAOC address", async function () {
-        const {
-            backend,
-            validatorCandidate,
-            validator,
-            superValidatorCandidate,
-            superValidator,
-            foundation,
-            governanceCandidate,
-            governanceMember,
-            jurorCandidate,
-            jurorMember,
-            contractUDAO,
-            contractRoleManager,
-            contractUDAOCertificate,
-            contractUDAOContent,
-            contractValidationManager,
-            contractPlatformTreasury,
-            contractUDAOVp,
-            contractUDAOStaker,
-            contractUDAOTimelockController,
-            contractUDAOGovernor,
-            contractJurorManager,
-            contractContractManager
-        } = await deploy();
-        // @dev Dummy contract address
-        const dummyAddress = "0x7D1AfA7B718fb893dB30A3aBc0Cfc608AaCfeBB0";
-        await contractContractManager.connect(backend).setAddressUdaocAddress(dummyAddress);
-        expect(await contractContractManager.UdaocAddress()).to.equal(dummyAddress);
-    });
-    it("Should allow backend to set the IRM address", async function () {
-        const {
-            backend,
-            validatorCandidate,
-            validator,
-            superValidatorCandidate,
-            superValidator,
-            foundation,
-            governanceCandidate,
-            governanceMember,
-            jurorCandidate,
-            jurorMember,
-            contractUDAO,
-            contractRoleManager,
-            contractUDAOCertificate,
-            contractUDAOContent,
-            contractValidationManager,
-            contractPlatformTreasury,
-            contractUDAOVp,
-            contractUDAOStaker,
-            contractUDAOTimelockController,
-            contractUDAOGovernor,
-            contractJurorManager,
-            contractContractManager
-        } = await deploy();
-        // @dev Dummy contract address
-        const dummyAddress = "0x7D1AfA7B718fb893dB30A3aBc0Cfc608AaCfeBB0";
-        await contractContractManager.connect(backend).setAddressIrmAddress(dummyAddress);
-        expect(await contractContractManager.IrmAddress()).to.equal(dummyAddress);
-    });
-    });
+  it("Should deploy", async function () {
+    const {
+      backend,
+      validatorCandidate,
+      validator,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+      contractJurorManager,
+      contractContractManager,
+    } = await deploy();
+  });
+
+  it("Should allow backend to set the platform treasury address", async function () {
+    const {
+      backend,
+      validatorCandidate,
+      validator,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+      contractJurorManager,
+      contractContractManager,
+    } = await deploy();
+    // @dev Dummy contract address
+    const dummyAddress = "0x7D1AfA7B718fb893dB30A3aBc0Cfc608AaCfeBB0";
+    await contractContractManager
+      .connect(backend)
+      .setPlatformTreasuryAddress(dummyAddress);
+    expect(await contractContractManager.PlatformTreasuryAddress()).to.equal(
+      dummyAddress
+    );
+  });
+  it("Should allow backend to set the IVM address", async function () {
+    const {
+      backend,
+      validatorCandidate,
+      validator,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+      contractJurorManager,
+      contractContractManager,
+    } = await deploy();
+    // @dev Dummy contract address
+    const dummyAddress = "0x7D1AfA7B718fb893dB30A3aBc0Cfc608AaCfeBB0";
+    await contractContractManager.connect(backend).setAddressIVM(dummyAddress);
+    expect(await contractContractManager.IVMAddress()).to.equal(dummyAddress);
+  });
+  it("Should allow backend to set the staking address", async function () {
+    const {
+      backend,
+      validatorCandidate,
+      validator,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+      contractJurorManager,
+      contractContractManager,
+    } = await deploy();
+    // @dev Dummy contract address
+    const dummyAddress = "0x7D1AfA7B718fb893dB30A3aBc0Cfc608AaCfeBB0";
+    await contractContractManager
+      .connect(backend)
+      .setAddressStaking(dummyAddress);
+    expect(await contractContractManager.StakingContractAddress()).to.equal(
+      dummyAddress
+    );
+  });
+  it("Should allow backend to set the UDAO-VP address", async function () {
+    const {
+      backend,
+      validatorCandidate,
+      validator,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+      contractJurorManager,
+      contractContractManager,
+    } = await deploy();
+    // @dev Dummy contract address
+    const dummyAddress = "0x7D1AfA7B718fb893dB30A3aBc0Cfc608AaCfeBB0";
+    await contractContractManager
+      .connect(backend)
+      .setAddressUdaoVp(dummyAddress);
+    expect(await contractContractManager.UdaoVpAddress()).to.equal(
+      dummyAddress
+    );
+  });
+  it("Should allow backend to set the IJM address", async function () {
+    const {
+      backend,
+      validatorCandidate,
+      validator,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+      contractJurorManager,
+      contractContractManager,
+    } = await deploy();
+    // @dev Dummy contract address
+    const dummyAddress = "0x7D1AfA7B718fb893dB30A3aBc0Cfc608AaCfeBB0";
+    await contractContractManager
+      .connect(backend)
+      .setAddressIJMAddress(dummyAddress);
+    expect(await contractContractManager.IJMAddress()).to.equal(dummyAddress);
+  });
+  it("Should allow backend to set the UDAO address", async function () {
+    const {
+      backend,
+      validatorCandidate,
+      validator,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+      contractJurorManager,
+      contractContractManager,
+    } = await deploy();
+    // @dev Dummy contract address
+    const dummyAddress = "0x7D1AfA7B718fb893dB30A3aBc0Cfc608AaCfeBB0";
+    await contractContractManager
+      .connect(backend)
+      .setAddressUdaoAddress(dummyAddress);
+    expect(await contractContractManager.UdaoAddress()).to.equal(dummyAddress);
+  });
+  it("Should allow backend to set the UDAOC address", async function () {
+    const {
+      backend,
+      validatorCandidate,
+      validator,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+      contractJurorManager,
+      contractContractManager,
+    } = await deploy();
+    // @dev Dummy contract address
+    const dummyAddress = "0x7D1AfA7B718fb893dB30A3aBc0Cfc608AaCfeBB0";
+    await contractContractManager
+      .connect(backend)
+      .setAddressUdaocAddress(dummyAddress);
+    expect(await contractContractManager.UdaocAddress()).to.equal(dummyAddress);
+  });
+  it("Should allow backend to set the IRM address", async function () {
+    const {
+      backend,
+      validatorCandidate,
+      validator,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+      contractJurorManager,
+      contractContractManager,
+    } = await deploy();
+    // @dev Dummy contract address
+    const dummyAddress = "0x7D1AfA7B718fb893dB30A3aBc0Cfc608AaCfeBB0";
+    await contractContractManager
+      .connect(backend)
+      .setAddressIrmAddress(dummyAddress);
+    expect(await contractContractManager.IrmAddress()).to.equal(dummyAddress);
+  });
+});

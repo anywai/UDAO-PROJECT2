@@ -468,6 +468,10 @@ async function deploy() {
   await contractContractManager
     .connect(backend)
     .setAddressUdaoVp(contractUDAOVp.address);
+
+  await contractJurorManager
+    .connect(backend)
+    .setContractManager(contractContractManager.address);
   // add staking contract to udao-vp
   await contractUDAOVp.connect(backend).updateAddresses();
 
@@ -504,6 +508,7 @@ async function deploy() {
     contractJurorManager,
     GOVERNANCE_ROLE,
     BACKEND_ROLE,
+    contractContractManager,
   };
 }
 
@@ -2426,5 +2431,164 @@ describe("Juror Manager", function () {
     await expect(
       contractJurorManager.connect(signerTreasuryContract).nextRound()
     ).to.revertedWith("Pausable: paused");
+  });
+
+  it("Should create new dispute that is not token related", async function () {
+    const {
+      backend,
+      contentCreator,
+      contentBuyer,
+      validatorCandidate,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember1,
+      jurorMember2,
+      jurorMember3,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+      contractJurorManager,
+    } = await deploy();
+
+    /// @dev Case settings
+    const caseScope = 1;
+    const caseQuestion = "Should we remove this content?";
+    const caseTokenRelated = false;
+    const caseTokenId = 5;
+
+    /// @dev Create dispute
+    await expect(
+      contractJurorManager
+        .connect(backend)
+        .createDispute(caseScope, caseQuestion, caseTokenRelated, caseTokenId)
+    )
+      .to.emit(contractJurorManager, "DisputeCreated")
+      .withArgs(1, caseScope, caseQuestion);
+
+    /// Check dispute settings
+    const dispute = await contractJurorManager.disputes(1);
+    expect(dispute.caseScope).to.equal(caseScope);
+    expect(dispute.question).to.equal(caseQuestion);
+    expect(dispute.isTokenRelated).to.equal(caseTokenRelated);
+    expect(dispute.tokenId).to.equal(0);
+  });
+
+  it("Should create new dispute that is token related", async function () {
+    const {
+      backend,
+      contentCreator,
+      contentBuyer,
+      validatorCandidate,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember1,
+      jurorMember2,
+      jurorMember3,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+      contractJurorManager,
+    } = await deploy();
+
+    /// @dev Case settings
+    const caseScope = 1;
+    const caseQuestion = "Should we remove this content?";
+    const caseTokenRelated = true;
+    const caseTokenId = 5;
+
+    /// @dev Create dispute
+    await expect(
+      contractJurorManager
+        .connect(backend)
+        .createDispute(caseScope, caseQuestion, caseTokenRelated, caseTokenId)
+    )
+      .to.emit(contractJurorManager, "DisputeCreated")
+      .withArgs(1, caseScope, caseQuestion);
+
+    /// Check dispute settings
+    const dispute = await contractJurorManager.disputes(1);
+    expect(dispute.caseScope).to.equal(caseScope);
+    expect(dispute.question).to.equal(caseQuestion);
+    expect(dispute.isTokenRelated).to.equal(caseTokenRelated);
+    expect(dispute.tokenId).to.equal(caseTokenId);
+  });
+  it("Should allow backend to call updateAddresses in contractJurorManager", async function () {
+    const {
+      backend,
+      contentCreator,
+      contentBuyer,
+      validatorCandidate,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember1,
+      jurorMember2,
+      jurorMember3,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+      contractJurorManager,
+      contractContractManager,
+    } = await deploy();
+
+    // Dummy contract address
+    const dummyAddress = "0x7D1AfA7B718fb893dB30A3aBc0Cfc608AaCfeBB0";
+    await contractContractManager
+      .connect(backend)
+      .setAddressIrmAddress(dummyAddress);
+    // Check the current IRM address
+    const currentIrmAddress = await contractContractManager.IrmAddress();
+    expect(currentIrmAddress).to.equal(dummyAddress);
+    // Update addresses
+    await expect(contractJurorManager.connect(backend).updateAddresses())
+      .to.emit(contractJurorManager, "AddressesUpdated")
+      .withArgs(dummyAddress);
   });
 });
