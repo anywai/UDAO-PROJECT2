@@ -332,7 +332,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
                 sellingCurrency
             );
         }
-
+        udao.transferFrom(msg.sender, address(this), priceToPayUdao);
         uint256 foundationBalanceFromThisPurchase = (priceToPayUdao * coachingFoundationCut) / 100000;
         uint256 governanceBalanceFromThisPurchase = (priceToPayUdao * coachingGovernanceCut) / 100000;
         foundationBalance += foundationBalanceFromThisPurchase;
@@ -354,8 +354,6 @@ abstract contract ContentManager is EIP712, BasePlatform {
         coachingIndex++;
 
         studentList[tokenId].push(msg.sender);
-        // TODO This transfer is prone to reentrancy attack. Fix it.
-        udao.transferFrom(msg.sender, address(this), priceToPayUdao);
     }
 
     /// @notice Allows both parties to finalize coaching service.
