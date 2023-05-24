@@ -18,87 +18,110 @@ bn.config({ EXPONENTIAL_AT: 999999, DECIMAL_PLACES: 40 });
 // Enable and inject BN dependency
 chai.use(require("chai-bn")(BN));
 
-async function deploy() {
-  helpers.reset(
-    "https://polygon-mainnet.g.alchemy.com/v2/OsNaN43nxvV85Kk1JpU-a5qduFwjcIGJ",
-    40691400
-  );
-  const [owner, account1, account2, account3] = await ethers.getSigners();
+async function deploy(isDexRequired = false) {
+  if (isDexRequired) {
+    helpers.reset(
+      "https://polygon-mainnet.g.alchemy.com/v2/OsNaN43nxvV85Kk1JpU-a5qduFwjcIGJ",
+      40691400
+    );
+  }
+
+  const [backend, account1, account2, account3] = await ethers.getSigners();
 
   let factoryUDAO = await ethers.getContractFactory("UDAO");
   //DEPLOYMENTS
   const contractUDAO = await factoryUDAO.deploy();
 
-  // send some eth to the owner 
-  await helpers.setBalance(owner.address, hre.ethers.utils.parseEther("100000"));
-  
-
-  const positionManager = await ethers.getContractAt(
-    NonFunbiblePositionABI,
-    NonFunbiblePositionAddress
-  );
-
-  // console.log("Find WMATIC");
-
-  const WMATIC = await ethers.getContractAt(WMATIC_ABI, WMATICAddress);
-  // console.log("Deposit MATIC for WMATIC");
-  await WMATIC.connect(owner).deposit({
-    value: ethers.utils.parseEther("1000.0"),
-  });
-
-  // console.log("Approve WMATIC");
-
-  // call approve for tokens before adding a new pool
-  await WMATIC.connect(owner).approve(
-    positionManager.address,
-    ethers.utils.parseEther("99999999.0")
-  );
-
-  // console.log("Approve UDAO");
-
-  await contractUDAO
-    .connect(owner)
-    .approve(positionManager.address, ethers.utils.parseEther("9999999.0"));
-
-  // console.log("Creating Pool");
-
-  const tx = await positionManager
-    .connect(owner)
-    .createAndInitializePoolIfNecessary(
-      WMATIC.address,
-      contractUDAO.address,
-      "3000",
-      "250541420775534450580036817218"
+  // Deploys PriceGetter
+  if (isDexRequired) {
+    const positionManager = await ethers.getContractAt(
+      NonFunbiblePositionABI,
+      "0xC36442b4a4522E871399CD717aBDD847Ab11FE88"
     );
-  const tx_2 = await positionManager
-    .connect(owner)
-    .mint([
-      WMATIC.address,
-      contractUDAO.address,
-      "3000",
-      "0",
-      "23040",
-      "950252822518485471",
-      "9999999999999999991268",
-      "0",
-      "9963392298778452810744",
-      owner.address,
-      "1678352028999",
-    ]);
+    await helpers.setBalance(
+      backend.address,
+      ethers.utils.parseEther("1000000.0")
+    );
+    const WMATIC = await ethers.getContractAt(WMATIC_ABI, WMATICAddress);
+    await WMATIC.connect(backend).deposit({
+      value: ethers.utils.parseEther("1000.0"),
+    });
 
-  const factoryPriceGetter = await ethers.getContractFactory("PriceGetter");
+    // call approve for tokens before adding a new pool
+
+    await WMATIC.connect(backend).approve(
+      positionManager.address,
+      ethers.utils.parseEther("99999999.0")
+    );
+
+    await contractUDAO
+      .connect(backend)
+      .approve(positionManager.address, ethers.utils.parseEther("9999999.0"));
+
+    const tx = await positionManager
+      .connect(backend)
+      .createAndInitializePoolIfNecessary(
+        WMATIC.address,
+        contractUDAO.address,
+        "3000",
+        "250541420775534450580036817218"
+      );
+    const result = await tx.wait();
+    const tx_2 = await positionManager
+      .connect(backend)
+      .mint([
+        WMATIC.address,
+        contractUDAO.address,
+        "3000",
+        "0",
+        "23040",
+        "950252822518485471",
+        "9999999999999999991268",
+        "0",
+        "9963392298778452810744",
+        backend.address,
+        "1678352028999",
+      ]);
+    const result_2 = await tx_2.wait();
+
+    await helpers.time.increase(2);
+    await helpers.time.increase(2);
+    await helpers.time.increase(2);
+    await helpers.time.increase(2);
+    await helpers.time.increase(2);
+    await helpers.time.increase(2);
+    await helpers.time.increase(2);
+    await helpers.time.increase(2);
+    await helpers.time.increase(2);
+    await helpers.time.increase(2);
+    await helpers.time.increase(2);
+    await helpers.time.increase(2);
+    await helpers.time.increase(2);
+    await helpers.time.increase(2);
+    await helpers.time.increase(2);
+
+    // Price Getter End
+  }
+
   let factoryRoleManager = await ethers.getContractFactory("RoleManager");
+  let factoryPriceGetter = await ethers.getContractFactory("PriceGetter");
+
   const contractRoleManager = await factoryRoleManager.deploy();
-  const contractPriceGetter = await factoryPriceGetter.deploy(
-    "0x1F98431c8aD98523631AE4a59f267346ea31F984",
-    contractUDAO.address,
-    WMATICAddress,
-    3000,
-    contractRoleManager.address
-  );
+  let contractPriceGetter;
+  if (isDexRequired) {
+    contractPriceGetter = await factoryPriceGetter.deploy(
+      "0x1F98431c8aD98523631AE4a59f267346ea31F984",
+      contractUDAO.address,
+      "0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270",
+      3000,
+      contractRoleManager.address
+    );
+  } else {
+    contractPriceGetter = { address: ethers.constants.AddressZero };
+  }
 
   return {
-    owner,
+    backend,
     account1,
     account2,
     account3,
@@ -109,12 +132,14 @@ async function deploy() {
 
 describe("Uniswap DEX Tests", function () {
   it("Should deploy, create and fund a pool", async function () {
-    const { owner, account1, account2, contractUDAO, whale } = await deploy();
+    const { backend, account1, account2, contractUDAO, whale } = await deploy(
+      true
+    );
   });
 
   it("Should create a pool", async function () {
     const {
-      owner,
+      backend,
       account1,
       account2,
       account3,
@@ -123,7 +148,7 @@ describe("Uniswap DEX Tests", function () {
       weth,
       nonfungiblePositionManager,
       contractPriceGetter,
-    } = await deploy();
+    } = await deploy(true);
 
     // console.log("Deployed price getter");
 
@@ -145,9 +170,7 @@ describe("Uniswap DEX Tests", function () {
 
     const out = await contractPriceGetter.getUdaoOut(
       ethers.utils.parseEther("1.0"),
-      ethers.utils.keccak256(
-        ethers.utils.toUtf8Bytes("eur")
-      )
+      ethers.utils.keccak256(ethers.utils.toUtf8Bytes("eur"))
     );
     // console.log("Out is ", out);
   });
