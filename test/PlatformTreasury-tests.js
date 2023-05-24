@@ -292,11 +292,9 @@ async function makeCoachingPurchase(
     (e) => e.event == "CoachingBought"
   );
   const coachingId = queueTxEvent.args[2];
-  // Check if buyer is saved as a student
-  const returnedStudentList =
-    await contractPlatformTreasury.getStudentListOfToken(0);
-  // Check if buyer addres is in the list
-  expect(returnedStudentList).to.include(contentBuyer.address);
+  const coachingStruct = await contractPlatformTreasury.coachingStructs(coachingId);
+  // Check if returned learner address is the same as the buyer address
+  expect(coachingStruct.learner).to.equal(contentBuyer.address);
   return coachingId;
 }
 async function deploy() {
@@ -2223,10 +2221,11 @@ describe("Platform Treasury General", function () {
       (e) => e.event == "CoachingBought"
     );
     const coachingId = queueTxEvent.args[2];
-    // Check if buyer is saved as a student
-    const returnedStudentList =
-      await contractPlatformTreasury.getStudentListOfToken(0);
-    expect(returnedStudentList[0]).to.equal(contentBuyer1.address);
+    // Get coaching struct
+    const coachingStruct = await contractPlatformTreasury.coachingStructs(coachingId);
+    // Check if returned learner address is the same as the buyer address
+    expect(coachingStruct.learner).to.equal(contentBuyer1.address);
+    
     // Finalize the coaching
     await contractPlatformTreasury
       .connect(contentBuyer1)
