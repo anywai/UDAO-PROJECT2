@@ -490,11 +490,20 @@ describe("Platform Treasury Contract - Coaching", function () {
         contractPlatformTreasury.address,
         ethers.utils.parseEther("999999999999.0")
       );
-
-    await contractPlatformTreasury.connect(contentBuyer).buyCoaching(0);
-    expect(await contractPlatformTreasury.getStudentListOfToken(0)).to.be.eql([
-      contentBuyer.address,
-    ]);
+    
+    // Buy coaching
+    const purchaseTx = await contractPlatformTreasury
+      .connect(contentBuyer)
+      .buyCoaching(0);
+    const queueTxReceipt = await purchaseTx.wait();
+    const queueTxEvent = queueTxReceipt.events.find(
+      (e) => e.event == "CoachingBought"
+    );
+    const coachingId = queueTxEvent.args[2];
+    // Get coaching struct
+    const coachingStruct = await contractPlatformTreasury.coachingStructs(coachingId);
+    // Check if returned learner address is the same as the buyer address
+    expect(coachingStruct.learner).to.equal(contentBuyer.address);
   });
 
   it("Should return coaching list of token", async function () {
@@ -1208,12 +1217,19 @@ describe("Platform Treasury Contract - Coaching", function () {
         ethers.utils.parseEther("999999999999.0")
       );
 
-    // TODO What IS THIS COACHING VOUCHER?
-
-    await contractPlatformTreasury.connect(contentBuyer).buyCoaching(0);
-    expect(await contractPlatformTreasury.getStudentListOfToken(0)).to.be.eql([
-      contentBuyer.address,
-    ]);
+    // Buy coaching
+    const purchaseTx = await contractPlatformTreasury
+      .connect(contentBuyer)
+      .buyCoaching(0);
+    const queueTxReceipt = await purchaseTx.wait();
+    const queueTxEvent = queueTxReceipt.events.find(
+      (e) => e.event == "CoachingBought"
+    );
+    const coachingId = queueTxEvent.args[2];
+    // Get coaching struct
+    const coachingStruct = await contractPlatformTreasury.coachingStructs(coachingId);
+    // Check if returned learner address is the same as the buyer address
+    expect(coachingStruct.learner).to.equal(contentBuyer.address);
 
     await contractPlatformTreasury.connect(contentBuyer).finalizeCoaching(0);
     expect(
@@ -1300,10 +1316,20 @@ describe("Platform Treasury Contract - Coaching", function () {
         ethers.utils.parseEther("999999999999.0")
       );
 
-    await contractPlatformTreasury.connect(contentBuyer).buyCoaching(0);
-    expect(await contractPlatformTreasury.getStudentListOfToken(0)).to.be.eql([
-      contentBuyer.address,
-    ]);
+    // Buy coaching
+    const purchaseTx = await contractPlatformTreasury
+      .connect(contentBuyer)
+      .buyCoaching(0);
+    const queueTxReceipt = await purchaseTx.wait();
+    const queueTxEvent = queueTxReceipt.events.find(
+      (e) => e.event == "CoachingBought"
+    );
+    const coachingId = queueTxEvent.args[2];
+    // Get coaching struct
+    const coachingStruct = await contractPlatformTreasury.coachingStructs(coachingId);
+    // Check if returned learner address is the same as the buyer address
+    expect(coachingStruct.learner).to.equal(contentBuyer.address);
+
     await network.provider.send("evm_increaseTime", [999999999]);
     await network.provider.send("evm_mine");
     await contractPlatformTreasury.connect(contentCreator).finalizeCoaching(0);
@@ -1391,10 +1417,19 @@ describe("Platform Treasury Contract - Coaching", function () {
         ethers.utils.parseEther("999999999999.0")
       );
 
-    await contractPlatformTreasury.connect(contentBuyer).buyCoaching(0);
-    expect(await contractPlatformTreasury.getStudentListOfToken(0)).to.be.eql([
-      contentBuyer.address,
-    ]);
+    // Buy coaching
+    const purchaseTx = await contractPlatformTreasury
+      .connect(contentBuyer)
+      .buyCoaching(0);
+    const queueTxReceipt = await purchaseTx.wait();
+    const queueTxEvent = queueTxReceipt.events.find(
+      (e) => e.event == "CoachingBought"
+    );
+    const coachingId = queueTxEvent.args[2];
+    // Get coaching struct
+    const coachingStruct = await contractPlatformTreasury.coachingStructs(coachingId);
+    // Check if returned learner address is the same as the buyer address
+    expect(coachingStruct.learner).to.equal(contentBuyer.address);
 
     await expect(
       contractPlatformTreasury.connect(contentCreator).finalizeCoaching(0)
@@ -1484,10 +1519,19 @@ describe("Platform Treasury Contract - Coaching", function () {
       signer: backend,
     });
 
-    await contractPlatformTreasury.connect(contentBuyer).buyCoaching(0);
-    expect(await contractPlatformTreasury.getStudentListOfToken(0)).to.be.eql([
-      contentBuyer.address,
-    ]);
+    // Buy coaching
+    const purchaseTx = await contractPlatformTreasury
+      .connect(contentBuyer)
+      .buyCoaching(0);
+    const queueTxReceipt = await purchaseTx.wait();
+    const queueTxEvent = queueTxReceipt.events.find(
+      (e) => e.event == "CoachingBought"
+    );
+    const coachingId = queueTxEvent.args[2];
+    // Get coaching struct
+    const coachingStruct = await contractPlatformTreasury.coachingStructs(coachingId);
+    // Check if returned learner address is the same as the buyer address
+    expect(coachingStruct.learner).to.equal(contentBuyer.address);
 
     await expect(
       contractPlatformTreasury.connect(foundation).finalizeCoaching(0)
@@ -1577,10 +1621,19 @@ describe("Platform Treasury Contract - Coaching", function () {
       signer: backend,
     });
 
-    await contractPlatformTreasury.connect(contentBuyer).buyCoaching(0);
-    expect(await contractPlatformTreasury.getStudentListOfToken(0)).to.be.eql([
-      contentBuyer.address,
-    ]);
+    // Buy coaching
+    const purchaseTx = await contractPlatformTreasury
+      .connect(contentBuyer)
+      .buyCoaching(0);
+    const queueTxReceipt = await purchaseTx.wait();
+    const queueTxEvent = queueTxReceipt.events.find(
+      (e) => e.event == "CoachingBought"
+    );
+    const coachingId = queueTxEvent.args[2];
+    // Get coaching struct
+    const coachingStruct = await contractPlatformTreasury.coachingStructs(coachingId);
+    // Check if returned learner address is the same as the buyer address
+    expect(coachingStruct.learner).to.equal(contentBuyer.address);
 
     await expect(
       contractPlatformTreasury.connect(contentBuyer).finalizeCoaching(1)
@@ -1673,9 +1726,15 @@ describe("Platform Treasury Contract - Coaching", function () {
     const timestamp = (
       await ethers.provider.getBlock(result.logs[0].blockNumber)
     ).timestamp;
-    expect(await contractPlatformTreasury.getStudentListOfToken(0)).to.be.eql([
-      contentBuyer.address,
-    ]);
+    const resultTxEvent = result.events.find(
+      (e) => e.event == "CoachingBought"
+    );
+    const coachingId = resultTxEvent.args[2];
+    // Get coaching struct
+    const coachingStruct = await contractPlatformTreasury.coachingStructs(coachingId);
+    // Check if returned learner address is the same as the buyer address
+    expect(coachingStruct.learner).to.equal(contentBuyer.address);
+
     await network.provider.send("evm_increaseTime", [60 * 60 * 24 * 29]);
     await network.provider.send("evm_mine"); //
     await expect(
@@ -1771,9 +1830,14 @@ describe("Platform Treasury Contract - Coaching", function () {
     const timestamp = (
       await ethers.provider.getBlock(result.logs[0].blockNumber)
     ).timestamp;
-    expect(await contractPlatformTreasury.getStudentListOfToken(0)).to.be.eql([
-      contentBuyer.address,
-    ]);
+    const resultTxEvent = result.events.find(
+      (e) => e.event == "CoachingBought"
+    );
+    const coachingId = resultTxEvent.args[2];
+    // Get coaching struct
+    const coachingStruct = await contractPlatformTreasury.coachingStructs(coachingId);
+    // Check if returned learner address is the same as the buyer address
+    expect(coachingStruct.learner).to.equal(contentBuyer.address);
     await network.provider.send("evm_increaseTime", [60 * 60 * 24 * 29]);
     await network.provider.send("evm_mine"); //
     await expect(
@@ -1869,9 +1933,14 @@ describe("Platform Treasury Contract - Coaching", function () {
     const timestamp = (
       await ethers.provider.getBlock(result.logs[0].blockNumber)
     ).timestamp;
-    expect(await contractPlatformTreasury.getStudentListOfToken(0)).to.be.eql([
-      contentBuyer.address,
-    ]);
+    const resultTxEvent = result.events.find(
+      (e) => e.event == "CoachingBought"
+    );
+    const coachingId = resultTxEvent.args[2];
+    // Get coaching struct
+    const coachingStruct = await contractPlatformTreasury.coachingStructs(coachingId);
+    // Check if returned learner address is the same as the buyer address
+    expect(coachingStruct.learner).to.equal(contentBuyer.address);
     await expect(
       contractPlatformTreasury.connect(contentCreator).delayDeadline(0)
     ).to.revertedWith("Only can be delayed in last 3 days");
@@ -1963,9 +2032,14 @@ describe("Platform Treasury Contract - Coaching", function () {
     const timestamp = (
       await ethers.provider.getBlock(result.logs[0].blockNumber)
     ).timestamp;
-    expect(await contractPlatformTreasury.getStudentListOfToken(0)).to.be.eql([
-      contentBuyer.address,
-    ]);
+    const resultTxEvent = result.events.find(
+      (e) => e.event == "CoachingBought"
+    );
+    const coachingId = resultTxEvent.args[2];
+    // Get coaching struct
+    const coachingStruct = await contractPlatformTreasury.coachingStructs(coachingId);
+    // Check if returned learner address is the same as the buyer address
+    expect(coachingStruct.learner).to.equal(contentBuyer.address);
     await expect(
       contractPlatformTreasury.connect(jurorMember).delayDeadline(0)
     ).to.revertedWith("You are neither coach nor learner");
@@ -2057,9 +2131,14 @@ describe("Platform Treasury Contract - Coaching", function () {
     const timestamp = (
       await ethers.provider.getBlock(result.logs[0].blockNumber)
     ).timestamp;
-    expect(await contractPlatformTreasury.getStudentListOfToken(0)).to.be.eql([
-      contentBuyer.address,
-    ]);
+    const resultTxEvent = result.events.find(
+      (e) => e.event == "CoachingBought"
+    );
+    const coachingId = resultTxEvent.args[2];
+    // Get coaching struct
+    const coachingStruct = await contractPlatformTreasury.coachingStructs(coachingId);
+    // Check if returned learner address is the same as the buyer address
+    expect(coachingStruct.learner).to.equal(contentBuyer.address);
     await expect(contractPlatformTreasury.connect(foundation).forcedPayment(0))
       .to.emit(contractPlatformTreasury, "ForcedPayment")
       .withArgs(0, contentCreator.address);
@@ -2151,9 +2230,14 @@ describe("Platform Treasury Contract - Coaching", function () {
     const timestamp = (
       await ethers.provider.getBlock(result.logs[0].blockNumber)
     ).timestamp;
-    expect(await contractPlatformTreasury.getStudentListOfToken(0)).to.be.eql([
-      contentBuyer.address,
-    ]);
+    const resultTxEvent = result.events.find(
+      (e) => e.event == "CoachingBought"
+    );
+    const coachingId = resultTxEvent.args[2];
+    // Get coaching struct
+    const coachingStruct = await contractPlatformTreasury.coachingStructs(coachingId);
+    // Check if returned learner address is the same as the buyer address
+    expect(coachingStruct.learner).to.equal(contentBuyer.address);
     await expect(
       contractPlatformTreasury.connect(validator1).forcedPayment(0)
     ).to.revertedWith(
@@ -2249,9 +2333,14 @@ describe("Platform Treasury Contract - Coaching", function () {
     const timestamp = (
       await ethers.provider.getBlock(result.logs[0].blockNumber)
     ).timestamp;
-    expect(await contractPlatformTreasury.getStudentListOfToken(0)).to.be.eql([
-      contentBuyer.address,
-    ]);
+    const resultTxEvent = result.events.find(
+      (e) => e.event == "CoachingBought"
+    );
+    const coachingId = resultTxEvent.args[2];
+    // Get coaching struct
+    const coachingStruct = await contractPlatformTreasury.coachingStructs(coachingId);
+    // Check if returned learner address is the same as the buyer address
+    expect(coachingStruct.learner).to.equal(contentBuyer.address);
     await expect(contractPlatformTreasury.connect(contentCreator).refund(0))
       .to.emit(contractPlatformTreasury, "Refund")
       .withArgs(0, contentBuyer.address, ethers.utils.parseEther("2"));
@@ -2343,9 +2432,14 @@ describe("Platform Treasury Contract - Coaching", function () {
     const timestamp = (
       await ethers.provider.getBlock(result.logs[0].blockNumber)
     ).timestamp;
-    expect(await contractPlatformTreasury.getStudentListOfToken(0)).to.be.eql([
-      contentBuyer.address,
-    ]);
+    const resultTxEvent = result.events.find(
+      (e) => e.event == "CoachingBought"
+    );
+    const coachingId = resultTxEvent.args[2];
+    // Get coaching struct
+    const coachingStruct = await contractPlatformTreasury.coachingStructs(coachingId);
+    // Check if returned learner address is the same as the buyer address
+    expect(coachingStruct.learner).to.equal(contentBuyer.address);
     await expect(
       contractPlatformTreasury.connect(contentBuyer).refund(0)
     ).to.revertedWith("Your are not the coach");
@@ -2437,9 +2531,14 @@ describe("Platform Treasury Contract - Coaching", function () {
     const timestamp = (
       await ethers.provider.getBlock(result.logs[0].blockNumber)
     ).timestamp;
-    expect(await contractPlatformTreasury.getStudentListOfToken(0)).to.be.eql([
-      contentBuyer.address,
-    ]);
+    const resultTxEvent = result.events.find(
+      (e) => e.event == "CoachingBought"
+    );
+    const coachingId = resultTxEvent.args[2];
+    // Get coaching struct
+    const coachingStruct = await contractPlatformTreasury.coachingStructs(coachingId);
+    // Check if returned learner address is the same as the buyer address
+    expect(coachingStruct.learner).to.equal(contentBuyer.address);
     await expect(
       contractPlatformTreasury.connect(foundation).forcedRefundAdmin(0)
     )
@@ -2533,9 +2632,14 @@ describe("Platform Treasury Contract - Coaching", function () {
     const timestamp = (
       await ethers.provider.getBlock(result.logs[0].blockNumber)
     ).timestamp;
-    expect(await contractPlatformTreasury.getStudentListOfToken(0)).to.be.eql([
-      contentBuyer.address,
-    ]);
+    const resultTxEvent = result.events.find(
+      (e) => e.event == "CoachingBought"
+    );
+    const coachingId = resultTxEvent.args[2];
+    // Get coaching struct
+    const coachingStruct = await contractPlatformTreasury.coachingStructs(coachingId);
+    // Check if returned learner address is the same as the buyer address
+    expect(coachingStruct.learner).to.equal(contentBuyer.address);
     await expect(
       contractPlatformTreasury.connect(validator1).forcedRefundAdmin(0)
     ).to.revertedWith(
@@ -2631,9 +2735,14 @@ describe("Platform Treasury Contract - Coaching", function () {
     const timestamp = (
       await ethers.provider.getBlock(result.logs[0].blockNumber)
     ).timestamp;
-    expect(await contractPlatformTreasury.getStudentListOfToken(0)).to.be.eql([
-      contentBuyer.address,
-    ]);
+    const resultTxEvent = result.events.find(
+      (e) => e.event == "CoachingBought"
+    );
+    const coachingId = resultTxEvent.args[2];
+    // Get coaching struct
+    const coachingStruct = await contractPlatformTreasury.coachingStructs(coachingId);
+    // Check if returned learner address is the same as the buyer address
+    expect(coachingStruct.learner).to.equal(contentBuyer.address);
     await expect(
       contractPlatformTreasury.connect(foundation).forcedRefundAdmin(0)
     ).to.revertedWith("Coaching is not refundable");
