@@ -6,6 +6,10 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
 import "./interfaces/IRoleManager.sol";
 
 contract RoleManager is AccessControl, IRoleManager {
+    bytes32 public constant VALIDATOR_ROLE = keccak256("VALIDATOR_ROLE");
+    bytes32 public constant SUPER_VALIDATOR_ROLE =
+        keccak256("SUPER_VALIDATOR_ROLE");
+    bytes32 public constant JUROR_ROLE = keccak256("JUROR_ROLE");
     bytes32 public constant BACKEND_ROLE = keccak256("BACKEND_ROLE");
     bytes32 public constant STAKING_CONTRACT = keccak256("STAKING_CONTRACT");
 
@@ -78,6 +82,9 @@ contract RoleManager is AccessControl, IRoleManager {
         bool _isBanned
     ) external onlyRole(BACKEND_ROLE) {
         BanList[_address] = _isBanned;
+        _revokeRole(_address, VALIDATOR_ROLE);
+        _revokeRole(_address, SUPER_VALIDATOR_ROLE);
+        _revokeRole(_address, JUROR_ROLE);
         emit SetBan(_address, _isBanned);
     }
 
