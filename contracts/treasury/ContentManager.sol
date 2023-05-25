@@ -202,6 +202,8 @@ abstract contract ContentManager is EIP712, BasePlatform {
         );
         require(voucher.validUntil >= block.timestamp, "Voucher has expired.");
         require(msg.sender == voucher.redeemer, "You are not redeemer.");
+        require(!IRM.isBanned(msg.sender), "You are banned");
+        require(IRM.isKYCed(msg.sender), "You are not KYCed");
 
         uint256 tokenId = voucher.tokenId;
         uint256 partIdLength = voucher.purchasedParts.length;
@@ -213,8 +215,6 @@ abstract contract ContentManager is EIP712, BasePlatform {
             require(!IRM.isBanned(contentReceiver), "Gift receiver is banned");
             require(IRM.isKYCed(contentReceiver), "Gift receiver is not KYCed");
         }
-        require(!IRM.isBanned(msg.sender), "You are banned");
-        require(IRM.isKYCed(msg.sender), "You are not KYCed");
         address instructor = udaoc.ownerOf(tokenId);
         require(IRM.isKYCed(instructor), "Instructor is not KYCed");
         require(!IRM.isBanned(instructor), "Instructor is banned");
