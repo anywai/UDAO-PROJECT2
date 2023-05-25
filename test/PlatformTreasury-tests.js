@@ -529,6 +529,13 @@ async function deploy(isDexRequired = false) {
     ethers.utils.toUtf8Bytes("BACKEND_ROLE")
   );
   await contractRoleManager.grantRole(BACKEND_ROLE, backend.address);
+  const JUROR_CONTRACT = ethers.utils.keccak256(
+    ethers.utils.toUtf8Bytes("JUROR_CONTRACT")
+  );
+  await contractRoleManager.grantRole(
+    JUROR_CONTRACT,
+    contractJurorManager.address
+  );
   // approve udao tokens to timelock controller
   // Create signer for contractPlatformTreasury
   await helpers.setBalance(
@@ -550,7 +557,6 @@ async function deploy(isDexRequired = false) {
   const FOUNDATION_ROLE = ethers.utils.keccak256(
     ethers.utils.toUtf8Bytes("FOUNDATION_ROLE")
   );
-
   await contractRoleManager.grantRole(FOUNDATION_ROLE, foundation.address);
   const STAKING_CONTRACT = ethers.utils.keccak256(
     ethers.utils.toUtf8Bytes("STAKING_CONTRACT")
@@ -2577,4 +2583,93 @@ describe("Platform Treasury General", function () {
         .sub(instructorDebt)
     );
   });
+
+  it("Should allow jurors to force refund the coaching", async function () {
+    const {
+      backend,
+      contentCreator,
+      contentBuyer1,
+      contentBuyer2,
+      contentBuyer3,
+      validatorCandidate,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember1,
+      jurorMember2,
+      jurorMember3,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+      contractJurorManager,
+      contractContractManager,
+      jurorContract,
+    } = await deploy();
+    /// Create content
+    await createContent(
+      contractRoleManager,
+      contractUDAOContent,
+      contentCreator,
+      contractValidationManager,
+      backend,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
+      contentCreator
+    );
+    /// Make coaching purchase
+    const coachingId1 = await makeCoachingPurchase(
+      contractRoleManager,
+      contractUDAO,
+      contractPlatformTreasury,
+      contentBuyer1
+    );
+    /// Get balance of contentBuyer1 before refund
+    const contentBuyer1BalanceBefore = await contractUDAO.balanceOf(
+      contentBuyer1.address
+    );
+    /// send some eth to the contractJurorManager and impersonate it
+    await helpers.setBalance(
+      contractJurorManager.address,
+      hre.ethers.utils.parseEther("1")
+    );
+    const signerJurorManager = await ethers.getImpersonatedSigner(
+      contractJurorManager.address
+    );
+    /// Juror should call forcedRefundJuror from platformtreasury contract
+    await contractPlatformTreasury
+      .connect(signerJurorManager)
+      .forcedRefundJuror(coachingId1);
+    /// Get balance of contentBuyer1 after refund
+    const contentBuyer1BalanceAfter = await contractUDAO.balanceOf(
+      contentBuyer1.address
+    );
+    /// Get totalPaymentAmount from coachingStructs
+    const totalPaymentAmountTx = await contractPlatformTreasury.coachingStructs(
+      coachingId1
+    );
+    const totalPaymentAmount = totalPaymentAmountTx["totalPaymentAmount"];
+    /// Expect that the contentBuyer1 balance is equal to totalPaymentAmount plus contentBuyer1BalanceBefore
+    await expect(contentBuyer1BalanceAfter).to.equal(
+      totalPaymentAmount.add(contentBuyer1BalanceBefore)
+    );
+  });
+
 });
