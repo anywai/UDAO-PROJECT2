@@ -489,7 +489,7 @@ contract UDAOStaker is RoleController, EIP712 {
         4. If we reach the end of the loop and the _amount is still not less than or equal to withdrawableBalance then 
         it means that the user doesn't have enough withdrawable balance. So we revert with an error. 
         */
-        require(_amount > 0, "Stake amount can't be 0");
+        require(_amount > 0, "Unstake amount can't be 0");
         uint256 withdrawableBalance;
         uint256 vpBalance;
         for (
