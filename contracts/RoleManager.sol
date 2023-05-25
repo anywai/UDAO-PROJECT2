@@ -82,9 +82,6 @@ contract RoleManager is AccessControl, IRoleManager {
         bool _isBanned
     ) external onlyRole(BACKEND_ROLE) {
         BanList[_address] = _isBanned;
-        _revokeRole(VALIDATOR_ROLE, _address);
-        _revokeRole(SUPER_VALIDATOR_ROLE, _address);
-        _revokeRole(JUROR_ROLE, _address);
         emit SetBan(_address, _isBanned);
     }
 
