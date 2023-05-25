@@ -2672,4 +2672,77 @@ describe("Platform Treasury General", function () {
     );
   });
 
+  it("Should fail only JUROR_ROLE can force refund the coaching", async function () {
+    const {
+      backend,
+      contentCreator,
+      contentBuyer1,
+      contentBuyer2,
+      contentBuyer3,
+      validatorCandidate,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember1,
+      jurorMember2,
+      jurorMember3,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+      contractJurorManager,
+      contractContractManager,
+      JUROR_ROLE,
+    } = await deploy();
+    /// Create content
+    await createContent(
+      contractRoleManager,
+      contractUDAOContent,
+      contentCreator,
+      contractValidationManager,
+      backend,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
+      contentCreator
+    );
+    /// Make coaching purchase
+    const coachingId1 = await makeCoachingPurchase(
+      contractRoleManager,
+      contractUDAO,
+      contractPlatformTreasury,
+      contentBuyer1
+    );
+    /// Get balance of contentBuyer1 before refund
+    const contentBuyer1BalanceBefore = await contractUDAO.balanceOf(
+      contentBuyer1.address
+    );
+    /// Juror should call forcedRefundJuror from platformtreasury contract
+    hashedJUROR_ROLE =
+      "0x297de9766668e7caa540695c8342fe9e3874514aea0954531c7d3f7f2aecabfd";
+    /// Foundation should call forcedRefundAdmin from platformtreasury contract
+    await expect(
+      contractPlatformTreasury
+        .connect(foundation)
+        .forcedRefundJuror(coachingId1)
+    ).to.be.revertedWith(
+      `'AccessControl: account ${foundation.address.toLowerCase()} is missing role ${hashedJUROR_ROLE}'`
+    );
+  });
 });
