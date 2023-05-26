@@ -1921,7 +1921,10 @@ describe("Platform Treasury General", function () {
       contractJurorManager,
       contractContractManager,
     } = await deploy();
-
+    /// Set KYC
+    await contractRoleManager.setKYC(jurorMember1.address, true);
+    await contractRoleManager.setKYC(jurorMember2.address, true);
+    await contractRoleManager.setKYC(jurorMember3.address, true);
     /// @dev Dispute settings
     const caseScope = 1;
     const caseQuestion = "Should we remove this content?";

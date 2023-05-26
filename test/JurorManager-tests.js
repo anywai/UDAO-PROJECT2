@@ -658,6 +658,8 @@ describe("Juror Manager", function () {
       contractUDAOGovernor,
       contractJurorManager,
     } = await deploy();
+    /// Set KYC
+    await contractRoleManager.setKYC(jurorMember1.address, true);
 
     /// @dev Dispute settings
     const caseScope = 1;
@@ -723,6 +725,8 @@ describe("Juror Manager", function () {
       contractUDAOGovernor,
       contractJurorManager,
     } = await deploy();
+    /// Set KYC
+    await contractRoleManager.setKYC(jurorMember1.address, true);
 
     /// @dev Dispute settings
     const caseScope = 1;
@@ -787,6 +791,8 @@ describe("Juror Manager", function () {
       contractUDAOGovernor,
       contractJurorManager,
     } = await deploy();
+    /// Set KYC
+    await contractRoleManager.setKYC(jurorMember1.address, true);
 
     /// @dev Dispute settings
     const caseScope = 1;
@@ -924,6 +930,8 @@ describe("Juror Manager", function () {
       contractUDAOGovernor,
       contractJurorManager,
     } = await deploy();
+    /// Set KYC
+    await contractRoleManager.setKYC(jurorMember1.address, true);
 
     /// @dev Dispute settings
     const caseScope = 1;
@@ -994,6 +1002,8 @@ describe("Juror Manager", function () {
       contractUDAOGovernor,
       contractJurorManager,
     } = await deploy();
+    /// Set KYC
+    await contractRoleManager.setKYC(jurorMember1.address, true);
 
     /// @dev Dispute settings
     const caseScope = 1;
@@ -1066,7 +1076,10 @@ describe("Juror Manager", function () {
       contractUDAOGovernor,
       contractJurorManager,
     } = await deploy();
-
+    /// Set KYC
+    await contractRoleManager.setKYC(jurorMember1.address, true);
+    await contractRoleManager.setKYC(jurorMember2.address, true);
+    await contractRoleManager.setKYC(jurorMember3.address, true);
     /// @dev Dispute settings
     const caseScope = 1;
     const caseQuestion = "Should we remove this content?";
@@ -1147,7 +1160,10 @@ describe("Juror Manager", function () {
       contractUDAOGovernor,
       contractJurorManager,
     } = await deploy();
-
+    /// Set KYC
+    await contractRoleManager.setKYC(jurorMember1.address, true);
+    await contractRoleManager.setKYC(jurorMember2.address, true);
+    await contractRoleManager.setKYC(jurorMember3.address, true);
     /// @dev Dispute settings
     const caseScope = 1;
     const caseQuestion = "Should we remove this content?";
@@ -1230,7 +1246,10 @@ describe("Juror Manager", function () {
       contractUDAOGovernor,
       contractJurorManager,
     } = await deploy();
-
+    /// Set KYC
+    await contractRoleManager.setKYC(jurorMember1.address, true);
+    await contractRoleManager.setKYC(jurorMember2.address, true);
+    await contractRoleManager.setKYC(jurorMember3.address, true);
     /// @dev Dispute settings
     const caseScope = 1;
     const caseQuestion = "Should we remove this content?";
@@ -1366,7 +1385,10 @@ describe("Juror Manager", function () {
       contractUDAOGovernor,
       contractJurorManager,
     } = await deploy();
-
+    /// Set KYC
+    await contractRoleManager.setKYC(jurorMember1.address, true);
+    await contractRoleManager.setKYC(jurorMember2.address, true);
+    await contractRoleManager.setKYC(jurorMember3.address, true);
     /// @dev Dispute settings
     const caseScope = 1;
     const caseQuestion = "Should we remove this content?";
@@ -1467,7 +1489,10 @@ describe("Juror Manager", function () {
       contractUDAOGovernor,
       contractJurorManager,
     } = await deploy();
-
+    /// Set KYC
+    await contractRoleManager.setKYC(jurorMember1.address, true);
+    await contractRoleManager.setKYC(jurorMember2.address, true);
+    await contractRoleManager.setKYC(jurorMember3.address, true);
     /// @dev Dispute settings
     const caseScope = 1;
     const caseQuestion = "Should we remove this content?";
@@ -1568,7 +1593,10 @@ describe("Juror Manager", function () {
       contractUDAOGovernor,
       contractJurorManager,
     } = await deploy();
-
+    /// Set KYC
+    await contractRoleManager.setKYC(jurorMember1.address, true);
+    await contractRoleManager.setKYC(jurorMember2.address, true);
+    await contractRoleManager.setKYC(jurorMember3.address, true);
     /// @dev Dispute settings
     const caseScope = 1;
     const caseQuestion = "Should we remove this content?";
@@ -1717,7 +1745,10 @@ describe("Juror Manager", function () {
       contractUDAOGovernor,
       contractJurorManager,
     } = await deploy();
-
+    /// Set KYC
+    await contractRoleManager.setKYC(jurorMember1.address, true);
+    await contractRoleManager.setKYC(jurorMember2.address, true);
+    await contractRoleManager.setKYC(jurorMember3.address, true);
     /// @dev Dispute settings
     const caseScope = 1;
     const caseQuestion = "Should we remove this content?";
@@ -1960,7 +1991,11 @@ describe("Juror Manager", function () {
       contractUDAOGovernor,
       contractJurorManager,
     } = await deploy();
-
+    /// Set KYC
+    await contractRoleManager.setKYC(jurorMember1.address, true);
+    await contractRoleManager.setKYC(jurorMember2.address, true);
+    await contractRoleManager.setKYC(jurorMember3.address, true);
+    await contractRoleManager.setKYC(jurorMember4.address, true);
     /// @dev Dispute settings
     const caseScope = 1;
     const caseQuestion = "Should we remove this content?";
@@ -2033,7 +2068,8 @@ describe("Juror Manager", function () {
       contractUDAOGovernor,
       contractJurorManager,
     } = await deploy();
-
+    /// Set KYC
+    await contractRoleManager.setKYC(jurorMember1.address, true);
     /// @dev Dispute settings for 1st dispute
     const caseScope = 1;
     const caseQuestion = "Should we remove this content?";
@@ -2110,7 +2146,8 @@ describe("Juror Manager", function () {
       contractUDAOGovernor,
       contractJurorManager,
     } = await deploy();
-
+    /// Set KYC
+    await contractRoleManager.setKYC(jurorMember1.address, true);
     /// @dev Dispute settings
     const caseScope = 1;
     const caseQuestion = "Should we remove this content";
@@ -2174,6 +2211,8 @@ describe("Juror Manager", function () {
       contractJurorManager,
       JUROR_ROLE,
     } = await deploy();
+    /// Set KYC
+    await contractRoleManager.setKYC(jurorMember1.address, true);
 
     /// @dev Dispute settings
     const caseScope = 1;
@@ -2246,7 +2285,9 @@ describe("Juror Manager", function () {
       contractUDAOGovernor,
       contractJurorManager,
     } = await deploy();
-
+    /// Set KYC
+    await contractRoleManager.setKYC(jurorMember1.address, true);
+    await contractRoleManager.setKYC(jurorMember2.address, true);
     /// @dev Dispute settings
     const caseScope = 1;
     const caseQuestion = "Should we remove this content?";
