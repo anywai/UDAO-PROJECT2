@@ -54,8 +54,9 @@ contract UDAOCertificate is
     function redeem(CertificateVoucher calldata voucher) public whenNotPaused {
         // make sure redeemer is redeeming
         require(voucher.redeemer == msg.sender, "You are not the redeemer");
-        //make sure redeemer is kyced
+        //make sure redeemer is kyced and not banned
         require(IRM.isKYCed(msg.sender), "You are not KYCed");
+        require(!IRM.isBanned(msg.sender), "You were banned");
         // make sure signature is valid and get the address of the signer
         address signer = _verify(voucher);
         require(
@@ -121,6 +122,9 @@ contract UDAOCertificate is
     ) internal virtual override {
         super._beforeTokenTransfer(from, to, tokenId);
         if (from != address(0) && to != address(0)) {
+            //make sure to address is kyced and not banned
+            require(IRM.isKYCed(to), "Receiver is not KYCed");
+            require(!IRM.isBanned(to), "Receiver is banned");
             require(
                 IRM.hasRole(BACKEND_ROLE, msg.sender),
                 "You don't have right to transfer token"
@@ -137,6 +141,9 @@ contract UDAOCertificate is
         address to,
         uint256 tokenId
     ) external onlyRole(BACKEND_ROLE) {
+        //make sure "to" address is kyced and not banned
+        require(IRM.isKYCed(to), "Receiver is not KYCed");
+        require(!IRM.isBanned(to), "Receiver is banned");
         _transfer(from, to, tokenId);
     }
 
