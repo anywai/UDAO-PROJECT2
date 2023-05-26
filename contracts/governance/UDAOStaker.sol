@@ -183,6 +183,9 @@ contract UDAOStaker is RoleController, EIP712 {
 
     /// @notice allows users to apply for validator role
     function applyForValidator() external whenNotPaused {
+        //make sure redeemer is kyced and not banned
+        require(IRM.isKYCed(msg.sender), "You are not KYCed");
+        require(!IRM.isBanned(msg.sender), "You were banned");
         require(
             udaovp.balanceOf(msg.sender) > 0,
             "You have to be governance member to apply"
@@ -213,6 +216,9 @@ contract UDAOStaker is RoleController, EIP712 {
 
     /// @notice Allows validators to apply for super validator role
     function applyForSuperValidator() external whenNotPaused {
+        //make sure redeemer is kyced and not banned
+        require(IRM.isKYCed(msg.sender), "You are not KYCed");
+        require(!IRM.isBanned(msg.sender), "You were banned");
         /// TODO super validator requirementlari ekle
         require(
             udaovp.balanceOf(msg.sender) > 0,
@@ -243,6 +249,9 @@ contract UDAOStaker is RoleController, EIP712 {
 
     /// @notice allows users to apply for juror role
     function applyForJuror() external whenNotPaused {
+        //make sure redeemer is kyced and not banned
+        require(IRM.isKYCed(msg.sender), "You are not KYCed");
+        require(!IRM.isBanned(msg.sender), "You were banned");
         require(
             udaovp.balanceOf(msg.sender) > 0,
             "You have to be governance member to apply"
@@ -266,6 +275,9 @@ contract UDAOStaker is RoleController, EIP712 {
 
     /// @notice Users can use this function and assign validator or juror roles to themselves
     function getApproved(RoleVoucher calldata voucher) external whenNotPaused {
+        //make sure redeemer is kyced and not banned
+        require(IRM.isKYCed(msg.sender), "You are not KYCed");
+        require(!IRM.isBanned(msg.sender), "You were banned");
         // make sure redeemer is redeeming
         require(voucher.redeemer == msg.sender, "You are not the redeemer");
         //make sure redeemer is kyced
