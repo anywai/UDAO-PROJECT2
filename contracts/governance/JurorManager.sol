@@ -124,6 +124,10 @@ contract JurorManager is RoleController {
     /// @notice assign a dispute to self
     /// @param caseId id of the dispute
     function assignDispute(uint256 caseId) external onlyRole(JUROR_ROLE) {
+        //make sure juror is kyced and not banned
+        require(IRM.isKYCed(msg.sender), "You are not KYCed");
+        require(!IRM.isBanned(msg.sender), "You were banned");
+
         require(caseId < disputes.length, "Dispute does not exist!");
         require(
             activeDispute[msg.sender] == 0,
