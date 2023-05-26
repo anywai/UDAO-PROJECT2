@@ -586,6 +586,9 @@ contract UDAOStaker is RoleController, EIP712 {
     function registerJobListing(
         uint jobListingCount
     ) external onlyRole(CORPORATE_ROLE) {
+        //make sure juror is kyced and not banned
+        require(IRM.isKYCed(msg.sender), "You are not KYCed");
+        require(!IRM.isBanned(msg.sender), "You were banned");
         require(
             jobListingCount * corporateStakePerListing > 0,
             "Cannot unstake zero tokens"
