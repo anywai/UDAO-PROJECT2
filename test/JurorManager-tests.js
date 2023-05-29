@@ -892,9 +892,9 @@ describe("Juror Manager", function () {
       contractJurorManager.connect(backend).assignDispute(disputeId)
     ).to.be.revertedWith(
       "AccessControl: account " +
-        backend.address.toLowerCase() +
-        " is missing role " +
-        hashedJUROR_ROLE
+      backend.address.toLowerCase() +
+      " is missing role " +
+      hashedJUROR_ROLE
     );
   });
 
@@ -1112,20 +1112,16 @@ describe("Juror Manager", function () {
     const disputeResultOfJurorMember1 = 1;
     const disputeResultOfJurorMember2 = 1;
     const disputeResultOfJurorMember3 = 1;
+    const disputeVerdict = true;
     await contractJurorManager
       .connect(jurorMember1)
       .sendDisputeResult(disputeId, disputeResultOfJurorMember1);
     await contractJurorManager
       .connect(jurorMember2)
       .sendDisputeResult(disputeId, disputeResultOfJurorMember2);
-    await contractJurorManager
+    await expect(contractJurorManager
       .connect(jurorMember3)
-      .sendDisputeResult(disputeId, disputeResultOfJurorMember3);
-    /// @dev Finalize dispute
-    const disputeVerdict = true;
-    await expect(contractJurorManager.connect(backend).finalizeDispute(1))
-      .to.emit(contractJurorManager, "DisputeEnded")
-      .withArgs(disputeId, disputeVerdict);
+      .sendDisputeResult(disputeId, disputeResultOfJurorMember3)).to.emit(contractJurorManager, "DisputeEnded").withArgs(disputeId, disputeVerdict);
   });
 
   it("Should the final verdict return false if 2 out of 3 jurors vote against the dispute question", async function () {
@@ -1196,22 +1192,16 @@ describe("Juror Manager", function () {
     const disputeResultOfJurorMember1 = 1;
     const disputeResultOfJurorMember2 = 0;
     const disputeResultOfJurorMember3 = 0;
+    const disputeVerdict = false;
     await contractJurorManager
       .connect(jurorMember1)
       .sendDisputeResult(disputeId, disputeResultOfJurorMember1);
     await contractJurorManager
       .connect(jurorMember2)
       .sendDisputeResult(disputeId, disputeResultOfJurorMember2);
-    await contractJurorManager
+    await expect(contractJurorManager
       .connect(jurorMember3)
-      .sendDisputeResult(disputeId, disputeResultOfJurorMember3);
-    /// @dev Finalize dispute
-    const disputeVerdict = false;
-    await expect(
-      contractJurorManager.connect(backend).finalizeDispute(disputeId)
-    )
-      .to.emit(contractJurorManager, "DisputeEnded")
-      .withArgs(disputeId, disputeVerdict);
+      .sendDisputeResult(disputeId, disputeResultOfJurorMember3)).to.emit(contractJurorManager, "DisputeEnded").withArgs(disputeId, disputeVerdict);
   });
 
   it("Should the final verdict return true if 2 out of 3 jurors vote for the dispute question", async function () {
@@ -1282,22 +1272,17 @@ describe("Juror Manager", function () {
     const disputeResultOfJurorMember1 = 1;
     const disputeResultOfJurorMember2 = 1;
     const disputeResultOfJurorMember3 = 0;
+    const disputeVerdict = true;
     await contractJurorManager
       .connect(jurorMember1)
       .sendDisputeResult(disputeId, disputeResultOfJurorMember1);
     await contractJurorManager
       .connect(jurorMember2)
       .sendDisputeResult(disputeId, disputeResultOfJurorMember2);
-    await contractJurorManager
+    await expect(contractJurorManager
       .connect(jurorMember3)
-      .sendDisputeResult(disputeId, disputeResultOfJurorMember3);
-    /// @dev Finalize dispute
-    const disputeVerdict = true;
-    await expect(
-      contractJurorManager.connect(backend).finalizeDispute(disputeId)
-    )
-      .to.emit(contractJurorManager, "DisputeEnded")
-      .withArgs(disputeId, disputeVerdict);
+      .sendDisputeResult(disputeId, disputeResultOfJurorMember3)).to.emit(contractJurorManager, "DisputeEnded").withArgs(disputeId, disputeVerdict);
+
   });
 
   it("Should allow treasury contract to switch to the next round", async function () {
@@ -1421,22 +1406,17 @@ describe("Juror Manager", function () {
     const disputeResultOfJurorMember1 = 1;
     const disputeResultOfJurorMember2 = 0;
     const disputeResultOfJurorMember3 = 0;
+    const disputeVerdict = false;
     await contractJurorManager
       .connect(jurorMember1)
       .sendDisputeResult(disputeId, disputeResultOfJurorMember1);
     await contractJurorManager
       .connect(jurorMember2)
       .sendDisputeResult(disputeId, disputeResultOfJurorMember2);
-    await contractJurorManager
+    await expect(contractJurorManager
       .connect(jurorMember3)
-      .sendDisputeResult(disputeId, disputeResultOfJurorMember3);
-    /// @dev Finalize dispute
-    const disputeVerdict = false;
-    await expect(
-      contractJurorManager.connect(backend).finalizeDispute(disputeId)
-    )
-      .to.emit(contractJurorManager, "DisputeEnded")
-      .withArgs(disputeId, disputeVerdict);
+      .sendDisputeResult(disputeId, disputeResultOfJurorMember3)).to.emit(contractJurorManager, "DisputeEnded").withArgs(disputeId, disputeVerdict);
+
     /// @dev Check number of successful and unsuccessful dispute results of jurors
     const disputeResultsOfJuror1 = await contractJurorManager.getCaseResults(
       jurorMember1.address
@@ -1525,22 +1505,17 @@ describe("Juror Manager", function () {
     const disputeResultOfJurorMember1 = 1;
     const disputeResultOfJurorMember2 = 0;
     const disputeResultOfJurorMember3 = 0;
+    const disputeVerdict = false;
     await contractJurorManager
       .connect(jurorMember1)
       .sendDisputeResult(disputeId, disputeResultOfJurorMember1);
     await contractJurorManager
       .connect(jurorMember2)
       .sendDisputeResult(disputeId, disputeResultOfJurorMember2);
-    await contractJurorManager
+    await expect(contractJurorManager
       .connect(jurorMember3)
-      .sendDisputeResult(disputeId, disputeResultOfJurorMember3);
-    /// @dev Finalize dispute
-    const disputeVerdict = false;
-    await expect(
-      contractJurorManager.connect(backend).finalizeDispute(disputeId)
-    )
-      .to.emit(contractJurorManager, "DisputeEnded")
-      .withArgs(disputeId, disputeVerdict);
+      .sendDisputeResult(disputeId, disputeResultOfJurorMember3)).to.emit(contractJurorManager, "DisputeEnded").withArgs(disputeId, disputeVerdict);
+
     /// @dev Check scores of jurors in this round
     const currentDistributionRound =
       await contractJurorManager.distributionRound();
@@ -1629,22 +1604,17 @@ describe("Juror Manager", function () {
     const disputeResultOfJurorMember1 = 1;
     const disputeResultOfJurorMember2 = 0;
     const disputeResultOfJurorMember3 = 0;
+    const disputeVerdict = false;
     await contractJurorManager
       .connect(jurorMember1)
       .sendDisputeResult(disputeId, disputeResultOfJurorMember1);
     await contractJurorManager
       .connect(jurorMember2)
       .sendDisputeResult(disputeId, disputeResultOfJurorMember2);
-    await contractJurorManager
+    await expect(contractJurorManager
       .connect(jurorMember3)
-      .sendDisputeResult(disputeId, disputeResultOfJurorMember3);
-    /// @dev Finalize dispute
-    const disputeVerdict = false;
-    await expect(
-      contractJurorManager.connect(backend).finalizeDispute(disputeId)
-    )
-      .to.emit(contractJurorManager, "DisputeEnded")
-      .withArgs(disputeId, disputeVerdict);
+      .sendDisputeResult(disputeId, disputeResultOfJurorMember3)).to.emit(contractJurorManager, "DisputeEnded").withArgs(disputeId, disputeVerdict);
+
     /// @dev Check scores of jurors in this round
     const currentDistributionRound =
       await contractJurorManager.distributionRound();
@@ -1677,22 +1647,17 @@ describe("Juror Manager", function () {
     const disputeResultOfJurorMember1_2 = 1;
     const disputeResultOfJurorMember2_2 = 0;
     const disputeResultOfJurorMember3_2 = 0;
+    const disputeVerdict2 = false;
     await contractJurorManager
       .connect(jurorMember1)
       .sendDisputeResult(disputeId2, disputeResultOfJurorMember1_2);
     await contractJurorManager
       .connect(jurorMember2)
       .sendDisputeResult(disputeId2, disputeResultOfJurorMember2_2);
-    await contractJurorManager
+    await expect(contractJurorManager
       .connect(jurorMember3)
-      .sendDisputeResult(disputeId2, disputeResultOfJurorMember3_2);
-    /// @dev Finalize dispute
-    const disputeVerdict2 = false;
-    await expect(
-      contractJurorManager.connect(backend).finalizeDispute(disputeId2)
-    )
-      .to.emit(contractJurorManager, "DisputeEnded")
-      .withArgs(disputeId2, disputeVerdict2);
+      .sendDisputeResult(disputeId2, disputeResultOfJurorMember3_2)).to.emit(contractJurorManager, "DisputeEnded").withArgs(disputeId2, disputeVerdict2);
+
     /// @dev Check scores of jurors in this round
     const currentDistributionRound2 =
       await contractJurorManager.distributionRound();
@@ -1781,22 +1746,17 @@ describe("Juror Manager", function () {
     const disputeResultOfJurorMember1 = 1;
     const disputeResultOfJurorMember2 = 0;
     const disputeResultOfJurorMember3 = 0;
+    const disputeVerdict = false;
     await contractJurorManager
       .connect(jurorMember1)
       .sendDisputeResult(disputeId, disputeResultOfJurorMember1);
     await contractJurorManager
       .connect(jurorMember2)
       .sendDisputeResult(disputeId, disputeResultOfJurorMember2);
-    await contractJurorManager
+    await expect(contractJurorManager
       .connect(jurorMember3)
-      .sendDisputeResult(disputeId, disputeResultOfJurorMember3);
-    /// @dev Finalize dispute
-    const disputeVerdict = false;
-    await expect(
-      contractJurorManager.connect(backend).finalizeDispute(disputeId)
-    )
-      .to.emit(contractJurorManager, "DisputeEnded")
-      .withArgs(disputeId, disputeVerdict);
+      .sendDisputeResult(disputeId, disputeResultOfJurorMember3)).to.emit(contractJurorManager, "DisputeEnded").withArgs(disputeId, disputeVerdict);
+
     /// @dev Check scores of jurors in this round
     const currentDistributionRound =
       await contractJurorManager.distributionRound();

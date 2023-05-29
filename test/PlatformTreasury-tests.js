@@ -1965,22 +1965,16 @@ describe("Platform Treasury General", function () {
     const disputeResultOfJurorMember1 = 1;
     const disputeResultOfJurorMember2 = 0;
     const disputeResultOfJurorMember3 = 0;
+    const disputeVerdict = false;
     await contractJurorManager
       .connect(jurorMember1)
       .sendDisputeResult(disputeId, disputeResultOfJurorMember1);
     await contractJurorManager
       .connect(jurorMember2)
       .sendDisputeResult(disputeId, disputeResultOfJurorMember2);
-    await contractJurorManager
+    await expect(contractJurorManager
       .connect(jurorMember3)
-      .sendDisputeResult(disputeId, disputeResultOfJurorMember3);
-    /// @dev Finalize dispute
-    const disputeVerdict = false;
-    await expect(
-      contractJurorManager.connect(backend).finalizeDispute(disputeId)
-    )
-      .to.emit(contractJurorManager, "DisputeEnded")
-      .withArgs(disputeId, disputeVerdict);
+      .sendDisputeResult(disputeId, disputeResultOfJurorMember3)).to.emit(contractJurorManager, "DisputeEnded").withArgs(disputeId, disputeVerdict);
 
     // Get the ID of the current distribution round
     const currentDistributionRound =
