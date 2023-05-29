@@ -292,18 +292,20 @@ async function makeCoachingPurchase(
     (e) => e.event == "CoachingBought"
   );
   const coachingId = queueTxEvent.args[2];
-  // Check if buyer is saved as a student
-  const returnedStudentList =
-    await contractPlatformTreasury.getStudentListOfToken(0);
-  // Check if buyer addres is in the list
-  expect(returnedStudentList).to.include(contentBuyer.address);
+  const coachingStruct = await contractPlatformTreasury.coachingStructs(
+    coachingId
+  );
+  // Check if returned learner address is the same as the buyer address
+  expect(coachingStruct.learner).to.equal(contentBuyer.address);
   return coachingId;
 }
-async function deploy() {
-  helpers.reset(
-    "https://polygon-mainnet.g.alchemy.com/v2/OsNaN43nxvV85Kk1JpU-a5qduFwjcIGJ",
-    40691400
-  );
+async function deploy(isDexRequired = false) {
+  if (isDexRequired) {
+    helpers.reset(
+      "https://polygon-mainnet.g.alchemy.com/v2/OsNaN43nxvV85Kk1JpU-a5qduFwjcIGJ",
+      40691400
+    );
+  }
   const [
     backend,
     contentCreator,
@@ -352,68 +354,93 @@ async function deploy() {
   );
 
   //DEPLOYMENTS
-  const contractRoleManager = await factoryRoleManager.deploy();
   const contractUDAO = await factoryUDAO.deploy();
 
   // Deploys PriceGetter
-
-  const positionManager = await ethers.getContractAt(
-    NonFunbiblePositionABI,
-    "0xC36442b4a4522E871399CD717aBDD847Ab11FE88"
-  );
-
-  const WMATIC = await ethers.getContractAt(WMATIC_ABI, WMATICAddress);
-  await WMATIC.connect(backend).deposit({
-    value: ethers.utils.parseEther("1000.0"),
-  });
-
-  // call approve for tokens before adding a new pool
-  await WMATIC.connect(backend).approve(
-    positionManager.address,
-    ethers.utils.parseEther("99999999.0")
-  );
-
-  await contractUDAO
-    .connect(backend)
-    .approve(positionManager.address, ethers.utils.parseEther("9999999.0"));
-
-  const tx = await positionManager
-    .connect(backend)
-    .createAndInitializePoolIfNecessary(
-      WMATIC.address,
-      contractUDAO.address,
-      "3000",
-      "250541420775534450580036817218"
+  if (isDexRequired) {
+    const positionManager = await ethers.getContractAt(
+      NonFunbiblePositionABI,
+      "0xC36442b4a4522E871399CD717aBDD847Ab11FE88"
     );
-  const result = await tx.wait();
-  const tx_2 = await positionManager
-    .connect(backend)
-    .mint([
-      WMATIC.address,
-      contractUDAO.address,
-      "3000",
-      "0",
-      "23040",
-      "950252822518485471",
-      "9999999999999999991268",
-      "0",
-      "9963392298778452810744",
+    await helpers.setBalance(
       backend.address,
-      "1678352028999",
-    ]);
-  const result_2 = await tx_2.wait();
+      ethers.utils.parseEther("1000000.0")
+    );
+    const WMATIC = await ethers.getContractAt(WMATIC_ABI, WMATICAddress);
+    await WMATIC.connect(backend).deposit({
+      value: ethers.utils.parseEther("1000.0"),
+    });
 
+    // call approve for tokens before adding a new pool
+
+    await WMATIC.connect(backend).approve(
+      positionManager.address,
+      ethers.utils.parseEther("99999999.0")
+    );
+
+    await contractUDAO
+      .connect(backend)
+      .approve(positionManager.address, ethers.utils.parseEther("9999999.0"));
+
+    const tx = await positionManager
+      .connect(backend)
+      .createAndInitializePoolIfNecessary(
+        WMATIC.address,
+        contractUDAO.address,
+        "3000",
+        "250541420775534450580036817218"
+      );
+    const result = await tx.wait();
+    const tx_2 = await positionManager
+      .connect(backend)
+      .mint([
+        WMATIC.address,
+        contractUDAO.address,
+        "3000",
+        "0",
+        "23040",
+        "950252822518485471",
+        "9999999999999999991268",
+        "0",
+        "9963392298778452810744",
+        backend.address,
+        "1678352028999",
+      ]);
+    const result_2 = await tx_2.wait();
+
+    await helpers.time.increase(2);
+    await helpers.time.increase(2);
+    await helpers.time.increase(2);
+    await helpers.time.increase(2);
+    await helpers.time.increase(2);
+    await helpers.time.increase(2);
+    await helpers.time.increase(2);
+    await helpers.time.increase(2);
+    await helpers.time.increase(2);
+    await helpers.time.increase(2);
+    await helpers.time.increase(2);
+    await helpers.time.increase(2);
+    await helpers.time.increase(2);
+    await helpers.time.increase(2);
+    await helpers.time.increase(2);
+
+    // Price Getter End
+  }
   let factoryPriceGetter = await ethers.getContractFactory("PriceGetter");
+  const contractRoleManager = await factoryRoleManager.deploy();
+  let contractPriceGetter;
+  if (isDexRequired) {
+    contractPriceGetter = await factoryPriceGetter.deploy(
+      "0x1F98431c8aD98523631AE4a59f267346ea31F984",
+      contractUDAO.address,
+      "0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270",
+      3000,
+      contractRoleManager.address
+    );
+  } else {
+    contractPriceGetter = { address: ethers.constants.AddressZero };
+  }
 
-  // Price Getter End
-
-  const contractPriceGetter = await factoryPriceGetter.deploy(
-    "0x1F98431c8aD98523631AE4a59f267346ea31F984",
-    contractUDAO.address,
-    "0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270",
-    3000,
-    contractRoleManager.address
-  );
   const contractUDAOCertificate = await factoryUDAOCertificate.deploy(
     contractRoleManager.address
   );
@@ -502,6 +529,13 @@ async function deploy() {
     ethers.utils.toUtf8Bytes("BACKEND_ROLE")
   );
   await contractRoleManager.grantRole(BACKEND_ROLE, backend.address);
+  const JUROR_CONTRACT = ethers.utils.keccak256(
+    ethers.utils.toUtf8Bytes("JUROR_CONTRACT")
+  );
+  await contractRoleManager.grantRole(
+    JUROR_CONTRACT,
+    contractJurorManager.address
+  );
   // approve udao tokens to timelock controller
   // Create signer for contractPlatformTreasury
   await helpers.setBalance(
@@ -523,7 +557,6 @@ async function deploy() {
   const FOUNDATION_ROLE = ethers.utils.keccak256(
     ethers.utils.toUtf8Bytes("FOUNDATION_ROLE")
   );
-
   await contractRoleManager.grantRole(FOUNDATION_ROLE, foundation.address);
   const STAKING_CONTRACT = ethers.utils.keccak256(
     ethers.utils.toUtf8Bytes("STAKING_CONTRACT")
@@ -1888,7 +1921,10 @@ describe("Platform Treasury General", function () {
       contractJurorManager,
       contractContractManager,
     } = await deploy();
-
+    /// Set KYC
+    await contractRoleManager.setKYC(jurorMember1.address, true);
+    await contractRoleManager.setKYC(jurorMember2.address, true);
+    await contractRoleManager.setKYC(jurorMember3.address, true);
     /// @dev Dispute settings
     const caseScope = 1;
     const caseQuestion = "Should we remove this content?";
@@ -2223,10 +2259,13 @@ describe("Platform Treasury General", function () {
       (e) => e.event == "CoachingBought"
     );
     const coachingId = queueTxEvent.args[2];
-    // Check if buyer is saved as a student
-    const returnedStudentList =
-      await contractPlatformTreasury.getStudentListOfToken(0);
-    expect(returnedStudentList[0]).to.equal(contentBuyer1.address);
+    // Get coaching struct
+    const coachingStruct = await contractPlatformTreasury.coachingStructs(
+      coachingId
+    );
+    // Check if returned learner address is the same as the buyer address
+    expect(coachingStruct.learner).to.equal(contentBuyer1.address);
+
     // Finalize the coaching
     await contractPlatformTreasury
       .connect(contentBuyer1)
@@ -2545,6 +2584,168 @@ describe("Platform Treasury General", function () {
       instructerBalanceBefore
         .add(coachingPaymentAmount.mul(2))
         .sub(instructorDebt)
+    );
+  });
+
+  it("Should allow jurors to force refund the coaching", async function () {
+    const {
+      backend,
+      contentCreator,
+      contentBuyer1,
+      contentBuyer2,
+      contentBuyer3,
+      validatorCandidate,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember1,
+      jurorMember2,
+      jurorMember3,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+      contractJurorManager,
+      contractContractManager,
+      jurorContract,
+    } = await deploy();
+    /// Create content
+    await createContent(
+      contractRoleManager,
+      contractUDAOContent,
+      contentCreator,
+      contractValidationManager,
+      backend,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
+      contentCreator
+    );
+    /// Make coaching purchase
+    const coachingId1 = await makeCoachingPurchase(
+      contractRoleManager,
+      contractUDAO,
+      contractPlatformTreasury,
+      contentBuyer1
+    );
+    /// Get balance of contentBuyer1 before refund
+    const contentBuyer1BalanceBefore = await contractUDAO.balanceOf(
+      contentBuyer1.address
+    );
+    /// send some eth to the contractJurorManager and impersonate it
+    await helpers.setBalance(
+      contractJurorManager.address,
+      hre.ethers.utils.parseEther("1")
+    );
+    const signerJurorManager = await ethers.getImpersonatedSigner(
+      contractJurorManager.address
+    );
+    /// Juror should call forcedRefundJuror from platformtreasury contract
+    await contractPlatformTreasury
+      .connect(signerJurorManager)
+      .forcedRefundJuror(coachingId1);
+    /// Get balance of contentBuyer1 after refund
+    const contentBuyer1BalanceAfter = await contractUDAO.balanceOf(
+      contentBuyer1.address
+    );
+    /// Get totalPaymentAmount from coachingStructs
+    const totalPaymentAmountTx = await contractPlatformTreasury.coachingStructs(
+      coachingId1
+    );
+    const totalPaymentAmount = totalPaymentAmountTx["totalPaymentAmount"];
+    /// Expect that the contentBuyer1 balance is equal to totalPaymentAmount plus contentBuyer1BalanceBefore
+    await expect(contentBuyer1BalanceAfter).to.equal(
+      totalPaymentAmount.add(contentBuyer1BalanceBefore)
+    );
+  });
+
+  it("Should fail only JUROR_ROLE can force refund the coaching", async function () {
+    const {
+      backend,
+      contentCreator,
+      contentBuyer1,
+      contentBuyer2,
+      contentBuyer3,
+      validatorCandidate,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember1,
+      jurorMember2,
+      jurorMember3,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+      contractJurorManager,
+      contractContractManager,
+      JUROR_ROLE,
+    } = await deploy();
+    /// Create content
+    await createContent(
+      contractRoleManager,
+      contractUDAOContent,
+      contentCreator,
+      contractValidationManager,
+      backend,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
+      contentCreator
+    );
+    /// Make coaching purchase
+    const coachingId1 = await makeCoachingPurchase(
+      contractRoleManager,
+      contractUDAO,
+      contractPlatformTreasury,
+      contentBuyer1
+    );
+    /// Get balance of contentBuyer1 before refund
+    const contentBuyer1BalanceBefore = await contractUDAO.balanceOf(
+      contentBuyer1.address
+    );
+    /// Juror should call forcedRefundJuror from platformtreasury contract
+    hashedJUROR_ROLE =
+      "0x297de9766668e7caa540695c8342fe9e3874514aea0954531c7d3f7f2aecabfd";
+    /// Foundation should call forcedRefundAdmin from platformtreasury contract
+    await expect(
+      contractPlatformTreasury
+        .connect(foundation)
+        .forcedRefundJuror(coachingId1)
+    ).to.be.revertedWith(
+      `'AccessControl: account ${foundation.address.toLowerCase()} is missing role ${hashedJUROR_ROLE}'`
     );
   });
 });
