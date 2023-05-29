@@ -82,6 +82,8 @@ contract JurorManager is RoleController {
         bool isTokenRelated;
         /// @dev Related token ID, default to 0
         uint256 tokenId;
+        /// @dev If the dispute is finalized or not
+        bool isFinalized;
         /// @dev Case result date
         uint256 resultDate;
         /// @dev The data required to make calls to the contract that will be modified.
@@ -175,6 +177,7 @@ contract JurorManager is RoleController {
         uint256 caseId,
         bool result
     ) external onlyRole(JUROR_ROLE) {
+        require(disputes[caseId].isFinalized == false, "Dispute is finalized");
         require(
             activeDispute[msg.sender] == caseId,
             "This dispute is not assigned to this wallet"
@@ -186,7 +189,46 @@ contract JurorManager is RoleController {
         disputes[caseId].isVoted[msg.sender] = true;
         disputes[caseId].vote[msg.sender] = result;
         disputes[caseId].voteCount++;
+        if(disputes[caseId].voteCount >= requiredJurors) {
+            _finalizeDispute(caseId);
+        }
         emit DisputeResultSent(caseId, result, msg.sender);
+    }
+
+    /// @notice finalizes dispute if last dispute result is sent
+    /// @param caseId id of the dispute
+    function _finalizeDispute(uint256 caseId) internal {
+        /// @dev Check if the caller is in the list of jurors
+        //_checkJuror(disputes[caseId].jurors);
+
+        if (disputes[caseId].acceptVoteCount >= minRequiredAcceptVote) {
+            disputes[caseId].verdict = true;
+        } else {
+            disputes[caseId].verdict = false;
+        }
+
+        disputes[caseId].resultDate = block.timestamp;
+
+        /// TODO Below is for unfixed juror scores and juror penalty..
+
+        for (uint i; i < disputes[caseId].jurors.length; i++) {
+            if (
+                disputes[caseId].verdict ==
+                disputes[caseId].vote[disputes[caseId].jurors[i]]
+            ) {
+                jurorScorePerRound[disputes[caseId].jurors[i]][
+                    distributionRound
+                ]++;
+                totalJurorScore++;
+                /// @dev Record success point of a juror
+                successfulDispute[disputes[caseId].jurors[i]]++;
+            } else {
+                /// @dev Record unsuccess point of a juror
+                unsuccessfulDispute[disputes[caseId].jurors[i]]++;
+            }
+        disputes[caseId].isFinalized = true;
+        }
+        emit DisputeEnded(caseId, disputes[caseId].verdict);
     }
 
     /// @notice finalizes dispute if enough juror vote is sent
@@ -194,6 +236,7 @@ contract JurorManager is RoleController {
     function finalizeDispute(uint256 caseId) external {
         /// @dev Check if the caller is in the list of jurors
         //_checkJuror(disputes[caseId].jurors);
+        require(disputes[caseId].isFinalized == false, "Dispute is finalized");
 
         require(
             disputes[caseId].voteCount >= requiredJurors,
@@ -224,6 +267,7 @@ contract JurorManager is RoleController {
                 /// @dev Record unsuccess point of a juror
                 unsuccessfulDispute[disputes[caseId].jurors[i]]++;
             }
+        disputes[caseId].isFinalized = true;
         }
         emit DisputeEnded(caseId, disputes[caseId].verdict);
     }
