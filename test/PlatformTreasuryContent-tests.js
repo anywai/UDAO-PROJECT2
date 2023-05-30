@@ -379,7 +379,7 @@ async function deploy(isDexRequired = false) {
     .setAddressUdaoVp(contractUDAOVp.address);
 
   await contractValidationManager
-    .connect(foundation)
+    .connect(backend)
     .setStaker(contractUDAOStaker.address);
   await contractJurorManager
     .connect(backend)
