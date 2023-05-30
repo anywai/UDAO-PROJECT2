@@ -1124,4 +1124,132 @@ describe("Validation Manageer Contract", function () {
       contractValidationManager.connect(backend).createValidation(0, 50)
     ).to.revertedWith("ERC721: invalid token ID");
   });
+
+  it("Should fail to create content validation when Token owner isn't KYCed", async function () {
+    const {
+      backend,
+      contentCreator,
+      contentBuyer,
+      validatorCandidate,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+    } = await deploy();
+
+    /// Set KYC to true
+    await contractRoleManager.setKYC(contentCreator.address, true);
+
+    /// Create content
+    await expect(
+      contractUDAOContent
+        .connect(contentCreator)
+        .redeem(
+          [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
+          "udao",
+          "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
+          contentCreator.address,
+          ethers.utils.parseEther("2"),
+          "udao",
+          true,
+          true
+        )
+    )
+      .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
+      .withArgs(
+        "0x0000000000000000000000000000000000000000",
+        contentCreator.address,
+        0
+      );
+
+    /// Set KYC to false
+    await contractRoleManager.setKYC(contentCreator.address, false);
+
+    /// Create validation
+    await expect(
+      contractValidationManager.connect(backend).createValidation(0, 50)
+    ).to.revertedWith("Token owner is not KYCed");
+  });
+
+  it("Should fail to create content validation when Token owner is banned", async function () {
+    const {
+      backend,
+      contentCreator,
+      contentBuyer,
+      validatorCandidate,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+    } = await deploy();
+
+    /// Set KYC to true
+    await contractRoleManager.setKYC(contentCreator.address, true);
+
+    /// Create content
+    await expect(
+      contractUDAOContent
+        .connect(contentCreator)
+        .redeem(
+          [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
+          "udao",
+          "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
+          contentCreator.address,
+          ethers.utils.parseEther("2"),
+          "udao",
+          true,
+          true
+        )
+    )
+      .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
+      .withArgs(
+        "0x0000000000000000000000000000000000000000",
+        contentCreator.address,
+        0
+      );
+
+    /// Ban the user
+    await contractRoleManager.setBan(contentCreator.address, true);
+
+    /// Create validation
+    await expect(
+      contractValidationManager.connect(backend).createValidation(0, 50)
+    ).to.revertedWith("Token owner is banned");
+  });
 });

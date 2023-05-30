@@ -824,4 +824,95 @@ describe("UDAO Cert Contract", function () {
       contractUDAOCertificate.connect(contentBuyer).burn(1)
     ).to.revertedWith("You are not the owner of the token");
   });
+
+  it("Should fail to create certificate when the user hasn't kyced", async function () {
+    const {
+      backend,
+      contentCreator,
+      contentBuyer,
+      validatorCandidate,
+      validator,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+    } = await deploy();
+    await contractRoleManager.setKYC(contentBuyer.address, false);
+
+    const tx = await contractUDAOCertificate.getChainID();
+    const lazyMinter = new LazyUDAOCertMinter({
+      contract: contractUDAOCertificate,
+      signer: backend,
+    });
+    const voucher = await lazyMinter.createVoucher(
+      1,
+      "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
+      contentBuyer.address,
+      "Content Name",
+      "Content Description"
+    );
+    await expect(
+      contractUDAOCertificate.connect(contentBuyer).redeem(voucher)
+    ).to.revertedWith("You are not KYCed");
+  });
+
+  it("Should fail to create certificate when paused", async function () {
+    const {
+      backend,
+      contentCreator,
+      contentBuyer,
+      validatorCandidate,
+      validator,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+    } = await deploy();
+    await contractRoleManager.setKYC(contentBuyer.address, false);
+
+    const tx = await contractUDAOCertificate.getChainID();
+    const lazyMinter = new LazyUDAOCertMinter({
+      contract: contractUDAOCertificate,
+      signer: backend,
+    });
+    const voucher = await lazyMinter.createVoucher(
+      1,
+      "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
+      contentBuyer.address,
+      "Content Name",
+      "Content Description"
+    );
+
+    await expect(contractUDAOCertificate.pause());
+
+    await expect(
+      contractUDAOCertificate.connect(contentBuyer).redeem(voucher)
+    ).to.revertedWith("Pausable: paused");
+  });
 });

@@ -892,9 +892,9 @@ describe("Juror Manager", function () {
       contractJurorManager.connect(backend).assignDispute(disputeId)
     ).to.be.revertedWith(
       "AccessControl: account " +
-      backend.address.toLowerCase() +
-      " is missing role " +
-      hashedJUROR_ROLE
+        backend.address.toLowerCase() +
+        " is missing role " +
+        hashedJUROR_ROLE
     );
   });
 
@@ -1119,9 +1119,13 @@ describe("Juror Manager", function () {
     await contractJurorManager
       .connect(jurorMember2)
       .sendDisputeResult(disputeId, disputeResultOfJurorMember2);
-    await expect(contractJurorManager
-      .connect(jurorMember3)
-      .sendDisputeResult(disputeId, disputeResultOfJurorMember3)).to.emit(contractJurorManager, "DisputeEnded").withArgs(disputeId, disputeVerdict);
+    await expect(
+      contractJurorManager
+        .connect(jurorMember3)
+        .sendDisputeResult(disputeId, disputeResultOfJurorMember3)
+    )
+      .to.emit(contractJurorManager, "DisputeEnded")
+      .withArgs(disputeId, disputeVerdict);
   });
 
   it("Should the final verdict return false if 2 out of 3 jurors vote against the dispute question", async function () {
@@ -1199,9 +1203,13 @@ describe("Juror Manager", function () {
     await contractJurorManager
       .connect(jurorMember2)
       .sendDisputeResult(disputeId, disputeResultOfJurorMember2);
-    await expect(contractJurorManager
-      .connect(jurorMember3)
-      .sendDisputeResult(disputeId, disputeResultOfJurorMember3)).to.emit(contractJurorManager, "DisputeEnded").withArgs(disputeId, disputeVerdict);
+    await expect(
+      contractJurorManager
+        .connect(jurorMember3)
+        .sendDisputeResult(disputeId, disputeResultOfJurorMember3)
+    )
+      .to.emit(contractJurorManager, "DisputeEnded")
+      .withArgs(disputeId, disputeVerdict);
   });
 
   it("Should the final verdict return true if 2 out of 3 jurors vote for the dispute question", async function () {
@@ -1279,10 +1287,13 @@ describe("Juror Manager", function () {
     await contractJurorManager
       .connect(jurorMember2)
       .sendDisputeResult(disputeId, disputeResultOfJurorMember2);
-    await expect(contractJurorManager
-      .connect(jurorMember3)
-      .sendDisputeResult(disputeId, disputeResultOfJurorMember3)).to.emit(contractJurorManager, "DisputeEnded").withArgs(disputeId, disputeVerdict);
-
+    await expect(
+      contractJurorManager
+        .connect(jurorMember3)
+        .sendDisputeResult(disputeId, disputeResultOfJurorMember3)
+    )
+      .to.emit(contractJurorManager, "DisputeEnded")
+      .withArgs(disputeId, disputeVerdict);
   });
 
   it("Should allow treasury contract to switch to the next round", async function () {
@@ -1413,9 +1424,13 @@ describe("Juror Manager", function () {
     await contractJurorManager
       .connect(jurorMember2)
       .sendDisputeResult(disputeId, disputeResultOfJurorMember2);
-    await expect(contractJurorManager
-      .connect(jurorMember3)
-      .sendDisputeResult(disputeId, disputeResultOfJurorMember3)).to.emit(contractJurorManager, "DisputeEnded").withArgs(disputeId, disputeVerdict);
+    await expect(
+      contractJurorManager
+        .connect(jurorMember3)
+        .sendDisputeResult(disputeId, disputeResultOfJurorMember3)
+    )
+      .to.emit(contractJurorManager, "DisputeEnded")
+      .withArgs(disputeId, disputeVerdict);
 
     /// @dev Check number of successful and unsuccessful dispute results of jurors
     const disputeResultsOfJuror1 = await contractJurorManager.getCaseResults(
@@ -1512,9 +1527,13 @@ describe("Juror Manager", function () {
     await contractJurorManager
       .connect(jurorMember2)
       .sendDisputeResult(disputeId, disputeResultOfJurorMember2);
-    await expect(contractJurorManager
-      .connect(jurorMember3)
-      .sendDisputeResult(disputeId, disputeResultOfJurorMember3)).to.emit(contractJurorManager, "DisputeEnded").withArgs(disputeId, disputeVerdict);
+    await expect(
+      contractJurorManager
+        .connect(jurorMember3)
+        .sendDisputeResult(disputeId, disputeResultOfJurorMember3)
+    )
+      .to.emit(contractJurorManager, "DisputeEnded")
+      .withArgs(disputeId, disputeVerdict);
 
     /// @dev Check scores of jurors in this round
     const currentDistributionRound =
@@ -1611,9 +1630,13 @@ describe("Juror Manager", function () {
     await contractJurorManager
       .connect(jurorMember2)
       .sendDisputeResult(disputeId, disputeResultOfJurorMember2);
-    await expect(contractJurorManager
-      .connect(jurorMember3)
-      .sendDisputeResult(disputeId, disputeResultOfJurorMember3)).to.emit(contractJurorManager, "DisputeEnded").withArgs(disputeId, disputeVerdict);
+    await expect(
+      contractJurorManager
+        .connect(jurorMember3)
+        .sendDisputeResult(disputeId, disputeResultOfJurorMember3)
+    )
+      .to.emit(contractJurorManager, "DisputeEnded")
+      .withArgs(disputeId, disputeVerdict);
 
     /// @dev Check scores of jurors in this round
     const currentDistributionRound =
@@ -1654,9 +1677,13 @@ describe("Juror Manager", function () {
     await contractJurorManager
       .connect(jurorMember2)
       .sendDisputeResult(disputeId2, disputeResultOfJurorMember2_2);
-    await expect(contractJurorManager
-      .connect(jurorMember3)
-      .sendDisputeResult(disputeId2, disputeResultOfJurorMember3_2)).to.emit(contractJurorManager, "DisputeEnded").withArgs(disputeId2, disputeVerdict2);
+    await expect(
+      contractJurorManager
+        .connect(jurorMember3)
+        .sendDisputeResult(disputeId2, disputeResultOfJurorMember3_2)
+    )
+      .to.emit(contractJurorManager, "DisputeEnded")
+      .withArgs(disputeId2, disputeVerdict2);
 
     /// @dev Check scores of jurors in this round
     const currentDistributionRound2 =
@@ -1753,9 +1780,13 @@ describe("Juror Manager", function () {
     await contractJurorManager
       .connect(jurorMember2)
       .sendDisputeResult(disputeId, disputeResultOfJurorMember2);
-    await expect(contractJurorManager
-      .connect(jurorMember3)
-      .sendDisputeResult(disputeId, disputeResultOfJurorMember3)).to.emit(contractJurorManager, "DisputeEnded").withArgs(disputeId, disputeVerdict);
+    await expect(
+      contractJurorManager
+        .connect(jurorMember3)
+        .sendDisputeResult(disputeId, disputeResultOfJurorMember3)
+    )
+      .to.emit(contractJurorManager, "DisputeEnded")
+      .withArgs(disputeId, disputeVerdict);
 
     /// @dev Check scores of jurors in this round
     const currentDistributionRound =
@@ -2620,5 +2651,138 @@ describe("Juror Manager", function () {
     await expect(contractJurorManager.connect(backend).updateAddresses())
       .to.emit(contractJurorManager, "AddressesUpdated")
       .withArgs(dummyAddress);
+  });
+
+  it("Should fail to assign dispute to a juror when juror hasn't kyced", async function () {
+    const {
+      backend,
+      contentCreator,
+      contentBuyer,
+      validatorCandidate,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember1,
+      jurorMember2,
+      jurorMember3,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+      contractJurorManager,
+    } = await deploy();
+    /// Set KYC
+    await contractRoleManager.setKYC(jurorMember1.address, false);
+
+    /// @dev Dispute settings
+    const caseScope = 1;
+    const caseQuestion = "Should we remove this content?";
+    const caseTokenRelated = true;
+    const caseTokenId = 0;
+
+    /// @dev Create content
+    await createContent(
+      contentCreator,
+      contractValidationManager,
+      contractRoleManager,
+      contractUDAOContent,
+      backend,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5
+    );
+    /// @dev Create dispute
+    await contractJurorManager
+      .connect(backend)
+      .createDispute(caseScope, caseQuestion, caseTokenRelated, caseTokenId);
+    /// @dev Assign dispute to juror
+    const disputeId = 1;
+    await expect(
+      contractJurorManager.connect(jurorMember1).assignDispute(disputeId)
+    ).to.revertedWith("You are not KYCed");
+  });
+
+  it("Should fail to assign dispute to a juror when juror already banned", async function () {
+    const {
+      backend,
+      contentCreator,
+      contentBuyer,
+      validatorCandidate,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember1,
+      jurorMember2,
+      jurorMember3,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+      contractJurorManager,
+    } = await deploy();
+    /// Set KYC
+    await contractRoleManager.setKYC(jurorMember1.address, true);
+
+    /// Ban the juror
+    await contractRoleManager.setBan(jurorMember1.address, true);
+
+    /// @dev Dispute settings
+    const caseScope = 1;
+    const caseQuestion = "Should we remove this content?";
+    const caseTokenRelated = true;
+    const caseTokenId = 0;
+
+    /// @dev Create content
+    await createContent(
+      contentCreator,
+      contractValidationManager,
+      contractRoleManager,
+      contractUDAOContent,
+      backend,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5
+    );
+    /// @dev Create dispute
+    await contractJurorManager
+      .connect(backend)
+      .createDispute(caseScope, caseQuestion, caseTokenRelated, caseTokenId);
+    /// @dev Assign dispute to juror
+    const disputeId = 1;
+    await expect(
+      contractJurorManager.connect(jurorMember1).assignDispute(disputeId)
+    ).to.revertedWith("You were banned");
   });
 });
