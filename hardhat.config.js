@@ -35,10 +35,10 @@ module.exports = {
   docgen: { pages: "files" },
   networks: {
     hardhat: {
-      forking: {
-        url: POLYGON_RPC_PROVIDER,
-        blockNumber: 40691400,
-      },
+      //forking: {
+      //  url: POLYGON_RPC_PROVIDER,
+      //  blockNumber: 40691400,
+      //},
       live: false,
       chainId: 31337,
       allowUnlimitedContractSize: true,
