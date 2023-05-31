@@ -2186,4 +2186,183 @@ describe("Governance Contract", function () {
       .connect(foundation)
       .cancel(timelockId);
   });
+  it("Should allow change of quorum with a proposal", async function () {
+    const {
+      backend,
+      validatorCandidate,
+      validator,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+      contractJurorManager,
+    } = await deploy();
+    /// @dev Setup governance member
+    await setupGovernanceMember(
+      contractRoleManager,
+      contractUDAO,
+      contractUDAOStaker,
+      governanceCandidate
+    );
+    await setupGovernanceMember(
+      contractRoleManager,
+      contractUDAO,
+      contractUDAOStaker,
+      superValidator
+    );
+    await setupGovernanceMember(
+      contractRoleManager,
+      contractUDAO,
+      contractUDAOStaker,
+      superValidatorCandidate
+    );
+    await setupGovernanceMember(
+      contractRoleManager,
+      contractUDAO,
+      contractUDAOStaker,
+      validatorCandidate
+    );
+    await setupGovernanceMember(
+      contractRoleManager,
+      contractUDAO,
+      contractUDAOStaker,
+      validator
+    );
+    /// @dev Check account UDAO-vp balance and delegate to themselves
+    await checkAccountUDAOVpBalanceAndDelegate(
+      contractUDAOVp,
+      governanceCandidate
+    );
+    await checkAccountUDAOVpBalanceAndDelegate(contractUDAOVp, superValidator);
+    await checkAccountUDAOVpBalanceAndDelegate(contractUDAOVp, validator);
+    await checkAccountUDAOVpBalanceAndDelegate(
+      contractUDAOVp,
+      validatorCandidate
+    );
+    /// @dev Proposal settings
+    const contractAddress = contractUDAOGovernor.address;
+    const contractData = await ethers.getContractAt(
+      "UDAOGovernor",
+      contractAddress
+    );
+    /// @dev Get the old quorum
+    const oldQuorum = await contractUDAOGovernor["quorumNumerator()"]();
+    /// @dev 50 means 50% quorum
+    const _newQuorum = ethers.utils.defaultAbiCoder.encode(["uint256"], [50]);
+    const transferCalldata = contractData.interface.encodeFunctionData(
+      "updateQuorumNumerator",
+      [_newQuorum]
+    );
+    /// @dev Propose a new proposal
+    const proposeTx = await contractUDAOGovernor
+      .connect(governanceCandidate)
+      .propose(
+        [contractAddress],
+        [0],
+        [transferCalldata],
+        "Proposal #1: Set quorum to 25%"
+      );
+      /// @dev Wait for the transaction to be mined
+    const tx = await proposeTx.wait();
+    const proposalId = tx.events.find((e) => e.event == "ProposalCreated").args
+      .proposalId;
+
+    /// @dev Get to start of the voting period
+    const numBlocksToMine = Math.ceil((7 * 24 * 60 * 60) / 2);
+    await hre.network.provider.send("hardhat_mine", [
+      `0x${numBlocksToMine.toString(16)}`,
+      "0x2",
+    ]);
+
+    /// @dev Vote on the proposal
+    await contractUDAOGovernor.connect(superValidator).castVote(proposalId, 1);
+    await contractUDAOGovernor
+      .connect(superValidatorCandidate)
+      .castVote(proposalId, 1);
+    await contractUDAOGovernor.connect(validator).castVote(proposalId, 1);
+    await contractUDAOGovernor
+      .connect(validatorCandidate)
+      .castVote(proposalId, 1);
+
+    /// @dev Check if the vote was casted
+    const proposalState = await contractUDAOGovernor.state(proposalId);
+    await expect(proposalState).to.equal(1);
+
+    /// @dev Skip to the end of the voting period
+    const numBlocksToMineToEnd = Math.ceil((7 * 24 * 60 * 60) / 2);
+    await hre.network.provider.send("hardhat_mine", [
+      `0x${numBlocksToMineToEnd.toString(16)}`,
+      "0x2",
+    ]);
+    /// @dev Check if the proposal was successful
+    const proposalStateAtStart = await contractUDAOGovernor.state(proposalId);
+    await expect(proposalStateAtStart).to.equal(4);
+    /// @dev Queue the proposal and Check the ProposalQueued event
+
+    const queueTx = await contractUDAOGovernor
+      .connect(governanceCandidate)
+      .queue(
+        [contractAddress],
+        [0],
+        [transferCalldata],
+        ethers.utils.id("Proposal #1: Set quorum to 25%")
+      );
+    const queueTxReceipt = await queueTx.wait();
+    const queueTxEvent = queueTxReceipt.events.find(
+      (e) => e.event == "ProposalQueued"
+    );
+
+    await expect(queueTxEvent.args.proposalId).to.equal(proposalId);
+    /// @dev Check if the proposal was queued
+    const proposalStateAfterQueue = await contractUDAOGovernor.state(
+      proposalId
+    );
+    await expect(proposalStateAfterQueue).to.equal(5);
+    /// @dev Execute the proposal
+    const executeTx = await contractUDAOGovernor
+      .connect(governanceCandidate)
+      .execute(
+        [contractAddress],
+        [0],
+        [transferCalldata],
+        ethers.utils.id("Proposal #1: Set quorum to 25%")
+      );
+    const executeTxReceipt = await executeTx.wait();
+    const executeTxEvent = executeTxReceipt.events.find(
+      (e) => e.event == "ProposalExecuted"
+    );
+ 
+    await expect(executeTxEvent.args.proposalId).to.equal(proposalId);
+    /// @dev Check if the proposal was executed
+    const proposalStateAfterExecute = await contractUDAOGovernor.state(
+      proposalId
+    );
+    await expect(proposalStateAfterExecute).to.equal(7);
+    /// @dev Check if the quorum was changed
+    const executeTxEvent2 = executeTxReceipt.events.find(
+      (e) => e.event == "QuorumNumeratorUpdated"
+    );
+    const oldQuorumNumerator = executeTxEvent2.args.oldQuorumNumerator;
+    const newQuorumNumerator = executeTxEvent2.args.newQuorumNumerator;
+
+    // Expect oldQuorumNumerator to equal to oldQuorum
+    await expect(oldQuorumNumerator).to.equal(oldQuorum);
+    // Expect newQuorumNumerator to equal to _newQuorum
+    await expect(newQuorumNumerator).to.equal(_newQuorum);
+
+      
+  });
 });
