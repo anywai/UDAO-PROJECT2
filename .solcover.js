@@ -14,4 +14,5 @@ module.exports = {
     "uniswap-0.8/v3-periphery/contracts/libraries/OracleLibrary.sol",
   ],
   compileCommand: "npx hardhat compile",
+  mocha: {parallel: true},
 };
