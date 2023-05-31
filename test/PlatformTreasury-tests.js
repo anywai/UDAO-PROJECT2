@@ -536,23 +536,7 @@ async function deploy(isDexRequired = false) {
     JUROR_CONTRACT,
     contractJurorManager.address
   );
-  // approve udao tokens to timelock controller
-  // Create signer for contractPlatformTreasury
-  await helpers.setBalance(
-    contractPlatformTreasury.address,
-    hre.ethers.utils.parseEther("1")
-  );
-  const signerPlatformTreasury = await ethers.getImpersonatedSigner(
-    contractPlatformTreasury.address
-  );
-  await contractUDAO
-    .connect(signerPlatformTreasury)
-    .approve(
-      contractUDAOTimelockController.address,
-      ethers.utils.parseEther(
-        "999999999999999999999999999999999999999999999999999999999.0"
-      )
-    );
+  
   //await contractUDAO.connect(backend).setApprovalForTimeLockController(contractUDAOTimelockController.address);
   const FOUNDATION_ROLE = ethers.utils.keccak256(
     ethers.utils.toUtf8Bytes("FOUNDATION_ROLE")
