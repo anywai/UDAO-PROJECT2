@@ -137,10 +137,10 @@ contract PriceGetter is IPriceGetter, RoleController {
         uint256 val,
         bytes32 fiat
     ) public view returns (uint128) {
-        uint256 msgValueInUSD = (
-            ((val * (uint256)(getLatestPrice(fiat))) / (10 ** 18))
+        uint256 msgValueInMATIC = (
+            (((val * 1e8 * 1e18) / (uint256)(getLatestPrice(fiat))))
         );
-        return (uint128)(msgValueInUSD);
+        return (uint128)(msgValueInMATIC);
     }
 
     /// @notice Returns current price of 1 Matic in fiat from chainlink
@@ -158,7 +158,7 @@ contract PriceGetter is IPriceGetter, RoleController {
             ,
 
         ) = priceFeed.latestRoundData();
-
+        
         if (fiat != keccak256(abi.encodePacked("usd"))) {
             priceFeed = fiatToPriceFeed[fiat];
 
