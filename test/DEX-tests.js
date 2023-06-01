@@ -515,7 +515,7 @@ describe("Uniswap DEX Tests", function () {
     await expect(
       contractUDAOContent.connect(contentCreator).redeem(
         //[ethers.utils.parseEther("1")],
-        [10000],
+        [10],
         "usd",
         "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
         contentCreator.address,
@@ -559,10 +559,7 @@ describe("Uniswap DEX Tests", function () {
       contentBuyer.address
     );
     //New Balance of contentBuyer
-    //console.log(
-    //  "New Balance of contentBuyer is %lf",
-    //  contentBuyerNewBalance.toString()
-    //);
+    //console.log("New Balance of contentBuyer is: ", contentBuyerNewBalance.toString());
     /// Content buyer needs to give approval to the platformtreasury
     await contractUDAO
       .connect(contentBuyer)
@@ -577,7 +574,7 @@ describe("Uniswap DEX Tests", function () {
         .buyContent(0, true, [1], validator1.address)
     )
       .to.emit(contractPlatformTreasury, "ContentBought")
-      .withArgs(0, [1], 0, contentBuyer.address); // Content bought event
+      .withArgs(0, [1], "886525018013279181", contentBuyer.address); // Content bought event
 
     const result = await contractPlatformTreasury
       .connect(contentBuyer)
@@ -587,10 +584,10 @@ describe("Uniswap DEX Tests", function () {
       contentBuyer.address
     );
     //After Sale Balance of contentBuyer
-    //console.log(
-    //  "After Sale Balance of contentBuyer is %lf",
-    //  contentBuyerAfterSaleBalance.toString()
-    //);
+    //console.log("After Sale Balance of contentBuyer is: ", contentBuyerAfterSaleBalance.toString());
+
+    const spentUser = contentBuyerNewBalance.sub(contentBuyerAfterSaleBalance);
+    //console.log("User how much spent: " + spentUser.toString());
 
     const numArray = result.map((x) => x.map((y) => y.toNumber()));
     expect(numArray).to.eql([[0, 0]]);
