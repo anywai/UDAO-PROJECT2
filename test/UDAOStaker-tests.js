@@ -2249,6 +2249,7 @@ describe("UDAOStaker Contract", function () {
         ethers.utils.parseEther((5 * 500).toString())
       );
   });
+
   it("Should fail to register job listing if sender is not kyced", async function () {
     const {
       backend,
@@ -2301,7 +2302,7 @@ describe("UDAOStaker Contract", function () {
     )
       .to.emit(contractUDAOStaker, "RoleApproved") // transfer from null address to minter
       .withArgs(2, corporation.address);
-    
+
     await contractRoleManager.setKYC(corporation.address, false);
     await expect(
       contractUDAOStaker.connect(corporation).registerJobListing(5)
@@ -2359,7 +2360,7 @@ describe("UDAOStaker Contract", function () {
     )
       .to.emit(contractUDAOStaker, "RoleApproved") // transfer from null address to minter
       .withArgs(2, corporation.address);
-    
+
     await contractRoleManager.setBan(corporation.address, true);
     await expect(
       contractUDAOStaker.connect(corporation).registerJobListing(5)
@@ -2393,7 +2394,11 @@ describe("UDAOStaker Contract", function () {
     const CORPORATE_ROLE = ethers.utils.keccak256(
       ethers.utils.toUtf8Bytes("CORPORATE_ROLE")
     );
-    await expect(contractUDAOStaker.connect(jurorMember).registerJobListing(5)).to.revertedWith(`'AccessControl: account ${jurorMember.address.toLowerCase()} is missing role ${CORPORATE_ROLE}'`);
+    await expect(
+      contractUDAOStaker.connect(jurorMember).registerJobListing(5)
+    ).to.revertedWith(
+      `'AccessControl: account ${jurorMember.address.toLowerCase()} is missing role ${CORPORATE_ROLE}'`
+    );
   });
 
   it("Should fail to register job listing if zero amount is sent", async function () {
@@ -2448,7 +2453,9 @@ describe("UDAOStaker Contract", function () {
     )
       .to.emit(contractUDAOStaker, "RoleApproved") // transfer from null address to minter
       .withArgs(2, corporation.address);
-    await expect(contractUDAOStaker.connect(corporation).registerJobListing(0)).to.revertedWith("Zero job listing count is not allowed");
+    await expect(
+      contractUDAOStaker.connect(corporation).registerJobListing(0)
+    ).to.revertedWith("Zero job listing count is not allowed");
   });
 
   it("Should unregister job listing (single)", async function () {
@@ -2543,7 +2550,11 @@ describe("UDAOStaker Contract", function () {
     const CORPORATE_ROLE = ethers.utils.keccak256(
       ethers.utils.toUtf8Bytes("CORPORATE_ROLE")
     );
-    await expect(contractUDAOStaker.connect(jurorMember).unregisterJobListing([0])).to.revertedWith(`'AccessControl: account ${jurorMember.address.toLowerCase()} is missing role ${CORPORATE_ROLE}'`);
+    await expect(
+      contractUDAOStaker.connect(jurorMember).unregisterJobListing([0])
+    ).to.revertedWith(
+      `'AccessControl: account ${jurorMember.address.toLowerCase()} is missing role ${CORPORATE_ROLE}'`
+    );
   });
   it("Should fail to unregister job listing if there is nothing to unstake", async function () {
     const {
@@ -2681,5 +2692,671 @@ describe("UDAOStaker Contract", function () {
         [0, 1, 2, 3, 4],
         ethers.utils.parseEther("2500")
       );
+  });
+
+  it("Should fail to apply for validator when the user hasn't kyced", async function () {
+    const {
+      backend,
+      validatorCandidate,
+      validator,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+    } = await deploy();
+
+    await contractRoleManager.setKYC(validatorCandidate.address, true);
+
+    await contractUDAO.transfer(
+      validatorCandidate.address,
+      ethers.utils.parseEther("10000.0")
+    );
+
+    await contractUDAO
+      .connect(validatorCandidate)
+      .approve(
+        contractUDAOStaker.address,
+        ethers.utils.parseEther("999999999999.0")
+      );
+
+    await expect(
+      contractUDAOStaker
+        .connect(validatorCandidate)
+        .stakeForGovernance(ethers.utils.parseEther("10"), 30)
+    )
+      .to.emit(contractUDAOStaker, "GovernanceStake") // transfer from null address to minter
+      .withArgs(
+        validatorCandidate.address,
+        ethers.utils.parseEther("10"),
+        ethers.utils.parseEther("300")
+      );
+
+    await contractRoleManager.setKYC(validatorCandidate.address, false);
+
+    await expect(
+      contractUDAOStaker.connect(validatorCandidate).applyForValidator()
+    ).to.revertedWith("You are not KYCed");
+  });
+
+  it("Should fail to apply for validator if the user banned", async function () {
+    const {
+      backend,
+      validatorCandidate,
+      validator,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+    } = await deploy();
+
+    await contractRoleManager.setKYC(validatorCandidate.address, true);
+
+    await contractUDAO.transfer(
+      validatorCandidate.address,
+      ethers.utils.parseEther("10000.0")
+    );
+
+    await contractUDAO
+      .connect(validatorCandidate)
+      .approve(
+        contractUDAOStaker.address,
+        ethers.utils.parseEther("999999999999.0")
+      );
+
+    await expect(
+      contractUDAOStaker
+        .connect(validatorCandidate)
+        .stakeForGovernance(ethers.utils.parseEther("10"), 30)
+    )
+      .to.emit(contractUDAOStaker, "GovernanceStake") // transfer from null address to minter
+      .withArgs(
+        validatorCandidate.address,
+        ethers.utils.parseEther("10"),
+        ethers.utils.parseEther("300")
+      );
+
+    await contractRoleManager.setBan(validatorCandidate.address, true);
+
+    await expect(
+      contractUDAOStaker.connect(validatorCandidate).applyForValidator()
+    ).to.revertedWith("You were banned");
+  });
+
+  it("Should fail to apply as Super Validator when user hasn't kyced", async function () {
+    const {
+      backend,
+      validatorCandidate,
+      validator,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+    } = await deploy();
+
+    await contractRoleManager.setKYC(validatorCandidate.address, true);
+
+    await contractUDAO.transfer(
+      validatorCandidate.address,
+      ethers.utils.parseEther("10000.0")
+    );
+
+    await contractUDAO
+      .connect(validatorCandidate)
+      .approve(
+        contractUDAOStaker.address,
+        ethers.utils.parseEther("999999999999.0")
+      );
+
+    // Staking
+    await expect(
+      contractUDAOStaker
+        .connect(validatorCandidate)
+        .stakeForGovernance(ethers.utils.parseEther("10"), 30)
+    )
+      .to.emit(contractUDAOStaker, "GovernanceStake") // transfer from null address to minter
+      .withArgs(
+        validatorCandidate.address,
+        ethers.utils.parseEther("10"),
+        ethers.utils.parseEther("300")
+      );
+
+    await expect(
+      contractUDAOStaker.connect(validatorCandidate).applyForValidator()
+    )
+      .to.emit(contractUDAOStaker, "RoleApplied") // transfer from null address to minter
+      .withArgs(0, validatorCandidate.address, ethers.utils.parseEther("150"));
+
+    const lazyRole = new LazyRole({
+      contract: contractUDAOStaker,
+      signer: backend,
+    });
+
+    const role_voucher = await lazyRole.createVoucher(
+      validatorCandidate.address,
+      Date.now() + 999999999,
+      0
+    );
+
+    await expect(
+      contractUDAOStaker.connect(validatorCandidate).getApproved(role_voucher)
+    )
+      .to.emit(contractUDAOStaker, "RoleApproved") // transfer from null address to minter
+      .withArgs(0, validatorCandidate.address);
+
+    await contractRoleManager.setKYC(validatorCandidate.address, false);
+
+    await expect(
+      contractUDAOStaker.connect(validatorCandidate).applyForSuperValidator()
+    ).to.revertedWith("You are not KYCed");
+  });
+
+  it("Should fail to apply as Super Validator when user banned", async function () {
+    const {
+      backend,
+      validatorCandidate,
+      validator,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+    } = await deploy();
+
+    await contractRoleManager.setKYC(validatorCandidate.address, true);
+
+    await contractUDAO.transfer(
+      validatorCandidate.address,
+      ethers.utils.parseEther("10000.0")
+    );
+
+    await contractUDAO
+      .connect(validatorCandidate)
+      .approve(
+        contractUDAOStaker.address,
+        ethers.utils.parseEther("999999999999.0")
+      );
+
+    // Staking
+    await expect(
+      contractUDAOStaker
+        .connect(validatorCandidate)
+        .stakeForGovernance(ethers.utils.parseEther("10"), 30)
+    )
+      .to.emit(contractUDAOStaker, "GovernanceStake") // transfer from null address to minter
+      .withArgs(
+        validatorCandidate.address,
+        ethers.utils.parseEther("10"),
+        ethers.utils.parseEther("300")
+      );
+
+    await expect(
+      contractUDAOStaker.connect(validatorCandidate).applyForValidator()
+    )
+      .to.emit(contractUDAOStaker, "RoleApplied") // transfer from null address to minter
+      .withArgs(0, validatorCandidate.address, ethers.utils.parseEther("150"));
+
+    const lazyRole = new LazyRole({
+      contract: contractUDAOStaker,
+      signer: backend,
+    });
+
+    const role_voucher = await lazyRole.createVoucher(
+      validatorCandidate.address,
+      Date.now() + 999999999,
+      0
+    );
+
+    await expect(
+      contractUDAOStaker.connect(validatorCandidate).getApproved(role_voucher)
+    )
+      .to.emit(contractUDAOStaker, "RoleApproved") // transfer from null address to minter
+      .withArgs(0, validatorCandidate.address);
+
+    await contractRoleManager.setBan(validatorCandidate.address, true);
+
+    await expect(
+      contractUDAOStaker.connect(validatorCandidate).applyForSuperValidator()
+    ).to.revertedWith("You were banned");
+  });
+
+  it("Should fail to apply for juror when juror hasn't kyced", async function () {
+    const {
+      backend,
+      validatorCandidate,
+      validator,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+    } = await deploy();
+
+    await contractRoleManager.setKYC(jurorCandidate.address, true);
+
+    await contractUDAO.transfer(
+      jurorCandidate.address,
+      ethers.utils.parseEther("10000.0")
+    );
+
+    await contractUDAO
+      .connect(jurorCandidate)
+      .approve(
+        contractUDAOStaker.address,
+        ethers.utils.parseEther("999999999999.0")
+      );
+
+    await expect(
+      contractUDAOStaker
+        .connect(jurorCandidate)
+        .stakeForGovernance(ethers.utils.parseEther("10"), 30)
+    )
+      .to.emit(contractUDAOStaker, "GovernanceStake") // transfer from null address to minter
+      .withArgs(
+        jurorCandidate.address,
+        ethers.utils.parseEther("10"),
+        ethers.utils.parseEther("300")
+      );
+
+    await contractRoleManager.setKYC(jurorCandidate.address, false);
+
+    await expect(
+      contractUDAOStaker.connect(jurorCandidate).applyForJuror()
+    ).to.revertedWith("You are not KYCed");
+  });
+
+  it("Should fail to apply for juror when juror banned", async function () {
+    const {
+      backend,
+      validatorCandidate,
+      validator,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+    } = await deploy();
+
+    await contractRoleManager.setKYC(jurorCandidate.address, true);
+
+    await contractUDAO.transfer(
+      jurorCandidate.address,
+      ethers.utils.parseEther("10000.0")
+    );
+
+    await contractUDAO
+      .connect(jurorCandidate)
+      .approve(
+        contractUDAOStaker.address,
+        ethers.utils.parseEther("999999999999.0")
+      );
+
+    await expect(
+      contractUDAOStaker
+        .connect(jurorCandidate)
+        .stakeForGovernance(ethers.utils.parseEther("10"), 30)
+    )
+      .to.emit(contractUDAOStaker, "GovernanceStake") // transfer from null address to minter
+      .withArgs(
+        jurorCandidate.address,
+        ethers.utils.parseEther("10"),
+        ethers.utils.parseEther("300")
+      );
+
+    await contractRoleManager.setBan(jurorCandidate.address, true);
+
+    await expect(
+      contractUDAOStaker.connect(jurorCandidate).applyForJuror()
+    ).to.revertedWith("You were banned");
+  });
+
+  it("Should fail to approve for validator when validator hasn't kyced", async function () {
+    const {
+      backend,
+      validatorCandidate,
+      validator,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+    } = await deploy();
+
+    await contractRoleManager.setKYC(validatorCandidate.address, true);
+
+    await contractUDAO.transfer(
+      validatorCandidate.address,
+      ethers.utils.parseEther("10000.0")
+    );
+
+    await contractUDAO
+      .connect(validatorCandidate)
+      .approve(
+        contractUDAOStaker.address,
+        ethers.utils.parseEther("999999999999.0")
+      );
+
+    // Staking
+    await expect(
+      contractUDAOStaker
+        .connect(validatorCandidate)
+        .stakeForGovernance(ethers.utils.parseEther("10"), 30)
+    )
+      .to.emit(contractUDAOStaker, "GovernanceStake") // transfer from null address to minter
+      .withArgs(
+        validatorCandidate.address,
+        ethers.utils.parseEther("10"),
+        ethers.utils.parseEther("300")
+      );
+
+    await expect(
+      contractUDAOStaker.connect(validatorCandidate).applyForValidator()
+    )
+      .to.emit(contractUDAOStaker, "RoleApplied") // transfer from null address to minter
+      .withArgs(0, validatorCandidate.address, ethers.utils.parseEther("150"));
+
+    const lazyRole = new LazyRole({
+      contract: contractUDAOStaker,
+      signer: backend,
+    });
+
+    const role_voucher = await lazyRole.createVoucher(
+      validatorCandidate.address,
+      Date.now() + 999999999,
+      0
+    );
+
+    await contractRoleManager.setKYC(validatorCandidate.address, false);
+
+    await expect(
+      contractUDAOStaker.connect(validatorCandidate).getApproved(role_voucher)
+    ).to.revertedWith("You are not KYCed");
+  });
+
+  it("Should fail to approve for validator when validator banned", async function () {
+    const {
+      backend,
+      validatorCandidate,
+      validator,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+    } = await deploy();
+
+    await contractRoleManager.setKYC(validatorCandidate.address, true);
+
+    await contractUDAO.transfer(
+      validatorCandidate.address,
+      ethers.utils.parseEther("10000.0")
+    );
+
+    await contractUDAO
+      .connect(validatorCandidate)
+      .approve(
+        contractUDAOStaker.address,
+        ethers.utils.parseEther("999999999999.0")
+      );
+
+    // Staking
+    await expect(
+      contractUDAOStaker
+        .connect(validatorCandidate)
+        .stakeForGovernance(ethers.utils.parseEther("10"), 30)
+    )
+      .to.emit(contractUDAOStaker, "GovernanceStake") // transfer from null address to minter
+      .withArgs(
+        validatorCandidate.address,
+        ethers.utils.parseEther("10"),
+        ethers.utils.parseEther("300")
+      );
+
+    await expect(
+      contractUDAOStaker.connect(validatorCandidate).applyForValidator()
+    )
+      .to.emit(contractUDAOStaker, "RoleApplied") // transfer from null address to minter
+      .withArgs(0, validatorCandidate.address, ethers.utils.parseEther("150"));
+
+    const lazyRole = new LazyRole({
+      contract: contractUDAOStaker,
+      signer: backend,
+    });
+
+    const role_voucher = await lazyRole.createVoucher(
+      validatorCandidate.address,
+      Date.now() + 999999999,
+      0
+    );
+
+    await contractRoleManager.setBan(validatorCandidate.address, true);
+
+    await expect(
+      contractUDAOStaker.connect(validatorCandidate).getApproved(role_voucher)
+    ).to.revertedWith("You were banned");
+  });
+
+  it("Should fail to register job listing when user hasn't kyced", async function () {
+    const {
+      backend,
+      validatorCandidate,
+      validator,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+      corporation,
+    } = await deploy();
+
+    await contractRoleManager.setKYC(corporation.address, true);
+
+    await contractUDAO.transfer(
+      corporation.address,
+      ethers.utils.parseEther("10000.0")
+    );
+
+    await contractUDAO
+      .connect(corporation)
+      .approve(
+        contractUDAOStaker.address,
+        ethers.utils.parseEther("999999999999.0")
+      );
+
+    const lazyRole = new LazyRole({
+      contract: contractUDAOStaker,
+      signer: backend,
+    });
+
+    const role_voucher = await lazyRole.createVoucher(
+      corporation.address,
+      Date.now() + 999999999,
+      2
+    );
+
+    await expect(
+      contractUDAOStaker.connect(corporation).getApproved(role_voucher)
+    )
+      .to.emit(contractUDAOStaker, "RoleApproved") // transfer from null address to minter
+      .withArgs(2, corporation.address);
+
+    await contractRoleManager.setKYC(corporation.address, false);
+
+    await expect(
+      contractUDAOStaker.connect(corporation).registerJobListing(5)
+    ).to.revertedWith("You are not KYCed");
+  });
+
+  it("Should fail to register job listing when user banned", async function () {
+    const {
+      backend,
+      validatorCandidate,
+      validator,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+      corporation,
+    } = await deploy();
+
+    await contractRoleManager.setKYC(corporation.address, true);
+
+    await contractUDAO.transfer(
+      corporation.address,
+      ethers.utils.parseEther("10000.0")
+    );
+
+    await contractUDAO
+      .connect(corporation)
+      .approve(
+        contractUDAOStaker.address,
+        ethers.utils.parseEther("999999999999.0")
+      );
+
+    const lazyRole = new LazyRole({
+      contract: contractUDAOStaker,
+      signer: backend,
+    });
+
+    const role_voucher = await lazyRole.createVoucher(
+      corporation.address,
+      Date.now() + 999999999,
+      2
+    );
+
+    await expect(
+      contractUDAOStaker.connect(corporation).getApproved(role_voucher)
+    )
+      .to.emit(contractUDAOStaker, "RoleApproved") // transfer from null address to minter
+      .withArgs(2, corporation.address);
+
+    await contractRoleManager.setBan(corporation.address, true);
+
+    await expect(
+      contractUDAOStaker.connect(corporation).registerJobListing(5)
+    ).to.revertedWith("You were banned");
   });
 });
