@@ -18,6 +18,7 @@ chai.use(require("chai-bn")(BN));
 
 // @dev Proposal states
 /*
+States starts from 0
  enum ProposalState {
         Pending,
         Active,
@@ -41,27 +42,27 @@ async function setupGovernanceMember(
   contractRoleManager,
   contractUDAO,
   contractUDAOStaker,
-  governanceCandidate
+  memberToSetup
 ) {
-  await contractRoleManager.setKYC(governanceCandidate.address, true);
+  await contractRoleManager.setKYC(memberToSetup.address, true);
   await contractUDAO.transfer(
-    governanceCandidate.address,
+    memberToSetup.address,
     ethers.utils.parseEther("100.0")
   );
   await contractUDAO
-    .connect(governanceCandidate)
+    .connect(memberToSetup)
     .approve(
       contractUDAOStaker.address,
       ethers.utils.parseEther("999999999999.0")
     );
   await expect(
     contractUDAOStaker
-      .connect(governanceCandidate)
+      .connect(memberToSetup)
       .stakeForGovernance(ethers.utils.parseEther("10"), 30)
   )
     .to.emit(contractUDAOStaker, "GovernanceStake") // transfer from null address to minter
     .withArgs(
-      governanceCandidate.address,
+      memberToSetup.address,
       ethers.utils.parseEther("10"),
       ethers.utils.parseEther("300")
     );
@@ -1885,6 +1886,9 @@ describe("Governance Contract", function () {
     const cancelTx = await contractUDAOTimelockController
       .connect(foundation)
       .cancel(timelockId);
+
+    const cancelState = await contractUDAOGovernor.state(proposalId);
+    await expect(cancelState).to.equal(2);
   });
   it("Should allow change of quorum with a proposal", async function () {
     const {
@@ -2062,7 +2066,420 @@ describe("Governance Contract", function () {
     await expect(oldQuorumNumerator).to.equal(oldQuorum);
     // Expect newQuorumNumerator to equal to _newQuorum
     await expect(newQuorumNumerator).to.equal(_newQuorum);
+  });
 
-      
+  it("Should fail to execute if quorum is not met", async function () {
+    const {
+      backend,
+      validatorCandidate,
+      validator,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+      contractJurorManager,
+    } = await deploy();
+    /// @dev Current quorum is 4%. Increase this in order to easy testing
+    /// @dev Setup governance member
+    await setupGovernanceMember(
+      contractRoleManager,
+      contractUDAO,
+      contractUDAOStaker,
+      governanceCandidate
+    );
+    await setupGovernanceMember(
+      contractRoleManager,
+      contractUDAO,
+      contractUDAOStaker,
+      superValidator
+    );
+    await setupGovernanceMember(
+      contractRoleManager,
+      contractUDAO,
+      contractUDAOStaker,
+      superValidatorCandidate
+    );
+    await setupGovernanceMember(
+      contractRoleManager,
+      contractUDAO,
+      contractUDAOStaker,
+      validatorCandidate
+    );
+    await setupGovernanceMember(
+      contractRoleManager,
+      contractUDAO,
+      contractUDAOStaker,
+      validator
+    );
+    /// @dev Check account UDAO-vp balance and delegate to themselves
+    await checkAccountUDAOVpBalanceAndDelegate(
+      contractUDAOVp,
+      governanceCandidate
+    );
+    await checkAccountUDAOVpBalanceAndDelegate(contractUDAOVp, superValidator);
+    await checkAccountUDAOVpBalanceAndDelegate(contractUDAOVp, validator);
+    await checkAccountUDAOVpBalanceAndDelegate(
+      contractUDAOVp,
+      validatorCandidate
+    );
+    /// @dev Proposal settings
+    const contractAddress = contractUDAOGovernor.address;
+    const contractData = await ethers.getContractAt(
+      "UDAOGovernor",
+      contractAddress
+    );
+    /// @dev Get the old quorum
+    const oldQuorum = await contractUDAOGovernor["quorumNumerator()"]();
+    /// @dev 75 means 75% quorum
+    const _newQuorum = ethers.utils.defaultAbiCoder.encode(["uint256"], [75]);
+    const transferCalldata = contractData.interface.encodeFunctionData(
+      "updateQuorumNumerator",
+      [_newQuorum]
+    );
+    /// @dev Propose a new proposal
+    const proposeTx = await contractUDAOGovernor
+      .connect(governanceCandidate)
+      .propose(
+        [contractAddress],
+        [0],
+        [transferCalldata],
+        "Proposal #1: Set quorum to 75%"
+      );
+      /// @dev Wait for the transaction to be mined
+    const tx = await proposeTx.wait();
+    const proposalId = tx.events.find((e) => e.event == "ProposalCreated").args
+      .proposalId;
+
+    /// @dev Get to start of the voting period
+    const numBlocksToMine = Math.ceil((7 * 24 * 60 * 60) / 2);
+    await hre.network.provider.send("hardhat_mine", [
+      `0x${numBlocksToMine.toString(16)}`,
+      "0x2",
+    ]);
+
+    /// @dev Vote on the proposal
+    await contractUDAOGovernor.connect(superValidator).castVote(proposalId, 1);
+    await contractUDAOGovernor
+      .connect(superValidatorCandidate)
+      .castVote(proposalId, 1);
+    await contractUDAOGovernor.connect(validator).castVote(proposalId, 1);
+    await contractUDAOGovernor
+      .connect(validatorCandidate)
+      .castVote(proposalId, 1);
+
+    /// @dev Check if the vote was casted
+    const proposalState = await contractUDAOGovernor.state(proposalId);
+    await expect(proposalState).to.equal(1);
+
+    /// @dev Skip to the end of the voting period
+    const numBlocksToMineToEnd = Math.ceil((7 * 24 * 60 * 60) / 2);
+    await hre.network.provider.send("hardhat_mine", [
+      `0x${numBlocksToMineToEnd.toString(16)}`,
+      "0x2",
+    ]);
+    /// @dev Check if the proposal was successful
+    const proposalStateAtStart = await contractUDAOGovernor.state(proposalId);
+    await expect(proposalStateAtStart).to.equal(4);
+    /// @dev Queue the proposal and Check the ProposalQueued event
+    await contractUDAOGovernor
+      .connect(governanceCandidate)
+      .queue(
+        [contractAddress],
+        [0],
+        [transferCalldata],
+        ethers.utils.id("Proposal #1: Set quorum to 75%")
+      );
+
+    /// @dev Check if the proposal was queued
+    const proposalStateAfterQueue = await contractUDAOGovernor.state(
+      proposalId
+    );
+    await expect(proposalStateAfterQueue).to.equal(5);
+    /// @dev Execute the proposal
+    await contractUDAOGovernor
+      .connect(governanceCandidate)
+      .execute(
+        [contractAddress],
+        [0],
+        [transferCalldata],
+        ethers.utils.id("Proposal #1: Set quorum to 75%")
+      );
+
+    /// @dev Check if the proposal was executed
+    const proposalStateAfterExecute = await contractUDAOGovernor.state(
+      proposalId
+    );
+    await expect(proposalStateAfterExecute).to.equal(7);
+
+    /// @dev Create new proposal, vote and expect it to fail
+    const _newQuorum2 = ethers.utils.defaultAbiCoder.encode(["uint256"], [25]);
+    const transferCalldata2 = contractData.interface.encodeFunctionData(
+      "updateQuorumNumerator",
+      [_newQuorum2]
+    );
+
+    const proposeTx2 = await contractUDAOGovernor
+      .connect(governanceCandidate)
+      .propose(
+        [contractAddress],
+        [0],
+        [transferCalldata2],
+        "Proposal #2: Set quorum to 25%"
+      );
+    /// @dev Wait for the transaction to be mined
+    const tx2 = await proposeTx2.wait();
+    const proposalId2 = tx2.events.find((e) => e.event == "ProposalCreated")
+      .args.proposalId;
+
+    /// @dev Get to start of the voting period
+    const numBlocksToMine2 = Math.ceil((7 * 24 * 60 * 60) / 2);
+    await hre.network.provider.send("hardhat_mine", [
+      `0x${numBlocksToMine2.toString(16)}`,
+      "0x2",
+    ]);
+
+    /// @dev Vote on the proposal, note that only 2 people voted, below 75% quorum
+    await contractUDAOGovernor.connect(superValidator).castVote(proposalId2, 1);
+    await contractUDAOGovernor
+      .connect(superValidatorCandidate)
+      .castVote(proposalId2, 1);
+    /// @dev Check if the vote was casted
+    const proposalState2 = await contractUDAOGovernor.state(proposalId2);
+    await expect(proposalState2).to.equal(1);
+
+    /// @dev Skip to the end of the voting period
+    const numBlocksToMineToEnd2 = Math.ceil((7 * 24 * 60 * 60) / 2);
+    await hre.network.provider.send("hardhat_mine", [
+      `0x${numBlocksToMineToEnd2.toString(16)}`,
+      "0x2",
+    ]);
+    /// @dev Check if the proposal was Defeated
+    const proposalStateAtStart2 = await contractUDAOGovernor.state(proposalId2);
+    await expect(proposalStateAtStart2).to.equal(3);
+
+  });
+  it("Should successfully to execute if quorum is met", async function () {
+    const {
+      backend,
+      validatorCandidate,
+      validator,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+      contractJurorManager,
+    } = await deploy();
+    /// @dev Current quorum is 4%. Increase this in order to easy testing
+    /// @dev Setup governance member
+    await setupGovernanceMember(
+      contractRoleManager,
+      contractUDAO,
+      contractUDAOStaker,
+      governanceCandidate
+    );
+    await setupGovernanceMember(
+      contractRoleManager,
+      contractUDAO,
+      contractUDAOStaker,
+      superValidator
+    );
+    await setupGovernanceMember(
+      contractRoleManager,
+      contractUDAO,
+      contractUDAOStaker,
+      superValidatorCandidate
+    );
+    await setupGovernanceMember(
+      contractRoleManager,
+      contractUDAO,
+      contractUDAOStaker,
+      validatorCandidate
+    );
+    await setupGovernanceMember(
+      contractRoleManager,
+      contractUDAO,
+      contractUDAOStaker,
+      validator
+    );
+    /// @dev Check account UDAO-vp balance and delegate to themselves
+    await checkAccountUDAOVpBalanceAndDelegate(
+      contractUDAOVp,
+      governanceCandidate
+    );
+    await checkAccountUDAOVpBalanceAndDelegate(contractUDAOVp, superValidatorCandidate);
+    await checkAccountUDAOVpBalanceAndDelegate(contractUDAOVp, superValidator);
+    await checkAccountUDAOVpBalanceAndDelegate(contractUDAOVp, validator);
+    await checkAccountUDAOVpBalanceAndDelegate(
+      contractUDAOVp,
+      validatorCandidate
+    );
+    /// @dev Proposal settings
+    const contractAddress = contractUDAOGovernor.address;
+    const contractData = await ethers.getContractAt(
+      "UDAOGovernor",
+      contractAddress
+    );
+    /// @dev Get the old quorum
+    const oldQuorum = await contractUDAOGovernor["quorumNumerator()"]();
+    /// @dev 75 means 75% quorum
+    const _newQuorum = ethers.utils.defaultAbiCoder.encode(["uint256"], [75]);
+    const transferCalldata = contractData.interface.encodeFunctionData(
+      "updateQuorumNumerator",
+      [_newQuorum]
+    );
+    /// @dev Propose a new proposal
+    const proposeTx = await contractUDAOGovernor
+      .connect(governanceCandidate)
+      .propose(
+        [contractAddress],
+        [0],
+        [transferCalldata],
+        "Proposal #1: Set quorum to 75%"
+      );
+      /// @dev Wait for the transaction to be mined
+    const tx = await proposeTx.wait();
+    const proposalId = tx.events.find((e) => e.event == "ProposalCreated").args
+      .proposalId;
+
+    /// @dev Get to start of the voting period
+    const numBlocksToMine = Math.ceil((7 * 24 * 60 * 60) / 2);
+    await hre.network.provider.send("hardhat_mine", [
+      `0x${numBlocksToMine.toString(16)}`,
+      "0x2",
+    ]);
+
+    /// @dev Vote on the proposal
+    await contractUDAOGovernor.connect(superValidator).castVote(proposalId, 1);
+    await contractUDAOGovernor
+      .connect(superValidatorCandidate)
+      .castVote(proposalId, 1);
+    await contractUDAOGovernor.connect(validator).castVote(proposalId, 1);
+    await contractUDAOGovernor
+      .connect(validatorCandidate)
+      .castVote(proposalId, 1);
+
+    /// @dev Check if the vote was casted
+    const proposalState = await contractUDAOGovernor.state(proposalId);
+    await expect(proposalState).to.equal(1);
+
+    /// @dev Skip to the end of the voting period
+    const numBlocksToMineToEnd = Math.ceil((7 * 24 * 60 * 60) / 2);
+    await hre.network.provider.send("hardhat_mine", [
+      `0x${numBlocksToMineToEnd.toString(16)}`,
+      "0x2",
+    ]);
+    /// @dev Check if the proposal was successful
+    const proposalStateAtStart = await contractUDAOGovernor.state(proposalId);
+    await expect(proposalStateAtStart).to.equal(4);
+    /// @dev Queue the proposal and Check the ProposalQueued event
+    await contractUDAOGovernor
+      .connect(governanceCandidate)
+      .queue(
+        [contractAddress],
+        [0],
+        [transferCalldata],
+        ethers.utils.id("Proposal #1: Set quorum to 75%")
+      );
+
+    /// @dev Check if the proposal was queued
+    const proposalStateAfterQueue = await contractUDAOGovernor.state(
+      proposalId
+    );
+    await expect(proposalStateAfterQueue).to.equal(5);
+    /// @dev Execute the proposal
+    await contractUDAOGovernor
+      .connect(governanceCandidate)
+      .execute(
+        [contractAddress],
+        [0],
+        [transferCalldata],
+        ethers.utils.id("Proposal #1: Set quorum to 75%")
+      );
+
+    /// @dev Check if the proposal was executed
+    const proposalStateAfterExecute = await contractUDAOGovernor.state(
+      proposalId
+    );
+    await expect(proposalStateAfterExecute).to.equal(7);
+    await hre.network.provider.send("hardhat_mine");
+    /// @dev Create new proposal, vote and expect it to fail
+    const _newQuorum2 = ethers.utils.defaultAbiCoder.encode(["uint256"], [25]);
+    const transferCalldata2 = contractData.interface.encodeFunctionData(
+      "updateQuorumNumerator",
+      [_newQuorum2]
+    );
+
+    const proposeTx2 = await contractUDAOGovernor
+      .connect(governanceCandidate)
+      .propose(
+        [contractAddress],
+        [0],
+        [transferCalldata2],
+        "Proposal #2: Set quorum to 25%"
+      );
+    /// @dev Wait for the transaction to be mined
+    const tx2 = await proposeTx2.wait();
+    await hre.network.provider.send("hardhat_mine");
+    const proposalId2 = tx2.events.find((e) => e.event == "ProposalCreated")
+      .args.proposalId;
+
+    /// @dev Get to start of the voting period
+    const numBlocksToMine2 = Math.ceil((7 * 24 * 60 * 60) / 2);
+    await hre.network.provider.send("hardhat_mine", [
+      `0x${numBlocksToMine2.toString(16)}`,
+      "0x2",
+    ]);
+
+    /// @dev Vote on the proposal, note that everyone has voted, above 75% quorum
+    await contractUDAOGovernor.connect(governanceCandidate).castVote(proposalId2, 1);
+    await contractUDAOGovernor.connect(superValidator).castVote(proposalId2, 1);
+    await contractUDAOGovernor
+      .connect(superValidatorCandidate)
+      .castVote(proposalId2, 1);
+    await contractUDAOGovernor.connect(validator).castVote(proposalId2, 1);
+    await contractUDAOGovernor
+      .connect(validatorCandidate)
+      .castVote(proposalId2, 1);
+    /// @dev Check if the vote was casted
+    const proposalState2 = await contractUDAOGovernor.state(proposalId2);
+    await expect(proposalState2).to.equal(1);
+
+    /// @dev Skip to the end of the voting period
+    const numBlocksToMineToEnd2 = Math.ceil((8 * 24 * 60 * 60) / 2);
+    await hre.network.provider.send("hardhat_mine", [
+      `0x${numBlocksToMineToEnd2.toString(16)}`,
+      "0x2",
+    ]);
+    
+    /// @dev Check if the proposal was Succeeded
+    const proposalStateAtStart2 = await contractUDAOGovernor.state(proposalId2);
+    await expect(proposalStateAtStart2).to.equal(4);
+
   });
 });
