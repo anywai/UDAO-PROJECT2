@@ -173,7 +173,7 @@ describe("Uniswap DEX Tests", function () {
       ethers.utils.parseEther("1.0"),
       ethers.utils.keccak256(ethers.utils.toUtf8Bytes("eur"))
     );
-    console.log("Out is ", out);
+    //console.log("Out is ", out);
   });
 
   it("Should buy the full content for someone else with USD", async function () {
@@ -255,11 +255,13 @@ describe("Uniswap DEX Tests", function () {
       contentBuyer.address,
       ethers.utils.parseEther("3.0")
     );
+
+    //New Balance of contentBuyer
     const contentBuyerNewBalance = await contractUDAO.balanceOf(
       contentBuyer.address
     );
-    //New Balance of contentBuyer
     //console.log("New Balance of contentBuyer is: ", contentBuyerNewBalance.toString());
+
     /// Content buyer needs to give approval to the platformtreasury
     await contractUDAO
       .connect(contentBuyer)
@@ -280,10 +282,10 @@ describe("Uniswap DEX Tests", function () {
       .connect(contentBuyer)
       .getOwnedContent(validator1.address);
 
+    //After Sale Balance of contentBuyer
     const contentBuyerAfterSaleBalance = await contractUDAO.balanceOf(
       contentBuyer.address
     );
-    //After Sale Balance of contentBuyer
     //console.log("After Sale Balance of contentBuyer is: ", contentBuyerAfterSaleBalance.toString());
 
     const spentUser = contentBuyerNewBalance.sub(contentBuyerAfterSaleBalance);
@@ -291,5 +293,135 @@ describe("Uniswap DEX Tests", function () {
 
     const numArray = result.map((x) => x.map((y) => y.toNumber()));
     expect(numArray).to.eql([[0, 0]]);
+
+    //Calculated coaching price in UDAO for given BlockNumber and 10USD
+    const calculatedCoachingPrice = 886525018013279181n;
+
+    await expect(spentUser).to.equal(calculatedCoachingPrice);
+  });
+
+  it("Should a user able to buy a coaching with USD", async function () {
+    const {
+      backend,
+      contentCreator,
+      contentBuyer,
+      validatorCandidate,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+    } = await deploy(true);
+    /// Set KYC
+    await contractRoleManager.setKYC(contentCreator.address, true);
+    await contractRoleManager.setKYC(contentBuyer.address, true);
+
+    await expect(
+      contractUDAOContent
+        .connect(contentCreator)
+        .redeem(
+          [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
+          "udao",
+          "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
+          contentCreator.address,
+          [10],
+          "usd",
+          true,
+          true
+        )
+    )
+      .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
+      .withArgs(
+        "0x0000000000000000000000000000000000000000",
+        contentCreator.address,
+        0
+      );
+
+    /// Start validation and finalize it
+    await runValidation(
+      contractValidationManager,
+      backend,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
+      contentCreator
+    );
+
+    /// Send UDAO to the buyer's wallet
+    await contractUDAO.transfer(
+      contentBuyer.address,
+      ethers.utils.parseEther("3.0")
+    );
+
+    //New Balance of contentBuyer
+    const contentBuyerNewBalance = await contractUDAO.balanceOf(
+      contentBuyer.address
+    );
+    //console.log("New Balance of contentBuyer is: ", contentBuyerNewBalance.toString());
+
+    /// Content buyer needs to give approval to the platformtreasury
+    await contractUDAO
+      .connect(contentBuyer)
+      .approve(
+        contractPlatformTreasury.address,
+        ethers.utils.parseEther("3.0")
+      );
+
+    // Buy coaching
+    const purchaseTx = await contractPlatformTreasury
+      .connect(contentBuyer)
+      .buyCoaching(0);
+    const queueTxReceipt = await purchaseTx.wait();
+    const queueTxEvent = queueTxReceipt.events.find(
+      (e) => e.event == "CoachingBought"
+    );
+
+    //// Buy coaching
+    //// await expect(
+    ////   contractPlatformTreasury.connect(contentBuyer).buyCoaching(0) //, true, [1], validator1.address)
+    //// )
+    ////   .to.emit(contractPlatformTreasury, "ContentBought")
+    ////   .withArgs(contentBuyer.address, 0, 1); // Content bought event
+
+    const coachingId = queueTxEvent.args[2];
+    // Get coaching struct
+    const coachingStruct = await contractPlatformTreasury.coachingStructs(
+      coachingId
+    );
+    // Check if returned learner address is the same as the buyer address
+    expect(coachingStruct.learner).to.equal(contentBuyer.address);
+
+    //After Sale Balance of contentBuyer
+    const contentBuyerAfterSaleBalance = await contractUDAO.balanceOf(
+      contentBuyer.address
+    );
+    //console.log("After Sale Balance of contentBuyer is: ", contentBuyerAfterSaleBalance.toString());
+
+    const spentUser = contentBuyerNewBalance.sub(contentBuyerAfterSaleBalance);
+    //console.log("User how much spent: " + spentUser.toString());
+
+    //Calculated coaching price in UDAO for given BlockNumber and 10USD
+    const calculatedCoachingPrice = 886525018013279181n;
+
+    await expect(spentUser).to.equal(calculatedCoachingPrice);
   });
 });
