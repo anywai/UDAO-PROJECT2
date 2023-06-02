@@ -294,10 +294,10 @@ describe("Uniswap DEX Tests", function () {
     const numArray = result.map((x) => x.map((y) => y.toNumber()));
     expect(numArray).to.eql([[0, 0]]);
 
-    //Calculated coaching price in UDAO for given BlockNumber and 10USD
-    const calculatedCoachingPrice = 886525018013279181n;
+    //Calculated content price in UDAO for given BlockNumber and 10USD
+    const calculatedContentPrice = 886525018013279181n;
 
-    await expect(spentUser).to.equal(calculatedCoachingPrice);
+    await expect(spentUser).to.equal(calculatedContentPrice);
   });
 
   it("Should a user able to buy a coaching with USD", async function () {
