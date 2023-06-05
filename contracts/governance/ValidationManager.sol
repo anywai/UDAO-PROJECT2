@@ -88,7 +88,7 @@ contract ValidationManager is RoleController {
     /// @param stakerAddress address of staking contract
     function setStaker(
         address stakerAddress
-    ) external onlyRole(FOUNDATION_ROLE) {
+    ) external onlyRole(BACKEND_ROLE) {
         staker = IStakingContract(stakerAddress);
     }
 
