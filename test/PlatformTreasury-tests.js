@@ -3501,4 +3501,449 @@ describe("Platform Treasury General", function () {
       expectedGovernanceTreasuryBalance
     );
   });
+
+  it("Should allow Banned-instructers to withdraw their rewards", async function () {
+    const {
+      backend,
+      contentCreator,
+      contentBuyer1,
+      contentBuyer2,
+      contentBuyer3,
+      validatorCandidate,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember1,
+      jurorMember2,
+      jurorMember3,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+      contractJurorManager,
+      contractContractManager,
+    } = await deploy(false, true);
+    // Create content
+    await createContent(
+      contractRoleManager,
+      contractUDAOContent,
+      contentCreator,
+      contractValidationManager,
+      backend,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
+      contentCreator
+    );
+    // Make a content purchase
+    await makeContentPurchase(
+      contractPlatformTreasury,
+      contentBuyer1,
+      contractRoleManager,
+      contractUDAO
+    );
+
+    // Get the instructer balance before withdrawal
+    const instructerBalanceBefore = await contractUDAO.balanceOf(
+      contentCreator.address
+    );
+    // Expect that the instructer balance is 0 before withdrawal
+    await expect(instructerBalanceBefore).to.equal(0);
+
+    // Ban the Instructor
+    await contractRoleManager.setBan(contentCreator.address, true);
+
+    // Instructer should call withdrawInstructor from platformtreasury contract
+    await contractPlatformTreasury.connect(contentCreator).withdrawInstructor();
+    // Get the instructer balance after withdrawal
+    const instructerBalanceAfter = await contractUDAO.balanceOf(
+      contentCreator.address
+    );
+    // Expect that the instructer balance is not 0 after withdrawal
+    await expect(instructerBalanceAfter).to.not.equal(0);
+
+    /// @dev Calculate how much the instructer should receive
+    const contentPrice = await contractUDAOContent.contentPrice(0, 0);
+    // Calculate the foundation cut
+    const currentFoundationCut =
+      await contractPlatformTreasury.contentFoundationCut();
+    const expectedFoundationBalanceBeforePercentage =
+      contentPrice.mul(currentFoundationCut);
+    const expectedFoundationBalance =
+      expectedFoundationBalanceBeforePercentage.div(100000);
+    // Calculate the governance cut
+    const currentGovernanceTreasuryCut =
+      await contractPlatformTreasury.contentGovernanceCut();
+    const expectedGovernanceTreasuryBalanceBeforePercentage = contentPrice.mul(
+      currentGovernanceTreasuryCut
+    );
+    const expectedGovernanceTreasuryBalance =
+      expectedGovernanceTreasuryBalanceBeforePercentage.div(100000);
+    // Calculate the validator cut
+    const validatorBalanceForRound =
+      await contractPlatformTreasury.validatorBalanceForRound();
+    // Calculate the juror cut
+    const jurorBalanceForRound =
+      await contractPlatformTreasury.jurorBalanceForRound();
+    // Expect instructerBalance to be equal to priceToPay minus the sum of all cuts
+    await expect(instructerBalanceAfter).to.equal(
+      contentPrice
+        .sub(expectedFoundationBalance)
+        .sub(expectedGovernanceTreasuryBalance)
+        .sub(validatorBalanceForRound)
+        .sub(jurorBalanceForRound)
+    );
+  });
+
+  it("Should allow Banned-instructers to withdraw their rewards after coaching is done", async function () {
+    const {
+      backend,
+      contentCreator,
+      contentBuyer1,
+      contentBuyer2,
+      contentBuyer3,
+      validatorCandidate,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember1,
+      jurorMember2,
+      jurorMember3,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+      contractJurorManager,
+      contractContractManager,
+    } = await deploy(false, true);
+
+    /// Create content
+    await createContent(
+      contractRoleManager,
+      contractUDAOContent,
+      contentCreator,
+      contractValidationManager,
+      backend,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
+      contentCreator
+    );
+    /// Make coaching purchase and finalize it
+    // Set KYC
+    await contractRoleManager.setKYC(contentBuyer1.address, true);
+    // Send some UDAO to contentBuyer1
+    await contractUDAO.transfer(
+      contentBuyer1.address,
+      ethers.utils.parseEther("100.0")
+    );
+    // Content buyer needs to give approval to the platformtreasury
+    await contractUDAO
+      .connect(contentBuyer1)
+      .approve(
+        contractPlatformTreasury.address,
+        ethers.utils.parseEther("999999999999.0")
+      );
+    // Buy coaching
+    const purchaseTx = await contractPlatformTreasury
+      .connect(contentBuyer1)
+      .buyCoaching(0);
+    const queueTxReceipt = await purchaseTx.wait();
+    const queueTxEvent = queueTxReceipt.events.find(
+      (e) => e.event == "CoachingBought"
+    );
+    const coachingId = queueTxEvent.args[2];
+    // Get coaching struct
+    const coachingStruct = await contractPlatformTreasury.coachingStructs(
+      coachingId
+    );
+    // Check if returned learner address is the same as the buyer address
+    expect(coachingStruct.learner).to.equal(contentBuyer1.address);
+
+    // Finalize the coaching
+    await contractPlatformTreasury
+      .connect(contentBuyer1)
+      .finalizeCoaching(coachingId);
+
+    /// @dev Withdraw instructer rewards and check
+    // Get the instructer balance before withdrawal
+    const instructerBalanceBefore = await contractUDAO.balanceOf(
+      contentCreator.address
+    );
+    // Expect that the instructer balance is 0 before withdrawal
+    await expect(instructerBalanceBefore).to.equal(0);
+
+    // Ban the Instructor
+    await contractRoleManager.setBan(contentCreator.address, true);
+
+    // Instructer should call withdrawInstructor from platformtreasury contract
+    await contractPlatformTreasury.connect(contentCreator).withdrawInstructor();
+    // Get the instructer balance after withdrawal
+    const instructerBalanceAfter = await contractUDAO.balanceOf(
+      contentCreator.address
+    );
+    // Get coachingPaymentAmount from coachingStructs
+    const coachingPaymentAmountTx =
+      await contractPlatformTreasury.coachingStructs(coachingId);
+    const coachingPaymentAmount =
+      coachingPaymentAmountTx["coachingPaymentAmount"];
+    // Expect that the instructer balance is equal to coachingPaymentAmount
+    await expect(instructerBalanceAfter).to.equal(coachingPaymentAmount);
+  });
+
+  it("Should allow Banned-instructers to withdraw their rewards after multiple coachings are done", async function () {
+    const {
+      backend,
+      contentCreator,
+      contentBuyer1,
+      contentBuyer2,
+      contentBuyer3,
+      validatorCandidate,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember1,
+      jurorMember2,
+      jurorMember3,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+      contractJurorManager,
+      contractContractManager,
+    } = await deploy(false, true);
+    /// Create content
+    await createContent(
+      contractRoleManager,
+      contractUDAOContent,
+      contentCreator,
+      contractValidationManager,
+      backend,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
+      contentCreator
+    );
+    /// Make multiple coaching purchases and finalize all
+    const coachingId1 = await makeCoachingPurchase(
+      contractRoleManager,
+      contractUDAO,
+      contractPlatformTreasury,
+      contentBuyer1
+    );
+    const coachingId2 = await makeCoachingPurchase(
+      contractRoleManager,
+      contractUDAO,
+      contractPlatformTreasury,
+      contentBuyer2
+    );
+    const coachingId3 = await makeCoachingPurchase(
+      contractRoleManager,
+      contractUDAO,
+      contractPlatformTreasury,
+      contentBuyer3
+    );
+    // Finalize the coachings
+    await contractPlatformTreasury
+      .connect(contentBuyer1)
+      .finalizeCoaching(coachingId1);
+    await contractPlatformTreasury
+      .connect(contentBuyer2)
+      .finalizeCoaching(coachingId2);
+    await contractPlatformTreasury
+      .connect(contentBuyer3)
+      .finalizeCoaching(coachingId3);
+    /// @dev Withdraw instructer rewards and check
+    // Get the instructer balance before withdrawal
+    const instructerBalanceBefore = await contractUDAO.balanceOf(
+      contentCreator.address
+    );
+    // Expect that the instructer balance is 0 before withdrawal
+    await expect(instructerBalanceBefore).to.equal(0);
+
+    // Ban the Instructor
+    await contractRoleManager.setBan(contentCreator.address, true);
+
+    // Instructer should call withdrawInstructor from platformtreasury contract
+    await contractPlatformTreasury.connect(contentCreator).withdrawInstructor();
+    // Get the instructer balance after withdrawal
+    const instructerBalanceAfter = await contractUDAO.balanceOf(
+      contentCreator.address
+    );
+    // Get coachingPaymentAmount from coachingStructs
+    const coachingPaymentAmountTx =
+      await contractPlatformTreasury.coachingStructs(0);
+    const coachingPaymentAmount =
+      coachingPaymentAmountTx["coachingPaymentAmount"];
+    // Expect that the instructer balance is equal to coachingPaymentAmount
+    await expect(instructerBalanceAfter).to.equal(coachingPaymentAmount.mul(3));
+  });
+
+  it("Should return InstructorWithdrawnWithDebt event when instructer withdraws rewards with debt while instructer banned", async function () {
+    const {
+      backend,
+      contentCreator,
+      contentBuyer1,
+      contentBuyer2,
+      contentBuyer3,
+      validatorCandidate,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember1,
+      jurorMember2,
+      jurorMember3,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+      contractJurorManager,
+      contractContractManager,
+    } = await deploy(false, true);
+    /// Create content
+    await createContent(
+      contractRoleManager,
+      contractUDAOContent,
+      contentCreator,
+      contractValidationManager,
+      backend,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
+      contentCreator
+    );
+    /// Make coaching purchase
+    const coachingId1 = await makeCoachingPurchase(
+      contractRoleManager,
+      contractUDAO,
+      contractPlatformTreasury,
+      contentBuyer1
+    );
+    /// Get coachingPaymentAmount from coachingStructs
+    const coachingPaymentAmountTx =
+      await contractPlatformTreasury.coachingStructs(coachingId1);
+    const coachingPaymentAmount =
+      coachingPaymentAmountTx["coachingPaymentAmount"];
+    /// Force refund the coaching
+    await contractPlatformTreasury
+      .connect(foundation)
+      .forcedRefundAdmin(coachingId1);
+    /// Get instructorDebt
+    const instructorDebt = await contractPlatformTreasury.instructorDebt(
+      contentCreator.address
+    );
+    /// Make another coaching purchase and finalize it
+    const coachingId2 = await makeCoachingPurchase(
+      contractRoleManager,
+      contractUDAO,
+      contractPlatformTreasury,
+      contentBuyer2
+    );
+    const coachingId3 = await makeCoachingPurchase(
+      contractRoleManager,
+      contractUDAO,
+      contractPlatformTreasury,
+      contentBuyer3
+    );
+    await contractPlatformTreasury
+      .connect(contentBuyer3)
+      .finalizeCoaching(coachingId3);
+    await contractPlatformTreasury
+      .connect(contentBuyer2)
+      .finalizeCoaching(coachingId2);
+    /// Get instructer balance before withdrawal
+    const instructerBalanceBefore = await contractUDAO.balanceOf(
+      contentCreator.address
+    );
+
+    // Ban the Instructor
+    await contractRoleManager.setBan(contentCreator.address, true);
+
+    /// Instructer should call withdrawInstructor from platformtreasury contract
+    const withdrawInstructorTx = await contractPlatformTreasury
+      .connect(contentCreator)
+      .withdrawInstructor();
+    /// Get the InstructorWithdrawnWithDebt event and check the debt amount
+    const withdrawInstructorTxReceipt = await withdrawInstructorTx.wait();
+    const withdrawInstructorTxEvent = withdrawInstructorTxReceipt.events.find(
+      (e) => e.event == "InstructorWithdrawnWithDebt"
+    );
+    const debtAmount = withdrawInstructorTxEvent.args[2];
+    /// Expect that the debt amount from event is equal to instructorDebt
+    await expect(debtAmount).to.equal(instructorDebt);
+    /// Get instructer balance after withdrawal
+    const instructerBalanceAfter = await contractUDAO.balanceOf(
+      contentCreator.address
+    );
+    /// Expect that the instructer balance is equal to instructerBalanceBefore plus 2 coaching purchases minus instructorDebt
+    await expect(instructerBalanceAfter).to.equal(
+      instructerBalanceBefore
+        .add(coachingPaymentAmount.mul(2))
+        .sub(instructorDebt)
+    );
+  });
 });
