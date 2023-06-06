@@ -208,12 +208,13 @@ contract ValidationManager is RoleController {
     function createValidation(
         uint256 tokenId,
         uint256 score
-    ) external onlyRole(BACKEND_ROLE) {
+    ) external {
+        require(udaoc.ownerOf(tokenId) != address(0), "Token owner is zero address");
+        require(udaoc.ownerOf(tokenId) == msg.sender, "Only token owner can create validation");
         //make sure token owner is kyced and not banned
-        require(IRM.isKYCed(udaoc.ownerOf(tokenId)), "Token owner is not KYCed");
-        require(!IRM.isBanned(udaoc.ownerOf(tokenId)), "Token owner is banned");
+        require(IRM.isKYCed(msg.sender), "Token owner is not KYCed");
+        require(!IRM.isBanned(msg.sender), "Token owner is banned");
         
-        require(udaoc.exists(tokenId), "ERC721: invalid token ID");
         Validation storage validation = validations.push();
         validation.id = validations.length - 1;
         validation.tokenId = tokenId;
