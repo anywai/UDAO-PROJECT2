@@ -1547,6 +1547,8 @@ describe("Platform Treasury General", function () {
     const caseQuestion = "Should we remove this content?";
     const caseTokenRelated = true;
     const caseTokenId = 0;
+    const caseRefund = false;
+    const caseRefundId = 0;
     // Create content
     await createContent(
       contractRoleManager,
@@ -1572,7 +1574,14 @@ describe("Platform Treasury General", function () {
     /// @dev Create dispute
     await contractJurorManager
       .connect(backend)
-      .createDispute(caseScope, caseQuestion, caseTokenRelated, caseTokenId);
+      .createDispute(
+        caseScope,
+        caseQuestion,
+        caseTokenRelated,
+        caseTokenId,
+        caseRefund,
+        caseRefundId
+      );
     /// @dev Assign dispute to juror
     const disputeId = 1;
     await contractJurorManager.connect(jurorMember1).assignDispute(disputeId);
