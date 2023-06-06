@@ -238,12 +238,21 @@ describe("Juror Manager", function () {
     const caseQuestion = "Should we remove this content?";
     const caseTokenRelated = true;
     const caseTokenId = 0;
+    const caseRefund = false;
+    const caseRefundId = 0;
 
     /// @dev Create dispute
     await expect(
       contractJurorManager
         .connect(backend)
-        .createDispute(caseScope, caseQuestion, caseTokenRelated, caseTokenId)
+        .createDispute(
+          caseScope,
+          caseQuestion,
+          caseTokenRelated,
+          caseTokenId,
+          caseRefund,
+          caseRefundId
+        )
     )
       .to.emit(contractJurorManager, "DisputeCreated")
       .withArgs(1, caseScope, caseQuestion);
@@ -289,6 +298,8 @@ describe("Juror Manager", function () {
     const caseQuestion = "Should we remove this content?";
     const caseTokenRelated = true;
     const caseTokenId = 0;
+    const caseRefund = false;
+    const caseRefundId = 0;
 
     /// @dev Create content
     await createContent(
@@ -306,7 +317,14 @@ describe("Juror Manager", function () {
     /// @dev Create dispute
     await contractJurorManager
       .connect(backend)
-      .createDispute(caseScope, caseQuestion, caseTokenRelated, caseTokenId);
+      .createDispute(
+        caseScope,
+        caseQuestion,
+        caseTokenRelated,
+        caseTokenId,
+        caseRefund,
+        caseRefundId
+      );
     /// @dev Assign dispute to juror
     const disputeId = 1;
     await expect(
@@ -356,6 +374,8 @@ describe("Juror Manager", function () {
     const caseQuestion = "Should we remove this content?";
     const caseTokenRelated = true;
     const caseTokenId = 0;
+    const caseRefund = false;
+    const caseRefundId = 0;
 
     /// @dev Create content
     await createContent(
@@ -373,7 +393,14 @@ describe("Juror Manager", function () {
     /// @dev Create dispute
     await contractJurorManager
       .connect(backend)
-      .createDispute(caseScope, caseQuestion, caseTokenRelated, caseTokenId);
+      .createDispute(
+        caseScope,
+        caseQuestion,
+        caseTokenRelated,
+        caseTokenId,
+        caseRefund,
+        caseRefundId
+      );
     /// @dev Assign dispute to juror
     const disputeId = 1;
     await contractJurorManager.connect(jurorMember1).assignDispute(disputeId);
@@ -422,6 +449,8 @@ describe("Juror Manager", function () {
     const caseQuestion = "Should we remove this content?";
     const caseTokenRelated = true;
     const caseTokenId = 0;
+    const caseRefund = false;
+    const caseRefundId = 0;
     /// @dev Give validator role to jurorMember1
     const VALIDATOR_ROLE = ethers.utils.keccak256(
       ethers.utils.toUtf8Bytes("VALIDATOR_ROLE")
@@ -443,7 +472,14 @@ describe("Juror Manager", function () {
     /// @dev Create dispute
     await contractJurorManager
       .connect(backend)
-      .createDispute(caseScope, caseQuestion, caseTokenRelated, caseTokenId);
+      .createDispute(
+        caseScope,
+        caseQuestion,
+        caseTokenRelated,
+        caseTokenId,
+        caseRefund,
+        caseRefundId
+      );
     /// @dev Assign dispute to juror and fail
     const disputeId = 1;
     await expect(
@@ -489,6 +525,8 @@ describe("Juror Manager", function () {
     const caseQuestion = "Should we remove this content?";
     const caseTokenRelated = true;
     const caseTokenId = 0;
+    const caseRefund = false;
+    const caseRefundId = 0;
 
     /// @dev Create content
     await createContent(
@@ -506,7 +544,14 @@ describe("Juror Manager", function () {
     /// @dev Create dispute
     await contractJurorManager
       .connect(backend)
-      .createDispute(caseScope, caseQuestion, caseTokenRelated, caseTokenId);
+      .createDispute(
+        caseScope,
+        caseQuestion,
+        caseTokenRelated,
+        caseTokenId,
+        caseRefund,
+        caseRefundId
+      );
     /// @dev Assign dispute to juror
     const hashedJUROR_ROLE =
       "0x2ea44624af573c71d23003c0751808a79f405c6b5fddb794897688d59c07918b";
@@ -561,6 +606,8 @@ describe("Juror Manager", function () {
     const caseQuestion = "Should we remove this content?";
     const caseTokenRelated = true;
     const caseTokenId = 0;
+    const caseRefund = false;
+    const caseRefundId = 0;
 
     /// @dev Create content
     await createContent(
@@ -578,7 +625,14 @@ describe("Juror Manager", function () {
     /// @dev Create dispute
     await contractJurorManager
       .connect(backend)
-      .createDispute(caseScope, caseQuestion, caseTokenRelated, caseTokenId);
+      .createDispute(
+        caseScope,
+        caseQuestion,
+        caseTokenRelated,
+        caseTokenId,
+        caseRefund,
+        caseRefundId
+      );
     /// @dev Assign dispute to juror
     const disputeId = 1;
     await contractJurorManager.connect(jurorMember1).assignDispute(disputeId);
@@ -633,6 +687,8 @@ describe("Juror Manager", function () {
     const caseQuestion = "Should we remove this content?";
     const caseTokenRelated = true;
     const caseTokenId = 0;
+    const caseRefund = false;
+    const caseRefundId = 0;
 
     /// @dev Create content
     await createContent(
@@ -650,7 +706,14 @@ describe("Juror Manager", function () {
     /// @dev Create dispute
     await contractJurorManager
       .connect(backend)
-      .createDispute(caseScope, caseQuestion, caseTokenRelated, caseTokenId);
+      .createDispute(
+        caseScope,
+        caseQuestion,
+        caseTokenRelated,
+        caseTokenId,
+        caseRefund,
+        caseRefundId
+      );
     /// @dev Assign dispute to juror
     const disputeId = 1;
     await contractJurorManager.connect(jurorMember1).assignDispute(disputeId);
@@ -708,6 +771,8 @@ describe("Juror Manager", function () {
     const caseQuestion = "Should we remove this content?";
     const caseTokenRelated = true;
     const caseTokenId = 0;
+    const caseRefund = false;
+    const caseRefundId = 0;
 
     /// @dev Create content
     await createContent(
@@ -725,7 +790,14 @@ describe("Juror Manager", function () {
     /// @dev Create dispute
     await contractJurorManager
       .connect(backend)
-      .createDispute(caseScope, caseQuestion, caseTokenRelated, caseTokenId);
+      .createDispute(
+        caseScope,
+        caseQuestion,
+        caseTokenRelated,
+        caseTokenId,
+        caseRefund,
+        caseRefundId
+      );
     /// @dev Assign dispute to juror
     const disputeId = 1;
     await contractJurorManager.connect(jurorMember1).assignDispute(disputeId);
@@ -792,6 +864,8 @@ describe("Juror Manager", function () {
     const caseQuestion = "Should we remove this content?";
     const caseTokenRelated = true;
     const caseTokenId = 0;
+    const caseRefund = false;
+    const caseRefundId = 0;
 
     /// @dev Create content
     await createContent(
@@ -809,7 +883,14 @@ describe("Juror Manager", function () {
     /// @dev Create dispute
     await contractJurorManager
       .connect(backend)
-      .createDispute(caseScope, caseQuestion, caseTokenRelated, caseTokenId);
+      .createDispute(
+        caseScope,
+        caseQuestion,
+        caseTokenRelated,
+        caseTokenId,
+        caseRefund,
+        caseRefundId
+      );
     /// @dev Assign dispute to juror
     const disputeId = 1;
     await contractJurorManager.connect(jurorMember1).assignDispute(disputeId);
@@ -876,6 +957,8 @@ describe("Juror Manager", function () {
     const caseQuestion = "Should we remove this content?";
     const caseTokenRelated = true;
     const caseTokenId = 0;
+    const caseRefund = false;
+    const caseRefundId = 0;
 
     /// @dev Create content
     await createContent(
@@ -893,7 +976,14 @@ describe("Juror Manager", function () {
     /// @dev Create dispute
     await contractJurorManager
       .connect(backend)
-      .createDispute(caseScope, caseQuestion, caseTokenRelated, caseTokenId);
+      .createDispute(
+        caseScope,
+        caseQuestion,
+        caseTokenRelated,
+        caseTokenId,
+        caseRefund,
+        caseRefundId
+      );
     /// @dev Assign dispute to juror
     const disputeId = 1;
     await contractJurorManager.connect(jurorMember1).assignDispute(disputeId);
@@ -1013,6 +1103,8 @@ describe("Juror Manager", function () {
     const caseQuestion = "Should we remove this content?";
     const caseTokenRelated = true;
     const caseTokenId = 0;
+    const caseRefund = false;
+    const caseRefundId = 0;
 
     /// @dev Create content
     await createContent(
@@ -1030,7 +1122,14 @@ describe("Juror Manager", function () {
     /// @dev Create dispute
     await contractJurorManager
       .connect(backend)
-      .createDispute(caseScope, caseQuestion, caseTokenRelated, caseTokenId);
+      .createDispute(
+        caseScope,
+        caseQuestion,
+        caseTokenRelated,
+        caseTokenId,
+        caseRefund,
+        caseRefundId
+      );
     /// @dev Assign dispute to juror
     const disputeId = 1;
     await contractJurorManager.connect(jurorMember1).assignDispute(disputeId);
@@ -1116,6 +1215,8 @@ describe("Juror Manager", function () {
     const caseQuestion = "Should we remove this content?";
     const caseTokenRelated = true;
     const caseTokenId = 0;
+    const caseRefund = false;
+    const caseRefundId = 0;
 
     /// @dev Create content
     await createContent(
@@ -1133,7 +1234,14 @@ describe("Juror Manager", function () {
     /// @dev Create dispute
     await contractJurorManager
       .connect(backend)
-      .createDispute(caseScope, caseQuestion, caseTokenRelated, caseTokenId);
+      .createDispute(
+        caseScope,
+        caseQuestion,
+        caseTokenRelated,
+        caseTokenId,
+        caseRefund,
+        caseRefundId
+      );
     /// @dev Assign dispute to juror
     const disputeId = 1;
     await contractJurorManager.connect(jurorMember1).assignDispute(disputeId);
@@ -1219,6 +1327,8 @@ describe("Juror Manager", function () {
     const caseQuestion = "Should we remove this content?";
     const caseTokenRelated = true;
     const caseTokenId = 0;
+    const caseRefund = false;
+    const caseRefundId = 0;
 
     /// @dev Create content
     await createContent(
@@ -1236,7 +1346,14 @@ describe("Juror Manager", function () {
     /// @dev Create dispute
     await contractJurorManager
       .connect(backend)
-      .createDispute(caseScope, caseQuestion, caseTokenRelated, caseTokenId);
+      .createDispute(
+        caseScope,
+        caseQuestion,
+        caseTokenRelated,
+        caseTokenId,
+        caseRefund,
+        caseRefundId
+      );
     /// @dev Assign dispute to juror
     const disputeId = 1;
     await contractJurorManager.connect(jurorMember1).assignDispute(disputeId);
@@ -1283,7 +1400,14 @@ describe("Juror Manager", function () {
     /// @dev Create dispute
     await contractJurorManager
       .connect(backend)
-      .createDispute(caseScope, caseQuestion, caseTokenRelated, caseTokenId);
+      .createDispute(
+        caseScope,
+        caseQuestion,
+        caseTokenRelated,
+        caseTokenId,
+        caseRefund,
+        caseRefundId
+      );
     /// @dev Assign dispute to juror
     const disputeId2 = 2;
     await contractJurorManager.connect(jurorMember1).assignDispute(disputeId2);
@@ -1369,6 +1493,8 @@ describe("Juror Manager", function () {
     const caseQuestion = "Should we remove this content?";
     const caseTokenRelated = true;
     const caseTokenId = 0;
+    const caseRefund = false;
+    const caseRefundId = 0;
 
     /// @dev Create content
     await createContent(
@@ -1386,7 +1512,14 @@ describe("Juror Manager", function () {
     /// @dev Create dispute
     await contractJurorManager
       .connect(backend)
-      .createDispute(caseScope, caseQuestion, caseTokenRelated, caseTokenId);
+      .createDispute(
+        caseScope,
+        caseQuestion,
+        caseTokenRelated,
+        caseTokenId,
+        caseRefund,
+        caseRefundId
+      );
     /// @dev Assign dispute to juror
     const disputeId = 1;
     await contractJurorManager.connect(jurorMember1).assignDispute(disputeId);
@@ -1516,12 +1649,21 @@ describe("Juror Manager", function () {
     const caseQuestion = "Should we remove this content?";
     const caseTokenRelated = true;
     const caseTokenId = 0;
+    const caseRefund = false;
+    const caseRefundId = 0;
 
     /// @dev Create dispute
     await expect(
       contractJurorManager
         .connect(jurorMember1)
-        .createDispute(caseScope, caseQuestion, caseTokenRelated, caseTokenId)
+        .createDispute(
+          caseScope,
+          caseQuestion,
+          caseTokenRelated,
+          caseTokenId,
+          caseRefund,
+          caseRefundId
+        )
     ).to.revertedWith(
       `'AccessControl: account ${jurorMember1.address.toLowerCase()} is missing role ${BACKEND_ROLE}'`
     );
@@ -1615,6 +1757,8 @@ describe("Juror Manager", function () {
     const caseQuestion = "Should we remove this content?";
     const caseTokenRelated = true;
     const caseTokenId = 0;
+    const caseRefund = false;
+    const caseRefundId = 0;
 
     /// @dev Create content
     await createContent(
@@ -1632,7 +1776,14 @@ describe("Juror Manager", function () {
     /// @dev Create dispute
     await contractJurorManager
       .connect(backend)
-      .createDispute(caseScope, caseQuestion, caseTokenRelated, caseTokenId);
+      .createDispute(
+        caseScope,
+        caseQuestion,
+        caseTokenRelated,
+        caseTokenId,
+        caseRefund,
+        caseRefundId
+      );
     /// @dev Assign dispute to juror
     const disputeId = 1;
     await expect(
@@ -1689,6 +1840,8 @@ describe("Juror Manager", function () {
     const caseQuestion = "Should we remove this content?";
     const caseTokenRelated = true;
     var caseTokenId = 0;
+    const caseRefund = false;
+    const caseRefundId = 0;
 
     /// @dev Create content for 1st dispute
     await createContent(
@@ -1706,7 +1859,14 @@ describe("Juror Manager", function () {
     /// @dev Create dispute for 1st dispute
     await contractJurorManager
       .connect(backend)
-      .createDispute(caseScope, caseQuestion, caseTokenRelated, caseTokenId);
+      .createDispute(
+        caseScope,
+        caseQuestion,
+        caseTokenRelated,
+        caseTokenId,
+        caseRefund,
+        caseRefundId
+      );
 
     /// @dev arrange Dispute settings for 2nd dispute
     caseTokenId = 1;
@@ -1714,7 +1874,14 @@ describe("Juror Manager", function () {
     /// @dev Create dispute for 2nd dispute
     await contractJurorManager
       .connect(backend)
-      .createDispute(caseScope, caseQuestion, caseTokenRelated, caseTokenId);
+      .createDispute(
+        caseScope,
+        caseQuestion,
+        caseTokenRelated,
+        caseTokenId,
+        caseRefund,
+        caseRefundId
+      );
 
     /// @dev Assign dispute to juror
     var disputeId = 1;
@@ -1767,6 +1934,8 @@ describe("Juror Manager", function () {
     const caseQuestion = "Should we remove this content";
     const caseTokenRelated = true;
     const caseTokenId = 0;
+    const caseRefund = false;
+    const caseRefundId = 0;
 
     /// @dev Create content
     await createContent(
@@ -1784,7 +1953,14 @@ describe("Juror Manager", function () {
     /// @dev Create dispute
     await contractJurorManager
       .connect(backend)
-      .createDispute(caseScope, caseQuestion, caseTokenRelated, caseTokenId);
+      .createDispute(
+        caseScope,
+        caseQuestion,
+        caseTokenRelated,
+        caseTokenId,
+        caseRefund,
+        caseRefundId
+      );
     /// @dev Assign dispute to juror
     const disputeId = 2;
     await expect(
@@ -1833,6 +2009,8 @@ describe("Juror Manager", function () {
     const caseQuestion = "Should we remove this content?";
     const caseTokenRelated = true;
     const caseTokenId = 0;
+    const caseRefund = false;
+    const caseRefundId = 0;
 
     /// @dev Create content
     await createContent(
@@ -1850,7 +2028,14 @@ describe("Juror Manager", function () {
     /// @dev Create dispute
     await contractJurorManager
       .connect(backend)
-      .createDispute(caseScope, caseQuestion, caseTokenRelated, caseTokenId);
+      .createDispute(
+        caseScope,
+        caseQuestion,
+        caseTokenRelated,
+        caseTokenId,
+        caseRefund,
+        caseRefundId
+      );
     /// @dev Assign dispute to juror
     const hashedJUROR_ROLE =
       "0x2ea44624af573c71d23003c0751808a79f405c6b5fddb794897688d59c07918b";
@@ -1907,6 +2092,8 @@ describe("Juror Manager", function () {
     const caseQuestion = "Should we remove this content?";
     const caseTokenRelated = true;
     const caseTokenId = 0;
+    const caseRefund = false;
+    const caseRefundId = 0;
 
     /// @dev Create content
     await createContent(
@@ -1924,7 +2111,14 @@ describe("Juror Manager", function () {
     /// @dev Create dispute
     await contractJurorManager
       .connect(backend)
-      .createDispute(caseScope, caseQuestion, caseTokenRelated, caseTokenId);
+      .createDispute(
+        caseScope,
+        caseQuestion,
+        caseTokenRelated,
+        caseTokenId,
+        caseRefund,
+        caseRefundId
+      );
     /// @dev Assign dispute to juror
     const disputeId = 1;
     await contractJurorManager.connect(jurorMember1).assignDispute(disputeId);
@@ -2040,6 +2234,8 @@ describe("Juror Manager", function () {
     const caseQuestion = "Should we remove this content?";
     const caseTokenRelated = true;
     const caseTokenId = 0;
+    const caseRefund = false;
+    const caseRefundId = 0;
 
     /// @dev Create content
     await createContent(
@@ -2057,7 +2253,14 @@ describe("Juror Manager", function () {
     /// @dev Create dispute
     await contractJurorManager
       .connect(backend)
-      .createDispute(caseScope, caseQuestion, caseTokenRelated, caseTokenId);
+      .createDispute(
+        caseScope,
+        caseQuestion,
+        caseTokenRelated,
+        caseTokenId,
+        caseRefund,
+        caseRefundId
+      );
     /// @dev Assign dispute to juror
     const disputeId = 1;
     await expect(
@@ -2155,12 +2358,21 @@ describe("Juror Manager", function () {
     const caseQuestion = "Should we remove this content?";
     const caseTokenRelated = false;
     const caseTokenId = 5;
+    const caseRefund = false;
+    const caseRefundId = 0;
 
     /// @dev Create dispute
     await expect(
       contractJurorManager
         .connect(backend)
-        .createDispute(caseScope, caseQuestion, caseTokenRelated, caseTokenId)
+        .createDispute(
+          caseScope,
+          caseQuestion,
+          caseTokenRelated,
+          caseTokenId,
+          caseRefund,
+          caseRefundId
+        )
     )
       .to.emit(contractJurorManager, "DisputeCreated")
       .withArgs(1, caseScope, caseQuestion);
@@ -2211,12 +2423,21 @@ describe("Juror Manager", function () {
     const caseQuestion = "Should we remove this content?";
     const caseTokenRelated = true;
     const caseTokenId = 5;
+    const caseRefund = false;
+    const caseRefundId = 0;
 
     /// @dev Create dispute
     await expect(
       contractJurorManager
         .connect(backend)
-        .createDispute(caseScope, caseQuestion, caseTokenRelated, caseTokenId)
+        .createDispute(
+          caseScope,
+          caseQuestion,
+          caseTokenRelated,
+          caseTokenId,
+          caseRefund,
+          caseRefundId
+        )
     )
       .to.emit(contractJurorManager, "DisputeCreated")
       .withArgs(1, caseScope, caseQuestion);
@@ -2273,7 +2494,7 @@ describe("Juror Manager", function () {
     // Update addresses
     await expect(contractJurorManager.connect(backend).updateAddresses())
       .to.emit(contractJurorManager, "AddressesUpdated")
-      .withArgs(dummyAddress);
+      .withArgs(dummyAddress, contractPlatformTreasury.address);
   });
 
   it("Should fail to assign dispute to a juror when juror hasn't kyced", async function () {
@@ -2316,6 +2537,8 @@ describe("Juror Manager", function () {
     const caseQuestion = "Should we remove this content?";
     const caseTokenRelated = true;
     const caseTokenId = 0;
+    const caseRefund = false;
+    const caseRefundId = 0;
 
     /// @dev Create content
     await createContent(
@@ -2333,7 +2556,14 @@ describe("Juror Manager", function () {
     /// @dev Create dispute
     await contractJurorManager
       .connect(backend)
-      .createDispute(caseScope, caseQuestion, caseTokenRelated, caseTokenId);
+      .createDispute(
+        caseScope,
+        caseQuestion,
+        caseTokenRelated,
+        caseTokenId,
+        caseRefund,
+        caseRefundId
+      );
     /// @dev Assign dispute to juror
     const disputeId = 1;
     await expect(
@@ -2384,6 +2614,8 @@ describe("Juror Manager", function () {
     const caseQuestion = "Should we remove this content?";
     const caseTokenRelated = true;
     const caseTokenId = 0;
+    const caseRefund = false;
+    const caseRefundId = 0;
 
     /// @dev Create content
     await createContent(
@@ -2401,7 +2633,14 @@ describe("Juror Manager", function () {
     /// @dev Create dispute
     await contractJurorManager
       .connect(backend)
-      .createDispute(caseScope, caseQuestion, caseTokenRelated, caseTokenId);
+      .createDispute(
+        caseScope,
+        caseQuestion,
+        caseTokenRelated,
+        caseTokenId,
+        caseRefund,
+        caseRefundId
+      );
     /// @dev Assign dispute to juror
     const disputeId = 1;
     await expect(
