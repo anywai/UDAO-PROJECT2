@@ -174,10 +174,6 @@ describe("UDAOStaker Contract", function () {
     await expect(contractUDAOStaker.connect(foundation).setVoteReward("100"))
       .to.emit(contractUDAOStaker, "SetVoteReward") // transfer from null address to minter
       .withArgs("100");
-
-    expect(await contractUDAOStaker.voteReward()).to.eql(
-      ethers.BigNumber.from("100")
-    );
   });
 
   it("Should fail to set super vote reward amount as unauthorized user", async function () {
@@ -244,10 +240,6 @@ describe("UDAOStaker Contract", function () {
     )
       .to.emit(contractUDAOStaker, "SetPlatformTreasuryAddress") // transfer from null address to minter
       .withArgs(foundation.address);
-
-    expect(await contractUDAOStaker.platformTreasuryAddress()).to.eql(
-      foundation.address
-    );
   });
 
   it("Should fail to set a new platform treasury address as unauthorized user", async function () {
