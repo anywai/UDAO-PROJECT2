@@ -69,7 +69,7 @@ describe("Validation Manageer Contract", function () {
         0
       );
     await expect(
-      contractValidationManager.connect(backend).createValidation(0, 50)
+      contractValidationManager.connect(contentCreator).createValidation(0, 50)
     )
       .to.emit(contractValidationManager, "ValidationCreated")
       .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1));
@@ -127,7 +127,7 @@ describe("Validation Manageer Contract", function () {
         0
       );
     await expect(
-      contractValidationManager.connect(backend).createValidation(0, 50)
+      contractValidationManager.connect(contentCreator).createValidation(0, 50)
     )
       .to.emit(contractValidationManager, "ValidationCreated")
       .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1));
@@ -194,7 +194,7 @@ describe("Validation Manageer Contract", function () {
         0
       );
     await expect(
-      contractValidationManager.connect(backend).createValidation(0, 50)
+      contractValidationManager.connect(contentCreator).createValidation(0, 50)
     )
       .to.emit(contractValidationManager, "ValidationCreated")
       .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1));
@@ -348,7 +348,7 @@ describe("Validation Manageer Contract", function () {
         0
       );
     await expect(
-      contractValidationManager.connect(backend).createValidation(0, 50)
+      contractValidationManager.connect(contentCreator).createValidation(0, 50)
     )
       .to.emit(contractValidationManager, "ValidationCreated")
       .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1));
@@ -507,7 +507,7 @@ describe("Validation Manageer Contract", function () {
         0
       );
     await expect(
-      contractValidationManager.connect(backend).createValidation(0, 50)
+      contractValidationManager.connect(contentCreator).createValidation(0, 50)
     )
       .to.emit(contractValidationManager, "ValidationCreated")
       .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1));
@@ -669,7 +669,7 @@ describe("Validation Manageer Contract", function () {
         0
       );
     await expect(
-      contractValidationManager.connect(backend).createValidation(0, 50)
+      contractValidationManager.connect(contentCreator).createValidation(0, 50)
     )
       .to.emit(contractValidationManager, "ValidationCreated")
       .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1));
@@ -810,7 +810,7 @@ describe("Validation Manageer Contract", function () {
     } = await deploy();
     await contractRoleManager.setKYC(contentCreator.address, true);
     await expect(
-      contractValidationManager.connect(backend).createValidation(0, 50)
+      contractValidationManager.connect(contentCreator).createValidation(0, 50)
     ).to.revertedWith("ERC721: invalid token ID");
   });
 
@@ -874,7 +874,7 @@ describe("Validation Manageer Contract", function () {
 
     /// Create validation
     await expect(
-      contractValidationManager.connect(backend).createValidation(0, 50)
+      contractValidationManager.connect(contentCreator).createValidation(0, 50)
     ).to.revertedWith("Token owner is not KYCed");
   });
 
@@ -938,7 +938,7 @@ describe("Validation Manageer Contract", function () {
 
     /// Create validation
     await expect(
-      contractValidationManager.connect(backend).createValidation(0, 50)
+      contractValidationManager.connect(contentCreator).createValidation(0, 50)
     ).to.revertedWith("Token owner is banned");
   });
 });

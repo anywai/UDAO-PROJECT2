@@ -28,7 +28,7 @@ async function runValidation(
   contentCreator
 ) {
   await expect(
-    contractValidationManager.connect(backend).createValidation(0, 50)
+    contractValidationManager.connect(contentCreator).createValidation(0, 50)
   )
     .to.emit(contractValidationManager, "ValidationCreated")
     .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1));
@@ -1085,7 +1085,7 @@ describe("Platform Treasury Contract - Content", function () {
         0
       );
     await expect(
-      contractValidationManager.connect(backend).createValidation(0, 50)
+      contractValidationManager.connect(contentCreator).createValidation(0, 50)
     )
       .to.emit(contractValidationManager, "ValidationCreated")
       .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1));
@@ -1272,7 +1272,7 @@ describe("Platform Treasury Contract - Content", function () {
         0
       );
     await expect(
-      contractValidationManager.connect(backend).createValidation(0, 50)
+      contractValidationManager.connect(contentCreator).createValidation(0, 50)
     )
       .to.emit(contractValidationManager, "ValidationCreated")
       .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1));
@@ -1461,7 +1461,7 @@ describe("Platform Treasury Contract - Content", function () {
         0
       );
     await expect(
-      contractValidationManager.connect(backend).createValidation(0, 50)
+      contractValidationManager.connect(contentCreator).createValidation(0, 50)
     )
       .to.emit(contractValidationManager, "ValidationCreated")
       .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1));
