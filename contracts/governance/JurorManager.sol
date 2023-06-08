@@ -11,10 +11,10 @@ import "../interfaces/IPlatformTreasury.sol";
 
 contract JurorManager is RoleController {
     IUDAOC udaoc;
-    IValidationManager public IVM;
-    IPlatformTreasury public PT;
+    IValidationManager IVM;
+    IPlatformTreasury PT;
 
-    ContractManager public contractManager;
+    ContractManager contractManager;
 
     event EndDispute(uint256 caseId, address[] jurors, uint256 totalJurorScore);
     event NextRound(uint256 newRoundId);
