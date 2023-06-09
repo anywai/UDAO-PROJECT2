@@ -498,16 +498,16 @@ describe("Platform Treasury General", function () {
     );
 
     // new dummy governance treasury address
-    const newGovernanceTreasur = await ethers.Wallet.createRandom();
+    const newGovernanceTreasury = await ethers.Wallet.createRandom();
 
     // set new governance treasury address
     await expect(
       contractPlatformTreasury
         .connect(backend)
-        .setGovernanceTreasuryAddress(newGovernanceTreasur.address)
+        .setGovernanceTreasuryAddress(newGovernanceTreasury.address)
     )
       .to.emit(contractPlatformTreasury, "GovernanceTreasuryUpdated")
-      .withArgs(newGovernanceTreasur.address);
+      .withArgs(newGovernanceTreasury.address);
 
     /// @dev Check if the governance candidate has the correct amount of UDAO-vp tokens
     const governanceCandidateBalance = await contractUDAOVp.balanceOf(
@@ -644,7 +644,7 @@ describe("Platform Treasury General", function () {
 
     /// Get the current governance treasury balance
     const currentGovernanceTreasuryBalance = await contractUDAO.balanceOf(
-      newGovernanceTreasur.address
+      newGovernanceTreasury.address
     );
     /// Get the content price of token Id 0 from UDAOC (first 0 is token ID, second 0 is full price of content)
     const contentPrice = await contractUDAOContent.contentPrice(0, 0);
@@ -773,16 +773,16 @@ describe("Platform Treasury General", function () {
     );
 
     // new dummy governance treasury address
-    const newGovernanceTreasur = await ethers.Wallet.createRandom();
+    const newGovernanceTreasury = await ethers.Wallet.createRandom();
 
     // set new governance treasury address
     await expect(
       contractPlatformTreasury
         .connect(backend)
-        .setGovernanceTreasuryAddress(newGovernanceTreasur.address)
+        .setGovernanceTreasuryAddress(newGovernanceTreasury.address)
     )
       .to.emit(contractPlatformTreasury, "GovernanceTreasuryUpdated")
-      .withArgs(newGovernanceTreasur.address);
+      .withArgs(newGovernanceTreasury.address);
 
     /// @dev Check if the governance candidate has the correct amount of UDAO-vp tokens
     const governanceCandidateBalance = await contractUDAOVp.balanceOf(
@@ -919,7 +919,7 @@ describe("Platform Treasury General", function () {
 
     /// Get the current governance treasury balance
     const currentGovernanceTreasuryBalance = await contractUDAO.balanceOf(
-      newGovernanceTreasur.address
+      newGovernanceTreasury.address
     );
     /// Get the content price of token Id 0 from UDAOC (first 0 is token ID, second 0 is full price of content)
     const contentPrice = await contractUDAOContent.contentPrice(0, 0);
@@ -994,16 +994,16 @@ describe("Platform Treasury General", function () {
     );
 
     // new dummy governance treasury address
-    const newGovernanceTreasur = await ethers.Wallet.createRandom();
+    const newGovernanceTreasury = await ethers.Wallet.createRandom();
 
     // set new governance treasury address
     await expect(
       contractPlatformTreasury
         .connect(backend)
-        .setGovernanceTreasuryAddress(newGovernanceTreasur.address)
+        .setGovernanceTreasuryAddress(newGovernanceTreasury.address)
     )
       .to.emit(contractPlatformTreasury, "GovernanceTreasuryUpdated")
-      .withArgs(newGovernanceTreasur.address);
+      .withArgs(newGovernanceTreasury.address);
     // set foundation wallet address
     await expect(
       contractPlatformTreasury
@@ -1106,16 +1106,16 @@ describe("Platform Treasury General", function () {
     );
 
     // new dummy governance treasury address
-    const newGovernanceTreasur = await ethers.Wallet.createRandom();
+    const newGovernanceTreasury = await ethers.Wallet.createRandom();
 
     // set new governance treasury address
     await expect(
       contractPlatformTreasury
         .connect(backend)
-        .setGovernanceTreasuryAddress(newGovernanceTreasur.address)
+        .setGovernanceTreasuryAddress(newGovernanceTreasury.address)
     )
       .to.emit(contractPlatformTreasury, "GovernanceTreasuryUpdated")
-      .withArgs(newGovernanceTreasur.address);
+      .withArgs(newGovernanceTreasury.address);
     // set foundation wallet address
     await expect(
       contractPlatformTreasury
@@ -3066,15 +3066,16 @@ describe("Platform Treasury General", function () {
     );
 
     // new dummy governance treasury address
-    const newGovernanceTreasur = await ethers.Wallet.createRandom();
+    const newGovernanceTreasury = await ethers.Wallet.createRandom();
 
     // set new governance treasury address
-    await contractPlatformTreasury
-      .connect(backend)
-      .setGovernanceTreasuryAddress(newGovernanceTreasur.address);
-    const governanceTreasuryAddress =
-      await contractPlatformTreasury.governanceTreasury();
-    expect(governanceTreasuryAddress).to.equal(newGovernanceTreasur.address);
+    await expect(
+      contractPlatformTreasury
+        .connect(backend)
+        .setGovernanceTreasuryAddress(newGovernanceTreasury.address)
+    )
+      .to.emit(contractPlatformTreasury, "GovernanceTreasuryUpdated")
+      .withArgs(newGovernanceTreasury.address);
 
     /// @dev Check if the governance candidate has the correct amount of UDAO-vp tokens
     const governanceCandidateBalance = await contractUDAOVp.balanceOf(
@@ -3215,7 +3216,7 @@ describe("Platform Treasury General", function () {
 
     /// Get the current governance treasury balance
     const currentGovernanceTreasuryBalance = await contractUDAO.balanceOf(
-      governanceTreasuryAddress
+      newGovernanceTreasury.address
     );
     /// Get the content price of token Id 0 from UDAOC (first 0 is token ID, second 0 is full price of content)
     const contentPrice = await contractUDAOContent.contentPrice(0, 0);
@@ -3345,15 +3346,16 @@ describe("Platform Treasury General", function () {
     );
 
     // new dummy governance treasury address
-    const newGovernanceTreasur = await ethers.Wallet.createRandom();
+    const newGovernanceTreasury = await ethers.Wallet.createRandom();
 
     // set new governance treasury address
-    await contractPlatformTreasury
-      .connect(backend)
-      .setGovernanceTreasuryAddress(newGovernanceTreasur.address);
-    const governanceTreasuryAddress =
-      await contractPlatformTreasury.governanceTreasury();
-    expect(governanceTreasuryAddress).to.equal(newGovernanceTreasur.address);
+    await expect(
+      contractPlatformTreasury
+        .connect(backend)
+        .setGovernanceTreasuryAddress(newGovernanceTreasury.address)
+    )
+      .to.emit(contractPlatformTreasury, "GovernanceTreasuryUpdated")
+      .withArgs(newGovernanceTreasury.address);
 
     /// @dev Check if the governance candidate has the correct amount of UDAO-vp tokens
     const governanceCandidateBalance = await contractUDAOVp.balanceOf(
@@ -3494,7 +3496,7 @@ describe("Platform Treasury General", function () {
 
     /// Get the current governance treasury balance
     const currentGovernanceTreasuryBalance = await contractUDAO.balanceOf(
-      governanceTreasuryAddress
+      newGovernanceTreasury.address
     );
     /// Get the content price of token Id 0 from UDAOC (first 0 is token ID, second 0 is full price of content)
     const contentPrice = await contractUDAOContent.contentPrice(0, 0);
@@ -4027,22 +4029,24 @@ describe("Platform Treasury General", function () {
     );
 
     // new dummy governance treasury address
-    const newGovernanceTreasur = await ethers.Wallet.createRandom();
+    const newGovernanceTreasury = await ethers.Wallet.createRandom();
 
     // set new governance treasury address
-    await contractPlatformTreasury
-      .connect(backend)
-      .setGovernanceTreasuryAddress(newGovernanceTreasur.address);
-    const governanceTreasuryAddress =
-      await contractPlatformTreasury.governanceTreasury();
-    expect(governanceTreasuryAddress).to.equal(newGovernanceTreasur.address);
+    await expect(
+      contractPlatformTreasury
+        .connect(backend)
+        .setGovernanceTreasuryAddress(newGovernanceTreasury.address)
+    )
+      .to.emit(contractPlatformTreasury, "GovernanceTreasuryUpdated")
+      .withArgs(newGovernanceTreasury.address);
     // set foundation wallet address
-    await contractPlatformTreasury
-      .connect(backend)
-      .setFoundationWalletAddress(foundation.address);
-    const foundationWalletAddress =
-      await contractPlatformTreasury.foundationWallet();
-    expect(foundationWalletAddress).to.equal(foundation.address);
+    await expect(
+      contractPlatformTreasury
+        .connect(backend)
+        .setFoundationWalletAddress(foundation.address)
+    )
+      .to.emit(contractPlatformTreasury, "FoundationWalletUpdated")
+      .withArgs(foundation.address);
 
     // Ban the Foundation
     await contractRoleManager.setBan(foundation.address, true);
