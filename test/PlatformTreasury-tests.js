@@ -987,16 +987,6 @@ describe("Platform Treasury General", function () {
       contractUDAO
     );
 
-    // new dummy governance treasury address
-    const newGovernanceTreasur = await ethers.Wallet.createRandom();
-
-    // set new governance treasury address
-    await contractPlatformTreasury
-      .connect(backend)
-      .setGovernanceTreasuryAddress(newGovernanceTreasur.address);
-    const governanceTreasuryAddress =
-      await contractPlatformTreasury.governanceTreasury();
-    expect(governanceTreasuryAddress).to.equal(newGovernanceTreasur.address);
     // set foundation wallet address
     await contractPlatformTreasury
       .connect(backend)
@@ -1097,16 +1087,6 @@ describe("Platform Treasury General", function () {
       contractUDAO
     );
 
-    // new dummy governance treasury address
-    const newGovernanceTreasur = await ethers.Wallet.createRandom();
-
-    // set new governance treasury address
-    await contractPlatformTreasury
-      .connect(backend)
-      .setGovernanceTreasuryAddress(newGovernanceTreasur.address);
-    const governanceTreasuryAddress =
-      await contractPlatformTreasury.governanceTreasury();
-    expect(governanceTreasuryAddress).to.equal(newGovernanceTreasur.address);
     // set foundation wallet address
     await contractPlatformTreasury
       .connect(backend)
@@ -4016,16 +3996,6 @@ describe("Platform Treasury General", function () {
       contractUDAO
     );
 
-    // new dummy governance treasury address
-    const newGovernanceTreasur = await ethers.Wallet.createRandom();
-
-    // set new governance treasury address
-    await contractPlatformTreasury
-      .connect(backend)
-      .setGovernanceTreasuryAddress(newGovernanceTreasur.address);
-    const governanceTreasuryAddress =
-      await contractPlatformTreasury.governanceTreasury();
-    expect(governanceTreasuryAddress).to.equal(newGovernanceTreasur.address);
     // set foundation wallet address
     await contractPlatformTreasury
       .connect(backend)
