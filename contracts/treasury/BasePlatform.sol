@@ -76,11 +76,11 @@ abstract contract BasePlatform is Pausable, RoleController {
     // cut for validator pool from content
     uint public contentValidatorCut = 200;
 
-    address public governanceTreasury;
-    address public foundationWallet;
+    address governanceTreasury;
+    address foundationWallet;
 
-    IValidationManager public IVM;
-    IJurorManager public IJM;
+    IValidationManager IVM;
+    IJurorManager IJM;
 
     /// @notice Triggered after every round is finalized and rewards are distributed
     event RewardsDistributed(
@@ -97,6 +97,24 @@ abstract contract BasePlatform is Pausable, RoleController {
         uint contentGov,
         uint contentJuror,
         uint contentValid
+    );
+
+    /// @notice This event is triggered if the governance treasury address is updated.
+    event GovernanceTreasuryUpdated(address newAddress);
+
+    /// @notice This event is triggered if the foundation wallet address is updated.
+    event FoundationWalletUpdated(address newAddress);
+
+    /// @notice This event is triggered if the contract manager address is updated.
+    event ContractManagerUpdated(address newAddress);
+
+    /// @notice This event is triggered if the contract manager updates the addresses.
+    event AddressesUpdated(
+        address udao,
+        address udaoc,
+        address ivm,
+        address ijm,
+        address irm
     );
 
     /**
@@ -121,6 +139,7 @@ abstract contract BasePlatform is Pausable, RoleController {
         address _newAddress
     ) external onlyRole(BACKEND_ROLE) {
         governanceTreasury = _newAddress;
+        emit GovernanceTreasuryUpdated(_newAddress);
     }
 
     /// @notice Sets the address of the foundation wallet
@@ -129,6 +148,7 @@ abstract contract BasePlatform is Pausable, RoleController {
         address _newAddress
     ) external onlyRole(BACKEND_ROLE) {
         foundationWallet = _newAddress;
+        emit FoundationWalletUpdated(_newAddress);
     }
 
     /// @notice Sets the address of the contract manager
@@ -137,6 +157,7 @@ abstract contract BasePlatform is Pausable, RoleController {
         address _newAddress
     ) external onlyRole(BACKEND_ROLE) {
         contractManager = ContractManager(_newAddress);
+        emit ContractManagerUpdated(_newAddress);
     }
 
     /// @notice Get the updated addresses from contract manager
@@ -146,6 +167,13 @@ abstract contract BasePlatform is Pausable, RoleController {
         IVM = IValidationManager(contractManager.IVMAddress());
         IJM = IJurorManager(contractManager.IJMAddress());
         IRM = IRoleManager(contractManager.IrmAddress());
+        emit AddressesUpdated(
+            contractManager.UdaoAddress(),
+            contractManager.UdaocAddress(),
+            contractManager.IVMAddress(),
+            contractManager.IJMAddress(),
+            contractManager.IrmAddress()
+        );
     }
 
     /// @notice changes cut from coaching for foundation

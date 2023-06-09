@@ -9,11 +9,11 @@ import "./interfaces/IPriceGetter.sol";
 import "./RoleController.sol";
 
 contract PriceGetter is IPriceGetter, RoleController {
-    address public token0;
-    address public token1;
-    address public pool;
+    address token0;
+    address token1;
+    address pool;
     /// fiat name => aggregator interface
-    mapping(bytes32 => AggregatorV3Interface) public fiatToPriceFeed;
+    mapping(bytes32 => AggregatorV3Interface) fiatToPriceFeed;
 
     /// @dev token0 = tokenIn (matic) and token1 = tokenOut(udao)
     constructor(
@@ -158,7 +158,7 @@ contract PriceGetter is IPriceGetter, RoleController {
             ,
 
         ) = priceFeed.latestRoundData();
-        
+
         if (fiat != keccak256(abi.encodePacked("usd"))) {
             priceFeed = fiatToPriceFeed[fiat];
 
