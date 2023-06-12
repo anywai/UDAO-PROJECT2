@@ -188,7 +188,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
     }
 
     /// @notice allows users to purchase a content. Notice that there is no price conversion
-    /// since the total payment amount is coming from backend with voucher where 
+    /// since the total payment amount is coming from backend with voucher where
     /// the total amount of payment in UDAO is calculated.
     /// @param voucher voucher for the content purchase
     function buyDiscountedContent(
@@ -333,8 +333,10 @@ abstract contract ContentManager is EIP712, BasePlatform {
             );
         }
         udao.transferFrom(msg.sender, address(this), priceToPayUdao);
-        uint256 foundationBalanceFromThisPurchase = (priceToPayUdao * coachingFoundationCut) / 100000;
-        uint256 governanceBalanceFromThisPurchase = (priceToPayUdao * coachingGovernanceCut) / 100000;
+        uint256 foundationBalanceFromThisPurchase = (priceToPayUdao *
+            coachingFoundationCut) / 100000;
+        uint256 governanceBalanceFromThisPurchase = (priceToPayUdao *
+            coachingGovernanceCut) / 100000;
         foundationBalance += foundationBalanceFromThisPurchase;
         governanceBalance += governanceBalanceFromThisPurchase;
         coachingStructs[coachingIndex] = CoachingStruct({
@@ -445,7 +447,21 @@ abstract contract ContentManager is EIP712, BasePlatform {
             (totalPaymentAmount * coachingGovernanceCut) /
             100000;
 
+        uint instructorRefunds = 0;
+        if (currentCoaching.isDone == 1) {
+            instructorRefunds =
+                totalPaymentAmount -
+                ((totalPaymentAmount * coachingFoundationCut) / 100000) -
+                ((totalPaymentAmount * coachingGovernanceCut) / 100000);
+        }
+
         currentCoaching.isDone = 2;
+
+        if (instructorBalance[currentCoaching.coach] >= instructorRefunds) {
+            instructorBalance[currentCoaching.coach] -= instructorRefunds;
+        } else {
+            instructorDebt[currentCoaching.coach] += instructorRefunds;
+        }
         udao.transfer(currentCoaching.learner, totalPaymentAmount);
 
         emit Refund(_coachingId, currentCoaching.learner, totalPaymentAmount);
@@ -467,7 +483,13 @@ abstract contract ContentManager is EIP712, BasePlatform {
         governanceBalance -=
             (totalPaymentAmount * coachingGovernanceCut) /
             100000;
-
+        uint instructorRefunds = 0;
+        if (currentCoaching.isDone == 1) {
+            instructorRefunds =
+                totalPaymentAmount -
+                ((totalPaymentAmount * coachingFoundationCut) / 100000) -
+                ((totalPaymentAmount * coachingGovernanceCut) / 100000);
+        }
         currentCoaching.isDone = 2;
         udao.transfer(currentCoaching.learner, totalPaymentAmount);
 
@@ -482,11 +504,16 @@ abstract contract ContentManager is EIP712, BasePlatform {
         uint256 gasUsed = startGas - gasleft();
 
         if (
-            instructorBalance[currentCoaching.coach] >= (gasUsed * tx.gasprice)
+            instructorBalance[currentCoaching.coach] >=
+            (gasUsed * tx.gasprice + instructorRefunds)
         ) {
-            instructorBalance[currentCoaching.coach] -= gasUsed * tx.gasprice;
+            instructorBalance[currentCoaching.coach] -= (gasUsed *
+                tx.gasprice +
+                instructorRefunds);
         } else {
-            instructorDebt[currentCoaching.coach] += gasUsed * tx.gasprice;
+            instructorDebt[currentCoaching.coach] += (gasUsed *
+                tx.gasprice +
+                instructorRefunds);
         }
 
         emit Refund(_coachingId, currentCoaching.learner, totalPaymentAmount);
@@ -509,6 +536,13 @@ abstract contract ContentManager is EIP712, BasePlatform {
             (totalPaymentAmount * coachingGovernanceCut) /
             100000;
 
+        uint instructorRefunds = 0;
+        if (currentCoaching.isDone == 1) {
+            instructorRefunds =
+                totalPaymentAmount -
+                ((totalPaymentAmount * coachingFoundationCut) / 100000) -
+                ((totalPaymentAmount * coachingGovernanceCut) / 100000);
+        }
         currentCoaching.isDone = 2;
         udao.transfer(currentCoaching.learner, totalPaymentAmount);
 
@@ -521,12 +555,18 @@ abstract contract ContentManager is EIP712, BasePlatform {
          */
         uint256 gasUsed = startGas - gasleft();
         if (
-            instructorBalance[currentCoaching.coach] >= (gasUsed * tx.gasprice)
+            instructorBalance[currentCoaching.coach] >=
+            (gasUsed * tx.gasprice + instructorRefunds)
         ) {
-            instructorBalance[currentCoaching.coach] -= gasUsed * tx.gasprice;
+            instructorBalance[currentCoaching.coach] -= (gasUsed *
+                tx.gasprice +
+                instructorRefunds);
         } else {
-            instructorDebt[currentCoaching.coach] += gasUsed * tx.gasprice;
+            instructorDebt[currentCoaching.coach] += (gasUsed *
+                tx.gasprice +
+                instructorRefunds);
         }
+
         emit Refund(_coachingId, msg.sender, totalPaymentAmount);
     }
 

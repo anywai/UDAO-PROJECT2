@@ -7,13 +7,14 @@ import "../ContractManager.sol";
 import "../RoleController.sol";
 import "../interfaces/IUDAOC.sol";
 import "../interfaces/IVM.sol";
-
+import "../interfaces/IPlatformTreasury.sol";
 
 contract JurorManager is RoleController {
     IUDAOC udaoc;
-    IValidationManager public IVM;
+    IValidationManager IVM;
+    IPlatformTreasury PT;
 
-    ContractManager public contractManager;
+    ContractManager contractManager;
 
     event EndDispute(uint256 caseId, address[] jurors, uint256 totalJurorScore);
     event NextRound(uint256 newRoundId);
@@ -22,7 +23,7 @@ contract JurorManager is RoleController {
     event DisputeResultSent(uint256 caseId, bool result, address juror);
     event DisputeEnded(uint256 caseId, bool verdict);
 
-    event AddressesUpdated(address IRMAddress);
+    event AddressesUpdated(address IRMAddress, address PTAddress);
     // juror => round => score
     mapping(address => mapping(uint256 => uint256)) public jurorScorePerRound;
     // juror => caseId
@@ -48,15 +49,24 @@ contract JurorManager is RoleController {
         disputes.push();
     }
 
-    function setContractManager(address _contractManager) external onlyRole(BACKEND_ROLE) {
+    function setContractManager(
+        address _contractManager
+    ) external onlyRole(BACKEND_ROLE) {
         contractManager = ContractManager(_contractManager);
+    }
+
+    function setPlatformTreasury(
+        address _platformTreasury
+    ) external onlyRole(BACKEND_ROLE) {
+        PT = IPlatformTreasury(_platformTreasury);
     }
 
     /// @notice Get the updated addresses from contract manager
     /// TODO is this correct?
     function updateAddresses() external onlyRole(BACKEND_ROLE) {
         IRM = IRoleManager(contractManager.IrmAddress());
-        emit AddressesUpdated(address(IRM));
+        PT = IPlatformTreasury(contractManager.PlatformTreasuryAddress());
+        emit AddressesUpdated(address(IRM), address(PT));
     }
 
     struct Dispute {
@@ -82,6 +92,10 @@ contract JurorManager is RoleController {
         bool isTokenRelated;
         /// @dev Related token ID, default to 0
         uint256 tokenId;
+        /// @dev refund dispute
+        bool isRefundDispute;
+        /// @dev coaching id
+        uint256 coachingId;
         /// @dev If the dispute is finalized or not
         bool isFinalized;
         /// @dev Case result date
@@ -109,12 +123,18 @@ contract JurorManager is RoleController {
         uint128 caseScope,
         string calldata question,
         bool isTokenRelated,
-        uint256 tokenId
+        uint256 tokenId,
+        bool isRefundDispute,
+        uint coachingId
     ) external onlyRole(BACKEND_ROLE) {
         Dispute storage dispute = disputes.push();
         dispute.caseId = disputes.length - 1;
         dispute.caseScope = caseScope;
         dispute.question = question;
+        dispute.isRefundDispute = isRefundDispute;
+        if (isRefundDispute) {
+            dispute.coachingId = coachingId;
+        }
         // TODO it seems like we are not using the info below
         dispute.isTokenRelated = isTokenRelated;
         if (isTokenRelated) {
@@ -189,7 +209,7 @@ contract JurorManager is RoleController {
         disputes[caseId].isVoted[msg.sender] = true;
         disputes[caseId].vote[msg.sender] = result;
         disputes[caseId].voteCount++;
-        if(disputes[caseId].voteCount >= requiredJurors) {
+        if (disputes[caseId].voteCount >= requiredJurors) {
             _finalizeDispute(caseId);
         }
         emit DisputeResultSent(caseId, result, msg.sender);
@@ -203,6 +223,9 @@ contract JurorManager is RoleController {
 
         if (disputes[caseId].acceptVoteCount >= minRequiredAcceptVote) {
             disputes[caseId].verdict = true;
+            if (disputes[caseId].isRefundDispute) {
+                PT.forcedRefundJuror(disputes[caseId].coachingId);
+            }
         } else {
             disputes[caseId].verdict = false;
         }
@@ -226,7 +249,7 @@ contract JurorManager is RoleController {
                 /// @dev Record unsuccess point of a juror
                 unsuccessfulDispute[disputes[caseId].jurors[i]]++;
             }
-        disputes[caseId].isFinalized = true;
+            disputes[caseId].isFinalized = true;
         }
         emit DisputeEnded(caseId, disputes[caseId].verdict);
     }
@@ -267,7 +290,7 @@ contract JurorManager is RoleController {
                 /// @dev Record unsuccess point of a juror
                 unsuccessfulDispute[disputes[caseId].jurors[i]]++;
             }
-        disputes[caseId].isFinalized = true;
+            disputes[caseId].isFinalized = true;
         }
         emit DisputeEnded(caseId, disputes[caseId].verdict);
     }

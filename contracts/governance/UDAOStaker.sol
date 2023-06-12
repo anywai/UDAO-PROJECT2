@@ -21,10 +21,10 @@ contract UDAOStaker is RoleController, EIP712 {
     string private constant SIGNING_DOMAIN = "UDAOStaker";
     string private constant SIGNATURE_VERSION = "1";
 
-    IERC20 public udao;
-    IUDAOVP public udaovp;
-    ContractManager public contractManager;
-    address public platformTreasuryAddress;
+    IERC20 udao;
+    IUDAOVP udaovp;
+    ContractManager contractManager;
+    address platformTreasuryAddress;
 
     /// @notice the required duration to be a validator
     uint256 public jurorLockTime = 30 days;
@@ -88,7 +88,7 @@ contract UDAOStaker is RoleController, EIP712 {
     mapping(address => GovernanceLock[]) governanceStakes;
     mapping(address => uint256) rewardBalanceOf;
     mapping(address => uint256) lastRewardBlock;
-    uint256 public voteReward = 0.0001 ether; // SHOULD BE UPDATED
+    uint256 voteReward = 0.0001 ether; // SHOULD BE UPDATED
 
     struct ValidationApplication {
         address applicant;
@@ -110,7 +110,7 @@ contract UDAOStaker is RoleController, EIP712 {
     mapping(address => uint256) jurorApplicationId;
     uint256 private caseApplicationIndex;
 
-    uint256 public totalVotingPower;
+    uint256 totalVotingPower;
 
     /**
      * @param _platformTreasuryAddress address of the platform treasury contract
@@ -589,9 +589,7 @@ contract UDAOStaker is RoleController, EIP712 {
         //make sure juror is kyced and not banned
         require(IRM.isKYCed(msg.sender), "You are not KYCed");
         require(!IRM.isBanned(msg.sender), "You were banned");
-        require(jobListingCount > 0,
-            "Zero job listing count is not allowed"
-        );
+        require(jobListingCount > 0, "Zero job listing count is not allowed");
         udao.transferFrom(
             msg.sender,
             address(this),

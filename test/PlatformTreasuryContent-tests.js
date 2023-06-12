@@ -6,6 +6,7 @@ const BN = require("bn.js");
 const { DiscountedPurchase } = require("../lib/DiscountedPurchase");
 const helpers = require("@nomicfoundation/hardhat-network-helpers");
 const { deploy } = require("../lib/deployments");
+const { anyValue } = require("@nomicfoundation/hardhat-chai-matchers/withArgs");
 
 const {
   WMATIC_ABI,
@@ -27,7 +28,7 @@ async function runValidation(
   contentCreator
 ) {
   await expect(
-    contractValidationManager.connect(backend).createValidation(0, 50)
+    contractValidationManager.connect(contentCreator).createValidation(0, 50)
   )
     .to.emit(contractValidationManager, "ValidationCreated")
     .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1));
@@ -165,21 +166,32 @@ describe("Platform Treasury Contract - Content", function () {
       contractUDAOGovernor,
       contractContractManager,
     } = await deploy();
-    const originalVMAdress = await contractPlatformTreasury.IVM.call();
     await contractContractManager
       .connect(backend)
       .setAddressIVM("0x5B38Da6a701c568545dCfcB03FcB875f56beddC4");
     // Get updated address
-    await contractPlatformTreasury.connect(backend).updateAddresses();
-    expect(await contractPlatformTreasury.IVM.call()).to.eql(
-      "0x5B38Da6a701c568545dCfcB03FcB875f56beddC4"
-    );
+    await expect(contractPlatformTreasury.connect(backend).updateAddresses())
+      .to.emit(contractPlatformTreasury, "AddressesUpdated")
+      .withArgs(
+        anyValue,
+        anyValue,
+        "0x5B38Da6a701c568545dCfcB03FcB875f56beddC4",
+        anyValue,
+        anyValue
+      );
     await contractContractManager
       .connect(backend)
-      .setAddressIVM(originalVMAdress);
+      .setAddressIVM(contractValidationManager.address);
     // Get updated address
-    await contractPlatformTreasury.connect(backend).updateAddresses();
-    expect(await contractPlatformTreasury.IVM.call()).to.eql(originalVMAdress);
+    await expect(contractPlatformTreasury.connect(backend).updateAddresses())
+      .to.emit(contractPlatformTreasury, "AddressesUpdated")
+      .withArgs(
+        anyValue,
+        anyValue,
+        contractValidationManager.address,
+        anyValue,
+        anyValue
+      );
   });
 
   it("Should fail to set validation manager if not FOUNDATION", async function () {
@@ -212,7 +224,6 @@ describe("Platform Treasury Contract - Content", function () {
       contractUDAOGovernor,
       contractContractManager,
     } = await deploy();
-    const originalVMAdress = await contractPlatformTreasury.IVM.call();
 
     await expect(
       contractPlatformTreasury.connect(foundation).updateAddresses()
@@ -1074,7 +1085,7 @@ describe("Platform Treasury Contract - Content", function () {
         0
       );
     await expect(
-      contractValidationManager.connect(backend).createValidation(0, 50)
+      contractValidationManager.connect(contentCreator).createValidation(0, 50)
     )
       .to.emit(contractValidationManager, "ValidationCreated")
       .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1));
@@ -1261,7 +1272,7 @@ describe("Platform Treasury Contract - Content", function () {
         0
       );
     await expect(
-      contractValidationManager.connect(backend).createValidation(0, 50)
+      contractValidationManager.connect(contentCreator).createValidation(0, 50)
     )
       .to.emit(contractValidationManager, "ValidationCreated")
       .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1));
@@ -1450,7 +1461,7 @@ describe("Platform Treasury Contract - Content", function () {
         0
       );
     await expect(
-      contractValidationManager.connect(backend).createValidation(0, 50)
+      contractValidationManager.connect(contentCreator).createValidation(0, 50)
     )
       .to.emit(contractValidationManager, "ValidationCreated")
       .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1));
