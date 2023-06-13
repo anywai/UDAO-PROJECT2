@@ -899,4 +899,76 @@ describe("UDAOC Contract", function () {
       contractUDAOContent.connect(contentBuyer).disableCoaching(0)
     ).to.revertedWith("You are not the owner of token");
   });
+
+  it("Should allow content owner to add new parts to content", async function () {
+    const {
+      backend,
+      contentCreator,
+      contentBuyer,
+      validatorCandidate,
+      validator,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+      contractUDAOContentParts,
+    } = await deploy();
+    await contractRoleManager.setKYC(contentCreator.address, true);
+
+    await expect(
+      contractUDAOContent
+        .connect(contentCreator)
+        .redeem(
+          [ethers.utils.parseEther("1"), ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
+          "udao",
+          "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
+          contentCreator.address,
+          ethers.utils.parseEther("2"),
+          "udao",
+          false,
+          false
+        )
+    )
+      .to.emit(contractUDAOContent, "Transfer") // transfer from null address to min
+      .withArgs(
+        "0x0000000000000000000000000000000000000000",
+        contentCreator.address,
+        0
+      );
+  
+      
+      // add new part
+      await contractUDAOContent.connect(contentCreator).addNewPart(0, 3, ethers.utils.parseEther("20"), "udao")
+      
+      // mine 1 block
+      await ethers.provider.send("evm_mine");
+      // get getContentPriceAndCurrency
+      //const getContentPriceAndCurrency = await contractUDAOContent.getContentPriceAndCurrency(0, 0);
+      //const getContentPriceAndCurrency1 = await contractUDAOContent.getContentPriceAndCurrency(0, 1);
+      //const getContentPriceAndCurrency2 = await contractUDAOContent.getContentPriceAndCurrency(0, 2);
+      //const getContentPriceAndCurrency3 = await contractUDAOContent.getContentPriceAndCurrency(0, 3);
+      //const getContentPriceAndCurrency4 = await contractUDAOContent.getContentPriceAndCurrency(0, 4);
+      //console.log(getContentPriceAndCurrency[0]);
+      //console.log(getContentPriceAndCurrency1[0]);
+      //console.log(getContentPriceAndCurrency2[0]);
+      //console.log(getContentPriceAndCurrency3[0]);
+      //console.log(getContentPriceAndCurrency4[0]);
+
+      
+
+
+  });
 });
