@@ -34,6 +34,10 @@ contract UDAOStaker is RoleController, EIP712 {
     uint256 public validatorLockAmount = 150 ether;
     /// @notice Amount to deduct from juror application
     uint256 public jurorLockAmount = 150 ether;
+    /// @notice the minimum duration for governance stake
+    uint256 public minimum_stake_days = 7; // 1 WEEK
+    /// @notice the maximum duration for governance stake
+    uint256 public maximum_stake_days = 1460; // 4 YEARS
 
     event SetValidatorLockAmount(uint256 _newAmount);
     event SetVoteReward(uint256 _newAmount);
@@ -472,6 +476,14 @@ contract UDAOStaker is RoleController, EIP712 {
         require(IRM.isKYCed(msg.sender), "Address is not KYCed");
         require(!IRM.isBanned(msg.sender), "Address is banned");
         udao.transferFrom(msg.sender, address(this), _amount);
+        require(
+            _days >= minimum_stake_days,
+            "Can't stake less than minimum_stake_days"
+        );
+        require(
+            _days <= maximum_stake_days,
+            "Can't stake more than maximum_stake_days"
+        );
 
         GovernanceLock storage lock = governanceStakes[msg.sender].push();
         lock.amount = _amount;
