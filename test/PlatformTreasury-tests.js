@@ -338,14 +338,13 @@ describe("Platform Treasury General", function () {
       contractJurorManager,
       contractContractManager,
     } = await deploy();
+    const newGovernanceTreasury = contractUDAOTimelockController;
 
-    // new dummy governance treasury address
-    const newGovernanceTreasury = await ethers.Wallet.createRandom();
     // set new governance treasury address
     await expect(
       contractPlatformTreasury
         .connect(backend)
-        .setGovernanceTreasuryAddress(newGovernanceTreasury.address)
+        .setGovernanceTreasuryAddress(contractUDAOTimelockController.address)
     )
       .to.emit(contractPlatformTreasury, "GovernanceTreasuryUpdated")
       .withArgs(newGovernanceTreasury.address);
@@ -498,13 +497,13 @@ describe("Platform Treasury General", function () {
     );
 
     // new dummy governance treasury address
-    const newGovernanceTreasury = await ethers.Wallet.createRandom();
+    const newGovernanceTreasury = contractUDAOTimelockController;
 
     // set new governance treasury address
     await expect(
       contractPlatformTreasury
         .connect(backend)
-        .setGovernanceTreasuryAddress(newGovernanceTreasury.address)
+        .setGovernanceTreasuryAddress(contractUDAOTimelockController.address)
     )
       .to.emit(contractPlatformTreasury, "GovernanceTreasuryUpdated")
       .withArgs(newGovernanceTreasury.address);
@@ -773,13 +772,13 @@ describe("Platform Treasury General", function () {
     );
 
     // new dummy governance treasury address
-    const newGovernanceTreasury = await ethers.Wallet.createRandom();
+    const newGovernanceTreasury = contractUDAOTimelockController;
 
     // set new governance treasury address
     await expect(
       contractPlatformTreasury
         .connect(backend)
-        .setGovernanceTreasuryAddress(newGovernanceTreasury.address)
+        .setGovernanceTreasuryAddress(contractUDAOTimelockController.address)
     )
       .to.emit(contractPlatformTreasury, "GovernanceTreasuryUpdated")
       .withArgs(newGovernanceTreasury.address);
@@ -3044,13 +3043,13 @@ describe("Platform Treasury General", function () {
     );
 
     // new dummy governance treasury address
-    const newGovernanceTreasury = await ethers.Wallet.createRandom();
+    const newGovernanceTreasury = contractUDAOTimelockController;
 
     // set new governance treasury address
     await expect(
       contractPlatformTreasury
         .connect(backend)
-        .setGovernanceTreasuryAddress(newGovernanceTreasury.address)
+        .setGovernanceTreasuryAddress(contractUDAOTimelockController.address)
     )
       .to.emit(contractPlatformTreasury, "GovernanceTreasuryUpdated")
       .withArgs(newGovernanceTreasury.address);
@@ -3324,13 +3323,13 @@ describe("Platform Treasury General", function () {
     );
 
     // new dummy governance treasury address
-    const newGovernanceTreasury = await ethers.Wallet.createRandom();
+    const newGovernanceTreasury = contractUDAOTimelockController;
 
     // set new governance treasury address
     await expect(
       contractPlatformTreasury
         .connect(backend)
-        .setGovernanceTreasuryAddress(newGovernanceTreasury.address)
+        .setGovernanceTreasuryAddress(contractUDAOTimelockController.address)
     )
       .to.emit(contractPlatformTreasury, "GovernanceTreasuryUpdated")
       .withArgs(newGovernanceTreasury.address);
