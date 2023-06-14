@@ -131,47 +131,45 @@ contract UDAOContent is IUDAOC, ERC721, ERC721URIStorage, RoleController {
     /// @param newPartId The id of the new part
     /// @param newPartPrice The price of the new part
     function _insertNewPart(
-    uint tokenId,
-    uint newPartId,
-    uint newPartPrice
-) internal {
-    require(newPartId <= partNumberOfContent[tokenId], "Invalid index");
-    uint256[] memory prices = new uint256[](3); // Change to dynamic memory array
+        uint tokenId,
+        uint newPartId,
+        uint newPartPrice
+    ) internal {
+        require(newPartId <= partNumberOfContent[tokenId], "Invalid index");
+        uint256[] memory prices = new uint256[](3); // Change to dynamic memory array
 
-    for (uint i = 0; i < 3; i++) {
-        prices[i] = contentPrice[tokenId][i];
+        for (uint i = 0; i < 3; i++) {
+            prices[i] = contentPrice[tokenId][i];
+        }
+
+        // Create a new array with an increased length
+        uint[] memory newArray = new uint[](prices.length + 1);
+
+        // Copy the elements before the desired index
+        for (uint i = 0; i < newPartId; i++) {
+            newArray[i] = prices[i];
+        }
+
+        // Insert the new value at the desired index
+        newArray[newPartId] = newPartPrice;
+
+        // Copy the remaining elements from the original array
+        for (uint i = newPartId; i < prices.length; i++) {
+            newArray[i + 1] = prices[i];
+        }
+
+        // Replace the original array with the new array
+        prices = newArray;
+
+        // replace content price mapping
+        for (uint i = 0; i < prices.length; i++) {
+            contentPrice[tokenId][i] = prices[i];
+        }
+
+        // save the content price
+        uint partLength = prices.length;
+        partNumberOfContent[tokenId] = partLength;
     }
-
-    // Create a new array with an increased length
-    uint[] memory newArray = new uint[](prices.length + 1);
-
-    // Copy the elements before the desired index
-    for (uint i = 0; i < newPartId; i++) {
-        newArray[i] = prices[i];
-    }
-
-    // Insert the new value at the desired index
-    newArray[newPartId] = newPartPrice;
-
-    // Copy the remaining elements from the original array
-    for (uint i = newPartId; i < prices.length; i++) {
-        newArray[i + 1] = prices[i];
-    }
-
-    // Replace the original array with the new array
-    prices = newArray;
-
-    // replace content price mapping
-    for (uint i = 0; i < prices.length; i++) {
-        contentPrice[tokenId][i] = prices[i];
-    }
-
-    // save the content price
-    uint partLength = prices.length;
-    partNumberOfContent[tokenId] = partLength;
-}
-
-    
 
     /// @notice Allows instructers' to enable coaching for a specific content
     /// @param tokenId The content id
