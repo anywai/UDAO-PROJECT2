@@ -84,7 +84,11 @@ contract UDAOContent is IUDAOC, ERC721, ERC721URIStorage, RoleController {
         _setTokenURI(tokenId, _uri);
         _tokenIds.increment();
     }
-    /// @dev Allows content owners to insert new parts to the given _newPartIds index by shifting old parts
+
+    /// @dev Allows content owners to insert new parts
+    /// @param tokenId The id of the token
+    /// @param newPartId The id of the new part
+    /// @param newPartPrice The price of the new part
     function addNewPart(
         uint tokenId,
         uint newPartId,
@@ -122,6 +126,10 @@ contract UDAOContent is IUDAOC, ERC721, ERC721URIStorage, RoleController {
         }
     }
 
+    /// @dev Internal function to insert a new part in between existing parts
+    /// @param tokenId The id of the token
+    /// @param newPartId The id of the new part
+    /// @param newPartPrice The price of the new part
     function _insertNewPart(
     uint tokenId,
     uint newPartId,
