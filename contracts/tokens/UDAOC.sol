@@ -34,6 +34,8 @@ contract UDAOContent is IUDAOC, ERC721, ERC721URIStorage, RoleController {
     // tokenId => is coaching refundable
     mapping(uint => bool) public coachingRefundable;
 
+    event newPartAdded(uint tokenId, uint newPartId, uint newPartPrice);
+
     // TODO No name or description for individual NFT. Is this a problem?
     /// @notice Redeems a ContentVoucher for an actual NFT, creating it in the process.
     /// @param _contentPrice The price of the content, first price is the full price
@@ -119,11 +121,11 @@ contract UDAOContent is IUDAOC, ERC721, ERC721URIStorage, RoleController {
         if (newPartId == partNumberOfContent[tokenId]) {
             contentPrice[tokenId][newPartId] = newPartPrice;
             partNumberOfContent[tokenId]++;
-            return;
         } else {
             // if new part is not the last part, shift the parts
             _insertNewPart(tokenId, newPartId, newPartPrice);
         }
+        emit newPartAdded(tokenId, newPartId, newPartPrice);
     }
 
     /// @dev Internal function to insert a new part in between existing parts
