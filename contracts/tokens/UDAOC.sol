@@ -104,7 +104,7 @@ contract UDAOContent is IUDAOC, ERC721, ERC721URIStorage, RoleController {
         //make sure caller is kyced
         require(IRM.isKYCed(msg.sender), "You are not KYCed");
         //make sure caller is not banned
-        require(!IRM.isBanned(msg.sender), "You were banned!");
+        require(!IRM.isBanned(msg.sender), "You are banned");
         // make sure currency name is the same
         require(
             keccak256(abi.encodePacked(_currencyName)) == currencyName[tokenId],
