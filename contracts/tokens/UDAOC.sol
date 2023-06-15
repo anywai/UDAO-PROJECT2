@@ -108,7 +108,7 @@ contract UDAOContent is IUDAOC, ERC721, ERC721URIStorage, RoleController {
         // make sure currency name is the same
         require(
             keccak256(abi.encodePacked(_currencyName)) == currencyName[tokenId],
-            "Currency name is not the same"
+            "Original currency name is not the same as the new currency name"
         );
         // make sure new part id is not bigger than the number of parts
         require(
