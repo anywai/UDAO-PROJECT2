@@ -69,6 +69,9 @@ contract UDAOStaker is RoleController, EIP712 {
     event VoteRewardAdded(address _rewardee, uint256 _amount);
     event VoteRewardsWithdrawn(address _rewardee, uint256 _amount);
 
+    event SetMaximumStakeDays(uint256 _newAmount);
+    event SetMinimumStakeDays(uint256 _newAmount);
+
     mapping(address => uint256) validationBalanceOf;
     mapping(address => uint256) jurorBalanceOf;
     mapping(address => uint256) latestValidatorStakeId;
@@ -171,6 +174,28 @@ contract UDAOStaker is RoleController, EIP712 {
     ) external onlyRole(BACKEND_ROLE) {
         platformTreasuryAddress = _platformTreasuryAddress;
         emit SetPlatformTreasuryAddress(_platformTreasuryAddress);
+    }
+
+    /**
+     * @notice sets the maximum stake days for governance members
+     * @param _maximum_stake_days the new maximum stake days
+     */
+    function setMaximumStakeDays(
+        uint256 _maximum_stake_days
+    ) external onlyRoles(administrator_roles) {
+        maximum_stake_days = _maximum_stake_days;
+        emit SetMaximumStakeDays(_maximum_stake_days);
+    }
+
+    /**
+     * @notice sets the minimum stake days for governance members
+     * @param _minimum_stake_days the new minimum stake days
+     */
+    function setMinimumStakeDays(
+        uint256 _minimum_stake_days
+    ) external onlyRoles(administrator_roles) {
+        minimum_stake_days = _minimum_stake_days;
+        emit SetMinimumStakeDays(_minimum_stake_days);
     }
 
     /// @notice Represents the right to get a role
