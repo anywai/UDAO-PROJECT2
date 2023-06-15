@@ -183,6 +183,10 @@ contract UDAOStaker is RoleController, EIP712 {
     function setMaximumStakeDays(
         uint256 _maximum_stake_days
     ) external onlyRoles(administrator_roles) {
+        require(
+            _maximum_stake_days >= minimum_stake_days,
+            "Maximum stake days must be greater than minimum days"
+        );
         maximum_stake_days = _maximum_stake_days;
         emit SetMaximumStakeDays(_maximum_stake_days);
     }
@@ -194,6 +198,10 @@ contract UDAOStaker is RoleController, EIP712 {
     function setMinimumStakeDays(
         uint256 _minimum_stake_days
     ) external onlyRoles(administrator_roles) {
+        require(
+            _minimum_stake_days <= maximum_stake_days,
+            "Minimum stake days must be less than maximum days"
+        );
         minimum_stake_days = _minimum_stake_days;
         emit SetMinimumStakeDays(_minimum_stake_days);
     }
