@@ -113,7 +113,7 @@ contract UDAOContent is IUDAOC, ERC721, ERC721URIStorage, RoleController {
         // make sure new part id is not bigger than the number of parts
         require(
             newPartId <= partNumberOfContent[tokenId],
-            "Part id is bigger than the number of parts"
+            "Part id is bigger than the total number of parts"
         );
         // make sure new part is not the zero part since it is the full price
         require(newPartId != 0, "0 sent as new part id, parts starts from 1");
