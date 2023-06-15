@@ -76,7 +76,7 @@ abstract contract BasePlatform is Pausable, RoleController {
     // cut for validator pool from content
     uint public contentValidatorCut = 200;
 
-    address governanceTreasury;
+    address governanceTreasury; // timelock controller address
     address foundationWallet;
 
     IValidationManager IVM;
