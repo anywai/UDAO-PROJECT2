@@ -5,7 +5,6 @@ import "@openzeppelin/contracts/governance/Governor.sol";
 import "@openzeppelin/contracts/governance/extensions/GovernorSettings.sol";
 import "@openzeppelin/contracts/governance/extensions/GovernorCountingSimple.sol";
 import "@openzeppelin/contracts/governance/extensions/GovernorVotes.sol";
-import "@openzeppelin/contracts/governance/extensions/GovernorVotesQuorumFraction.sol";
 import "@openzeppelin/contracts/governance/extensions/GovernorTimelockControl.sol";
 
 import "../RoleController.sol";
@@ -19,7 +18,6 @@ contract UDAOGovernor is
     GovernorSettings,
     GovernorCountingSimple,
     GovernorVotes,
-    GovernorVotesQuorumFraction,
     GovernorTimelockControl,
     RoleController
 {
@@ -39,11 +37,22 @@ contract UDAOGovernor is
             1 /*proposal threshold*/
         )
         GovernorVotes(_token)
-        GovernorVotesQuorumFraction(4)
         GovernorTimelockControl(_timelock)
         RoleController(rmAddress)
     {
         stakingContract = IUDAOStaker(stakingContractAddress);
+    }
+
+    uint _quorum = 720000000e18;
+
+    function quorum(
+        uint256 blockNumber
+    ) public pure override returns (uint256) {
+        return _quorum;
+    }
+
+    function setQuorum(uint quorum) external onlyRole(GOVERNANCE_CONTRACT) {
+        _quorum = quorum;
     }
 
     /// @notice Allows backend to set the staking contract address.
