@@ -114,6 +114,134 @@ describe("UDAOStaker Contract", function () {
     );
   });
 
+  it("Should set maximum lock days", async function () {
+    const {
+      backend,
+      validatorCandidate,
+      validator,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+    } = await deploy();
+
+    await expect(
+      contractUDAOStaker.connect(foundation).setMaximumStakeDays("1000")
+    )
+      .to.emit(contractUDAOStaker, "SetMaximumStakeDays") // transfer from null address to minter
+      .withArgs("1000");
+
+    expect(await contractUDAOStaker.maximum_stake_days()).to.eql(
+      ethers.BigNumber.from("1000")
+    );
+  });
+
+  it("Should set minimum lock days", async function () {
+    const {
+      backend,
+      validatorCandidate,
+      validator,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+    } = await deploy();
+
+    await expect(
+      contractUDAOStaker.connect(foundation).setMinimumStakeDays("1")
+    )
+      .to.emit(contractUDAOStaker, "SetMinimumStakeDays") // transfer from null address to minter
+      .withArgs("1");
+
+    expect(await contractUDAOStaker.minimum_stake_days()).to.eql(
+      ethers.BigNumber.from("1")
+    );
+  });
+
+  it("Should fail to set maximum lock days if less than minimum days", async function () {
+    const {
+      backend,
+      validatorCandidate,
+      validator,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+    } = await deploy();
+
+    await expect(
+      contractUDAOStaker.connect(foundation).setMaximumStakeDays("1")
+    ).to.revertedWith("Maximum stake days must be greater than minimum days");
+  });
+
+  it("Should fail to set minimum lock days", async function () {
+    const {
+      backend,
+      validatorCandidate,
+      validator,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+    } = await deploy();
+
+    await expect(
+      contractUDAOStaker.connect(foundation).setMinimumStakeDays("3000")
+    ).to.revertedWith("Minimum stake days must be less than maximum days");
+  });
+
   it("Should fail to set super validator lock amount as unauthorized user", async function () {
     const {
       backend,
@@ -326,6 +454,96 @@ describe("UDAOStaker Contract", function () {
         ethers.utils.parseEther("10"),
         ethers.utils.parseEther("300")
       );
+  });
+
+  it("Should fail to stake to be a governance member if more than maximum days", async function () {
+    const {
+      backend,
+      validatorCandidate,
+      validator,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+    } = await deploy();
+
+    await contractRoleManager.setKYC(governanceCandidate.address, true);
+
+    await contractUDAO.transfer(
+      governanceCandidate.address,
+      ethers.utils.parseEther("100.0")
+    );
+
+    await contractUDAO
+      .connect(governanceCandidate)
+      .approve(
+        contractUDAOStaker.address,
+        ethers.utils.parseEther("999999999999.0")
+      );
+
+    await expect(
+      contractUDAOStaker
+        .connect(governanceCandidate)
+        .stakeForGovernance(ethers.utils.parseEther("10"), 3000)
+    ).to.revertedWith("Can't stake more than maximum_stake_days");
+  });
+
+  it("Should fail to stake to be a governance member if less than maximum days", async function () {
+    const {
+      backend,
+      validatorCandidate,
+      validator,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+    } = await deploy();
+
+    await contractRoleManager.setKYC(governanceCandidate.address, true);
+
+    await contractUDAO.transfer(
+      governanceCandidate.address,
+      ethers.utils.parseEther("100.0")
+    );
+
+    await contractUDAO
+      .connect(governanceCandidate)
+      .approve(
+        contractUDAOStaker.address,
+        ethers.utils.parseEther("999999999999.0")
+      );
+
+    await expect(
+      contractUDAOStaker
+        .connect(governanceCandidate)
+        .stakeForGovernance(ethers.utils.parseEther("10"), 3)
+    ).to.revertedWith("Can't stake less than minimum_stake_days");
   });
 
   it("Should apply for validator", async function () {

@@ -34,6 +34,8 @@ contract UDAOContent is IUDAOC, ERC721, ERC721URIStorage, RoleController {
     // tokenId => is coaching refundable
     mapping(uint => bool) public coachingRefundable;
 
+    event newPartAdded(uint tokenId, uint newPartId, uint newPartPrice);
+
     // TODO No name or description for individual NFT. Is this a problem?
     /// @notice Redeems a ContentVoucher for an actual NFT, creating it in the process.
     /// @param _contentPrice The price of the content, first price is the full price
@@ -83,6 +85,92 @@ contract UDAOContent is IUDAOC, ERC721, ERC721URIStorage, RoleController {
         _mint(_redeemer, tokenId);
         _setTokenURI(tokenId, _uri);
         _tokenIds.increment();
+    }
+
+    /// @dev Allows content owners to insert new parts
+    /// @param tokenId The id of the token
+    /// @param newPartId The id of the new part
+    /// @param newPartPrice The price of the new part
+    function addNewPart(
+        uint tokenId,
+        uint newPartId,
+        uint newPartPrice,
+        string calldata _currencyName
+    ) external whenNotPaused {
+        require(
+            ownerOf(tokenId) == msg.sender,
+            "You are not the owner of token"
+        );
+        //make sure caller is kyced
+        require(IRM.isKYCed(msg.sender), "You are not KYCed");
+        //make sure caller is not banned
+        require(!IRM.isBanned(msg.sender), "You are banned");
+        // make sure currency name is the same
+        require(
+            keccak256(abi.encodePacked(_currencyName)) == currencyName[tokenId],
+            "Original currency name is not the same as the new currency name"
+        );
+        // make sure new part id is not bigger than the number of parts
+        require(
+            newPartId <= partNumberOfContent[tokenId],
+            "Part id is bigger than the total number of parts"
+        );
+        // make sure new part is not the zero part since it is the full price
+        require(newPartId != 0, "0 sent as new part id, parts starts from 1");
+        // if new part is the last part, just push it
+        if (newPartId == partNumberOfContent[tokenId]) {
+            contentPrice[tokenId][newPartId] = newPartPrice;
+            partNumberOfContent[tokenId]++;
+        } else {
+            // if new part is not the last part, shift the parts
+            _insertNewPart(tokenId, newPartId, newPartPrice);
+        }
+        emit newPartAdded(tokenId, newPartId, newPartPrice);
+    }
+
+    /// @dev Internal function to insert a new part in between existing parts
+    /// @param tokenId The id of the token
+    /// @param newPartId The id of the new part
+    /// @param newPartPrice The price of the new part
+    function _insertNewPart(
+        uint tokenId,
+        uint newPartId,
+        uint newPartPrice
+    ) internal {
+        require(newPartId <= partNumberOfContent[tokenId], "Invalid index");
+        uint256[] memory prices = new uint256[](3); // Change to dynamic memory array
+
+        for (uint i = 0; i < 3; i++) {
+            prices[i] = contentPrice[tokenId][i];
+        }
+
+        // Create a new array with an increased length
+        uint[] memory newArray = new uint[](prices.length + 1);
+
+        // Copy the elements before the desired index
+        for (uint i = 0; i < newPartId; i++) {
+            newArray[i] = prices[i];
+        }
+
+        // Insert the new value at the desired index
+        newArray[newPartId] = newPartPrice;
+
+        // Copy the remaining elements from the original array
+        for (uint i = newPartId; i < prices.length; i++) {
+            newArray[i + 1] = prices[i];
+        }
+
+        // Replace the original array with the new array
+        prices = newArray;
+
+        // replace content price mapping
+        for (uint i = 0; i < prices.length; i++) {
+            contentPrice[tokenId][i] = prices[i];
+        }
+
+        // save the content price
+        uint partLength = prices.length;
+        partNumberOfContent[tokenId] = partLength;
     }
 
     /// @notice Allows instructers' to enable coaching for a specific content

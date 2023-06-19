@@ -34,6 +34,10 @@ contract UDAOStaker is RoleController, EIP712 {
     uint256 public validatorLockAmount = 150 ether;
     /// @notice Amount to deduct from juror application
     uint256 public jurorLockAmount = 150 ether;
+    /// @notice the minimum duration for governance stake
+    uint256 public minimum_stake_days = 7; // 1 WEEK
+    /// @notice the maximum duration for governance stake
+    uint256 public maximum_stake_days = 1460; // 4 YEARS
 
     event SetValidatorLockAmount(uint256 _newAmount);
     event SetVoteReward(uint256 _newAmount);
@@ -64,6 +68,9 @@ contract UDAOStaker is RoleController, EIP712 {
     );
     event VoteRewardAdded(address _rewardee, uint256 _amount);
     event VoteRewardsWithdrawn(address _rewardee, uint256 _amount);
+
+    event SetMaximumStakeDays(uint256 _newAmount);
+    event SetMinimumStakeDays(uint256 _newAmount);
 
     mapping(address => uint256) validationBalanceOf;
     mapping(address => uint256) jurorBalanceOf;
@@ -167,6 +174,36 @@ contract UDAOStaker is RoleController, EIP712 {
     ) external onlyRole(BACKEND_ROLE) {
         platformTreasuryAddress = _platformTreasuryAddress;
         emit SetPlatformTreasuryAddress(_platformTreasuryAddress);
+    }
+
+    /**
+     * @notice sets the maximum stake days for governance members
+     * @param _maximum_stake_days the new maximum stake days
+     */
+    function setMaximumStakeDays(
+        uint256 _maximum_stake_days
+    ) external onlyRoles(administrator_roles) {
+        require(
+            _maximum_stake_days >= minimum_stake_days,
+            "Maximum stake days must be greater than minimum days"
+        );
+        maximum_stake_days = _maximum_stake_days;
+        emit SetMaximumStakeDays(_maximum_stake_days);
+    }
+
+    /**
+     * @notice sets the minimum stake days for governance members
+     * @param _minimum_stake_days the new minimum stake days
+     */
+    function setMinimumStakeDays(
+        uint256 _minimum_stake_days
+    ) external onlyRoles(administrator_roles) {
+        require(
+            _minimum_stake_days <= maximum_stake_days,
+            "Minimum stake days must be less than maximum days"
+        );
+        minimum_stake_days = _minimum_stake_days;
+        emit SetMinimumStakeDays(_minimum_stake_days);
     }
 
     /// @notice Represents the right to get a role
@@ -472,6 +509,14 @@ contract UDAOStaker is RoleController, EIP712 {
         require(IRM.isKYCed(msg.sender), "Address is not KYCed");
         require(!IRM.isBanned(msg.sender), "Address is banned");
         udao.transferFrom(msg.sender, address(this), _amount);
+        require(
+            _days >= minimum_stake_days,
+            "Can't stake less than minimum_stake_days"
+        );
+        require(
+            _days <= maximum_stake_days,
+            "Can't stake more than maximum_stake_days"
+        );
 
         GovernanceLock storage lock = governanceStakes[msg.sender].push();
         lock.amount = _amount;

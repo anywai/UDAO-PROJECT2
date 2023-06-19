@@ -1,6 +1,6 @@
 const { expect } = require("chai");
 const hardhat = require("hardhat");
-const { ethers } = hardhat;
+const { ethers, waffle } = hardhat;
 const chai = require("chai");
 const BN = require("bn.js");
 const helpers = require("@nomicfoundation/hardhat-network-helpers");
@@ -12,6 +12,10 @@ const {
   NonFunbiblePositionAddress,
   WMATICAddress,
 } = require("../lib/abis");
+const { parseEther } = require("ethers/lib/utils");
+const {
+  latestBlock,
+} = require("@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time");
 
 // Enable and inject BN dependency
 chai.use(require("chai-bn")(BN));
@@ -1962,12 +1966,13 @@ describe("Governance Contract", function () {
       "UDAOGovernor",
       contractAddress
     );
-    /// @dev Get the old quorum
-    const oldQuorum = await contractUDAOGovernor["quorumNumerator()"]();
     /// @dev 50 means 50% quorum
-    const _newQuorum = ethers.utils.defaultAbiCoder.encode(["uint256"], [50]);
+    const _newQuorum = ethers.utils.defaultAbiCoder.encode(
+      ["uint256"],
+      [ethers.utils.parseEther("50")]
+    );
     const transferCalldata = contractData.interface.encodeFunctionData(
-      "updateQuorumNumerator",
+      "setQuorum",
       [_newQuorum]
     );
     /// @dev Propose a new proposal
@@ -1977,9 +1982,9 @@ describe("Governance Contract", function () {
         [contractAddress],
         [0],
         [transferCalldata],
-        "Proposal #1: Set quorum to 25%"
+        "Proposal #1: Set quorum to 50 UDAO-vp"
       );
-      /// @dev Wait for the transaction to be mined
+    /// @dev Wait for the transaction to be mined
     const tx = await proposeTx.wait();
     const proposalId = tx.events.find((e) => e.event == "ProposalCreated").args
       .proposalId;
@@ -2022,7 +2027,7 @@ describe("Governance Contract", function () {
         [contractAddress],
         [0],
         [transferCalldata],
-        ethers.utils.id("Proposal #1: Set quorum to 25%")
+        ethers.utils.id("Proposal #1: Set quorum to 50 UDAO-vp")
       );
     const queueTxReceipt = await queueTx.wait();
     const queueTxEvent = queueTxReceipt.events.find(
@@ -2042,13 +2047,13 @@ describe("Governance Contract", function () {
         [contractAddress],
         [0],
         [transferCalldata],
-        ethers.utils.id("Proposal #1: Set quorum to 25%")
+        ethers.utils.id("Proposal #1: Set quorum to 50 UDAO-vp")
       );
     const executeTxReceipt = await executeTx.wait();
     const executeTxEvent = executeTxReceipt.events.find(
       (e) => e.event == "ProposalExecuted"
     );
- 
+
     await expect(executeTxEvent.args.proposalId).to.equal(proposalId);
     /// @dev Check if the proposal was executed
     const proposalStateAfterExecute = await contractUDAOGovernor.state(
@@ -2056,16 +2061,11 @@ describe("Governance Contract", function () {
     );
     await expect(proposalStateAfterExecute).to.equal(7);
     /// @dev Check if the quorum was changed
-    const executeTxEvent2 = executeTxReceipt.events.find(
-      (e) => e.event == "QuorumNumeratorUpdated"
-    );
-    const oldQuorumNumerator = executeTxEvent2.args.oldQuorumNumerator;
-    const newQuorumNumerator = executeTxEvent2.args.newQuorumNumerator;
 
     // Expect oldQuorumNumerator to equal to oldQuorum
-    await expect(oldQuorumNumerator).to.equal(oldQuorum);
-    // Expect newQuorumNumerator to equal to _newQuorum
-    await expect(newQuorumNumerator).to.equal(_newQuorum);
+    expect(await contractUDAOGovernor.quorum(1)).to.equal(
+      ethers.utils.parseEther("50")
+    );
   });
 
   it("Should fail to execute if quorum is not met", async function () {
@@ -2141,12 +2141,13 @@ describe("Governance Contract", function () {
       "UDAOGovernor",
       contractAddress
     );
-    /// @dev Get the old quorum
-    const oldQuorum = await contractUDAOGovernor["quorumNumerator()"]();
-    /// @dev 75 means 75% quorum
-    const _newQuorum = ethers.utils.defaultAbiCoder.encode(["uint256"], [75]);
+    /// @dev 50 means 50% quorum
+    const _newQuorum = ethers.utils.defaultAbiCoder.encode(
+      ["uint256"],
+      [ethers.utils.parseEther("7500000000000")]
+    );
     const transferCalldata = contractData.interface.encodeFunctionData(
-      "updateQuorumNumerator",
+      "setQuorum",
       [_newQuorum]
     );
     /// @dev Propose a new proposal
@@ -2156,9 +2157,9 @@ describe("Governance Contract", function () {
         [contractAddress],
         [0],
         [transferCalldata],
-        "Proposal #1: Set quorum to 75%"
+        "Proposal #1: Set quorum to 7500000000000 UDAO-vp"
       );
-      /// @dev Wait for the transaction to be mined
+    /// @dev Wait for the transaction to be mined
     const tx = await proposeTx.wait();
     const proposalId = tx.events.find((e) => e.event == "ProposalCreated").args
       .proposalId;
@@ -2200,7 +2201,7 @@ describe("Governance Contract", function () {
         [contractAddress],
         [0],
         [transferCalldata],
-        ethers.utils.id("Proposal #1: Set quorum to 75%")
+        ethers.utils.id("Proposal #1: Set quorum to 7500000000000 UDAO-vp")
       );
 
     /// @dev Check if the proposal was queued
@@ -2215,7 +2216,7 @@ describe("Governance Contract", function () {
         [contractAddress],
         [0],
         [transferCalldata],
-        ethers.utils.id("Proposal #1: Set quorum to 75%")
+        ethers.utils.id("Proposal #1: Set quorum to 7500000000000 UDAO-vp")
       );
 
     /// @dev Check if the proposal was executed
@@ -2225,9 +2226,12 @@ describe("Governance Contract", function () {
     await expect(proposalStateAfterExecute).to.equal(7);
 
     /// @dev Create new proposal, vote and expect it to fail
-    const _newQuorum2 = ethers.utils.defaultAbiCoder.encode(["uint256"], [25]);
+    const _newQuorum2 = ethers.utils.defaultAbiCoder.encode(
+      ["uint256"],
+      [ethers.utils.parseEther("25")]
+    );
     const transferCalldata2 = contractData.interface.encodeFunctionData(
-      "updateQuorumNumerator",
+      "setQuorum",
       [_newQuorum2]
     );
 
@@ -2237,7 +2241,7 @@ describe("Governance Contract", function () {
         [contractAddress],
         [0],
         [transferCalldata2],
-        "Proposal #2: Set quorum to 25%"
+        "Proposal #2: Set quorum to 25 UDAO-vp"
       );
     /// @dev Wait for the transaction to be mined
     const tx2 = await proposeTx2.wait();
@@ -2269,7 +2273,6 @@ describe("Governance Contract", function () {
     /// @dev Check if the proposal was Defeated
     const proposalStateAtStart2 = await contractUDAOGovernor.state(proposalId2);
     await expect(proposalStateAtStart2).to.equal(3);
-
   });
   it("Should successfully to execute if quorum is met", async function () {
     const {
@@ -2332,7 +2335,10 @@ describe("Governance Contract", function () {
       contractUDAOVp,
       governanceCandidate
     );
-    await checkAccountUDAOVpBalanceAndDelegate(contractUDAOVp, superValidatorCandidate);
+    await checkAccountUDAOVpBalanceAndDelegate(
+      contractUDAOVp,
+      superValidatorCandidate
+    );
     await checkAccountUDAOVpBalanceAndDelegate(contractUDAOVp, superValidator);
     await checkAccountUDAOVpBalanceAndDelegate(contractUDAOVp, validator);
     await checkAccountUDAOVpBalanceAndDelegate(
@@ -2345,12 +2351,13 @@ describe("Governance Contract", function () {
       "UDAOGovernor",
       contractAddress
     );
-    /// @dev Get the old quorum
-    const oldQuorum = await contractUDAOGovernor["quorumNumerator()"]();
     /// @dev 75 means 75% quorum
-    const _newQuorum = ethers.utils.defaultAbiCoder.encode(["uint256"], [75]);
+    const _newQuorum = ethers.utils.defaultAbiCoder.encode(
+      ["uint256"],
+      [ethers.utils.parseEther("75")]
+    );
     const transferCalldata = contractData.interface.encodeFunctionData(
-      "updateQuorumNumerator",
+      "setQuorum",
       [_newQuorum]
     );
     /// @dev Propose a new proposal
@@ -2360,9 +2367,9 @@ describe("Governance Contract", function () {
         [contractAddress],
         [0],
         [transferCalldata],
-        "Proposal #1: Set quorum to 75%"
+        "Proposal #1: Set quorum to 75 UDAO-vp"
       );
-      /// @dev Wait for the transaction to be mined
+    /// @dev Wait for the transaction to be mined
     const tx = await proposeTx.wait();
     const proposalId = tx.events.find((e) => e.event == "ProposalCreated").args
       .proposalId;
@@ -2404,7 +2411,7 @@ describe("Governance Contract", function () {
         [contractAddress],
         [0],
         [transferCalldata],
-        ethers.utils.id("Proposal #1: Set quorum to 75%")
+        ethers.utils.id("Proposal #1: Set quorum to 75 UDAO-vp")
       );
 
     /// @dev Check if the proposal was queued
@@ -2419,7 +2426,7 @@ describe("Governance Contract", function () {
         [contractAddress],
         [0],
         [transferCalldata],
-        ethers.utils.id("Proposal #1: Set quorum to 75%")
+        ethers.utils.id("Proposal #1: Set quorum to 75 UDAO-vp")
       );
 
     /// @dev Check if the proposal was executed
@@ -2429,9 +2436,12 @@ describe("Governance Contract", function () {
     await expect(proposalStateAfterExecute).to.equal(7);
     await hre.network.provider.send("hardhat_mine");
     /// @dev Create new proposal, vote and expect it to fail
-    const _newQuorum2 = ethers.utils.defaultAbiCoder.encode(["uint256"], [25]);
+    const _newQuorum2 = ethers.utils.defaultAbiCoder.encode(
+      ["uint256"],
+      [ethers.utils.parseEther("25")]
+    );
     const transferCalldata2 = contractData.interface.encodeFunctionData(
-      "updateQuorumNumerator",
+      "setQuorum",
       [_newQuorum2]
     );
 
@@ -2441,7 +2451,7 @@ describe("Governance Contract", function () {
         [contractAddress],
         [0],
         [transferCalldata2],
-        "Proposal #2: Set quorum to 25%"
+        "Proposal #2: Set quorum to 25 UDAO-vp"
       );
     /// @dev Wait for the transaction to be mined
     const tx2 = await proposeTx2.wait();
@@ -2457,7 +2467,9 @@ describe("Governance Contract", function () {
     ]);
 
     /// @dev Vote on the proposal, note that everyone has voted, above 75% quorum
-    await contractUDAOGovernor.connect(governanceCandidate).castVote(proposalId2, 1);
+    await contractUDAOGovernor
+      .connect(governanceCandidate)
+      .castVote(proposalId2, 1);
     await contractUDAOGovernor.connect(superValidator).castVote(proposalId2, 1);
     await contractUDAOGovernor
       .connect(superValidatorCandidate)
@@ -2476,10 +2488,371 @@ describe("Governance Contract", function () {
       `0x${numBlocksToMineToEnd2.toString(16)}`,
       "0x2",
     ]);
-    
+
     /// @dev Check if the proposal was Succeeded
     const proposalStateAtStart2 = await contractUDAOGovernor.state(proposalId2);
     await expect(proposalStateAtStart2).to.equal(4);
+  });
 
+  it("TimeLock transfer token to another address", async function () {
+    const {
+      backend,
+      validatorCandidate,
+      validator,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+      contractJurorManager,
+    } = await deploy();
+    /// @dev Setup governance member
+    await setupGovernanceMember(
+      contractRoleManager,
+      contractUDAO,
+      contractUDAOStaker,
+      governanceCandidate
+    );
+    await setupGovernanceMember(
+      contractRoleManager,
+      contractUDAO,
+      contractUDAOStaker,
+      superValidator
+    );
+    await setupGovernanceMember(
+      contractRoleManager,
+      contractUDAO,
+      contractUDAOStaker,
+      superValidatorCandidate
+    );
+    await setupGovernanceMember(
+      contractRoleManager,
+      contractUDAO,
+      contractUDAOStaker,
+      validatorCandidate
+    );
+    await setupGovernanceMember(
+      contractRoleManager,
+      contractUDAO,
+      contractUDAOStaker,
+      validator
+    );
+    /// @dev Check account UDAO-vp balance and delegate to themselves
+    await checkAccountUDAOVpBalanceAndDelegate(
+      contractUDAOVp,
+      governanceCandidate
+    );
+    await checkAccountUDAOVpBalanceAndDelegate(
+      contractUDAOVp,
+      superValidatorCandidate
+    );
+    await checkAccountUDAOVpBalanceAndDelegate(contractUDAOVp, superValidator);
+    await checkAccountUDAOVpBalanceAndDelegate(contractUDAOVp, validator);
+    await checkAccountUDAOVpBalanceAndDelegate(
+      contractUDAOVp,
+      validatorCandidate
+    );
+
+    // send some eth to the contractPlatformTreasury and impersonate it
+    await helpers.setBalance(
+      contractUDAOTimelockController.address,
+      hre.ethers.utils.parseEther("1")
+    );
+    await contractUDAO.transfer(
+      contractUDAOTimelockController.address,
+      ethers.utils.parseEther("100.0")
+    );
+    // check balance of contractPlatformTreasury
+    const balanceContractPlatformTreasury = await contractUDAO.balanceOf(
+      contractPlatformTreasury.address
+    );
+    const balanceContractTimeLockController = await contractUDAO.balanceOf(
+      contractUDAOTimelockController.address
+    );
+
+    // Create a proposal and send eth to the contractPlatformTreasury
+    const transferCalldata = contractUDAO.interface.encodeFunctionData(
+      "transfer",
+      [contractPlatformTreasury.address, hre.ethers.utils.parseEther("1")]
+    );
+    const proposeTx = await contractUDAOGovernor
+      .connect(governanceCandidate)
+      .propose(
+        [contractUDAO.address],
+        [0],
+        [transferCalldata],
+        "Proposal #1: Send 1 eth to the contractPlatformTreasury"
+      );
+    // Wait for the transaction to be mined
+    const tx = await proposeTx.wait();
+    // Get the proposal id
+    const proposalId = tx.events.find((e) => e.event == "ProposalCreated").args
+      .proposalId;
+    // Get to start of the voting period
+    const numBlocksToMine = Math.ceil((7 * 24 * 60 * 60) / 2);
+    await hre.network.provider.send("hardhat_mine", [
+      `0x${numBlocksToMine.toString(16)}`,
+      "0x2",
+    ]);
+    // Vote on the proposal, note that everyone has voted, above 75% quorum
+    /// @dev Vote on the proposal
+    await contractUDAOGovernor.connect(superValidator).castVote(proposalId, 1);
+    await contractUDAOGovernor
+      .connect(superValidatorCandidate)
+      .castVote(proposalId, 1);
+    await contractUDAOGovernor.connect(validator).castVote(proposalId, 1);
+    await contractUDAOGovernor
+      .connect(validatorCandidate)
+      .castVote(proposalId, 1);
+    /// @dev Check if the vote was casted
+    const proposalState = await contractUDAOGovernor.state(proposalId);
+    await expect(proposalState).to.equal(1);
+
+    /// @dev Skip to the end of the voting period
+    const numBlocksToMineToEnd = Math.ceil((7 * 24 * 60 * 60) / 2);
+    await hre.network.provider.send("hardhat_mine", [
+      `0x${numBlocksToMineToEnd.toString(16)}`,
+      "0x2",
+    ]);
+    // Check if the proposal was successful
+    const proposalStateAtStart = await contractUDAOGovernor.state(proposalId);
+    await expect(proposalStateAtStart).to.equal(4);
+    // Queue the proposal and Check the ProposalQueued event
+    await contractUDAOGovernor
+      .connect(governanceCandidate)
+      .queue(
+        [contractUDAO.address],
+        [0],
+        [transferCalldata],
+        ethers.utils.id(
+          "Proposal #1: Send 1 eth to the contractPlatformTreasury"
+        )
+      );
+    // Check if the proposal was queued
+    const proposalStateAfterQueue = await contractUDAOGovernor.state(
+      proposalId
+    );
+    await expect(proposalStateAfterQueue).to.equal(5);
+    // Execute the proposal
+    await contractUDAOGovernor
+      .connect(governanceCandidate)
+      .execute(
+        [contractUDAO.address],
+        [0],
+        [transferCalldata],
+        ethers.utils.id(
+          "Proposal #1: Send 1 eth to the contractPlatformTreasury"
+        )
+      );
+    // Check if the proposal was executed
+    const proposalStateAfterExecute = await contractUDAOGovernor.state(
+      proposalId
+    );
+    await expect(proposalStateAfterExecute).to.equal(7);
+    await hre.network.provider.send("hardhat_mine");
+
+    // check balance of contractPlatformTreasury
+    const balanceAfterContractPlatformTreasury = await contractUDAO.balanceOf(
+      contractPlatformTreasury.address
+    );
+    const balanceAfterContractTimeLockController = await contractUDAO.balanceOf(
+      contractUDAOTimelockController.address
+    );
+    expect(balanceAfterContractPlatformTreasury).to.equal(
+      balanceContractPlatformTreasury.add(hre.ethers.utils.parseEther("1"))
+    );
+    expect(balanceAfterContractTimeLockController).to.equal(
+      balanceContractTimeLockController.sub(hre.ethers.utils.parseEther("1"))
+    );
+  });
+
+  it("TimeLock transfer ether to another address", async function () {
+    const {
+      backend,
+      validatorCandidate,
+      validator,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractValidationManager,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+      contractJurorManager,
+    } = await deploy();
+    /// @dev Setup governance member
+    await setupGovernanceMember(
+      contractRoleManager,
+      contractUDAO,
+      contractUDAOStaker,
+      governanceCandidate
+    );
+    await setupGovernanceMember(
+      contractRoleManager,
+      contractUDAO,
+      contractUDAOStaker,
+      superValidator
+    );
+    await setupGovernanceMember(
+      contractRoleManager,
+      contractUDAO,
+      contractUDAOStaker,
+      superValidatorCandidate
+    );
+    await setupGovernanceMember(
+      contractRoleManager,
+      contractUDAO,
+      contractUDAOStaker,
+      validatorCandidate
+    );
+    await setupGovernanceMember(
+      contractRoleManager,
+      contractUDAO,
+      contractUDAOStaker,
+      validator
+    );
+    /// @dev Check account UDAO-vp balance and delegate to themselves
+    await checkAccountUDAOVpBalanceAndDelegate(
+      contractUDAOVp,
+      governanceCandidate
+    );
+    await checkAccountUDAOVpBalanceAndDelegate(
+      contractUDAOVp,
+      superValidatorCandidate
+    );
+    await checkAccountUDAOVpBalanceAndDelegate(contractUDAOVp, superValidator);
+    await checkAccountUDAOVpBalanceAndDelegate(contractUDAOVp, validator);
+    await checkAccountUDAOVpBalanceAndDelegate(
+      contractUDAOVp,
+      validatorCandidate
+    );
+
+    const randomWallet = await ethers.Wallet.createRandom();
+
+    // send some eth to the contractPlatformTreasury and impersonate it
+    await helpers.setBalance(
+      contractUDAOTimelockController.address,
+      hre.ethers.utils.parseEther("10")
+    );
+    // check balance of contractPlatformTreasury
+    const provider = waffle.provider;
+
+    const balanceRandomWallet = await provider.getBalance(randomWallet.address);
+    const balanceContractTimeLockController = await provider.getBalance(
+      contractUDAOTimelockController.address
+    );
+
+    // Create a proposal and send eth to the contractPlatformTreasury
+    const proposeTx = await contractUDAOGovernor
+      .connect(governanceCandidate)
+      .propose(
+        [randomWallet.address],
+        [ethers.utils.parseEther("1.0")],
+        ["0x"],
+        "Proposal #1: Send 1 eth to the contractPlatformTreasury"
+      );
+    // Wait for the transaction to be mined
+    const tx = await proposeTx.wait();
+    // Get the proposal id
+    const proposalId = tx.events.find((e) => e.event == "ProposalCreated").args
+      .proposalId;
+    // Get to start of the voting period
+    const numBlocksToMine = Math.ceil((7 * 24 * 60 * 60) / 2);
+    await hre.network.provider.send("hardhat_mine", [
+      `0x${numBlocksToMine.toString(16)}`,
+      "0x2",
+    ]);
+    // Vote on the proposal, note that everyone has voted, above 75% quorum
+    /// @dev Vote on the proposal
+    await contractUDAOGovernor.connect(superValidator).castVote(proposalId, 1);
+    await contractUDAOGovernor
+      .connect(superValidatorCandidate)
+      .castVote(proposalId, 1);
+    await contractUDAOGovernor.connect(validator).castVote(proposalId, 1);
+    await contractUDAOGovernor
+      .connect(validatorCandidate)
+      .castVote(proposalId, 1);
+    /// @dev Check if the vote was casted
+    const proposalState = await contractUDAOGovernor.state(proposalId);
+    await expect(proposalState).to.equal(1);
+
+    /// @dev Skip to the end of the voting period
+    const numBlocksToMineToEnd = Math.ceil((7 * 24 * 60 * 60) / 2);
+    await hre.network.provider.send("hardhat_mine", [
+      `0x${numBlocksToMineToEnd.toString(16)}`,
+      "0x2",
+    ]);
+    // Check if the proposal was successful
+    const proposalStateAtStart = await contractUDAOGovernor.state(proposalId);
+    await expect(proposalStateAtStart).to.equal(4);
+    // Queue the proposal and Check the ProposalQueued event
+    await contractUDAOGovernor
+      .connect(governanceCandidate)
+      .queue(
+        [randomWallet.address],
+        [ethers.utils.parseEther("1.0")],
+        ["0x"],
+        ethers.utils.id(
+          "Proposal #1: Send 1 eth to the contractPlatformTreasury"
+        )
+      );
+    // Check if the proposal was queued
+    const proposalStateAfterQueue = await contractUDAOGovernor.state(
+      proposalId
+    );
+    await expect(proposalStateAfterQueue).to.equal(5);
+    // Execute the proposal
+    await contractUDAOGovernor
+      .connect(governanceCandidate)
+      .execute(
+        [randomWallet.address],
+        [ethers.utils.parseEther("1.0")],
+        ["0x"],
+        ethers.utils.id(
+          "Proposal #1: Send 1 eth to the contractPlatformTreasury"
+        )
+      );
+    // Check if the proposal was executed
+    const proposalStateAfterExecute = await contractUDAOGovernor.state(
+      proposalId
+    );
+    await expect(proposalStateAfterExecute).to.equal(7);
+    await hre.network.provider.send("hardhat_mine");
+
+    // check balance of contractPlatformTreasury
+    const balanceAfterRandomWallet = await provider.getBalance(
+      randomWallet.address
+    );
+    const balanceAfterContractTimeLockController = await provider.getBalance(
+      contractUDAOTimelockController.address
+    );
+    expect(balanceAfterRandomWallet).to.equal(
+      balanceRandomWallet.add(ethers.utils.parseEther("1.0"))
+    );
+    expect(balanceAfterContractTimeLockController).to.equal(
+      balanceContractTimeLockController.sub(ethers.utils.parseEther("1.0"))
+    );
   });
 });
