@@ -43,16 +43,10 @@ contract UDAOGovernor is
         stakingContract = IUDAOStaker(stakingContractAddress);
     }
 
-    uint _quorum = 720000000e18;
+    uint _quorum = 1e18; // 720000000e18 (100.000.000 * 0.04 * 6 * 30)
 
-    function quorum(
-        uint256 blockNumber
-    ) public pure override returns (uint256) {
-        return _quorum;
-    }
-
-    function setQuorum(uint quorum) external onlyRole(GOVERNANCE_CONTRACT) {
-        _quorum = quorum;
+    function setQuorum(uint newQuorum) external onlyGovernance {
+        _quorum = newQuorum;
     }
 
     /// @notice Allows backend to set the staking contract address.
@@ -96,13 +90,8 @@ contract UDAOGovernor is
 
     function quorum(
         uint256 blockNumber
-    )
-        public
-        view
-        override(IGovernor, GovernorVotesQuorumFraction)
-        returns (uint256)
-    {
-        return super.quorum(blockNumber);
+    ) public view override(IGovernor) returns (uint256) {
+        return _quorum;
     }
 
     function state(
