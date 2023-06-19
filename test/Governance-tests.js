@@ -12,6 +12,10 @@ const {
   NonFunbiblePositionAddress,
   WMATICAddress,
 } = require("../lib/abis");
+const { parseEther } = require("ethers/lib/utils");
+const {
+  latestBlock,
+} = require("@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time");
 
 // Enable and inject BN dependency
 chai.use(require("chai-bn")(BN));
@@ -1962,12 +1966,13 @@ describe("Governance Contract", function () {
       "UDAOGovernor",
       contractAddress
     );
-    /// @dev Get the old quorum
-    const oldQuorum = await contractUDAOGovernor["quorumNumerator()"]();
     /// @dev 50 means 50% quorum
-    const _newQuorum = ethers.utils.defaultAbiCoder.encode(["uint256"], [50]);
+    const _newQuorum = ethers.utils.defaultAbiCoder.encode(
+      ["uint256"],
+      [ethers.utils.parseEther("50")]
+    );
     const transferCalldata = contractData.interface.encodeFunctionData(
-      "updateQuorumNumerator",
+      "setQuorum",
       [_newQuorum]
     );
     /// @dev Propose a new proposal
@@ -1977,7 +1982,7 @@ describe("Governance Contract", function () {
         [contractAddress],
         [0],
         [transferCalldata],
-        "Proposal #1: Set quorum to 25%"
+        "Proposal #1: Set quorum to 50 UDAO-vp"
       );
     /// @dev Wait for the transaction to be mined
     const tx = await proposeTx.wait();
@@ -2022,7 +2027,7 @@ describe("Governance Contract", function () {
         [contractAddress],
         [0],
         [transferCalldata],
-        ethers.utils.id("Proposal #1: Set quorum to 25%")
+        ethers.utils.id("Proposal #1: Set quorum to 50 UDAO-vp")
       );
     const queueTxReceipt = await queueTx.wait();
     const queueTxEvent = queueTxReceipt.events.find(
@@ -2042,7 +2047,7 @@ describe("Governance Contract", function () {
         [contractAddress],
         [0],
         [transferCalldata],
-        ethers.utils.id("Proposal #1: Set quorum to 25%")
+        ethers.utils.id("Proposal #1: Set quorum to 50 UDAO-vp")
       );
     const executeTxReceipt = await executeTx.wait();
     const executeTxEvent = executeTxReceipt.events.find(
@@ -2056,16 +2061,11 @@ describe("Governance Contract", function () {
     );
     await expect(proposalStateAfterExecute).to.equal(7);
     /// @dev Check if the quorum was changed
-    const executeTxEvent2 = executeTxReceipt.events.find(
-      (e) => e.event == "QuorumNumeratorUpdated"
-    );
-    const oldQuorumNumerator = executeTxEvent2.args.oldQuorumNumerator;
-    const newQuorumNumerator = executeTxEvent2.args.newQuorumNumerator;
 
     // Expect oldQuorumNumerator to equal to oldQuorum
-    await expect(oldQuorumNumerator).to.equal(oldQuorum);
-    // Expect newQuorumNumerator to equal to _newQuorum
-    await expect(newQuorumNumerator).to.equal(_newQuorum);
+    expect(await contractUDAOGovernor.quorum(1)).to.equal(
+      ethers.utils.parseEther("50")
+    );
   });
 
   it("Should fail to execute if quorum is not met", async function () {
@@ -2141,12 +2141,13 @@ describe("Governance Contract", function () {
       "UDAOGovernor",
       contractAddress
     );
-    /// @dev Get the old quorum
-    const oldQuorum = await contractUDAOGovernor["quorumNumerator()"]();
-    /// @dev 75 means 75% quorum
-    const _newQuorum = ethers.utils.defaultAbiCoder.encode(["uint256"], [75]);
+    /// @dev 50 means 50% quorum
+    const _newQuorum = ethers.utils.defaultAbiCoder.encode(
+      ["uint256"],
+      [ethers.utils.parseEther("7500000000000")]
+    );
     const transferCalldata = contractData.interface.encodeFunctionData(
-      "updateQuorumNumerator",
+      "setQuorum",
       [_newQuorum]
     );
     /// @dev Propose a new proposal
@@ -2156,7 +2157,7 @@ describe("Governance Contract", function () {
         [contractAddress],
         [0],
         [transferCalldata],
-        "Proposal #1: Set quorum to 75%"
+        "Proposal #1: Set quorum to 7500000000000 UDAO-vp"
       );
     /// @dev Wait for the transaction to be mined
     const tx = await proposeTx.wait();
@@ -2200,7 +2201,7 @@ describe("Governance Contract", function () {
         [contractAddress],
         [0],
         [transferCalldata],
-        ethers.utils.id("Proposal #1: Set quorum to 75%")
+        ethers.utils.id("Proposal #1: Set quorum to 7500000000000 UDAO-vp")
       );
 
     /// @dev Check if the proposal was queued
@@ -2215,7 +2216,7 @@ describe("Governance Contract", function () {
         [contractAddress],
         [0],
         [transferCalldata],
-        ethers.utils.id("Proposal #1: Set quorum to 75%")
+        ethers.utils.id("Proposal #1: Set quorum to 7500000000000 UDAO-vp")
       );
 
     /// @dev Check if the proposal was executed
@@ -2225,9 +2226,12 @@ describe("Governance Contract", function () {
     await expect(proposalStateAfterExecute).to.equal(7);
 
     /// @dev Create new proposal, vote and expect it to fail
-    const _newQuorum2 = ethers.utils.defaultAbiCoder.encode(["uint256"], [25]);
+    const _newQuorum2 = ethers.utils.defaultAbiCoder.encode(
+      ["uint256"],
+      [ethers.utils.parseEther("25")]
+    );
     const transferCalldata2 = contractData.interface.encodeFunctionData(
-      "updateQuorumNumerator",
+      "setQuorum",
       [_newQuorum2]
     );
 
@@ -2237,7 +2241,7 @@ describe("Governance Contract", function () {
         [contractAddress],
         [0],
         [transferCalldata2],
-        "Proposal #2: Set quorum to 25%"
+        "Proposal #2: Set quorum to 25 UDAO-vp"
       );
     /// @dev Wait for the transaction to be mined
     const tx2 = await proposeTx2.wait();
@@ -2347,12 +2351,13 @@ describe("Governance Contract", function () {
       "UDAOGovernor",
       contractAddress
     );
-    /// @dev Get the old quorum
-    const oldQuorum = await contractUDAOGovernor["quorumNumerator()"]();
     /// @dev 75 means 75% quorum
-    const _newQuorum = ethers.utils.defaultAbiCoder.encode(["uint256"], [75]);
+    const _newQuorum = ethers.utils.defaultAbiCoder.encode(
+      ["uint256"],
+      [ethers.utils.parseEther("75")]
+    );
     const transferCalldata = contractData.interface.encodeFunctionData(
-      "updateQuorumNumerator",
+      "setQuorum",
       [_newQuorum]
     );
     /// @dev Propose a new proposal
@@ -2362,7 +2367,7 @@ describe("Governance Contract", function () {
         [contractAddress],
         [0],
         [transferCalldata],
-        "Proposal #1: Set quorum to 75%"
+        "Proposal #1: Set quorum to 75 UDAO-vp"
       );
     /// @dev Wait for the transaction to be mined
     const tx = await proposeTx.wait();
@@ -2406,7 +2411,7 @@ describe("Governance Contract", function () {
         [contractAddress],
         [0],
         [transferCalldata],
-        ethers.utils.id("Proposal #1: Set quorum to 75%")
+        ethers.utils.id("Proposal #1: Set quorum to 75 UDAO-vp")
       );
 
     /// @dev Check if the proposal was queued
@@ -2421,7 +2426,7 @@ describe("Governance Contract", function () {
         [contractAddress],
         [0],
         [transferCalldata],
-        ethers.utils.id("Proposal #1: Set quorum to 75%")
+        ethers.utils.id("Proposal #1: Set quorum to 75 UDAO-vp")
       );
 
     /// @dev Check if the proposal was executed
@@ -2431,9 +2436,12 @@ describe("Governance Contract", function () {
     await expect(proposalStateAfterExecute).to.equal(7);
     await hre.network.provider.send("hardhat_mine");
     /// @dev Create new proposal, vote and expect it to fail
-    const _newQuorum2 = ethers.utils.defaultAbiCoder.encode(["uint256"], [25]);
+    const _newQuorum2 = ethers.utils.defaultAbiCoder.encode(
+      ["uint256"],
+      [ethers.utils.parseEther("25")]
+    );
     const transferCalldata2 = contractData.interface.encodeFunctionData(
-      "updateQuorumNumerator",
+      "setQuorum",
       [_newQuorum2]
     );
 
@@ -2443,7 +2451,7 @@ describe("Governance Contract", function () {
         [contractAddress],
         [0],
         [transferCalldata2],
-        "Proposal #2: Set quorum to 25%"
+        "Proposal #2: Set quorum to 25 UDAO-vp"
       );
     /// @dev Wait for the transaction to be mined
     const tx2 = await proposeTx2.wait();
