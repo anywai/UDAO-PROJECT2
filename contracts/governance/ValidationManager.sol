@@ -204,7 +204,9 @@ contract ValidationManager is RoleController {
 
     /// @notice starts new validation for content
     /// @param tokenId id of the content that will be validated
-    /// @param score validation score of the content
+    /// TODO 1 token aynı anda sadece 1 validasyonda olabilir
+    /// TODO kontent sahibine eğer validasyon başlamadıysa önceki validasyonu iptal etme hakkı verilebilir
+    /// TODO voucher eklendikten sonra score silinmeli buradan
     function createValidation(
         uint256 tokenId,
         uint256 score
