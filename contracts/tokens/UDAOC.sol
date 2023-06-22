@@ -110,9 +110,6 @@ contract UDAOContent is IUDAOC, ERC721, ERC721URIStorage, RoleController {
         //make sure caller is not banned
         require(!IRM.isBanned(msg.sender), "You are banned");
 
-        // Burn the token
-        _burn(tokenId);
-
         // Create the new token
         // save the content price (it should test removing for partLength)
         uint partLength = _contentPrice.length;
@@ -123,8 +120,6 @@ contract UDAOContent is IUDAOC, ERC721, ERC721URIStorage, RoleController {
         for (uint i = 0; i < partLength; i++) {
             contentPrice[tokenId][i] = _contentPrice[i];
         }
-
-        _mint(msg.sender, tokenId);
         _setTokenURI(tokenId, _uri);
     }
 
