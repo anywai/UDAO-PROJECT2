@@ -6,16 +6,16 @@ import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
 import "../ContractManager.sol";
 import "../RoleController.sol";
 import "../interfaces/IUDAOC.sol";
-import "../interfaces/IVM.sol";
+//import "../interfaces/IVM.sol";
 import "../interfaces/IPlatformTreasury.sol";
 
 interface IStakingContract {
     function registerValidation(uint256 validationId) external;
 }
 
-contract Supervision is RoleController{
+contract Supervision is RoleController {
     IUDAOC udaoc;
-    IValidationManager IVM;
+    //IValidationManager IVM;
     IPlatformTreasury PT;
     IStakingContract staker;
 
@@ -61,7 +61,7 @@ contract Supervision is RoleController{
     // validator => round => score
     mapping(address => mapping(uint256 => uint256))
         public validatorScorePerRound;
-        mapping(address => uint) public validationCount;
+    mapping(address => uint) public validationCount;
     mapping(address => uint) public activeValidation;
     mapping(address => bool) public isInDispute;
     mapping(address => uint) public successfulValidation;
@@ -73,7 +73,7 @@ contract Supervision is RoleController{
         uint256 caseId;
         // TODO REMOVE CASE SCOPE
         /// @dev Scope of the case
-        uint128 caseScope; 
+        uint128 caseScope;
         /// @dev Number of votes made
         uint128 voteCount;
         /// @dev Number of positive votes to the question
@@ -141,11 +141,13 @@ contract Supervision is RoleController{
     /// @dev Constructor
     constructor(
         address rmAddress,
-        address udaocAddress,
-        address ivmAddress
-    ) RoleController(rmAddress) {
+        address udaocAddress
+    )
+        //address ivmAddress
+        RoleController(rmAddress)
+    {
         udaoc = IUDAOC(udaocAddress);
-        IVM = IValidationManager(ivmAddress);
+        //IVM = IValidationManager(ivmAddress);
         disputes.push();
         validations.push();
     }
@@ -172,17 +174,18 @@ contract Supervision is RoleController{
     ) external onlyRole(GOVERNANCE_ROLE) {
         requiredJurors = _requiredJurors;
     }
+
     // Validation setters
     function setUDAOC(address udaocAddress) external onlyRole(FOUNDATION_ROLE) {
         udaoc = IUDAOC(udaocAddress);
     }
+
     /// @notice creates a validation for a token
     /// @param stakerAddress address of staking contract
-    function setStaker(
-        address stakerAddress
-    ) external onlyRole(BACKEND_ROLE) {
+    function setStaker(address stakerAddress) external onlyRole(BACKEND_ROLE) {
         staker = IStakingContract(stakerAddress);
     }
+
     /// @notice sets required validator vote count per content
     /// @param _requiredValidators new required vote count
     function setRequiredValidators(
@@ -209,17 +212,20 @@ contract Supervision is RoleController{
     ) external view returns (uint) {
         return jurorScorePerRound[_juror][_round];
     }
+
     /// @notice returns total juror scores
     function getTotalJurorScore() external view returns (uint) {
         return totalJurorScore;
     }
+
     // Validation getters
 
     function getValidatorsOfVal(
         uint validationId
-    ) external view returns (address[] memory) {
+    ) public view returns (address[] memory) {
         return validations[validationId].validators;
     }
+
     /// @notice returns successful and unsuccessful validation count of the account
     /// @param account wallet address of the account that wanted to be checked
     function getValidationResults(
@@ -244,7 +250,7 @@ contract Supervision is RoleController{
     /// @param tokenId The ID of a token
     function getLatestValidationIdOfToken(
         uint tokenId
-    ) external view returns (uint) {
+    ) public view returns (uint) {
         return latestValidationOfToken[tokenId];
     }
 
@@ -280,7 +286,7 @@ contract Supervision is RoleController{
         if (isTokenRelated) {
             dispute.tokenId = tokenId;
         }
-        
+
         emit DisputeCreated(dispute.caseId, caseScope, question);
     }
 
@@ -319,10 +325,10 @@ contract Supervision is RoleController{
     /// @param caseId id of the dispute
     /// @return true if the juror has not validated the content, false otherwise
     function _canAssignDispute(uint256 caseId) internal view returns (bool) {
-        uint validationId = IVM.getLatestValidationIdOfToken(
+        uint validationId = getLatestValidationIdOfToken(
             disputes[caseId].tokenId
         );
-        address[] memory validators = IVM.getValidatorsOfVal(validationId);
+        address[] memory validators = getValidatorsOfVal(validationId);
         uint validatorLength = validators.length;
         for (uint i = 0; i < validatorLength; i++) {
             if (msg.sender == validators[i]) {
@@ -355,7 +361,11 @@ contract Supervision is RoleController{
         disputes[caseId].voteCount++;
         emit DisputeResultSent(caseId, result, msg.sender);
         /// TODO replaceBannedJurors(); //add this function to contract and after that there will be no use of finalizeDispute();
-        if (disputes[caseId].voteCount >= requiredJurors || disputes[caseId].acceptVoteCount >= minMajortyVote || disputes[caseId].rejectVoteCount >= minMajortyVote) {
+        if (
+            disputes[caseId].voteCount >= requiredJurors ||
+            disputes[caseId].acceptVoteCount >= minMajortyVote ||
+            disputes[caseId].rejectVoteCount >= minMajortyVote
+        ) {
             _finalizeDispute(caseId);
         }
     }
@@ -407,12 +417,14 @@ contract Supervision is RoleController{
         /// @dev Check if the caller is in the list of jurors
         //_checkJuror(disputes[caseId].jurors);
         require(disputes[caseId].isFinalized == false, "Dispute is finalized");
-        require(    
-            disputes[caseId].voteCount >= requiredJurors || disputes[caseId].acceptVoteCount >= minMajortyVote || disputes[caseId].rejectVoteCount >= minMajortyVote
+        require(
+            disputes[caseId].voteCount >= requiredJurors ||
+                disputes[caseId].acceptVoteCount >= minMajortyVote ||
+                disputes[caseId].rejectVoteCount >= minMajortyVote
         );
         _finalizeDispute(caseId);
-        
     }
+
     /* TODO
     function replaceBannedJurors(address bannedJuror, uint256 caseId) external {
         
@@ -428,8 +440,7 @@ contract Supervision is RoleController{
         }
     }
     */
-    
-    
+
     // Validation functions
     /// Sends validation result of validator to blockchain
     /// @param validationId id of validation
@@ -460,6 +471,7 @@ contract Supervision is RoleController{
             result
         );
     }
+
     function finalizeValidation(uint256 validationId) external {
         /// @notice finalizes validation if enough validation is sent
         /// @param validationId id of the validation
@@ -511,6 +523,7 @@ contract Supervision is RoleController{
             validations[validationId].finalValidationResult
         );
     }
+
     function dismissValidation(
         uint validationId
     ) external onlyRoles(validator_roles) {
@@ -530,25 +543,30 @@ contract Supervision is RoleController{
             }
         }
     }
+
     /// @notice starts new validation for content
     /// @param tokenId id of the content that will be validated
     /// @param score validation score of the content
-    function createValidation(
-        uint256 tokenId,
-        uint256 score
-    ) external {
-        require(udaoc.ownerOf(tokenId) != address(0), "Token owner is zero address");
-        require(udaoc.ownerOf(tokenId) == msg.sender, "Only token owner can create validation");
+    function createValidation(uint256 tokenId, uint256 score) external {
+        require(
+            udaoc.ownerOf(tokenId) != address(0),
+            "Token owner is zero address"
+        );
+        require(
+            udaoc.ownerOf(tokenId) == msg.sender,
+            "Only token owner can create validation"
+        );
         //make sure token owner is kyced and not banned
         require(IRM.isKYCed(msg.sender), "Token owner is not KYCed");
         require(!IRM.isBanned(msg.sender), "Token owner is banned");
-        
+
         Validation storage validation = validations.push();
         validation.id = validations.length - 1;
         validation.tokenId = tokenId;
         validation.validationScore = score;
         emit ValidationCreated(tokenId, validations.length - 1);
     }
+
     /// @notice assign validation to self
     /// @param validationId id of the validation
     function assignValidation(
@@ -585,7 +603,7 @@ contract Supervision is RoleController{
         distributionRound++;
         emit NextRound(distributionRound);
     }
-    
+
     /// @notice Get the updated addresses from contract manager
     /// TODO is this correct?
     function updateAddresses() external onlyRole(BACKEND_ROLE) {
