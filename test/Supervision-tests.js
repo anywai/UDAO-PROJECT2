@@ -16,17 +16,13 @@ const {
 // Enable and inject BN dependency
 chai.use(require("chai-bn")(BN));
 
-describe("Validation Manageer Contract", function () {
+describe("Supervision Contract", function () {
   it("Should create content validation", async function () {
     const {
       backend,
       contentCreator,
       contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
       validatorCandidate,
-      validator,
       validator1,
       validator2,
       validator3,
@@ -38,34 +34,25 @@ describe("Validation Manageer Contract", function () {
       governanceCandidate,
       governanceMember,
       jurorCandidate,
-      jurorMember,
       jurorMember1,
       jurorMember2,
       jurorMember3,
-      jurorMember4,
-      corporation,
       contractUDAO,
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
       contractValidationManager,
-      contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
       contractJurorManager,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
+      contractSupervision,
     } = await deploy();
+    /// set kyc for content creator
     await contractRoleManager.setKYC(contentCreator.address, true);
-
+    /// create content
     await expect(
       contractUDAOContent
         .connect(contentCreator)
@@ -86,10 +73,11 @@ describe("Validation Manageer Contract", function () {
         contentCreator.address,
         0
       );
+    /// create validation
     await expect(
-      contractValidationManager.connect(contentCreator).createValidation(0, 50)
+      contractSupervision.connect(contentCreator).createValidation(0, 50)
     )
-      .to.emit(contractValidationManager, "ValidationCreated")
+      .to.emit(contractSupervision, "ValidationCreated")
       .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1));
   });
 
