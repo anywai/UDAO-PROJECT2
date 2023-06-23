@@ -16,40 +16,84 @@ const {
 // Enable and inject BN dependency
 chai.use(require("chai-bn")(BN));
 
+/// DEPLOYMENTS------------------------------------------------------------------
+// PEOPLE
+var backend;
+var contentCreator;
+var contentBuyer, contentBuyer1, contentBuyer2, contentBuyer3;
+var validator1, validator2, validator3, validator4, validator5;
+var jurorMember1, jurorMember2, jurorMember3, jurorMember4;
+var account1, account2, account3;
+
+var validatorCandidate, validator;
+var jurorCandidate, jurorMember;
+var governanceCandidate, governanceMember;
+var foundation, corporation;
+var superValidatorCandidate, superValidator;
+// CONTRACTS & ROLES
+var contractUDAO, contractUDAOVp, contractUDAOCertificate, contractUDAOContent;
+
+var contractJurorManager, contractValidationManager, contractSupervision;
+var contractUDAOStaker, contractUDAOTimelockController, contractUDAOGovernor;
+
+var contractRoleManager, contractContractManagervar;
+var contractPlatformTreasury;
+var contractPriceGetter;
+var GOVERNANCE_ROLE, BACKEND_ROLE;
+
+/// HELPERS---------------------------------------------------------------------
+async function reDeploy() {
+  const replace = await deploy();
+  backend = replace.backend;
+  contentCreator = replace.contentCreator;
+  contentBuyer = replace.contentBuyer;
+  contentBuyer1 = replace.contentBuyer1;
+  contentBuyer2 = replace.contentBuyer2;
+  contentBuyer3 = replace.contentBuyer3;
+  validatorCandidate = replace.validatorCandidate;
+  validator = replace.validator;
+  validator1 = replace.validator1;
+  validator2 = replace.validator2;
+  validator3 = replace.validator3;
+  validator4 = replace.validator4;
+  validator5 = replace.validator5;
+  superValidatorCandidate = replace.superValidatorCandidate;
+  superValidator = replace.superValidator;
+  foundation = replace.foundation;
+  governanceCandidate = replace.governanceCandidate;
+  governanceMember = replace.governanceMember;
+  jurorCandidate = replace.jurorCandidate;
+  jurorMember = replace.jurorMember;
+  jurorMember1 = replace.jurorMember1;
+  jurorMember2 = replace.jurorMember2;
+  jurorMember3 = replace.jurorMember3;
+  jurorMember4 = replace.jurorMember4;
+  corporation = replace.corporation;
+  contractUDAO = replace.contractUDAO;
+  contractRoleManager = replace.contractRoleManager;
+  contractUDAOCertificate = replace.contractUDAOCertificate;
+  contractUDAOContent = replace.contractUDAOContent;
+  contractValidationManager = replace.contractValidationManager;
+  contractSupervision = replace.contractSupervision;
+  contractPlatformTreasury = replace.contractPlatformTreasury;
+  contractUDAOVp = replace.contractUDAOVp;
+  contractUDAOStaker = replace.contractUDAOStaker;
+  contractUDAOTimelockController = replace.contractUDAOTimelockController;
+  contractUDAOGovernor = replace.contractUDAOGovernor;
+  contractJurorManager = replace.contractJurorManager;
+  GOVERNANCE_ROLE = replace.GOVERNANCE_ROLE;
+  BACKEND_ROLE = replace.BACKEND_ROLE;
+  contractContractManager = replace.contractContractManager;
+  account1 = replace.account1;
+  account2 = replace.account2;
+  account3 = replace.account3;
+  contractPriceGetter = replace.contractPriceGetter;
+}
+
+/// TESTS-----------------------------------------------------------------------
 describe("Supervision Contract", function () {
   it("Should create content validation", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      validatorCandidate,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractValidationManager,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      contractJurorManager,
-      contractSupervision,
-    } = await deploy();
+    await reDeploy();
     /// set kyc for content creator
     await contractRoleManager.setKYC(contentCreator.address, true);
     /// create content
@@ -82,54 +126,10 @@ describe("Supervision Contract", function () {
   });
 
   it("Should assign content validation", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractValidationManager,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      contractJurorManager,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy(false, true);
+    await reDeploy();
+    /// set kyc for content creator
     await contractRoleManager.setKYC(contentCreator.address, true);
-
+    /// create content
     await expect(
       contractUDAOContent
         .connect(contentCreator)
@@ -150,15 +150,15 @@ describe("Supervision Contract", function () {
         contentCreator.address,
         0
       );
+    /// create validation
     await expect(
-      contractValidationManager.connect(contentCreator).createValidation(0, 50)
+      contractSupervision.connect(contentCreator).createValidation(0, 50)
     )
-      .to.emit(contractValidationManager, "ValidationCreated")
+      .to.emit(contractSupervision, "ValidationCreated")
       .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1));
-    await expect(
-      contractValidationManager.connect(validator1).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
+    /// assign validation with validator1
+    await expect(contractSupervision.connect(validator1).assignValidation(1))
+      .to.emit(contractSupervision, "ValidationAssigned")
       .withArgs(
         ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
@@ -167,54 +167,10 @@ describe("Supervision Contract", function () {
   });
 
   it("Should send validation result of validator", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractValidationManager,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      contractJurorManager,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy(false, true);
+    await reDeploy();
+    /// set kyc for content creator
     await contractRoleManager.setKYC(contentCreator.address, true);
-
+    /// create content
     await expect(
       contractUDAOContent
         .connect(contentCreator)
@@ -235,101 +191,101 @@ describe("Supervision Contract", function () {
         contentCreator.address,
         0
       );
+    /// create validation
     await expect(
-      contractValidationManager.connect(contentCreator).createValidation(0, 50)
+      contractSupervision.connect(contentCreator).createValidation(0, 50)
     )
-      .to.emit(contractValidationManager, "ValidationCreated")
+      .to.emit(contractSupervision, "ValidationCreated")
       .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1));
-    await expect(
-      contractValidationManager.connect(validator1).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
+    /// assign validation with validator1
+    await expect(contractSupervision.connect(validator1).assignValidation(1))
+      .to.emit(contractSupervision, "ValidationAssigned")
       .withArgs(
         ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator1.address
       );
-    await expect(
-      contractValidationManager.connect(validator2).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
+    /// assign validation with validator2
+    await expect(contractSupervision.connect(validator2).assignValidation(1))
+      .to.emit(contractSupervision, "ValidationAssigned")
       .withArgs(
         ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator2.address
       );
-    await expect(
-      contractValidationManager.connect(validator3).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
+    /// assign validation with validator3
+    await expect(contractSupervision.connect(validator3).assignValidation(1))
+      .to.emit(contractSupervision, "ValidationAssigned")
       .withArgs(
         ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator3.address
       );
-    await expect(
-      contractValidationManager.connect(validator4).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
+    /// assign validation with validator4
+    await expect(contractSupervision.connect(validator4).assignValidation(1))
+      .to.emit(contractSupervision, "ValidationAssigned")
       .withArgs(
         ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator4.address
       );
-    await expect(
-      contractValidationManager.connect(validator5).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
+    /// assign validation with validator5
+    await expect(contractSupervision.connect(validator5).assignValidation(1))
+      .to.emit(contractSupervision, "ValidationAssigned")
       .withArgs(
         ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator5.address
       );
-
+    /// send validation result with validator1
     await expect(
-      contractValidationManager.connect(validator1).sendValidation(1, true)
+      contractSupervision.connect(validator1).sendValidation(1, true)
     )
-      .to.emit(contractValidationManager, "ValidationResultSent")
+      .to.emit(contractSupervision, "ValidationResultSent")
       .withArgs(
         ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator1.address,
         true
       );
+    /// send validation result with validator2
     await expect(
-      contractValidationManager.connect(validator2).sendValidation(1, true)
+      contractSupervision.connect(validator2).sendValidation(1, true)
     )
-      .to.emit(contractValidationManager, "ValidationResultSent")
+      .to.emit(contractSupervision, "ValidationResultSent")
       .withArgs(
         ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator2.address,
         true
       );
+    /// send validation result with validator3
     await expect(
-      contractValidationManager.connect(validator3).sendValidation(1, true)
+      contractSupervision.connect(validator3).sendValidation(1, true)
     )
-      .to.emit(contractValidationManager, "ValidationResultSent")
+      .to.emit(contractSupervision, "ValidationResultSent")
       .withArgs(
         ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator3.address,
         true
       );
+    /// send validation result with validator4
     await expect(
-      contractValidationManager.connect(validator4).sendValidation(1, true)
+      contractSupervision.connect(validator4).sendValidation(1, true)
     )
-      .to.emit(contractValidationManager, "ValidationResultSent")
+      .to.emit(contractSupervision, "ValidationResultSent")
       .withArgs(
         ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator4.address,
         true
       );
+    /// send validation result with validator5
     await expect(
-      contractValidationManager.connect(validator5).sendValidation(1, false)
+      contractSupervision.connect(validator5).sendValidation(1, false)
     )
-      .to.emit(contractValidationManager, "ValidationResultSent")
+      .to.emit(contractSupervision, "ValidationResultSent")
       .withArgs(
         ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
@@ -339,54 +295,10 @@ describe("Supervision Contract", function () {
   });
 
   it("Should validate content", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractValidationManager,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      contractJurorManager,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy(false, true);
+    await reDeploy();
+    /// set KYC for content creator
     await contractRoleManager.setKYC(contentCreator.address, true);
-
+    /// create content
     await expect(
       contractUDAOContent
         .connect(contentCreator)
@@ -407,163 +319,120 @@ describe("Supervision Contract", function () {
         contentCreator.address,
         0
       );
+    /// create validation
     await expect(
-      contractValidationManager.connect(contentCreator).createValidation(0, 50)
+      contractSupervision.connect(contentCreator).createValidation(0, 50)
     )
-      .to.emit(contractValidationManager, "ValidationCreated")
+      .to.emit(contractSupervision, "ValidationCreated")
       .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1));
-    await expect(
-      contractValidationManager.connect(validator1).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
+    /// assign validation with validator1
+    await expect(contractSupervision.connect(validator1).assignValidation(1))
+      .to.emit(contractSupervision, "ValidationAssigned")
       .withArgs(
         ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator1.address
       );
-    await expect(
-      contractValidationManager.connect(validator2).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
+    /// assign validation with validator2
+    await expect(contractSupervision.connect(validator2).assignValidation(1))
+      .to.emit(contractSupervision, "ValidationAssigned")
       .withArgs(
         ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator2.address
       );
-    await expect(
-      contractValidationManager.connect(validator3).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
+    /// assign validation with validator3
+    await expect(contractSupervision.connect(validator3).assignValidation(1))
+      .to.emit(contractSupervision, "ValidationAssigned")
       .withArgs(
         ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator3.address
       );
-    await expect(
-      contractValidationManager.connect(validator4).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
+    /// assign validation with validator4
+    await expect(contractSupervision.connect(validator4).assignValidation(1))
+      .to.emit(contractSupervision, "ValidationAssigned")
       .withArgs(
         ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator4.address
       );
-    await expect(
-      contractValidationManager.connect(validator5).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
+    /// assign validation with validator5
+    await expect(contractSupervision.connect(validator5).assignValidation(1))
+      .to.emit(contractSupervision, "ValidationAssigned")
       .withArgs(
         ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator5.address
       );
-
+    /// send validation result with validator1
     await expect(
-      contractValidationManager.connect(validator1).sendValidation(1, true)
+      contractSupervision.connect(validator1).sendValidation(1, true)
     )
-      .to.emit(contractValidationManager, "ValidationResultSent")
+      .to.emit(contractSupervision, "ValidationResultSent")
       .withArgs(
         ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator1.address,
         true
       );
+    /// send validation result with validator2
     await expect(
-      contractValidationManager.connect(validator2).sendValidation(1, true)
+      contractSupervision.connect(validator2).sendValidation(1, true)
     )
-      .to.emit(contractValidationManager, "ValidationResultSent")
+      .to.emit(contractSupervision, "ValidationResultSent")
       .withArgs(
         ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator2.address,
         true
       );
+    /// send validation result with validator3
     await expect(
-      contractValidationManager.connect(validator3).sendValidation(1, true)
+      contractSupervision.connect(validator3).sendValidation(1, true)
     )
-      .to.emit(contractValidationManager, "ValidationResultSent")
+      .to.emit(contractSupervision, "ValidationResultSent")
       .withArgs(
         ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator3.address,
         true
       );
+    /// send validation result with validator4
     await expect(
-      contractValidationManager.connect(validator4).sendValidation(1, true)
+      contractSupervision.connect(validator4).sendValidation(1, true)
     )
-      .to.emit(contractValidationManager, "ValidationResultSent")
+      .to.emit(contractSupervision, "ValidationResultSent")
       .withArgs(
         ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator4.address,
         true
       );
+    /// send validation result with validator5
     await expect(
-      contractValidationManager.connect(validator5).sendValidation(1, false)
+      contractSupervision.connect(validator5).sendValidation(1, false)
     )
-      .to.emit(contractValidationManager, "ValidationResultSent")
+      .to.emit(contractSupervision, "ValidationResultSent")
       .withArgs(
         ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator5.address,
         false
       );
+    /// finalize validation
     await expect(
-      contractValidationManager.connect(contentCreator).finalizeValidation(1)
+      contractSupervision.connect(contentCreator).finalizeValidation(1)
     )
-      .to.emit(contractValidationManager, "ValidationEnded")
+      .to.emit(contractSupervision, "ValidationEnded")
       .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), true);
   });
 
   it("Should return validator's score", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractValidationManager,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      contractJurorManager,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy(false, true);
+    await reDeploy();
+    /// set KYC for content creator
     await contractRoleManager.setKYC(contentCreator.address, true);
-
+    /// create content
     await expect(
       contractUDAOContent
         .connect(contentCreator)
@@ -584,166 +453,124 @@ describe("Supervision Contract", function () {
         contentCreator.address,
         0
       );
+    /// create validation
     await expect(
-      contractValidationManager.connect(contentCreator).createValidation(0, 50)
+      contractSupervision.connect(contentCreator).createValidation(0, 50)
     )
-      .to.emit(contractValidationManager, "ValidationCreated")
+      .to.emit(contractSupervision, "ValidationCreated")
       .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1));
-    await expect(
-      contractValidationManager.connect(validator1).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
+    /// assign validation with validator1
+    await expect(contractSupervision.connect(validator1).assignValidation(1))
+      .to.emit(contractSupervision, "ValidationAssigned")
       .withArgs(
         ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator1.address
       );
-    await expect(
-      contractValidationManager.connect(validator2).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
+    /// assign validation with validator2
+    await expect(contractSupervision.connect(validator2).assignValidation(1))
+      .to.emit(contractSupervision, "ValidationAssigned")
       .withArgs(
         ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator2.address
       );
-    await expect(
-      contractValidationManager.connect(validator3).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
+    /// assign validation with validator3
+    await expect(contractSupervision.connect(validator3).assignValidation(1))
+      .to.emit(contractSupervision, "ValidationAssigned")
       .withArgs(
         ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator3.address
       );
-    await expect(
-      contractValidationManager.connect(validator4).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
+    /// assign validation with validator4
+    await expect(contractSupervision.connect(validator4).assignValidation(1))
+      .to.emit(contractSupervision, "ValidationAssigned")
       .withArgs(
         ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator4.address
       );
-    await expect(
-      contractValidationManager.connect(validator5).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
+    /// assign validation with validator5
+    await expect(contractSupervision.connect(validator5).assignValidation(1))
+      .to.emit(contractSupervision, "ValidationAssigned")
       .withArgs(
         ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator5.address
       );
-
+    /// send validation result with validator1
     await expect(
-      contractValidationManager.connect(validator1).sendValidation(1, true)
+      contractSupervision.connect(validator1).sendValidation(1, true)
     )
-      .to.emit(contractValidationManager, "ValidationResultSent")
+      .to.emit(contractSupervision, "ValidationResultSent")
       .withArgs(
         ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator1.address,
         true
       );
+    /// send validation result with validator2
     await expect(
-      contractValidationManager.connect(validator2).sendValidation(1, true)
+      contractSupervision.connect(validator2).sendValidation(1, true)
     )
-      .to.emit(contractValidationManager, "ValidationResultSent")
+      .to.emit(contractSupervision, "ValidationResultSent")
       .withArgs(
         ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator2.address,
         true
       );
+    /// send validation result with validator3
     await expect(
-      contractValidationManager.connect(validator3).sendValidation(1, true)
+      contractSupervision.connect(validator3).sendValidation(1, true)
     )
-      .to.emit(contractValidationManager, "ValidationResultSent")
+      .to.emit(contractSupervision, "ValidationResultSent")
       .withArgs(
         ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator3.address,
         true
       );
+    /// send validation result with validator4
     await expect(
-      contractValidationManager.connect(validator4).sendValidation(1, true)
+      contractSupervision.connect(validator4).sendValidation(1, true)
     )
-      .to.emit(contractValidationManager, "ValidationResultSent")
+      .to.emit(contractSupervision, "ValidationResultSent")
       .withArgs(
         ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator4.address,
         true
       );
+    /// send validation result with validator5
     await expect(
-      contractValidationManager.connect(validator5).sendValidation(1, false)
+      contractSupervision.connect(validator5).sendValidation(1, false)
     )
-      .to.emit(contractValidationManager, "ValidationResultSent")
+      .to.emit(contractSupervision, "ValidationResultSent")
       .withArgs(
         ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator5.address,
         false
       );
+    /// finalize validation
     await expect(
-      contractValidationManager.connect(contentCreator).finalizeValidation(1)
+      contractSupervision.connect(contentCreator).finalizeValidation(1)
     )
-      .to.emit(contractValidationManager, "ValidationEnded")
+      .to.emit(contractSupervision, "ValidationEnded")
       .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), true);
+    /// check validation score of validator1
     expect(
-      await contractValidationManager.getValidatorScore(validator1.address, 0)
+      await contractSupervision.getValidatorScore(validator1.address, 0)
     ).to.eql(ethers.BigNumber.from(50));
   });
 
   it("Should return total validation score", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractValidationManager,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      contractJurorManager,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy(false, true);
+    await reDeploy();
+    /// set KYC for content creator
     await contractRoleManager.setKYC(contentCreator.address, true);
-
+    /// create content
     await expect(
       contractUDAOContent
         .connect(contentCreator)
@@ -764,219 +591,132 @@ describe("Supervision Contract", function () {
         contentCreator.address,
         0
       );
+    /// create validation
     await expect(
-      contractValidationManager.connect(contentCreator).createValidation(0, 50)
+      contractSupervision.connect(contentCreator).createValidation(0, 50)
     )
-      .to.emit(contractValidationManager, "ValidationCreated")
+      .to.emit(contractSupervision, "ValidationCreated")
       .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1));
-    await expect(
-      contractValidationManager.connect(validator1).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
+    /// assign validation with validator1
+    await expect(contractSupervision.connect(validator1).assignValidation(1))
+      .to.emit(contractSupervision, "ValidationAssigned")
       .withArgs(
         ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator1.address
       );
-    await expect(
-      contractValidationManager.connect(validator2).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
+    /// assign validation with validator2
+    await expect(contractSupervision.connect(validator2).assignValidation(1))
+      .to.emit(contractSupervision, "ValidationAssigned")
       .withArgs(
         ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator2.address
       );
-    await expect(
-      contractValidationManager.connect(validator3).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
+    /// assign validation with validator3
+    await expect(contractSupervision.connect(validator3).assignValidation(1))
+      .to.emit(contractSupervision, "ValidationAssigned")
       .withArgs(
         ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator3.address
       );
-    await expect(
-      contractValidationManager.connect(validator4).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
+    /// assign validation with validator4
+    await expect(contractSupervision.connect(validator4).assignValidation(1))
+      .to.emit(contractSupervision, "ValidationAssigned")
       .withArgs(
         ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator4.address
       );
-    await expect(
-      contractValidationManager.connect(validator5).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
+    /// assign validation with validator5
+    await expect(contractSupervision.connect(validator5).assignValidation(1))
+      .to.emit(contractSupervision, "ValidationAssigned")
       .withArgs(
         ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator5.address
       );
-
+    /// send validation result with validator1
     await expect(
-      contractValidationManager.connect(validator1).sendValidation(1, true)
+      contractSupervision.connect(validator1).sendValidation(1, true)
     )
-      .to.emit(contractValidationManager, "ValidationResultSent")
+      .to.emit(contractSupervision, "ValidationResultSent")
       .withArgs(
         ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator1.address,
         true
       );
+    /// send validation result with validator2
     await expect(
-      contractValidationManager.connect(validator2).sendValidation(1, true)
+      contractSupervision.connect(validator2).sendValidation(1, true)
     )
-      .to.emit(contractValidationManager, "ValidationResultSent")
+      .to.emit(contractSupervision, "ValidationResultSent")
       .withArgs(
         ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator2.address,
         true
       );
+    /// send validation result with validator3
     await expect(
-      contractValidationManager.connect(validator3).sendValidation(1, true)
+      contractSupervision.connect(validator3).sendValidation(1, true)
     )
-      .to.emit(contractValidationManager, "ValidationResultSent")
+      .to.emit(contractSupervision, "ValidationResultSent")
       .withArgs(
         ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator3.address,
         true
       );
+    /// send validation result with validator4
     await expect(
-      contractValidationManager.connect(validator4).sendValidation(1, true)
+      contractSupervision.connect(validator4).sendValidation(1, true)
     )
-      .to.emit(contractValidationManager, "ValidationResultSent")
+      .to.emit(contractSupervision, "ValidationResultSent")
       .withArgs(
         ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator4.address,
         true
       );
+    /// send validation result with validator5
     await expect(
-      contractValidationManager.connect(validator5).sendValidation(1, false)
+      contractSupervision.connect(validator5).sendValidation(1, false)
     )
-      .to.emit(contractValidationManager, "ValidationResultSent")
+      .to.emit(contractSupervision, "ValidationResultSent")
       .withArgs(
         ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator5.address,
         false
       );
+    /// finalize validation
     await expect(
-      contractValidationManager.connect(contentCreator).finalizeValidation(1)
+      contractSupervision.connect(contentCreator).finalizeValidation(1)
     )
-      .to.emit(contractValidationManager, "ValidationEnded")
+      .to.emit(contractSupervision, "ValidationEnded")
       .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), true);
-    expect(await contractValidationManager.getTotalValidationScore()).to.eql(
+    /// get total validation score
+    expect(await contractSupervision.getTotalValidationScore()).to.eql(
       ethers.BigNumber.from(200)
     );
   });
 
   it("Should not create validation if content does not exist", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractValidationManager,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      contractJurorManager,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
+    /// set KYC for content creator
     await contractRoleManager.setKYC(contentCreator.address, true);
+    /// create validation
     await expect(
-      contractValidationManager.connect(contentCreator).createValidation(0, 50)
+      contractSupervision.connect(contentCreator).createValidation(0, 50)
     ).to.revertedWith("ERC721: invalid token ID");
   });
 
   it("Should fail to create content validation when Token owner isn't KYCed", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractValidationManager,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      contractJurorManager,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
-
-    /// Set KYC to true
+    await reDeploy();
+    /// Set KYC to true for content creator
     await contractRoleManager.setKYC(contentCreator.address, true);
 
     /// Create content
@@ -1001,12 +741,12 @@ describe("Supervision Contract", function () {
         0
       );
 
-    /// Set KYC to false
+    /// Set KYC to false for content creator
     await contractRoleManager.setKYC(contentCreator.address, false);
 
     /// Create validation
     await expect(
-      contractValidationManager.connect(contentCreator).createValidation(0, 50)
+      contractSupervision.connect(contentCreator).createValidation(0, 50)
     ).to.revertedWith("Token owner is not KYCed");
   });
 
@@ -1057,8 +797,7 @@ describe("Supervision Contract", function () {
       account3,
       contractPriceGetter,
     } = await deploy();
-
-    /// Set KYC to true
+    /// Set KYC to true for content creator
     await contractRoleManager.setKYC(contentCreator.address, true);
 
     /// Create content
@@ -1083,12 +822,12 @@ describe("Supervision Contract", function () {
         0
       );
 
-    /// Ban the user
+    /// Ban the content creator
     await contractRoleManager.setBan(contentCreator.address, true);
 
     /// Create validation
     await expect(
-      contractValidationManager.connect(contentCreator).createValidation(0, 50)
+      contractSupervision.connect(contentCreator).createValidation(0, 50)
     ).to.revertedWith("Token owner is banned");
   });
 });
