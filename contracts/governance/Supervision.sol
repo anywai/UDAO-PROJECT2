@@ -29,6 +29,7 @@ contract Supervision is RoleController {
     event DisputeAssigned(uint256 caseId, address juror);
     event DisputeResultSent(uint256 caseId, bool result, address juror);
     event DisputeEnded(uint256 caseId, bool verdict);
+    event LateJurorScoreRecorded(uint256 caseId, address juror);
     event AddressesUpdated(address IRMAddress, address PTAddress);
     // Validation events
     event ValidationCreated(uint256 tokenId, uint256 validationId);
@@ -345,7 +346,6 @@ contract Supervision is RoleController {
         uint256 caseId,
         bool result
     ) external onlyRole(JUROR_ROLE) {
-        require(disputes[caseId].isFinalized == false, "Dispute is finalized");
         require(
             activeDispute[msg.sender] == caseId,
             "This dispute is not assigned to this wallet"
@@ -361,12 +361,16 @@ contract Supervision is RoleController {
         disputes[caseId].voteCount++;
         emit DisputeResultSent(caseId, result, msg.sender);
         /// TODO replaceBannedJurors(); //add this function to contract and after that there will be no use of finalizeDispute();
-        if (
-            disputes[caseId].voteCount >= requiredJurors ||
-            disputes[caseId].acceptVoteCount >= minMajortyVote ||
-            disputes[caseId].rejectVoteCount >= minMajortyVote
-        ) {
-            _finalizeDispute(caseId);
+        if (disputes[caseId].isFinalized == false) {
+            if (
+                disputes[caseId].voteCount >= requiredJurors ||
+                disputes[caseId].acceptVoteCount >= minMajortyVote ||
+                disputes[caseId].rejectVoteCount >= minMajortyVote
+            ) {
+                _finalizeDispute(caseId);
+            }
+        } else {
+            _recordLateJurorScore(caseId, msg.sender);
         }
     }
 
@@ -391,38 +395,48 @@ contract Supervision is RoleController {
 
         /// TODO Below is for unfixed juror scores and juror penalty..
 
-        for (uint i; i < disputes[caseId].jurors.length; i++) {
-            if (
-                disputes[caseId].verdict ==
-                disputes[caseId].vote[disputes[caseId].jurors[i]]
-            ) {
-                jurorScorePerRound[disputes[caseId].jurors[i]][
-                    distributionRound
-                ]++;
-                totalJurorScore++;
-                /// @dev Record success point of a juror
-                successfulDispute[disputes[caseId].jurors[i]]++;
-            } else {
-                /// @dev Record unsuccess point of a juror
-                unsuccessfulDispute[disputes[caseId].jurors[i]]++;
-            }
-            disputes[caseId].isFinalized = true;
-        }
+        _recordJurorScores(caseId);
+        disputes[caseId].isFinalized = true;
         emit DisputeEnded(caseId, disputes[caseId].verdict);
     }
 
-    /// @notice finalizes dispute if enough juror vote is sent
+    /// @notice record juror score
     /// @param caseId id of the dispute
-    function finalizeDispute(uint256 caseId) external {
-        /// @dev Check if the caller is in the list of jurors
-        //_checkJuror(disputes[caseId].jurors);
-        require(disputes[caseId].isFinalized == false, "Dispute is finalized");
-        require(
-            disputes[caseId].voteCount >= requiredJurors ||
-                disputes[caseId].acceptVoteCount >= minMajortyVote ||
-                disputes[caseId].rejectVoteCount >= minMajortyVote
-        );
-        _finalizeDispute(caseId);
+    function _recordJurorScores(uint caseId) internal {
+        for (uint i; i < disputes[caseId].jurors.length; i++) {
+            if (disputes[caseId].isVoted[msg.sender] == true) {
+                if (
+                    disputes[caseId].verdict ==
+                    disputes[caseId].vote[disputes[caseId].jurors[i]]
+                ) {
+                    jurorScorePerRound[disputes[caseId].jurors[i]][
+                        distributionRound
+                    ]++;
+                    totalJurorScore++;
+                    /// @dev Record success point of a juror
+                    successfulDispute[disputes[caseId].jurors[i]]++;
+                } else {
+                    /// @dev Record unsuccess point of a juror
+                    unsuccessfulDispute[disputes[caseId].jurors[i]]++;
+                }
+            }
+        }
+    }
+
+    /// @notice record late coming juror score
+    /// @param caseId id of the dispute
+    /// @param juror address of the juror
+    function _recordLateJurorScore(uint caseId, address juror) internal {
+        if (disputes[caseId].verdict == disputes[caseId].vote[juror]) {
+            jurorScorePerRound[juror][distributionRound]++;
+            totalJurorScore++;
+            /// @dev Record success point of a juror
+            successfulDispute[juror]++;
+        } else {
+            /// @dev Record unsuccess point of a juror
+            unsuccessfulDispute[juror]++;
+        }
+        emit LateJurorScoreRecorded(caseId, juror);
     }
 
     /* TODO
