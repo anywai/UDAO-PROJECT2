@@ -994,7 +994,7 @@ describe("Supervision Contract", function () {
     // bytes empty data
     const emptyData = "0x";
     // random address
-    const randomAddress = "0x7ceb23fd6bc0add59e62ac25578270cff1b9f619";
+    const randomAddress = ethers.constants.AddressZero;
     /// @dev Create dispute
     await expect(
       contractSupervision
@@ -1023,7 +1023,7 @@ describe("Supervision Contract", function () {
     const caseTokenRelated = true;
     const caseTokenId = 0;
     const emptyData = "0x";
-    const randomAddress = "0x7ceb23fd6bc0add59e62ac25578270cff1b9f619";
+    const randomAddress = ethers.constants.AddressZero;
     /// @dev Create content
     await createContent(
       contentCreator,
@@ -1068,7 +1068,7 @@ describe("Supervision Contract", function () {
     const caseTokenRelated = true;
     const caseTokenId = 0;
     const emptyData = "0x";
-    const randomAddress = "0x7ceb23fd6bc0add59e62ac25578270cff1b9f619";
+    const randomAddress = ethers.constants.AddressZero;
 
     /// @dev Create content
     await createContent(
@@ -1114,7 +1114,7 @@ describe("Supervision Contract", function () {
     const caseTokenRelated = true;
     const caseTokenId = 0;
     const emptyData = "0x";
-    const randomAddress = "0x7ceb23fd6bc0add59e62ac25578270cff1b9f619";
+    const randomAddress = ethers.constants.AddressZero; 
     /// @dev Give validator role to jurorMember1
     const VALIDATOR_ROLE = ethers.utils.keccak256(
       ethers.utils.toUtf8Bytes("VALIDATOR_ROLE")
@@ -1160,7 +1160,7 @@ describe("Supervision Contract", function () {
     const caseTokenRelated = true;
     const caseTokenId = 0;
     const emptyData = "0x";
-    const randomAddress = "0x7ceb23fd6bc0add59e62ac25578270cff1b9f619";
+    const randomAddress = ethers.constants.AddressZero;
 
     /// @dev Create content
     await createContent(
@@ -1211,7 +1211,7 @@ describe("Supervision Contract", function () {
     const caseTokenRelated = true;
     const caseTokenId = 0;
     const emptyData = "0x";
-    const randomAddress = "0x7ceb23fd6bc0add59e62ac25578270cff1b9f619";
+    const randomAddress = ethers.constants.AddressZero;
 
     /// @dev Create content
     await createContent(
@@ -1262,7 +1262,7 @@ describe("Supervision Contract", function () {
     const caseTokenRelated = true;
     const caseTokenId = 0;
     const emptyData = "0x";
-    const randomAddress = "0x7ceb23fd6bc0add59e62ac25578270cff1b9f619";
+    const randomAddress = ethers.constants.AddressZero;
 
     /// @dev Create content
     await createContent(
@@ -1316,7 +1316,8 @@ describe("Supervision Contract", function () {
     const caseTokenRelated = true;
     const caseTokenId = 0;
     const emptyData = "0x";
-    const randomAddress = "0x7ceb23fd6bc0add59e62ac25578270cff1b9f619";
+    // zero address
+    const randomAddress = ethers.constants.AddressZero;
 
     /// @dev Create content
     await createContent(
@@ -1383,7 +1384,7 @@ describe("Supervision Contract", function () {
     const caseTokenRelated = true;
     const caseTokenId = 0;
     const emptyData = "0x";
-    const randomAddress = "0x7ceb23fd6bc0add59e62ac25578270cff1b9f619";
+    const randomAddress = ethers.constants.AddressZero;
 
     /// @dev Create content
     await createContent(
@@ -1446,7 +1447,7 @@ describe("Supervision Contract", function () {
     const caseTokenRelated = true;
     const caseTokenId = 0;
     const emptyData = "0x";
-    const randomAddress = "0x7ceb23fd6bc0add59e62ac25578270cff1b9f619";
+    const randomAddress = ethers.constants.AddressZero;
 
     /// @dev Create content
     await createContent(
@@ -1536,7 +1537,7 @@ describe("Supervision Contract", function () {
     const caseTokenRelated = true;
     const caseTokenId = 0;
     const emptyData = "0x";
-    const randomAddress = "0x7ceb23fd6bc0add59e62ac25578270cff1b9f619";
+    const randomAddress = ethers.constants.AddressZero;
 
     /// @dev Create content
     await createContent(
@@ -1618,7 +1619,7 @@ describe("Supervision Contract", function () {
     const caseTokenRelated = true;
     const caseTokenId = 0;
     const emptyData = "0x";
-    const randomAddress = "0x7ceb23fd6bc0add59e62ac25578270cff1b9f619";
+    const randomAddress = ethers.constants.AddressZero;
 
     /// @dev Create content
     await createContent(
@@ -1700,7 +1701,7 @@ describe("Supervision Contract", function () {
     const caseTokenRelated = true;
     const caseTokenId = 0;
     const emptyData = "0x";
-    const randomAddress = "0x7ceb23fd6bc0add59e62ac25578270cff1b9f619";
+    const randomAddress = ethers.constants.AddressZero;
 
     /// @dev Create content
     await createContent(
@@ -1836,7 +1837,7 @@ describe("Supervision Contract", function () {
     const caseTokenRelated = true;
     const caseTokenId = 0;
     const emptyData = "0x";
-    const randomAddress = "0x7ceb23fd6bc0add59e62ac25578270cff1b9f619";
+    const randomAddress = ethers.constants.AddressZero;
 
     /// @dev Create content
     await createContent(
@@ -1931,7 +1932,7 @@ describe("Supervision Contract", function () {
     const caseTokenRelated = true;
     const caseTokenId = 0;
     const emptyData = "0x";
-    const randomAddress = "0x7ceb23fd6bc0add59e62ac25578270cff1b9f619";
+    const randomAddress = ethers.constants.AddressZero;
 
     /// @dev Create dispute
     await expect(
@@ -1977,7 +1978,7 @@ describe("Supervision Contract", function () {
     const caseTokenRelated = true;
     const caseTokenId = 0;
     const emptyData = "0x";
-    const randomAddress = "0x7ceb23fd6bc0add59e62ac25578270cff1b9f619";
+    const randomAddress = ethers.constants.AddressZero;
 
     /// @dev Create content
     await createContent(
@@ -2029,7 +2030,7 @@ describe("Supervision Contract", function () {
     const caseTokenRelated = true;
     var caseTokenId = 0;
     const emptyData = "0x";
-    const randomAddress = "0x7ceb23fd6bc0add59e62ac25578270cff1b9f619";
+    const randomAddress = ethers.constants.AddressZero;
 
     /// @dev Create content for 1st dispute
     await createContent(
@@ -2093,7 +2094,7 @@ describe("Supervision Contract", function () {
     const caseTokenRelated = true;
     const caseTokenId = 0;
     const emptyData = "0x";
-    const randomAddress = "0x7ceb23fd6bc0add59e62ac25578270cff1b9f619";
+    const randomAddress = ethers.constants.AddressZero;
 
     /// @dev Create content
     await createContent(
@@ -2137,7 +2138,7 @@ describe("Supervision Contract", function () {
     const caseTokenRelated = true;
     const caseTokenId = 0;
     const emptyData = "0x";
-    const randomAddress = "0x7ceb23fd6bc0add59e62ac25578270cff1b9f619";
+    const randomAddress = ethers.constants.AddressZero;
 
     /// @dev Create content
     await createContent(
@@ -2213,7 +2214,7 @@ describe("Supervision Contract", function () {
     const caseTokenRelated = true;
     const caseTokenId = 0;
     const emptyData = "0x";
-    const randomAddress = "0x7ceb23fd6bc0add59e62ac25578270cff1b9f619";
+    const randomAddress = ethers.constants.AddressZero;
 
     /// @dev Create content
     await createContent(
@@ -2277,7 +2278,7 @@ describe("Supervision Contract", function () {
     const caseTokenRelated = false;
     const caseTokenId = 5;
     const emptyData = "0x";
-    const randomAddress = "0x7ceb23fd6bc0add59e62ac25578270cff1b9f619";
+    const randomAddress = ethers.constants.AddressZero;
 
     /// @dev Create dispute
     await expect(
@@ -2312,7 +2313,7 @@ describe("Supervision Contract", function () {
     const caseTokenRelated = true;
     const caseTokenId = 5;
     const emptyData = "0x";
-    const randomAddress = "0x7ceb23fd6bc0add59e62ac25578270cff1b9f619";
+    const randomAddress = ethers.constants.AddressZero;
 
     /// @dev Create dispute
     await expect(
@@ -2365,7 +2366,7 @@ describe("Supervision Contract", function () {
     const caseTokenRelated = true;
     const caseTokenId = 0;
     const emptyData = "0x";
-    const randomAddress = "0x7ceb23fd6bc0add59e62ac25578270cff1b9f619";
+    const randomAddress = ethers.constants.AddressZero;
 
     /// @dev Create content
     await createContent(
@@ -2412,7 +2413,7 @@ describe("Supervision Contract", function () {
     const caseTokenRelated = true;
     const caseTokenId = 0;
     const emptyData = "0x";
-    const randomAddress = "0x7ceb23fd6bc0add59e62ac25578270cff1b9f619";
+    const randomAddress = ethers.constants.AddressZero;
 
     /// @dev Create content
     await createContent(
