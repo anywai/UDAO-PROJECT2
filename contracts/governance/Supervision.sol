@@ -8,7 +8,7 @@ import "../RoleController.sol";
 import "../interfaces/IUDAOC.sol";
 //import "../interfaces/IVM.sol";
 import "../interfaces/IPlatformTreasury.sol";
-
+import "hardhat/console.sol";
 interface IStakingContract {
     function registerValidation(uint256 validationId) external;
 }
@@ -312,8 +312,12 @@ contract Supervision is RoleController {
             "You are the instructor of this course."
         );
         require(
-            _canAssignDispute(caseId),
+            _wasntTheValidator(caseId, msg.sender),
             "You can't assign content you validated!"
+        );
+        require(
+            _wasntTheOwner(caseId, msg.sender),
+            "You can't assign content that you own!"
         );
 
         activeDispute[msg.sender] = caseId;
@@ -321,24 +325,42 @@ contract Supervision is RoleController {
         emit DisputeAssigned(caseId, msg.sender);
     }
 
-    // TODO add if the owner or the coach of the content/coaching
     /// @dev Checks if a juror was also validator of the content
     /// @param caseId id of the dispute
-    /// @return true if the juror has not validated the content, false otherwise
-    function _canAssignDispute(uint256 caseId) internal view returns (bool) {
+    /// @param juror address of the juror
+    /// @return true if the juror was not the validator of the content, false otherwise
+    function _wasntTheValidator(
+        uint256 caseId,
+        address juror
+    ) internal view returns (bool) {
         uint validationId = getLatestValidationIdOfToken(
             disputes[caseId].tokenId
         );
         address[] memory validators = getValidatorsOfVal(validationId);
         uint validatorLength = validators.length;
         for (uint i = 0; i < validatorLength; i++) {
-            if (msg.sender == validators[i]) {
+            if (juror == validators[i]) {
                 return false;
             }
         }
         return true;
     }
 
+    /// @dev Checks if a juror is the owner of the content
+    /// @param caseId id of the dispute
+    /// @param juror address of the juror
+    /// @return true if the juror was not the owner of the content, false otherwise
+    function _wasntTheOwner(
+        uint256 caseId,
+        address juror
+    ) internal view returns (bool) {
+        address tokenOwner = udaoc.ownerOf(disputes[caseId].tokenId);
+        if (tokenOwner == juror) {
+            return false;
+        }
+        return true;
+    }
+    
     /// @notice Allows jurors to send dipsute result
     /// @param caseId id of the dispute
     /// @param result result of dispute
