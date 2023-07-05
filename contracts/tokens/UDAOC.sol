@@ -66,7 +66,7 @@ contract UDAOContent is IUDAOC, ERC721, ERC721URIStorage, RoleController {
         coachingEnabled[tokenId] = _isCoachingEnabled;
         coachingRefundable[tokenId] = _isCoachingRefundable;
 
-        // save the content price
+        // save the content price (it should test removing for partLength)
         uint partLength = _contentPrice.length;
         partNumberOfContent[tokenId] = partLength;
 
@@ -85,6 +85,42 @@ contract UDAOContent is IUDAOC, ERC721, ERC721URIStorage, RoleController {
         _mint(_redeemer, tokenId);
         _setTokenURI(tokenId, _uri);
         _tokenIds.increment();
+    }
+
+    /// Allows token owners to burn the token
+    // TODO Content should be marked as not validated
+    function modifyContent(
+        uint tokenId,
+        uint256[] calldata _contentPrice,
+        string calldata _currencyName,
+        string calldata _uri
+    ) external whenNotPaused {
+        // score bilgisini çek
+        // bool defaultu false
+        // score hesaplandı = SkorContractı.scoreHesaplandı(tokenId);
+        // require(score hesaplandı == true, "score henüz hesaplanmadı");
+        // uint score = SkorContractı.getScore(tokenId);
+        // if(score > 0){createValidation}; // score 0 dan büyükse validasyon oluştur,0 ise sadece order değişti
+        require(
+            ownerOf(tokenId) == msg.sender,
+            "You are not the owner of token"
+        );
+        //make sure caller is kyced
+        require(IRM.isKYCed(msg.sender), "You are not KYCed");
+        //make sure caller is not banned
+        require(!IRM.isBanned(msg.sender), "You are banned");
+
+        // Create the new token
+        // save the content price (it should test removing for partLength)
+        uint partLength = _contentPrice.length;
+        partNumberOfContent[tokenId] = partLength;
+
+        currencyName[tokenId] = keccak256(abi.encodePacked(_currencyName));
+        /// @dev First index is the full price for the content
+        for (uint i = 0; i < partLength; i++) {
+            contentPrice[tokenId][i] = _contentPrice[i];
+        }
+        _setTokenURI(tokenId, _uri);
     }
 
     /// @dev Allows content owners to insert new parts

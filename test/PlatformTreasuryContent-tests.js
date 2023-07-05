@@ -141,7 +141,11 @@ describe("Platform Treasury Contract - Content", function () {
       backend,
       contentCreator,
       contentBuyer,
+      contentBuyer1,
+      contentBuyer2,
+      contentBuyer3,
       validatorCandidate,
+      validator,
       validator1,
       validator2,
       validator3,
@@ -154,17 +158,30 @@ describe("Platform Treasury Contract - Content", function () {
       governanceMember,
       jurorCandidate,
       jurorMember,
+      jurorMember1,
+      jurorMember2,
+      jurorMember3,
+      jurorMember4,
+      corporation,
       contractUDAO,
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
       contractValidationManager,
+      contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
+      contractJurorManager,
+      GOVERNANCE_ROLE,
+      BACKEND_ROLE,
       contractContractManager,
+      account1,
+      account2,
+      account3,
+      contractPriceGetter,
     } = await deploy();
     await contractContractManager
       .connect(backend)
@@ -199,7 +216,11 @@ describe("Platform Treasury Contract - Content", function () {
       backend,
       contentCreator,
       contentBuyer,
+      contentBuyer1,
+      contentBuyer2,
+      contentBuyer3,
       validatorCandidate,
+      validator,
       validator1,
       validator2,
       validator3,
@@ -212,17 +233,30 @@ describe("Platform Treasury Contract - Content", function () {
       governanceMember,
       jurorCandidate,
       jurorMember,
+      jurorMember1,
+      jurorMember2,
+      jurorMember3,
+      jurorMember4,
+      corporation,
       contractUDAO,
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
       contractValidationManager,
+      contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
+      contractJurorManager,
+      GOVERNANCE_ROLE,
+      BACKEND_ROLE,
       contractContractManager,
+      account1,
+      account2,
+      account3,
+      contractPriceGetter,
     } = await deploy();
 
     await expect(
@@ -239,7 +273,11 @@ describe("Platform Treasury Contract - Content", function () {
       backend,
       contentCreator,
       contentBuyer,
+      contentBuyer1,
+      contentBuyer2,
+      contentBuyer3,
       validatorCandidate,
+      validator,
       validator1,
       validator2,
       validator3,
@@ -252,17 +290,30 @@ describe("Platform Treasury Contract - Content", function () {
       governanceMember,
       jurorCandidate,
       jurorMember,
+      jurorMember1,
+      jurorMember2,
+      jurorMember3,
+      jurorMember4,
+      corporation,
       contractUDAO,
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
       contractValidationManager,
+      contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
+      contractJurorManager,
+      GOVERNANCE_ROLE,
+      BACKEND_ROLE,
       contractContractManager,
+      account1,
+      account2,
+      account3,
+      contractPriceGetter,
     } = await deploy(false, true);
 
     /// Set KYC
@@ -331,7 +382,11 @@ describe("Platform Treasury Contract - Content", function () {
       backend,
       contentCreator,
       contentBuyer,
+      contentBuyer1,
+      contentBuyer2,
+      contentBuyer3,
       validatorCandidate,
+      validator,
       validator1,
       validator2,
       validator3,
@@ -344,17 +399,30 @@ describe("Platform Treasury Contract - Content", function () {
       governanceMember,
       jurorCandidate,
       jurorMember,
+      jurorMember1,
+      jurorMember2,
+      jurorMember3,
+      jurorMember4,
+      corporation,
       contractUDAO,
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
       contractValidationManager,
+      contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
+      contractJurorManager,
+      GOVERNANCE_ROLE,
+      BACKEND_ROLE,
       contractContractManager,
+      account1,
+      account2,
+      account3,
+      contractPriceGetter,
     } = await deploy(false, true);
 
     /// Set KYC
@@ -430,7 +498,11 @@ describe("Platform Treasury Contract - Content", function () {
       backend,
       contentCreator,
       contentBuyer,
+      contentBuyer1,
+      contentBuyer2,
+      contentBuyer3,
       validatorCandidate,
+      validator,
       validator1,
       validator2,
       validator3,
@@ -443,17 +515,30 @@ describe("Platform Treasury Contract - Content", function () {
       governanceMember,
       jurorCandidate,
       jurorMember,
+      jurorMember1,
+      jurorMember2,
+      jurorMember3,
+      jurorMember4,
+      corporation,
       contractUDAO,
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
       contractValidationManager,
+      contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
+      contractJurorManager,
+      GOVERNANCE_ROLE,
+      BACKEND_ROLE,
       contractContractManager,
+      account1,
+      account2,
+      account3,
+      contractPriceGetter,
     } = await deploy(false, true);
 
     /// Set KYC
@@ -526,7 +611,11 @@ describe("Platform Treasury Contract - Content", function () {
       backend,
       contentCreator,
       contentBuyer,
+      contentBuyer1,
+      contentBuyer2,
+      contentBuyer3,
       validatorCandidate,
+      validator,
       validator1,
       validator2,
       validator3,
@@ -539,17 +628,30 @@ describe("Platform Treasury Contract - Content", function () {
       governanceMember,
       jurorCandidate,
       jurorMember,
+      jurorMember1,
+      jurorMember2,
+      jurorMember3,
+      jurorMember4,
+      corporation,
       contractUDAO,
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
       contractValidationManager,
+      contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
+      contractJurorManager,
+      GOVERNANCE_ROLE,
+      BACKEND_ROLE,
       contractContractManager,
+      account1,
+      account2,
+      account3,
+      contractPriceGetter,
     } = await deploy();
 
     /// Set KYC
@@ -576,7 +678,11 @@ describe("Platform Treasury Contract - Content", function () {
       backend,
       contentCreator,
       contentBuyer,
+      contentBuyer1,
+      contentBuyer2,
+      contentBuyer3,
       validatorCandidate,
+      validator,
       validator1,
       validator2,
       validator3,
@@ -589,17 +695,30 @@ describe("Platform Treasury Contract - Content", function () {
       governanceMember,
       jurorCandidate,
       jurorMember,
+      jurorMember1,
+      jurorMember2,
+      jurorMember3,
+      jurorMember4,
+      corporation,
       contractUDAO,
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
       contractValidationManager,
+      contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
+      contractJurorManager,
+      GOVERNANCE_ROLE,
+      BACKEND_ROLE,
       contractContractManager,
+      account1,
+      account2,
+      account3,
+      contractPriceGetter,
     } = await deploy(false, true);
 
     /// Set KYC
@@ -666,7 +785,11 @@ describe("Platform Treasury Contract - Content", function () {
       backend,
       contentCreator,
       contentBuyer,
+      contentBuyer1,
+      contentBuyer2,
+      contentBuyer3,
       validatorCandidate,
+      validator,
       validator1,
       validator2,
       validator3,
@@ -679,17 +802,30 @@ describe("Platform Treasury Contract - Content", function () {
       governanceMember,
       jurorCandidate,
       jurorMember,
+      jurorMember1,
+      jurorMember2,
+      jurorMember3,
+      jurorMember4,
+      corporation,
       contractUDAO,
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
       contractValidationManager,
+      contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
+      contractJurorManager,
+      GOVERNANCE_ROLE,
+      BACKEND_ROLE,
       contractContractManager,
+      account1,
+      account2,
+      account3,
+      contractPriceGetter,
     } = await deploy(false, true);
 
     /// Set KYC
@@ -756,7 +892,11 @@ describe("Platform Treasury Contract - Content", function () {
       backend,
       contentCreator,
       contentBuyer,
+      contentBuyer1,
+      contentBuyer2,
+      contentBuyer3,
       validatorCandidate,
+      validator,
       validator1,
       validator2,
       validator3,
@@ -769,16 +909,30 @@ describe("Platform Treasury Contract - Content", function () {
       governanceMember,
       jurorCandidate,
       jurorMember,
+      jurorMember1,
+      jurorMember2,
+      jurorMember3,
+      jurorMember4,
+      corporation,
       contractUDAO,
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
       contractValidationManager,
+      contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
+      contractJurorManager,
+      GOVERNANCE_ROLE,
+      BACKEND_ROLE,
+      contractContractManager,
+      account1,
+      account2,
+      account3,
+      contractPriceGetter,
     } = await deploy(false, true);
 
     /// Set KYC
@@ -845,7 +999,11 @@ describe("Platform Treasury Contract - Content", function () {
       backend,
       contentCreator,
       contentBuyer,
+      contentBuyer1,
+      contentBuyer2,
+      contentBuyer3,
       validatorCandidate,
+      validator,
       validator1,
       validator2,
       validator3,
@@ -858,16 +1016,30 @@ describe("Platform Treasury Contract - Content", function () {
       governanceMember,
       jurorCandidate,
       jurorMember,
+      jurorMember1,
+      jurorMember2,
+      jurorMember3,
+      jurorMember4,
+      corporation,
       contractUDAO,
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
       contractValidationManager,
+      contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
+      contractJurorManager,
+      GOVERNANCE_ROLE,
+      BACKEND_ROLE,
+      contractContractManager,
+      account1,
+      account2,
+      account3,
+      contractPriceGetter,
     } = await deploy(false, true);
 
     /// Set KYC
@@ -933,7 +1105,11 @@ describe("Platform Treasury Contract - Content", function () {
       backend,
       contentCreator,
       contentBuyer,
+      contentBuyer1,
+      contentBuyer2,
+      contentBuyer3,
       validatorCandidate,
+      validator,
       validator1,
       validator2,
       validator3,
@@ -946,17 +1122,30 @@ describe("Platform Treasury Contract - Content", function () {
       governanceMember,
       jurorCandidate,
       jurorMember,
+      jurorMember1,
+      jurorMember2,
+      jurorMember3,
+      jurorMember4,
+      corporation,
       contractUDAO,
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
       contractValidationManager,
+      contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
+      contractJurorManager,
+      GOVERNANCE_ROLE,
+      BACKEND_ROLE,
       contractContractManager,
+      account1,
+      account2,
+      account3,
+      contractPriceGetter,
     } = await deploy(false, true);
 
     /// Set KYC
@@ -1024,199 +1213,16 @@ describe("Platform Treasury Contract - Content", function () {
     ).to.revertedWith("Full content is already bought");
   });
 
-  it("Should fail to buy a content if content is not validated (rejected content)", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      validatorCandidate,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractValidationManager,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      contractContractManager,
-    } = await deploy(false, true);
-
-    /// Set KYC
-    await contractRoleManager.setKYC(contentCreator.address, true);
-    await contractRoleManager.setKYC(contentBuyer.address, true);
-
-    await expect(
-      contractUDAOContent
-        .connect(contentCreator)
-        .redeem(
-          [
-            ethers.utils.parseEther("1"),
-            ethers.utils.parseEther("1"),
-            ethers.utils.parseEther("1"),
-            ethers.utils.parseEther("1"),
-          ],
-          "udao",
-          "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
-          contentCreator.address,
-          ethers.utils.parseEther("2"),
-          "udao",
-          true,
-          true
-        )
-    )
-      .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
-      .withArgs(
-        "0x0000000000000000000000000000000000000000",
-        contentCreator.address,
-        0
-      );
-    await expect(
-      contractValidationManager.connect(contentCreator).createValidation(0, 50)
-    )
-      .to.emit(contractValidationManager, "ValidationCreated")
-      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1));
-    await expect(
-      contractValidationManager.connect(validator1).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator1.address
-      );
-    await expect(
-      contractValidationManager.connect(validator2).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator2.address
-      );
-    await expect(
-      contractValidationManager.connect(validator3).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator3.address
-      );
-    await expect(
-      contractValidationManager.connect(validator4).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator4.address
-      );
-    await expect(
-      contractValidationManager.connect(validator5).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator5.address
-      );
-
-    await expect(
-      contractValidationManager.connect(validator1).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator1.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator2).sendValidation(1, true)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator2.address,
-        true
-      );
-    await expect(
-      contractValidationManager.connect(validator3).sendValidation(1, false)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator3.address,
-        false
-      );
-    await expect(
-      contractValidationManager.connect(validator4).sendValidation(1, false)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator4.address,
-        false
-      );
-    await expect(
-      contractValidationManager.connect(validator5).sendValidation(1, false)
-    )
-      .to.emit(contractValidationManager, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator5.address,
-        false
-      );
-    await expect(
-      contractValidationManager.connect(contentCreator).finalizeValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationEnded")
-      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), false);
-
-    /// Send UDAO to the buyer's wallet
-    await contractUDAO.transfer(
-      contentBuyer.address,
-      ethers.utils.parseEther("100.0")
-    );
-    /// Content buyer needs to give approval to the platformtreasury
-    await contractUDAO
-      .connect(contentBuyer)
-      .approve(
-        contractPlatformTreasury.address,
-        ethers.utils.parseEther("999999999999.0")
-      );
-
-    await expect(
-      contractPlatformTreasury
-        .connect(contentBuyer)
-        .buyContent(0, true, [1], ethers.constants.AddressZero)
-    ).to.revertedWith("Content is not validated yet");
-  });
-
   it("Should fail to buy a full content if fullContentPurchase is false", async function () {
     const {
       backend,
       contentCreator,
       contentBuyer,
+      contentBuyer1,
+      contentBuyer2,
+      contentBuyer3,
       validatorCandidate,
+      validator,
       validator1,
       validator2,
       validator3,
@@ -1229,17 +1235,30 @@ describe("Platform Treasury Contract - Content", function () {
       governanceMember,
       jurorCandidate,
       jurorMember,
+      jurorMember1,
+      jurorMember2,
+      jurorMember3,
+      jurorMember4,
+      corporation,
       contractUDAO,
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
       contractValidationManager,
+      contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
+      contractJurorManager,
+      GOVERNANCE_ROLE,
+      BACKEND_ROLE,
       contractContractManager,
+      account1,
+      account2,
+      account3,
+      contractPriceGetter,
     } = await deploy(false, true);
 
     /// Set KYC
@@ -1405,7 +1424,11 @@ describe("Platform Treasury Contract - Content", function () {
       backend,
       contentCreator,
       contentBuyer,
+      contentBuyer1,
+      contentBuyer2,
+      contentBuyer3,
       validatorCandidate,
+      validator,
       validator1,
       validator2,
       validator3,
@@ -1418,17 +1441,30 @@ describe("Platform Treasury Contract - Content", function () {
       governanceMember,
       jurorCandidate,
       jurorMember,
+      jurorMember1,
+      jurorMember2,
+      jurorMember3,
+      jurorMember4,
+      corporation,
       contractUDAO,
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
       contractValidationManager,
+      contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
+      contractJurorManager,
+      GOVERNANCE_ROLE,
+      BACKEND_ROLE,
       contractContractManager,
+      account1,
+      account2,
+      account3,
+      contractPriceGetter,
     } = await deploy(false, true);
 
     /// Set KYC
@@ -1592,7 +1628,11 @@ describe("Platform Treasury Contract - Content", function () {
       backend,
       contentCreator,
       contentBuyer,
+      contentBuyer1,
+      contentBuyer2,
+      contentBuyer3,
       validatorCandidate,
+      validator,
       validator1,
       validator2,
       validator3,
@@ -1605,17 +1645,30 @@ describe("Platform Treasury Contract - Content", function () {
       governanceMember,
       jurorCandidate,
       jurorMember,
+      jurorMember1,
+      jurorMember2,
+      jurorMember3,
+      jurorMember4,
+      corporation,
       contractUDAO,
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
       contractValidationManager,
+      contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
+      contractJurorManager,
+      GOVERNANCE_ROLE,
+      BACKEND_ROLE,
       contractContractManager,
+      account1,
+      account2,
+      account3,
+      contractPriceGetter,
     } = await deploy(false, true);
 
     /// Set KYC
@@ -1684,7 +1737,11 @@ describe("Platform Treasury Contract - Content", function () {
       backend,
       contentCreator,
       contentBuyer,
+      contentBuyer1,
+      contentBuyer2,
+      contentBuyer3,
       validatorCandidate,
+      validator,
       validator1,
       validator2,
       validator3,
@@ -1697,17 +1754,30 @@ describe("Platform Treasury Contract - Content", function () {
       governanceMember,
       jurorCandidate,
       jurorMember,
+      jurorMember1,
+      jurorMember2,
+      jurorMember3,
+      jurorMember4,
+      corporation,
       contractUDAO,
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
       contractValidationManager,
+      contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
+      contractJurorManager,
+      GOVERNANCE_ROLE,
+      BACKEND_ROLE,
       contractContractManager,
+      account1,
+      account2,
+      account3,
+      contractPriceGetter,
     } = await deploy(false, true);
 
     /// Set KYC
@@ -1783,7 +1853,11 @@ describe("Platform Treasury Contract - Content", function () {
       backend,
       contentCreator,
       contentBuyer,
+      contentBuyer1,
+      contentBuyer2,
+      contentBuyer3,
       validatorCandidate,
+      validator,
       validator1,
       validator2,
       validator3,
@@ -1796,17 +1870,30 @@ describe("Platform Treasury Contract - Content", function () {
       governanceMember,
       jurorCandidate,
       jurorMember,
+      jurorMember1,
+      jurorMember2,
+      jurorMember3,
+      jurorMember4,
+      corporation,
       contractUDAO,
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
       contractValidationManager,
+      contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
+      contractJurorManager,
+      GOVERNANCE_ROLE,
+      BACKEND_ROLE,
       contractContractManager,
+      account1,
+      account2,
+      account3,
+      contractPriceGetter,
     } = await deploy(false, true);
 
     /// Set KYC
@@ -1870,7 +1957,11 @@ describe("Platform Treasury Contract - Content", function () {
       backend,
       contentCreator,
       contentBuyer,
+      contentBuyer1,
+      contentBuyer2,
+      contentBuyer3,
       validatorCandidate,
+      validator,
       validator1,
       validator2,
       validator3,
@@ -1883,17 +1974,30 @@ describe("Platform Treasury Contract - Content", function () {
       governanceMember,
       jurorCandidate,
       jurorMember,
+      jurorMember1,
+      jurorMember2,
+      jurorMember3,
+      jurorMember4,
+      corporation,
       contractUDAO,
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
       contractValidationManager,
+      contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
+      contractJurorManager,
+      GOVERNANCE_ROLE,
+      BACKEND_ROLE,
       contractContractManager,
+      account1,
+      account2,
+      account3,
+      contractPriceGetter,
     } = await deploy(false, true);
 
     /// Set KYC
@@ -1958,7 +2062,11 @@ describe("Platform Treasury Contract - Content", function () {
       backend,
       contentCreator,
       contentBuyer,
+      contentBuyer1,
+      contentBuyer2,
+      contentBuyer3,
       validatorCandidate,
+      validator,
       validator1,
       validator2,
       validator3,
@@ -1971,17 +2079,30 @@ describe("Platform Treasury Contract - Content", function () {
       governanceMember,
       jurorCandidate,
       jurorMember,
+      jurorMember1,
+      jurorMember2,
+      jurorMember3,
+      jurorMember4,
+      corporation,
       contractUDAO,
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
       contractValidationManager,
+      contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
+      contractJurorManager,
+      GOVERNANCE_ROLE,
+      BACKEND_ROLE,
       contractContractManager,
+      account1,
+      account2,
+      account3,
+      contractPriceGetter,
     } = await deploy(false, true);
 
     /// Set KYC

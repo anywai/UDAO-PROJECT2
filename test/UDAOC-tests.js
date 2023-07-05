@@ -20,8 +20,18 @@ describe("UDAOC Contract", function () {
   it("Should deploy", async function () {
     const {
       backend,
+      contentCreator,
+      contentBuyer,
+      contentBuyer1,
+      contentBuyer2,
+      contentBuyer3,
       validatorCandidate,
       validator,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
       superValidatorCandidate,
       superValidator,
       foundation,
@@ -29,16 +39,30 @@ describe("UDAOC Contract", function () {
       governanceMember,
       jurorCandidate,
       jurorMember,
+      jurorMember1,
+      jurorMember2,
+      jurorMember3,
+      jurorMember4,
+      corporation,
       contractUDAO,
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
       contractValidationManager,
+      contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
+      contractJurorManager,
+      GOVERNANCE_ROLE,
+      BACKEND_ROLE,
+      contractContractManager,
+      account1,
+      account2,
+      account3,
+      contractPriceGetter,
     } = await deploy();
   });
 
@@ -47,8 +71,16 @@ describe("UDAOC Contract", function () {
       backend,
       contentCreator,
       contentBuyer,
+      contentBuyer1,
+      contentBuyer2,
+      contentBuyer3,
       validatorCandidate,
       validator,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
       superValidatorCandidate,
       superValidator,
       foundation,
@@ -56,16 +88,30 @@ describe("UDAOC Contract", function () {
       governanceMember,
       jurorCandidate,
       jurorMember,
+      jurorMember1,
+      jurorMember2,
+      jurorMember3,
+      jurorMember4,
+      corporation,
       contractUDAO,
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
       contractValidationManager,
+      contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
+      contractJurorManager,
+      GOVERNANCE_ROLE,
+      BACKEND_ROLE,
+      contractContractManager,
+      account1,
+      account2,
+      account3,
+      contractPriceGetter,
     } = await deploy();
     await expect(contractRoleManager.setKYC(contentCreator.address, true))
       .to.emit(contractRoleManager, "SetKYC") // transfer from null address to minter
@@ -86,8 +132,16 @@ describe("UDAOC Contract", function () {
       backend,
       contentCreator,
       contentBuyer,
+      contentBuyer1,
+      contentBuyer2,
+      contentBuyer3,
       validatorCandidate,
       validator,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
       superValidatorCandidate,
       superValidator,
       foundation,
@@ -95,16 +149,30 @@ describe("UDAOC Contract", function () {
       governanceMember,
       jurorCandidate,
       jurorMember,
+      jurorMember1,
+      jurorMember2,
+      jurorMember3,
+      jurorMember4,
+      corporation,
       contractUDAO,
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
       contractValidationManager,
+      contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
+      contractJurorManager,
+      GOVERNANCE_ROLE,
+      BACKEND_ROLE,
+      contractContractManager,
+      account1,
+      account2,
+      account3,
+      contractPriceGetter,
     } = await deploy();
     await contractRoleManager.setKYC(contentCreator.address, true);
 
@@ -135,8 +203,16 @@ describe("UDAOC Contract", function () {
       backend,
       contentCreator,
       contentBuyer,
+      contentBuyer1,
+      contentBuyer2,
+      contentBuyer3,
       validatorCandidate,
       validator,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
       superValidatorCandidate,
       superValidator,
       foundation,
@@ -144,16 +220,30 @@ describe("UDAOC Contract", function () {
       governanceMember,
       jurorCandidate,
       jurorMember,
+      jurorMember1,
+      jurorMember2,
+      jurorMember3,
+      jurorMember4,
+      corporation,
       contractUDAO,
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
       contractValidationManager,
+      contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
+      contractJurorManager,
+      GOVERNANCE_ROLE,
+      BACKEND_ROLE,
+      contractContractManager,
+      account1,
+      account2,
+      account3,
+      contractPriceGetter,
     } = await deploy();
     await contractRoleManager.setKYC(contentCreator.address, true);
 
@@ -223,8 +313,16 @@ describe("UDAOC Contract", function () {
       backend,
       contentCreator,
       contentBuyer,
+      contentBuyer1,
+      contentBuyer2,
+      contentBuyer3,
       validatorCandidate,
       validator,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
       superValidatorCandidate,
       superValidator,
       foundation,
@@ -232,16 +330,30 @@ describe("UDAOC Contract", function () {
       governanceMember,
       jurorCandidate,
       jurorMember,
+      jurorMember1,
+      jurorMember2,
+      jurorMember3,
+      jurorMember4,
+      corporation,
       contractUDAO,
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
       contractValidationManager,
+      contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
+      contractJurorManager,
+      GOVERNANCE_ROLE,
+      BACKEND_ROLE,
+      contractContractManager,
+      account1,
+      account2,
+      account3,
+      contractPriceGetter,
     } = await deploy();
     await contractRoleManager.setKYC(contentCreator.address, true);
 
@@ -275,8 +387,16 @@ describe("UDAOC Contract", function () {
       backend,
       contentCreator,
       contentBuyer,
+      contentBuyer1,
+      contentBuyer2,
+      contentBuyer3,
       validatorCandidate,
       validator,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
       superValidatorCandidate,
       superValidator,
       foundation,
@@ -284,16 +404,30 @@ describe("UDAOC Contract", function () {
       governanceMember,
       jurorCandidate,
       jurorMember,
+      jurorMember1,
+      jurorMember2,
+      jurorMember3,
+      jurorMember4,
+      corporation,
       contractUDAO,
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
       contractValidationManager,
+      contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
+      contractJurorManager,
+      GOVERNANCE_ROLE,
+      BACKEND_ROLE,
+      contractContractManager,
+      account1,
+      account2,
+      account3,
+      contractPriceGetter,
     } = await deploy();
     await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer.address, true);
@@ -326,13 +460,22 @@ describe("UDAOC Contract", function () {
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(contentCreator.address, contentBuyer.address, 0);
   });
+
   it("Should fail to transfer token if sender is not KYCed", async function () {
     const {
       backend,
       contentCreator,
       contentBuyer,
+      contentBuyer1,
+      contentBuyer2,
+      contentBuyer3,
       validatorCandidate,
       validator,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
       superValidatorCandidate,
       superValidator,
       foundation,
@@ -340,16 +483,30 @@ describe("UDAOC Contract", function () {
       governanceMember,
       jurorCandidate,
       jurorMember,
+      jurorMember1,
+      jurorMember2,
+      jurorMember3,
+      jurorMember4,
+      corporation,
       contractUDAO,
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
       contractValidationManager,
+      contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
+      contractJurorManager,
+      GOVERNANCE_ROLE,
+      BACKEND_ROLE,
+      contractContractManager,
+      account1,
+      account2,
+      account3,
+      contractPriceGetter,
     } = await deploy();
     await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer.address, true);
@@ -382,13 +539,22 @@ describe("UDAOC Contract", function () {
         .transferFrom(contentCreator.address, contentBuyer.address, 0)
     ).to.revertedWith("Sender is not KYCed!");
   });
+
   it("Should fail to transfer token if sender is banned", async function () {
     const {
       backend,
       contentCreator,
       contentBuyer,
+      contentBuyer1,
+      contentBuyer2,
+      contentBuyer3,
       validatorCandidate,
       validator,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
       superValidatorCandidate,
       superValidator,
       foundation,
@@ -396,16 +562,30 @@ describe("UDAOC Contract", function () {
       governanceMember,
       jurorCandidate,
       jurorMember,
+      jurorMember1,
+      jurorMember2,
+      jurorMember3,
+      jurorMember4,
+      corporation,
       contractUDAO,
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
       contractValidationManager,
+      contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
+      contractJurorManager,
+      GOVERNANCE_ROLE,
+      BACKEND_ROLE,
+      contractContractManager,
+      account1,
+      account2,
+      account3,
+      contractPriceGetter,
     } = await deploy();
     await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer.address, true);
@@ -438,13 +618,22 @@ describe("UDAOC Contract", function () {
         .transferFrom(contentCreator.address, contentBuyer.address, 0)
     ).to.revertedWith("Sender is banned!");
   });
+
   it("Should fail to transfer token if receiver is banned", async function () {
     const {
       backend,
       contentCreator,
       contentBuyer,
+      contentBuyer1,
+      contentBuyer2,
+      contentBuyer3,
       validatorCandidate,
       validator,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
       superValidatorCandidate,
       superValidator,
       foundation,
@@ -452,16 +641,30 @@ describe("UDAOC Contract", function () {
       governanceMember,
       jurorCandidate,
       jurorMember,
+      jurorMember1,
+      jurorMember2,
+      jurorMember3,
+      jurorMember4,
+      corporation,
       contractUDAO,
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
       contractValidationManager,
+      contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
+      contractJurorManager,
+      GOVERNANCE_ROLE,
+      BACKEND_ROLE,
+      contractContractManager,
+      account1,
+      account2,
+      account3,
+      contractPriceGetter,
     } = await deploy();
     await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer.address, true);
@@ -493,13 +696,22 @@ describe("UDAOC Contract", function () {
         .transferFrom(contentCreator.address, contentBuyer.address, 0)
     ).to.revertedWith("Receiver is banned!");
   });
+
   it("Should fail to transfer token if sender is not KYCed", async function () {
     const {
       backend,
       contentCreator,
       contentBuyer,
+      contentBuyer1,
+      contentBuyer2,
+      contentBuyer3,
       validatorCandidate,
       validator,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
       superValidatorCandidate,
       superValidator,
       foundation,
@@ -507,16 +719,30 @@ describe("UDAOC Contract", function () {
       governanceMember,
       jurorCandidate,
       jurorMember,
+      jurorMember1,
+      jurorMember2,
+      jurorMember3,
+      jurorMember4,
+      corporation,
       contractUDAO,
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
       contractValidationManager,
+      contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
+      contractJurorManager,
+      GOVERNANCE_ROLE,
+      BACKEND_ROLE,
+      contractContractManager,
+      account1,
+      account2,
+      account3,
+      contractPriceGetter,
     } = await deploy();
     await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer.address, true);
@@ -555,8 +781,16 @@ describe("UDAOC Contract", function () {
       backend,
       contentCreator,
       contentBuyer,
+      contentBuyer1,
+      contentBuyer2,
+      contentBuyer3,
       validatorCandidate,
       validator,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
       superValidatorCandidate,
       superValidator,
       foundation,
@@ -564,16 +798,30 @@ describe("UDAOC Contract", function () {
       governanceMember,
       jurorCandidate,
       jurorMember,
+      jurorMember1,
+      jurorMember2,
+      jurorMember3,
+      jurorMember4,
+      corporation,
       contractUDAO,
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
       contractValidationManager,
+      contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
+      contractJurorManager,
+      GOVERNANCE_ROLE,
+      BACKEND_ROLE,
+      contractContractManager,
+      account1,
+      account2,
+      account3,
+      contractPriceGetter,
     } = await deploy();
     await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer.address, true);
@@ -612,8 +860,16 @@ describe("UDAOC Contract", function () {
       backend,
       contentCreator,
       contentBuyer,
+      contentBuyer1,
+      contentBuyer2,
+      contentBuyer3,
       validatorCandidate,
       validator,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
       superValidatorCandidate,
       superValidator,
       foundation,
@@ -621,16 +877,30 @@ describe("UDAOC Contract", function () {
       governanceMember,
       jurorCandidate,
       jurorMember,
+      jurorMember1,
+      jurorMember2,
+      jurorMember3,
+      jurorMember4,
+      corporation,
       contractUDAO,
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
       contractValidationManager,
+      contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
+      contractJurorManager,
+      GOVERNANCE_ROLE,
+      BACKEND_ROLE,
+      contractContractManager,
+      account1,
+      account2,
+      account3,
+      contractPriceGetter,
     } = await deploy();
     await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer.address, true);
@@ -666,8 +936,16 @@ describe("UDAOC Contract", function () {
       backend,
       contentCreator,
       contentBuyer,
+      contentBuyer1,
+      contentBuyer2,
+      contentBuyer3,
       validatorCandidate,
       validator,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
       superValidatorCandidate,
       superValidator,
       foundation,
@@ -675,16 +953,30 @@ describe("UDAOC Contract", function () {
       governanceMember,
       jurorCandidate,
       jurorMember,
+      jurorMember1,
+      jurorMember2,
+      jurorMember3,
+      jurorMember4,
+      corporation,
       contractUDAO,
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
       contractValidationManager,
+      contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
+      contractJurorManager,
+      GOVERNANCE_ROLE,
+      BACKEND_ROLE,
+      contractContractManager,
+      account1,
+      account2,
+      account3,
+      contractPriceGetter,
     } = await deploy();
     await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer.address, true);
@@ -699,8 +991,16 @@ describe("UDAOC Contract", function () {
       backend,
       contentCreator,
       contentBuyer,
+      contentBuyer1,
+      contentBuyer2,
+      contentBuyer3,
       validatorCandidate,
       validator,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
       superValidatorCandidate,
       superValidator,
       foundation,
@@ -708,16 +1008,30 @@ describe("UDAOC Contract", function () {
       governanceMember,
       jurorCandidate,
       jurorMember,
+      jurorMember1,
+      jurorMember2,
+      jurorMember3,
+      jurorMember4,
+      corporation,
       contractUDAO,
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
       contractValidationManager,
+      contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
+      contractJurorManager,
+      GOVERNANCE_ROLE,
+      BACKEND_ROLE,
+      contractContractManager,
+      account1,
+      account2,
+      account3,
+      contractPriceGetter,
     } = await deploy();
     await contractRoleManager.setKYC(contentCreator.address, true);
 
@@ -750,8 +1064,16 @@ describe("UDAOC Contract", function () {
       backend,
       contentCreator,
       contentBuyer,
+      contentBuyer1,
+      contentBuyer2,
+      contentBuyer3,
       validatorCandidate,
       validator,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
       superValidatorCandidate,
       superValidator,
       foundation,
@@ -759,16 +1081,30 @@ describe("UDAOC Contract", function () {
       governanceMember,
       jurorCandidate,
       jurorMember,
+      jurorMember1,
+      jurorMember2,
+      jurorMember3,
+      jurorMember4,
+      corporation,
       contractUDAO,
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
       contractValidationManager,
+      contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
+      contractJurorManager,
+      GOVERNANCE_ROLE,
+      BACKEND_ROLE,
+      contractContractManager,
+      account1,
+      account2,
+      account3,
+      contractPriceGetter,
     } = await deploy();
     await contractRoleManager.setKYC(contentCreator.address, true);
 
@@ -801,8 +1137,16 @@ describe("UDAOC Contract", function () {
       backend,
       contentCreator,
       contentBuyer,
+      contentBuyer1,
+      contentBuyer2,
+      contentBuyer3,
       validatorCandidate,
       validator,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
       superValidatorCandidate,
       superValidator,
       foundation,
@@ -810,16 +1154,30 @@ describe("UDAOC Contract", function () {
       governanceMember,
       jurorCandidate,
       jurorMember,
+      jurorMember1,
+      jurorMember2,
+      jurorMember3,
+      jurorMember4,
+      corporation,
       contractUDAO,
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
       contractValidationManager,
+      contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
+      contractJurorManager,
+      GOVERNANCE_ROLE,
+      BACKEND_ROLE,
+      contractContractManager,
+      account1,
+      account2,
+      account3,
+      contractPriceGetter,
     } = await deploy();
     await contractRoleManager.setKYC(contentCreator.address, true);
 
@@ -853,8 +1211,16 @@ describe("UDAOC Contract", function () {
       backend,
       contentCreator,
       contentBuyer,
+      contentBuyer1,
+      contentBuyer2,
+      contentBuyer3,
       validatorCandidate,
       validator,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
       superValidatorCandidate,
       superValidator,
       foundation,
@@ -862,16 +1228,30 @@ describe("UDAOC Contract", function () {
       governanceMember,
       jurorCandidate,
       jurorMember,
+      jurorMember1,
+      jurorMember2,
+      jurorMember3,
+      jurorMember4,
+      corporation,
       contractUDAO,
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
       contractValidationManager,
+      contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
+      contractJurorManager,
+      GOVERNANCE_ROLE,
+      BACKEND_ROLE,
+      contractContractManager,
+      account1,
+      account2,
+      account3,
+      contractPriceGetter,
     } = await deploy();
     await contractRoleManager.setKYC(contentCreator.address, true);
 
@@ -905,8 +1285,16 @@ describe("UDAOC Contract", function () {
       backend,
       contentCreator,
       contentBuyer,
+      contentBuyer1,
+      contentBuyer2,
+      contentBuyer3,
       validatorCandidate,
       validator,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
       superValidatorCandidate,
       superValidator,
       foundation,
@@ -914,16 +1302,30 @@ describe("UDAOC Contract", function () {
       governanceMember,
       jurorCandidate,
       jurorMember,
+      jurorMember1,
+      jurorMember2,
+      jurorMember3,
+      jurorMember4,
+      corporation,
       contractUDAO,
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
       contractValidationManager,
+      contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
+      contractJurorManager,
+      GOVERNANCE_ROLE,
+      BACKEND_ROLE,
+      contractContractManager,
+      account1,
+      account2,
+      account3,
+      contractPriceGetter,
       contractUDAOContentParts,
     } = await deploy();
     await contractRoleManager.setKYC(contentCreator.address, true);
@@ -932,7 +1334,11 @@ describe("UDAOC Contract", function () {
       contractUDAOContent
         .connect(contentCreator)
         .redeem(
-          [ethers.utils.parseEther("1"), ethers.utils.parseEther("2"), ethers.utils.parseEther("3")],
+          [
+            ethers.utils.parseEther("1"),
+            ethers.utils.parseEther("2"),
+            ethers.utils.parseEther("3"),
+          ],
           "udao",
           "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
           contentCreator.address,
@@ -952,31 +1358,54 @@ describe("UDAOC Contract", function () {
     // new part information
     const tokenId = 0;
     const newPartId = 2;
-    const newPartPrice = ethers.utils.parseEther("20");
-    const newPartCurrency = "udao";
+    const _contentPrice = [
+      ethers.utils.parseEther("1"),
+      ethers.utils.parseEther("2"),
+      ethers.utils.parseEther("4"),
+      ethers.utils.parseEther("3"),
+    ];
+    const _currencyName = "udao";
+    const _uri =
+      "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi";
     // add new part and expect newPartAdded event to emit
-    await expect(contractUDAOContent.connect(contentCreator).addNewPart(tokenId, newPartId, newPartPrice, newPartCurrency)).to.emit(contractUDAOContent, "newPartAdded").withArgs(tokenId, newPartId, ethers.utils.parseEther("20"));
+    await expect(
+      contractUDAOContent
+        .connect(contentCreator)
+        .modifyContent(tokenId, _contentPrice, _currencyName, _uri)
+    );
 
-    // expect new part price to be 20
-    const returnedPartPrice = await contractUDAOContent.getContentPriceAndCurrency(tokenId, newPartId);
-    expect(returnedPartPrice[0]).to.equal(ethers.utils.parseEther("20"));
+    // expect new part price to be 4
+    const returnedPartPrice =
+      await contractUDAOContent.getContentPriceAndCurrency(tokenId, newPartId);
+    expect(returnedPartPrice[0]).to.equal(ethers.utils.parseEther("4"));
 
     // epxpect previous parts to be shifted
-    const returnedPartPrice1 = await contractUDAOContent.getContentPriceAndCurrency(tokenId, 0);
+    const returnedPartPrice1 =
+      await contractUDAOContent.getContentPriceAndCurrency(tokenId, 0);
     expect(returnedPartPrice1[0]).to.equal(ethers.utils.parseEther("1"));
-    const returnedPartPrice2 = await contractUDAOContent.getContentPriceAndCurrency(tokenId, 1);
+    const returnedPartPrice2 =
+      await contractUDAOContent.getContentPriceAndCurrency(tokenId, 1);
     expect(returnedPartPrice2[0]).to.equal(ethers.utils.parseEther("2"));
-    const returnedPartPrice3 = await contractUDAOContent.getContentPriceAndCurrency(tokenId, 3);
+    const returnedPartPrice3 =
+      await contractUDAOContent.getContentPriceAndCurrency(tokenId, 3);
     expect(returnedPartPrice3[0]).to.equal(ethers.utils.parseEther("3"));
-
   });
+
   it("Should allow content owner to add a new part to content, at the end of existing parts", async function () {
     const {
       backend,
       contentCreator,
       contentBuyer,
+      contentBuyer1,
+      contentBuyer2,
+      contentBuyer3,
       validatorCandidate,
       validator,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
       superValidatorCandidate,
       superValidator,
       foundation,
@@ -984,16 +1413,30 @@ describe("UDAOC Contract", function () {
       governanceMember,
       jurorCandidate,
       jurorMember,
+      jurorMember1,
+      jurorMember2,
+      jurorMember3,
+      jurorMember4,
+      corporation,
       contractUDAO,
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
       contractValidationManager,
+      contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
+      contractJurorManager,
+      GOVERNANCE_ROLE,
+      BACKEND_ROLE,
+      contractContractManager,
+      account1,
+      account2,
+      account3,
+      contractPriceGetter,
       contractUDAOContentParts,
     } = await deploy();
     await contractRoleManager.setKYC(contentCreator.address, true);
@@ -1002,7 +1445,11 @@ describe("UDAOC Contract", function () {
       contractUDAOContent
         .connect(contentCreator)
         .redeem(
-          [ethers.utils.parseEther("1"), ethers.utils.parseEther("2"), ethers.utils.parseEther("3")],
+          [
+            ethers.utils.parseEther("1"),
+            ethers.utils.parseEther("2"),
+            ethers.utils.parseEther("3"),
+          ],
           "udao",
           "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
           contentCreator.address,
@@ -1025,29 +1472,47 @@ describe("UDAOC Contract", function () {
     const newPartPrice = ethers.utils.parseEther("20");
     const newPartCurrency = "udao";
     // add new part and expect newPartAdded event to emit
-    await expect(contractUDAOContent.connect(contentCreator).addNewPart(tokenId, newPartId, newPartPrice, newPartCurrency)).to.emit(contractUDAOContent, "newPartAdded").withArgs(tokenId, newPartId, ethers.utils.parseEther("20"));
+    await expect(
+      contractUDAOContent
+        .connect(contentCreator)
+        .addNewPart(tokenId, newPartId, newPartPrice, newPartCurrency)
+    )
+      .to.emit(contractUDAOContent, "newPartAdded")
+      .withArgs(tokenId, newPartId, ethers.utils.parseEther("20"));
 
     // expect new part price to be 20
-    const returnedPartPrice = await contractUDAOContent.getContentPriceAndCurrency(tokenId, newPartId);
+    const returnedPartPrice =
+      await contractUDAOContent.getContentPriceAndCurrency(tokenId, newPartId);
     expect(returnedPartPrice[0]).to.equal(ethers.utils.parseEther("20"));
 
     // epxpect previous parts to stay as is
-    const returnedPartPrice1 = await contractUDAOContent.getContentPriceAndCurrency(tokenId, 0);
+    const returnedPartPrice1 =
+      await contractUDAOContent.getContentPriceAndCurrency(tokenId, 0);
     expect(returnedPartPrice1[0]).to.equal(ethers.utils.parseEther("1"));
-    const returnedPartPrice2 = await contractUDAOContent.getContentPriceAndCurrency(tokenId, 1);
+    const returnedPartPrice2 =
+      await contractUDAOContent.getContentPriceAndCurrency(tokenId, 1);
     expect(returnedPartPrice2[0]).to.equal(ethers.utils.parseEther("2"));
-    const returnedPartPrice3 = await contractUDAOContent.getContentPriceAndCurrency(tokenId, 2);
+    const returnedPartPrice3 =
+      await contractUDAOContent.getContentPriceAndCurrency(tokenId, 2);
     expect(returnedPartPrice3[0]).to.equal(ethers.utils.parseEther("3"));
-
   });
+
   it("Should allow content owner to add a new part to content, at the beginning of existing parts", async function () {
     /// @dev Please note that the first indice of the price array is the price of the whole content and parts start from 1
     const {
       backend,
       contentCreator,
       contentBuyer,
+      contentBuyer1,
+      contentBuyer2,
+      contentBuyer3,
       validatorCandidate,
       validator,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
       superValidatorCandidate,
       superValidator,
       foundation,
@@ -1055,16 +1520,30 @@ describe("UDAOC Contract", function () {
       governanceMember,
       jurorCandidate,
       jurorMember,
+      jurorMember1,
+      jurorMember2,
+      jurorMember3,
+      jurorMember4,
+      corporation,
       contractUDAO,
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
       contractValidationManager,
+      contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
+      contractJurorManager,
+      GOVERNANCE_ROLE,
+      BACKEND_ROLE,
+      contractContractManager,
+      account1,
+      account2,
+      account3,
+      contractPriceGetter,
       contractUDAOContentParts,
     } = await deploy();
     await contractRoleManager.setKYC(contentCreator.address, true);
@@ -1073,7 +1552,11 @@ describe("UDAOC Contract", function () {
       contractUDAOContent
         .connect(contentCreator)
         .redeem(
-          [ethers.utils.parseEther("1"), ethers.utils.parseEther("2"), ethers.utils.parseEther("3")],
+          [
+            ethers.utils.parseEther("1"),
+            ethers.utils.parseEther("2"),
+            ethers.utils.parseEther("3"),
+          ],
           "udao",
           "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
           contentCreator.address,
@@ -1096,18 +1579,28 @@ describe("UDAOC Contract", function () {
     const newPartPrice = ethers.utils.parseEther("20");
     const newPartCurrency = "udao";
     // add new part and expect newPartAdded event to emit
-    await expect(contractUDAOContent.connect(contentCreator).addNewPart(tokenId, newPartId, newPartPrice, newPartCurrency)).to.emit(contractUDAOContent, "newPartAdded").withArgs(tokenId, newPartId, ethers.utils.parseEther("20"));
+    await expect(
+      contractUDAOContent
+        .connect(contentCreator)
+        .addNewPart(tokenId, newPartId, newPartPrice, newPartCurrency)
+    )
+      .to.emit(contractUDAOContent, "newPartAdded")
+      .withArgs(tokenId, newPartId, ethers.utils.parseEther("20"));
 
     // expect new part price to be 20
-    const returnedPartPrice = await contractUDAOContent.getContentPriceAndCurrency(tokenId, newPartId);
+    const returnedPartPrice =
+      await contractUDAOContent.getContentPriceAndCurrency(tokenId, newPartId);
     expect(returnedPartPrice[0]).to.equal(ethers.utils.parseEther("20"));
 
     // epxpect previous part to stay as is
-    const returnedPartPrice1 = await contractUDAOContent.getContentPriceAndCurrency(tokenId, 0);
+    const returnedPartPrice1 =
+      await contractUDAOContent.getContentPriceAndCurrency(tokenId, 0);
     expect(returnedPartPrice1[0]).to.equal(ethers.utils.parseEther("1"));
-    const returnedPartPrice2 = await contractUDAOContent.getContentPriceAndCurrency(tokenId, 2);
+    const returnedPartPrice2 =
+      await contractUDAOContent.getContentPriceAndCurrency(tokenId, 2);
     expect(returnedPartPrice2[0]).to.equal(ethers.utils.parseEther("2"));
-    const returnedPartPrice3 = await contractUDAOContent.getContentPriceAndCurrency(tokenId, 3);
+    const returnedPartPrice3 =
+      await contractUDAOContent.getContentPriceAndCurrency(tokenId, 3);
     expect(returnedPartPrice3[0]).to.equal(ethers.utils.parseEther("3"));
   });
 
@@ -1117,8 +1610,16 @@ describe("UDAOC Contract", function () {
       backend,
       contentCreator,
       contentBuyer,
+      contentBuyer1,
+      contentBuyer2,
+      contentBuyer3,
       validatorCandidate,
       validator,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
       superValidatorCandidate,
       superValidator,
       foundation,
@@ -1126,16 +1627,30 @@ describe("UDAOC Contract", function () {
       governanceMember,
       jurorCandidate,
       jurorMember,
+      jurorMember1,
+      jurorMember2,
+      jurorMember3,
+      jurorMember4,
+      corporation,
       contractUDAO,
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
       contractValidationManager,
+      contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
+      contractJurorManager,
+      GOVERNANCE_ROLE,
+      BACKEND_ROLE,
+      contractContractManager,
+      account1,
+      account2,
+      account3,
+      contractPriceGetter,
       contractUDAOContentParts,
     } = await deploy();
     await contractRoleManager.setKYC(contentCreator.address, true);
@@ -1144,7 +1659,11 @@ describe("UDAOC Contract", function () {
       contractUDAOContent
         .connect(contentCreator)
         .redeem(
-          [ethers.utils.parseEther("1"), ethers.utils.parseEther("2"), ethers.utils.parseEther("3")],
+          [
+            ethers.utils.parseEther("1"),
+            ethers.utils.parseEther("2"),
+            ethers.utils.parseEther("3"),
+          ],
           "udao",
           "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
           contentCreator.address,
@@ -1167,15 +1686,28 @@ describe("UDAOC Contract", function () {
     const newPartPrice = ethers.utils.parseEther("20");
     const newPartCurrency = "udao";
     // add new part and expect it to revert
-    await expect(contractUDAOContent.connect(contentCreator).addNewPart(tokenId, newPartId, newPartPrice, newPartCurrency)).to.be.revertedWith("0 sent as new part id, parts starts from 1");
+    await expect(
+      contractUDAOContent
+        .connect(contentCreator)
+        .addNewPart(tokenId, newPartId, newPartPrice, newPartCurrency)
+    ).to.be.revertedWith("0 sent as new part id, parts starts from 1");
   });
+
   it("Should revert if  someone other then the owner of the token tries to add a new part", async function () {
     const {
       backend,
       contentCreator,
       contentBuyer,
+      contentBuyer1,
+      contentBuyer2,
+      contentBuyer3,
       validatorCandidate,
       validator,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
       superValidatorCandidate,
       superValidator,
       foundation,
@@ -1183,16 +1715,30 @@ describe("UDAOC Contract", function () {
       governanceMember,
       jurorCandidate,
       jurorMember,
+      jurorMember1,
+      jurorMember2,
+      jurorMember3,
+      jurorMember4,
+      corporation,
       contractUDAO,
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
       contractValidationManager,
+      contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
+      contractJurorManager,
+      GOVERNANCE_ROLE,
+      BACKEND_ROLE,
+      contractContractManager,
+      account1,
+      account2,
+      account3,
+      contractPriceGetter,
       contractUDAOContentParts,
     } = await deploy();
     await contractRoleManager.setKYC(contentCreator.address, true);
@@ -1201,7 +1747,11 @@ describe("UDAOC Contract", function () {
       contractUDAOContent
         .connect(contentCreator)
         .redeem(
-          [ethers.utils.parseEther("1"), ethers.utils.parseEther("2"), ethers.utils.parseEther("3")],
+          [
+            ethers.utils.parseEther("1"),
+            ethers.utils.parseEther("2"),
+            ethers.utils.parseEther("3"),
+          ],
           "udao",
           "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
           contentCreator.address,
@@ -1224,7 +1774,11 @@ describe("UDAOC Contract", function () {
     const newPartPrice = ethers.utils.parseEther("20");
     const newPartCurrency = "udao";
     // add new part and expect it to revert
-    await expect(contractUDAOContent.connect(contentBuyer).addNewPart(tokenId, newPartId, newPartPrice, newPartCurrency)).to.be.revertedWith("You are not the owner of token");
+    await expect(
+      contractUDAOContent
+        .connect(contentBuyer)
+        .addNewPart(tokenId, newPartId, newPartPrice, newPartCurrency)
+    ).to.be.revertedWith("You are not the owner of token");
   });
 
   it("Should revert if add new part caller is not kyced", async function () {
@@ -1232,8 +1786,16 @@ describe("UDAOC Contract", function () {
       backend,
       contentCreator,
       contentBuyer,
+      contentBuyer1,
+      contentBuyer2,
+      contentBuyer3,
       validatorCandidate,
       validator,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
       superValidatorCandidate,
       superValidator,
       foundation,
@@ -1241,16 +1803,30 @@ describe("UDAOC Contract", function () {
       governanceMember,
       jurorCandidate,
       jurorMember,
+      jurorMember1,
+      jurorMember2,
+      jurorMember3,
+      jurorMember4,
+      corporation,
       contractUDAO,
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
       contractValidationManager,
+      contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
+      contractJurorManager,
+      GOVERNANCE_ROLE,
+      BACKEND_ROLE,
+      contractContractManager,
+      account1,
+      account2,
+      account3,
+      contractPriceGetter,
       contractUDAOContentParts,
     } = await deploy();
     await contractRoleManager.setKYC(contentCreator.address, true);
@@ -1259,7 +1835,11 @@ describe("UDAOC Contract", function () {
       contractUDAOContent
         .connect(contentCreator)
         .redeem(
-          [ethers.utils.parseEther("1"), ethers.utils.parseEther("2"), ethers.utils.parseEther("3")],
+          [
+            ethers.utils.parseEther("1"),
+            ethers.utils.parseEther("2"),
+            ethers.utils.parseEther("3"),
+          ],
           "udao",
           "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
           contentCreator.address,
@@ -1284,15 +1864,28 @@ describe("UDAOC Contract", function () {
     const newPartPrice = ethers.utils.parseEther("20");
     const newPartCurrency = "udao";
     // add new part and expect it to revert
-    await expect(contractUDAOContent.connect(contentCreator).addNewPart(tokenId, newPartId, newPartPrice, newPartCurrency)).to.be.revertedWith("You are not KYCed");
+    await expect(
+      contractUDAOContent
+        .connect(contentCreator)
+        .addNewPart(tokenId, newPartId, newPartPrice, newPartCurrency)
+    ).to.be.revertedWith("You are not KYCed");
   });
+
   it("Should revert add new part if content creator gets banned", async function () {
     const {
       backend,
       contentCreator,
       contentBuyer,
+      contentBuyer1,
+      contentBuyer2,
+      contentBuyer3,
       validatorCandidate,
       validator,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
       superValidatorCandidate,
       superValidator,
       foundation,
@@ -1300,16 +1893,30 @@ describe("UDAOC Contract", function () {
       governanceMember,
       jurorCandidate,
       jurorMember,
+      jurorMember1,
+      jurorMember2,
+      jurorMember3,
+      jurorMember4,
+      corporation,
       contractUDAO,
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
       contractValidationManager,
+      contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
+      contractJurorManager,
+      GOVERNANCE_ROLE,
+      BACKEND_ROLE,
+      contractContractManager,
+      account1,
+      account2,
+      account3,
+      contractPriceGetter,
       contractUDAOContentParts,
     } = await deploy();
     await contractRoleManager.setKYC(contentCreator.address, true);
@@ -1318,7 +1925,11 @@ describe("UDAOC Contract", function () {
       contractUDAOContent
         .connect(contentCreator)
         .redeem(
-          [ethers.utils.parseEther("1"), ethers.utils.parseEther("2"), ethers.utils.parseEther("3")],
+          [
+            ethers.utils.parseEther("1"),
+            ethers.utils.parseEther("2"),
+            ethers.utils.parseEther("3"),
+          ],
           "udao",
           "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
           contentCreator.address,
@@ -1343,15 +1954,28 @@ describe("UDAOC Contract", function () {
     const newPartPrice = ethers.utils.parseEther("20");
     const newPartCurrency = "udao";
     // add new part and expect it to revert
-    await expect(contractUDAOContent.connect(contentCreator).addNewPart(tokenId, newPartId, newPartPrice, newPartCurrency)).to.be.revertedWith("You are banned");
+    await expect(
+      contractUDAOContent
+        .connect(contentCreator)
+        .addNewPart(tokenId, newPartId, newPartPrice, newPartCurrency)
+    ).to.be.revertedWith("You are banned");
   });
+
   it("Should revert if the content's original currency is not same as the new part's currency", async function () {
     const {
       backend,
       contentCreator,
       contentBuyer,
+      contentBuyer1,
+      contentBuyer2,
+      contentBuyer3,
       validatorCandidate,
       validator,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
       superValidatorCandidate,
       superValidator,
       foundation,
@@ -1359,16 +1983,30 @@ describe("UDAOC Contract", function () {
       governanceMember,
       jurorCandidate,
       jurorMember,
+      jurorMember1,
+      jurorMember2,
+      jurorMember3,
+      jurorMember4,
+      corporation,
       contractUDAO,
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
       contractValidationManager,
+      contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
+      contractJurorManager,
+      GOVERNANCE_ROLE,
+      BACKEND_ROLE,
+      contractContractManager,
+      account1,
+      account2,
+      account3,
+      contractPriceGetter,
       contractUDAOContentParts,
     } = await deploy();
     await contractRoleManager.setKYC(contentCreator.address, true);
@@ -1377,7 +2015,11 @@ describe("UDAOC Contract", function () {
       contractUDAOContent
         .connect(contentCreator)
         .redeem(
-          [ethers.utils.parseEther("1"), ethers.utils.parseEther("2"), ethers.utils.parseEther("3")],
+          [
+            ethers.utils.parseEther("1"),
+            ethers.utils.parseEther("2"),
+            ethers.utils.parseEther("3"),
+          ],
           "udao",
           "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
           contentCreator.address,
@@ -1400,7 +2042,13 @@ describe("UDAOC Contract", function () {
     const newPartPrice = ethers.utils.parseEther("20");
     const newPartCurrency = "usd";
     // add new part and expect it to revert
-    await expect(contractUDAOContent.connect(contentCreator).addNewPart(tokenId, newPartId, newPartPrice, newPartCurrency)).to.be.revertedWith("Original currency name is not the same as the new currency name");
+    await expect(
+      contractUDAOContent
+        .connect(contentCreator)
+        .addNewPart(tokenId, newPartId, newPartPrice, newPartCurrency)
+    ).to.be.revertedWith(
+      "Original currency name is not the same as the new currency name"
+    );
   });
 
   it("Should revert if the given part id is bigger than the total parts", async function () {
@@ -1408,8 +2056,16 @@ describe("UDAOC Contract", function () {
       backend,
       contentCreator,
       contentBuyer,
+      contentBuyer1,
+      contentBuyer2,
+      contentBuyer3,
       validatorCandidate,
       validator,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
       superValidatorCandidate,
       superValidator,
       foundation,
@@ -1417,16 +2073,30 @@ describe("UDAOC Contract", function () {
       governanceMember,
       jurorCandidate,
       jurorMember,
+      jurorMember1,
+      jurorMember2,
+      jurorMember3,
+      jurorMember4,
+      corporation,
       contractUDAO,
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
       contractValidationManager,
+      contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
+      contractJurorManager,
+      GOVERNANCE_ROLE,
+      BACKEND_ROLE,
+      contractContractManager,
+      account1,
+      account2,
+      account3,
+      contractPriceGetter,
       contractUDAOContentParts,
     } = await deploy();
 
@@ -1436,7 +2106,11 @@ describe("UDAOC Contract", function () {
       contractUDAOContent
         .connect(contentCreator)
         .redeem(
-          [ethers.utils.parseEther("1"), ethers.utils.parseEther("2"), ethers.utils.parseEther("3")],
+          [
+            ethers.utils.parseEther("1"),
+            ethers.utils.parseEther("2"),
+            ethers.utils.parseEther("3"),
+          ],
           "udao",
           "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
           contentCreator.address,
@@ -1459,6 +2133,10 @@ describe("UDAOC Contract", function () {
     const newPartPrice = ethers.utils.parseEther("20");
     const newPartCurrency = "udao";
     // add new part and expect it to revert
-    await expect(contractUDAOContent.connect(contentCreator).addNewPart(tokenId, newPartId, newPartPrice, newPartCurrency)).to.be.revertedWith("Part id is bigger than the total number of parts");
+    await expect(
+      contractUDAOContent
+        .connect(contentCreator)
+        .addNewPart(tokenId, newPartId, newPartPrice, newPartCurrency)
+    ).to.be.revertedWith("Part id is bigger than the total number of parts");
   });
 });
