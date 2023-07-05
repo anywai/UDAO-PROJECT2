@@ -40,6 +40,9 @@ contract UDAOStaker is RoleController, EIP712 {
     uint256 public maximum_stake_days = 1460; // 4 YEARS
 
     event SetValidatorLockAmount(uint256 _newAmount);
+    event SetJurorLockAmount(uint256 _newAmount);
+    event SetValidatorLockTime(uint256 _newLockTime);
+    event SetJurorLockTime(uint256 _newLockTime);
     event SetVoteReward(uint256 _newAmount);
     event SetPlatformTreasuryAddress(address _newAddress);
     event RoleApplied(uint256 _roleId, address _user, uint256 _jobAmount);
@@ -152,6 +155,39 @@ contract UDAOStaker is RoleController, EIP712 {
     ) external onlyRoles(administrator_roles) {
         validatorLockAmount = _amount;
         emit SetValidatorLockAmount(_amount);
+    }
+
+    /**
+     * @notice set the required lock amount for jurors
+     * @param _amount new amount that requried to be locked
+     */
+    function setJurorLockAmount(
+        uint256 _amount
+    ) external onlyRoles(administrator_roles) {
+        jurorLockAmount = _amount;
+        emit SetJurorLockAmount(_amount);
+    }
+
+    /**
+     * @notice set the required lock time for validators
+     * @param _lockTime is new lock time for validators
+     * */
+    function setValidatorLockTime(
+        uint256 _lockTime
+    ) external onlyRoles(administrator_roles) {
+        validatorLockTime = _lockTime;
+        emit SetValidatorLockTime(_lockTime);
+    }
+
+    /**
+     * @notice set the required lock time for jurors
+     * @param _lockTime is new lock time for jurors
+     * */
+    function setJurorLockTime(
+        uint256 _lockTime
+    ) external onlyRoles(administrator_roles) {
+        jurorLockAmount = _lockTime;
+        emit SetJurorLockTime(_lockTime);
     }
 
     /**
