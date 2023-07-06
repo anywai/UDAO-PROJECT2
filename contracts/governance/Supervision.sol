@@ -6,16 +6,20 @@ import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
 import "../ContractManager.sol";
 import "../RoleController.sol";
 import "../interfaces/IUDAOC.sol";
-//import "../interfaces/IVM.sol";
 import "../interfaces/IPlatformTreasury.sol";
-import "hardhat/console.sol";
+
 interface IStakingContract {
-    function registerValidation(uint256 validationId) external;
+    function checkExpireDateValidator(
+        address _user
+    ) external view returns (uint256 expireDate);
+
+    function checkExpireDateJuror(
+        address _user
+    ) external view returns (uint256 expireDate);
 }
 
 contract Supervision is RoleController {
     IUDAOC udaoc;
-    //IValidationManager IVM;
     IPlatformTreasury PT;
     IStakingContract staker;
 
@@ -148,7 +152,6 @@ contract Supervision is RoleController {
         RoleController(rmAddress)
     {
         udaoc = IUDAOC(udaocAddress);
-        //IVM = IValidationManager(ivmAddress);
         disputes.push();
         validations.push();
     }
@@ -167,6 +170,10 @@ contract Supervision is RoleController {
         PT = IPlatformTreasury(_platformTreasury);
     }
 
+    function checkApplicationN(address _user) public view returns (uint256) {
+        return staker.checkExpireDateJuror(_user);
+    }
+
     /// TODO Wth is this function.
     /// @notice sets required juror count per dispute
     /// @param _requiredJurors new required juror count
@@ -183,7 +190,9 @@ contract Supervision is RoleController {
 
     /// @notice creates a validation for a token
     /// @param stakerAddress address of staking contract
-    function setStaker(address stakerAddress) external onlyRole(BACKEND_ROLE) {
+    function setAddressStaking(
+        address stakerAddress
+    ) external onlyRole(BACKEND_ROLE) {
         staker = IStakingContract(stakerAddress);
     }
 
@@ -297,7 +306,10 @@ contract Supervision is RoleController {
         //make sure juror is kyced and not banned
         require(IRM.isKYCed(msg.sender), "You are not KYCed");
         require(!IRM.isBanned(msg.sender), "You were banned");
-
+        require(
+            staker.checkExpireDateJuror(msg.sender) > block.timestamp,
+            "Your application is expired"
+        );
         require(caseId < disputes.length, "Dispute does not exist!");
         require(
             activeDispute[msg.sender] == 0,
@@ -360,7 +372,7 @@ contract Supervision is RoleController {
         }
         return true;
     }
-    
+
     /// @notice Allows jurors to send dipsute result
     /// @param caseId id of the dispute
     /// @param result result of dispute
@@ -608,6 +620,10 @@ contract Supervision is RoleController {
     function assignValidation(
         uint256 validationId
     ) external onlyRoles(validator_roles) {
+        require(
+            staker.checkExpireDateValidator(msg.sender) > block.timestamp,
+            "Validation is expired"
+        );
         require(
             validationId < validations.length,
             "Validation does not exist!"

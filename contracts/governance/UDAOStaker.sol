@@ -444,6 +444,26 @@ contract UDAOStaker is RoleController, EIP712 {
         emit RoleRejected(roleId, _applicant);
     }
 
+    /// @notice Returns expire dates for validator
+    /// @param _user address of the user
+    function checkExpireDateValidator(
+        address _user
+    ) external view returns (uint256 expireDate) {
+        // TODO There is no check for supervalidator yet
+        expireDate = validatorApplications[validatorApplicationId[_user]]
+            .expire;
+        return expireDate;
+    }
+
+    /// @notice Returns expire dates for juror
+    /// @param _user address of the user
+    function checkExpireDateJuror(
+        address _user
+    ) external view returns (uint256 expireDate) {
+        expireDate = jurorApplications[jurorApplicationId[_user]].expire;
+        return expireDate;
+    }
+
     /**
      * @notice allows validators to withdraw their staked tokens
      */
