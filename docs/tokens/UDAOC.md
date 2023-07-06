@@ -2,6 +2,12 @@
 
 ## UDAOContent
 
+### _tokenIds
+
+```solidity
+struct Counters.Counter _tokenIds
+```
+
 ### constructor
 
 ```solidity
@@ -20,18 +26,16 @@ constructor(address irmAdress) public
 mapping(uint256 => mapping(uint256 => uint256)) contentPrice
 ```
 
-### ContentVoucher
+### currencyName
 
 ```solidity
-struct ContentVoucher {
-  uint256 tokenId;
-  uint256[] contentPrice;
-  string uri;
-  address redeemer;
-  bool isCoachingEnabled;
-  string name;
-  string description;
-}
+mapping(uint256 => bytes32) currencyName
+```
+
+### partNumberOfContent
+
+```solidity
+mapping(uint256 => uint256) partNumberOfContent
 ```
 
 ### coachingEnabled
@@ -40,10 +44,34 @@ struct ContentVoucher {
 mapping(uint256 => bool) coachingEnabled
 ```
 
+### coachingPrice
+
+```solidity
+mapping(uint256 => uint256) coachingPrice
+```
+
+### coachingCurrency
+
+```solidity
+mapping(uint256 => bytes32) coachingCurrency
+```
+
+### coachingRefundable
+
+```solidity
+mapping(uint256 => bool) coachingRefundable
+```
+
+### newPartAdded
+
+```solidity
+event newPartAdded(uint256 tokenId, uint256 newPartId, uint256 newPartPrice)
+```
+
 ### redeem
 
 ```solidity
-function redeem(struct UDAOContent.ContentVoucher voucher) public
+function redeem(uint256[] _contentPrice, string _currencyName, string _uri, address _redeemer, uint256 _coachingPrice, string _coachingCurrencyName, bool _isCoachingEnabled, bool _isCoachingRefundable) public
 ```
 
 Redeems a ContentVoucher for an actual NFT, creating it in the process.
@@ -52,7 +80,55 @@ Redeems a ContentVoucher for an actual NFT, creating it in the process.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| voucher | struct UDAOContent.ContentVoucher | A signed ContentVoucher that describes the NFT to be redeemed. |
+| _contentPrice | uint256[] | The price of the content, first price is the full price |
+| _currencyName | string | Name of the selling currency |
+| _uri | string | The metadata URI to associate with this token. |
+| _redeemer | address | Address of the redeemer |
+| _coachingPrice | uint256 | The price of the coaching service |
+| _coachingCurrencyName | string | Name of the coaching currency |
+| _isCoachingEnabled | bool | Whether learner can buy coaching or not |
+| _isCoachingRefundable | bool | Whether coaching is refundable or not |
+
+### modifyContent
+
+```solidity
+function modifyContent(uint256 tokenId, uint256[] _contentPrice, string _currencyName, string _uri) external
+```
+
+Allows token owners to burn the token
+
+### addNewPart
+
+```solidity
+function addNewPart(uint256 tokenId, uint256 newPartId, uint256 newPartPrice, string _currencyName) external
+```
+
+_Allows content owners to insert new parts_
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| tokenId | uint256 | The id of the token |
+| newPartId | uint256 | The id of the new part |
+| newPartPrice | uint256 | The price of the new part |
+| _currencyName | string |  |
+
+### _insertNewPart
+
+```solidity
+function _insertNewPart(uint256 tokenId, uint256 newPartId, uint256 newPartPrice) internal
+```
+
+_Internal function to insert a new part in between existing parts_
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| tokenId | uint256 | The id of the token |
+| newPartId | uint256 | The id of the new part |
+| newPartPrice | uint256 | The price of the new part |
 
 ### enableCoaching
 
@@ -90,10 +166,46 @@ function isCoachingEnabled(uint256 tokenId) external view returns (bool)
 
 Returns if a coaching enabled for a token or not
 
-### getPriceContent
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| tokenId | uint256 | the content ID of the token |
+
+### setCoachingPriceAndCurrency
 
 ```solidity
-function getPriceContent(uint256 tokenId, uint256 partId) external view returns (uint256)
+function setCoachingPriceAndCurrency(uint256 tokenId, uint256 price, bytes32 currency) external
+```
+
+sets the coaching price and currency of a specific content
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| tokenId | uint256 | the content ID of the token |
+| price | uint256 | the price of the coaching |
+| currency | bytes32 | the currency of the coaching |
+
+### getCoachingPriceAndCurrency
+
+```solidity
+function getCoachingPriceAndCurrency(uint256 tokenId) external view returns (uint256, bytes32)
+```
+
+returns the coaching price and currency of a specific content
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| tokenId | uint256 | the content ID of the token |
+
+### getContentPriceAndCurrency
+
+```solidity
+function getContentPriceAndCurrency(uint256 tokenId, uint256 partId) external view returns (uint256, bytes32)
 ```
 
 returns the price of a specific content
@@ -242,6 +354,4 @@ function tokenURI(uint256 tokenId) public view returns (string)
 ```solidity
 function supportsInterface(bytes4 interfaceId) public view returns (bool)
 ```
-
-_See {IERC165-supportsInterface}._
 

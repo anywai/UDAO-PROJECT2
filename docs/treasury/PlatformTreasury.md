@@ -2,6 +2,18 @@
 
 ## PlatformTreasury
 
+### SIGNING_DOMAIN
+
+```solidity
+string SIGNING_DOMAIN
+```
+
+### SIGNATURE_VERSION
+
+```solidity
+string SIGNATURE_VERSION
+```
+
 ### GovernanceWithdrawn
 
 ```solidity
@@ -53,7 +65,7 @@ this event gets triggered when a instructor withdraw tokens and if has debt
 ### constructor
 
 ```solidity
-constructor(address _contractManagerAddress, address _rmAddress) public
+constructor(address _contractManagerAddress, address _rmAddress, address priceGetterAddress) public
 ```
 
 #### Parameters
@@ -62,6 +74,7 @@ constructor(address _contractManagerAddress, address _rmAddress) public
 | ---- | ---- | ----------- |
 | _contractManagerAddress | address | The address of the deployed role manager |
 | _rmAddress | address | The address of the deployed role manager |
+| priceGetterAddress | address |  |
 
 ### withdrawGovernance
 
@@ -102,4 +115,10 @@ function withdrawInstructor() external
 ```
 
 Allows instructers to withdraw individually.
+
+### transferGovernanceRewards
+
+```solidity
+function transferGovernanceRewards(address _to, uint256 _amount) external
+```
 

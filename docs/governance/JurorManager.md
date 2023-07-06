@@ -14,6 +14,12 @@ contract IUDAOC udaoc
 contract IValidationManager IVM
 ```
 
+### PT
+
+```solidity
+contract IPlatformTreasury PT
+```
+
 ### contractManager
 
 ```solidity
@@ -47,13 +53,19 @@ event DisputeAssigned(uint256 caseId, address juror)
 ### DisputeResultSent
 
 ```solidity
-event DisputeResultSent(uint256 caseId, address juror, bool result)
+event DisputeResultSent(uint256 caseId, bool result, address juror)
 ```
 
 ### DisputeEnded
 
 ```solidity
 event DisputeEnded(uint256 caseId, bool verdict)
+```
+
+### AddressesUpdated
+
+```solidity
+event AddressesUpdated(address IRMAddress, address PTAddress)
 ```
 
 ### jurorScorePerRound
@@ -118,6 +130,18 @@ constructor(address rmAddress, address udaocAddress, address ivmAddress) public
 | udaocAddress | address |  |
 | ivmAddress | address |  |
 
+### setContractManager
+
+```solidity
+function setContractManager(address _contractManager) external
+```
+
+### setPlatformTreasury
+
+```solidity
+function setPlatformTreasury(address _platformTreasury) external
+```
+
 ### updateAddresses
 
 ```solidity
@@ -125,6 +149,7 @@ function updateAddresses() external
 ```
 
 Get the updated addresses from contract manager
+TODO is this correct?
 
 ### Dispute
 
@@ -141,6 +166,9 @@ struct Dispute {
   bool verdict;
   bool isTokenRelated;
   uint256 tokenId;
+  bool isRefundDispute;
+  uint256 coachingId;
+  bool isFinalized;
   uint256 resultDate;
   bytes _data;
 }
@@ -158,12 +186,13 @@ struct JurorManager.Dispute[] disputes
 uint256 totalJurorScore
 ```
 
-### setRequiredValidators
+### setRequiredJurors
 
 ```solidity
-function setRequiredValidators(uint128 _requiredJurors) external
+function setRequiredJurors(uint128 _requiredJurors) external
 ```
 
+TODO Wth is this function.
 sets required juror count per dispute
 
 #### Parameters
@@ -175,7 +204,7 @@ sets required juror count per dispute
 ### createDispute
 
 ```solidity
-function createDispute(uint128 caseScope, string question, bool isTokenRelated, uint256 tokenId) external
+function createDispute(uint128 caseScope, string question, bool isTokenRelated, uint256 tokenId, bool isRefundDispute, uint256 coachingId) external
 ```
 
 starts new dispute case
@@ -194,6 +223,26 @@ assign a dispute to self
 | ---- | ---- | ----------- |
 | caseId | uint256 | id of the dispute |
 
+### _canAssignDispute
+
+```solidity
+function _canAssignDispute(uint256 caseId) internal view returns (bool)
+```
+
+_Checks if a juror was also validator of the content_
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| caseId | uint256 | id of the dispute |
+
+#### Return Values
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [0] | bool | true if the juror has not validated the content, false otherwise |
+
 ### sendDisputeResult
 
 ```solidity
@@ -207,7 +256,21 @@ Allows jurors to send dipsute result
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | caseId | uint256 | id of the dispute |
-| result | bool | result of validation |
+| result | bool | result of dispute |
+
+### _finalizeDispute
+
+```solidity
+function _finalizeDispute(uint256 caseId) internal
+```
+
+finalizes dispute if last dispute result is sent
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| caseId | uint256 | id of the dispute |
 
 ### finalizeDispute
 
@@ -222,20 +285,6 @@ finalizes dispute if enough juror vote is sent
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | caseId | uint256 | id of the dispute |
-
-### _checkJuror
-
-```solidity
-function _checkJuror(address[] _jurors) internal view
-```
-
-Makes sure if the end dispute caller is a juror participated in a certain case.
-
-#### Parameters
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _jurors | address[] | list of jurors contained in voucher |
 
 ### nextRound
 

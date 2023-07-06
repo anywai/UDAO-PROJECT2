@@ -22,13 +22,25 @@ contract IUDAOStaker stakingContract
 constructor(contract IVotes _token, contract TimelockController _timelock, address stakingContractAddress, address rmAddress) public
 ```
 
+### _quorum
+
+```solidity
+uint256 _quorum
+```
+
+### setQuorum
+
+```solidity
+function setQuorum(uint256 newQuorum) external
+```
+
 ### setStakingContract
 
 ```solidity
 function setStakingContract(address stakingContractAddress) external
 ```
 
-Allows administrator_roles to set the staking contract address.
+Allows backend to set the staking contract address.
 
 #### Parameters
 
@@ -64,6 +76,13 @@ function votingPeriod() public view returns (uint256)
 ```solidity
 function quorum(uint256 blockNumber) public view returns (uint256)
 ```
+
+module:user-config
+
+_Minimum number of cast voted required for a proposal to be successful.
+
+Note: The `blockNumber` parameter corresponds to the snapshot used for counting vote. This allows to scale the
+quorum depending on values such as the totalSupply of a token at this block (see {ERC20Votes})._
 
 ### state
 

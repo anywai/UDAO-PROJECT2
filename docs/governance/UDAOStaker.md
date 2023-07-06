@@ -8,7 +8,25 @@
 function mint(address to, uint256 amount) external
 ```
 
+### burnFrom
+
+```solidity
+function burnFrom(address account, uint256 amount) external
+```
+
 ## UDAOStaker
+
+### SIGNING_DOMAIN
+
+```solidity
+string SIGNING_DOMAIN
+```
+
+### SIGNATURE_VERSION
+
+```solidity
+string SIGNATURE_VERSION
+```
 
 ### udao
 
@@ -50,6 +68,14 @@ uint256 validatorLockTime
 
 the required duration to be a validator
 
+### applicationLockTime
+
+```solidity
+uint256 applicationLockTime
+```
+
+the lock duration for applications
+
 ### validatorLockAmount
 
 ```solidity
@@ -66,10 +92,44 @@ uint256 jurorLockAmount
 
 Amount to deduct from juror application
 
+### minimum_stake_days
+
+```solidity
+uint256 minimum_stake_days
+```
+
+the minimum duration for governance stake
+
+### maximum_stake_days
+
+```solidity
+uint256 maximum_stake_days
+```
+
+the maximum duration for governance stake
+
 ### SetValidatorLockAmount
 
 ```solidity
 event SetValidatorLockAmount(uint256 _newAmount)
+```
+
+### SetJurorLockAmount
+
+```solidity
+event SetJurorLockAmount(uint256 _newAmount)
+```
+
+### SetValidatorLockTime
+
+```solidity
+event SetValidatorLockTime(uint256 _newLockTime)
+```
+
+### SetJurorLockTime
+
+```solidity
+event SetJurorLockTime(uint256 _newLockTime)
 ```
 
 ### SetVoteReward
@@ -108,22 +168,10 @@ event RoleRejected(uint256 _roleId, address _user)
 event ValidationAdded(uint256 _amount)
 ```
 
-### CaseAdded
-
-```solidity
-event CaseAdded(uint256 _amount)
-```
-
 ### ValidationRegistered
 
 ```solidity
 event ValidationRegistered(address _validator, uint256 _validationId)
-```
-
-### CaseRegistered
-
-```solidity
-event CaseRegistered(address _juror, uint256 _caseId)
 ```
 
 ### ValidatorStakeWithdrawn
@@ -141,7 +189,7 @@ event JobListingRegistered(address corporate, uint256 amountPerListing)
 ### JobListingUnregistered
 
 ```solidity
-event JobListingUnregistered(address corporate, uint256 listingId, uint256 amount)
+event JobListingUnregistered(address corporate, uint256[] listingId, uint256 amount)
 ```
 
 ### JurorStakeWithdrawn
@@ -174,16 +222,16 @@ event VoteRewardAdded(address _rewardee, uint256 _amount)
 event VoteRewardsWithdrawn(address _rewardee, uint256 _amount)
 ```
 
-### StakeForJobListing
+### SetMaximumStakeDays
 
 ```solidity
-event StakeForJobListing(address corporateAddress, uint256 amount)
+event SetMaximumStakeDays(uint256 _newAmount)
 ```
 
-### UnstakeForJobListing
+### SetMinimumStakeDays
 
 ```solidity
-event UnstakeForJobListing(address corporateAddress, uint256 amount)
+event SetMinimumStakeDays(uint256 _newAmount)
 ```
 
 ### validationBalanceOf
@@ -214,6 +262,18 @@ mapping(address => uint256) latestJurorStakeId
 
 ```solidity
 mapping(address => uint256) latestValidationLockId
+```
+
+### activeApplicationForValidator
+
+```solidity
+mapping(address => bool) activeApplicationForValidator
+```
+
+### activeApplicationForJuror
+
+```solidity
+mapping(address => bool) activeApplicationForJuror
 ```
 
 ### corporateStakePerListing
@@ -279,7 +339,6 @@ uint256 voteReward
 ```solidity
 struct ValidationApplication {
   address applicant;
-  bool isSuper;
   bool isFinished;
   uint256 expire;
 }
@@ -295,6 +354,12 @@ struct UDAOStaker.ValidationApplication[] validatorApplications
 
 ```solidity
 mapping(address => uint256) validatorApplicationId
+```
+
+### validationApplicationIndex
+
+```solidity
+uint256 validationApplicationIndex
 ```
 
 ### JurorApplication
@@ -317,6 +382,12 @@ struct UDAOStaker.JurorApplication[] jurorApplications
 
 ```solidity
 mapping(address => uint256) jurorApplicationId
+```
+
+### caseApplicationIndex
+
+```solidity
+uint256 caseApplicationIndex
 ```
 
 ### totalVotingPower
@@ -362,6 +433,48 @@ set the required lock amount for validators
 | ---- | ---- | ----------- |
 | _amount | uint256 | new amount that requried to be locked |
 
+### setJurorLockAmount
+
+```solidity
+function setJurorLockAmount(uint256 _amount) external
+```
+
+set the required lock amount for jurors
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _amount | uint256 | new amount that requried to be locked |
+
+### setValidatorLockTime
+
+```solidity
+function setValidatorLockTime(uint256 _lockTime) external
+```
+
+set the required lock time for validators
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _lockTime | uint256 | is new lock time for validators |
+
+### setJurorLockTime
+
+```solidity
+function setJurorLockTime(uint256 _lockTime) external
+```
+
+set the required lock time for jurors
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _lockTime | uint256 | is new lock time for jurors |
+
 ### setVoteReward
 
 ```solidity
@@ -390,6 +503,34 @@ sets the platform treasury address
 | ---- | ---- | ----------- |
 | _platformTreasuryAddress | address | the address of the new platform treasury |
 
+### setMaximumStakeDays
+
+```solidity
+function setMaximumStakeDays(uint256 _maximum_stake_days) external
+```
+
+sets the maximum stake days for governance members
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _maximum_stake_days | uint256 | the new maximum stake days |
+
+### setMinimumStakeDays
+
+```solidity
+function setMinimumStakeDays(uint256 _minimum_stake_days) external
+```
+
+sets the minimum stake days for governance members
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _minimum_stake_days | uint256 | the new minimum stake days |
+
 ### RoleVoucher
 
 ```solidity
@@ -398,25 +539,6 @@ struct RoleVoucher {
   uint256 validUntil;
   uint256 roleId;
   bytes signature;
-}
-```
-
-### CorporateWithdrawVoucher
-
-```solidity
-struct CorporateWithdrawVoucher {
-  address redeemer;
-  uint256 amount;
-}
-```
-
-### GovernanceStakeVoucher
-
-```solidity
-struct GovernanceStakeVoucher {
-  address staker;
-  uint256 amount;
-  uint256 _days;
 }
 ```
 
@@ -439,16 +561,10 @@ Allows validators to apply for super validator role
 ### applyForJuror
 
 ```solidity
-function applyForJuror(uint256 caseAmount) external
+function applyForJuror() external
 ```
 
 allows users to apply for juror role
-
-#### Parameters
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| caseAmount | uint256 | The amount of cases that a juror wants to do |
 
 ### getApproved
 
@@ -472,6 +588,34 @@ Allows backend to reject role assignment application
 | ---- | ---- | ----------- |
 | _applicant | address | The address of the applicant |
 | roleId | uint256 |  |
+
+### checkExpireDateValidator
+
+```solidity
+function checkExpireDateValidator(address _user) external view returns (uint256 expireDate)
+```
+
+Returns expire dates for validator
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _user | address | address of the user |
+
+### checkExpireDateJuror
+
+```solidity
+function checkExpireDateJuror(address _user) external view returns (uint256 expireDate)
+```
+
+Returns expire dates for juror
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _user | address | address of the user |
 
 ### withdrawValidatorStake
 
@@ -530,10 +674,17 @@ Returns the amount of token a validator could withdraw
 ### stakeForGovernance
 
 ```solidity
-function stakeForGovernance(struct UDAOStaker.GovernanceStakeVoucher voucher) public
+function stakeForGovernance(uint256 _amount, uint256 _days) public
 ```
 
 staking function to become a governance member
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _amount | uint256 | amount of UDAO token that will be staked |
+| _days | uint256 | amount of days UDAO token that will be staked for |
 
 ### withdrawGovernanceStake
 
@@ -571,20 +722,6 @@ function withdrawRewards() external
 
 withdraws reward earned from voting
 
-### stakeForJobListing
-
-```solidity
-function stakeForJobListing(uint256 amount) external
-```
-
-Allows corporate accounts to stake. Staker and staked amount returned with event.
-
-#### Parameters
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| amount | uint256 | The amount of stake |
-
 ### corporateListingId
 
 ```solidity
@@ -606,7 +743,7 @@ function registerJobListing(uint256 jobListingCount) external
 ### unregisterJobListing
 
 ```solidity
-function unregisterJobListing(uint256 listingId) external
+function unregisterJobListing(uint256[] listingIds) external
 ```
 
 ### _hashRole

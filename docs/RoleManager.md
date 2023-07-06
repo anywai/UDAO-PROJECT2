@@ -2,6 +2,24 @@
 
 ## RoleManager
 
+### VALIDATOR_ROLE
+
+```solidity
+bytes32 VALIDATOR_ROLE
+```
+
+### SUPER_VALIDATOR_ROLE
+
+```solidity
+bytes32 SUPER_VALIDATOR_ROLE
+```
+
+### JUROR_ROLE
+
+```solidity
+bytes32 JUROR_ROLE
+```
+
 ### BACKEND_ROLE
 
 ```solidity
