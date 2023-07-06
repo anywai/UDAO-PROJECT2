@@ -188,7 +188,7 @@ contract UDAOStaker is RoleController, EIP712 {
     function setJurorLockTime(
         uint256 _lockTime
     ) external onlyRoles(administrator_roles) {
-        jurorLockAmount = _lockTime;
+        jurorLockTime = _lockTime;
         emit SetJurorLockTime(_lockTime);
     }
 
@@ -364,7 +364,7 @@ contract UDAOStaker is RoleController, EIP712 {
             IRM.hasRole(BACKEND_ROLE, signer),
             "Signature invalid or unauthorized"
         );
-        
+
         uint256 roleId = voucher.roleId;
 
         if (roleId == 0) {
@@ -372,7 +372,10 @@ contract UDAOStaker is RoleController, EIP712 {
                 storage validationApplication = validatorApplications[
                     validatorApplicationId[voucher.redeemer]
                 ];
-            require(validationApplication.isFinished == false, "Application was already finished");
+            require(
+                validationApplication.isFinished == false,
+                "Application was already finished"
+            );
             IRM.grantRoleStaker(VALIDATOR_ROLE, voucher.redeemer);
             activeApplicationForValidator[voucher.redeemer] = false;
             validationApplication.isFinished = true;
@@ -386,8 +389,11 @@ contract UDAOStaker is RoleController, EIP712 {
             JurorApplication storage jurorApplication = jurorApplications[
                 jurorApplicationId[voucher.redeemer]
             ];
-            
-            require(jurorApplication.isFinished == false, "Application was already finished");
+
+            require(
+                jurorApplication.isFinished == false,
+                "Application was already finished"
+            );
             IRM.grantRoleStaker(JUROR_ROLE, voucher.redeemer);
             activeApplicationForJuror[voucher.redeemer] = false;
             jurorApplication.isFinished = true;
@@ -458,8 +464,11 @@ contract UDAOStaker is RoleController, EIP712 {
                 validationBalanceOf[msg.sender] = 0;
             }
         } else {
-            // If application not finalized in time or got rejected 
-            if(validationApplication.expire < block.timestamp || validationApplication.isFinished){
+            // If application not finalized in time or got rejected
+            if (
+                validationApplication.expire < block.timestamp ||
+                validationApplication.isFinished
+            ) {
                 withdrawableBalance = validationBalanceOf[msg.sender];
                 validationBalanceOf[msg.sender] = 0;
             }
@@ -498,13 +507,16 @@ contract UDAOStaker is RoleController, EIP712 {
                 jurorBalanceOf[msg.sender] = 0;
             }
         } else {
-            // If application not finalized in time or got rejected 
-            if(jurorApplication.expire < block.timestamp || jurorApplication.isFinished){
+            // If application not finalized in time or got rejected
+            if (
+                jurorApplication.expire < block.timestamp ||
+                jurorApplication.isFinished
+            ) {
                 withdrawableBalance = jurorBalanceOf[msg.sender];
                 jurorBalanceOf[msg.sender] = 0;
             }
         }
-        
+
         jurorApplication.isFinished == true;
         _withdrawJuror(msg.sender, withdrawableBalance);
         return;
