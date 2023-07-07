@@ -1945,6 +1945,9 @@ describe("Platform Treasury Contract - Content", function () {
         ethers.utils.parseEther("999999999999.0")
       );
 
+    // Set kyc of validator1
+    await contractRoleManager.setKYC(validator1.address, false);
+
     await expect(
       contractPlatformTreasury
         .connect(contentBuyer)
