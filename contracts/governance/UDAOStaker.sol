@@ -33,9 +33,9 @@ contract UDAOStaker is RoleController, EIP712 {
     /// @notice the lock duration for applications
     uint256 public applicationLockTime = 7 days;
     /// @notice Amount to deduct from validator application
-    uint256 public validatorLockAmount = 150 ether;
+    uint256 public validatorLockAmount = 1 ether;
     /// @notice Amount to deduct from juror application
-    uint256 public jurorLockAmount = 150 ether;
+    uint256 public jurorLockAmount = 1 ether;
     /// @notice the minimum duration for governance stake
     uint256 public minimum_stake_days = 7; // 1 WEEK
     /// @notice the maximum duration for governance stake
