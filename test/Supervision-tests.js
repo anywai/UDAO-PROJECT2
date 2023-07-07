@@ -2474,9 +2474,10 @@ describe("Supervision Contract", function () {
         ethers.utils.parseEther("10"),
         ethers.utils.parseEther("300")
       );
+    const jurorLockAmount = await contractUDAOStaker.jurorLockAmount;
     await expect(contractUDAOStaker.connect(jurorCandidate).applyForJuror())
       .to.emit(contractUDAOStaker, "RoleApplied") // transfer from null address to minter
-      .withArgs(1, jurorCandidate.address, ethers.utils.parseEther("150"));
+      .withArgs(1, jurorCandidate.address, jurorLockAmount);
 
     const lazyRole = new LazyRole({
       contract: contractUDAOStaker,
