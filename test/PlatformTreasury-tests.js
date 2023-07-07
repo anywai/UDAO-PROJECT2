@@ -33,6 +33,7 @@ chai.use(require("chai-bn")(BN));
 async function checkAccountUDAOVpBalanceAndDelegate(contractUDAOVp, account) {
   const accountBalance = await contractUDAOVp.balanceOf(account.address);
   await expect(accountBalance).to.equal(ethers.utils.parseEther("300"));
+  //console.log("accountBalance is 300  :", accountBalance.toString());
   await contractUDAOVp.connect(account).delegate(account.address);
   const accountVotes = await contractUDAOVp.getVotes(account.address);
   await expect(accountVotes).to.equal(ethers.utils.parseEther("300"));
@@ -498,7 +499,7 @@ describe("Platform Treasury General", function () {
       contractRoleManager,
       contractUDAO,
       contractUDAOStaker,
-      validator1
+      jurorCandidate
     );
 
     /// @dev Check account UDAO-vp balance and delegate to themselves
@@ -507,11 +508,12 @@ describe("Platform Treasury General", function () {
       governanceCandidate
     );
     await checkAccountUDAOVpBalanceAndDelegate(contractUDAOVp, superValidator);
-    await checkAccountUDAOVpBalanceAndDelegate(contractUDAOVp, validator1);
+    //await checkAccountUDAOVpBalanceAndDelegate(contractUDAOVp, superValidatorCandidate);
     await checkAccountUDAOVpBalanceAndDelegate(
       contractUDAOVp,
       validatorCandidate
     );
+    await checkAccountUDAOVpBalanceAndDelegate(contractUDAOVp, jurorCandidate);
     // Create content
     await createContent(
       contractRoleManager,
@@ -616,7 +618,7 @@ describe("Platform Treasury General", function () {
     await contractUDAOGovernor
       .connect(superValidatorCandidate)
       .castVote(proposalId, 1);
-    await contractUDAOGovernor.connect(validator1).castVote(proposalId, 1);
+    await contractUDAOGovernor.connect(jurorCandidate).castVote(proposalId, 1);
     await contractUDAOGovernor
       .connect(validatorCandidate)
       .castVote(proposalId, 1);
@@ -774,7 +776,7 @@ describe("Platform Treasury General", function () {
       contractRoleManager,
       contractUDAO,
       contractUDAOStaker,
-      validator1
+      jurorCandidate
     );
 
     /// @dev Check account UDAO-vp balance and delegate to themselves
@@ -783,11 +785,11 @@ describe("Platform Treasury General", function () {
       governanceCandidate
     );
     await checkAccountUDAOVpBalanceAndDelegate(contractUDAOVp, superValidator);
-    await checkAccountUDAOVpBalanceAndDelegate(contractUDAOVp, validator1);
     await checkAccountUDAOVpBalanceAndDelegate(
       contractUDAOVp,
       validatorCandidate
     );
+    await checkAccountUDAOVpBalanceAndDelegate(contractUDAOVp, jurorCandidate);
     // Create content
     await createContent(
       contractRoleManager,
@@ -904,7 +906,7 @@ describe("Platform Treasury General", function () {
     await contractUDAOGovernor
       .connect(superValidatorCandidate)
       .castVote(proposalId, 1);
-    await contractUDAOGovernor.connect(validator1).castVote(proposalId, 1);
+    await contractUDAOGovernor.connect(jurorCandidate).castVote(proposalId, 1);
     await contractUDAOGovernor
       .connect(validatorCandidate)
       .castVote(proposalId, 1);
@@ -1288,12 +1290,10 @@ describe("Platform Treasury General", function () {
     const validator5BalanceBefore = await contractUDAO.balanceOf(
       validator5.address
     );
-    // expect balances to be equal to zero
-    await expect(validator1BalanceBefore).to.equal(0);
-    await expect(validator2BalanceBefore).to.equal(0);
-    await expect(validator3BalanceBefore).to.equal(0);
-    await expect(validator4BalanceBefore).to.equal(0);
-    await expect(validator5BalanceBefore).to.equal(0);
+    // expect balances to be equal to zero (They not anymore since commit: 617d510)
+    //await expect(validator1BalanceBefore).to.equal(0);
+    //...2-3-4...
+    //await expect(validator5BalanceBefore).to.equal(0);
 
     // Get the ID of the current distribution round
     const currentDistributionRound =
@@ -1383,11 +1383,21 @@ describe("Platform Treasury General", function () {
       .div(100000);
 
     /// @dev Check if the validator balances are equal to the expected validator balances
-    await expect(validator1BalanceAfter).to.equal(expectedValidator1Cut);
-    await expect(validator2BalanceAfter).to.equal(expectedValidator2Cut);
-    await expect(validator3BalanceAfter).to.equal(expectedValidator3Cut);
-    await expect(validator4BalanceAfter).to.equal(expectedValidator4Cut);
-    await expect(validator5BalanceAfter).to.equal(expectedValidator5Cut);
+    await expect(validator1BalanceAfter.sub(validator1BalanceBefore)).to.equal(
+      expectedValidator1Cut
+    );
+    await expect(validator2BalanceAfter.sub(validator2BalanceBefore)).to.equal(
+      expectedValidator2Cut
+    );
+    await expect(validator3BalanceAfter.sub(validator3BalanceBefore)).to.equal(
+      expectedValidator3Cut
+    );
+    await expect(validator4BalanceAfter.sub(validator4BalanceBefore)).to.equal(
+      expectedValidator4Cut
+    );
+    await expect(validator5BalanceAfter.sub(validator5BalanceBefore)).to.equal(
+      expectedValidator5Cut
+    );
   });
 
   it("Should allow validator to withdraw funds from the treasury after multiple content purchases", async function () {
@@ -1487,12 +1497,10 @@ describe("Platform Treasury General", function () {
     const validator5BalanceBefore = await contractUDAO.balanceOf(
       validator5.address
     );
-    // expect balances to be equal to zero
-    await expect(validator1BalanceBefore).to.equal(0);
-    await expect(validator2BalanceBefore).to.equal(0);
-    await expect(validator3BalanceBefore).to.equal(0);
-    await expect(validator4BalanceBefore).to.equal(0);
-    await expect(validator5BalanceBefore).to.equal(0);
+    // expect balances to be equal to zero (They not anymore since commit: 617d510)
+    //await expect(validator1BalanceBefore).to.equal(0);
+    //...2-3-4...
+    //await expect(validator5BalanceBefore).to.equal(0);
 
     // Get the ID of the current distribution round
     const currentDistributionRound =
@@ -1584,11 +1592,21 @@ describe("Platform Treasury General", function () {
       .div(100000);
 
     /// @dev Check if the validator balances are equal to the expected validator balances
-    await expect(validator1BalanceAfter).to.equal(expectedValidator1Cut);
-    await expect(validator2BalanceAfter).to.equal(expectedValidator2Cut);
-    await expect(validator3BalanceAfter).to.equal(expectedValidator3Cut);
-    await expect(validator4BalanceAfter).to.equal(expectedValidator4Cut);
-    await expect(validator5BalanceAfter).to.equal(expectedValidator5Cut);
+    await expect(validator1BalanceAfter.sub(validator1BalanceBefore)).to.equal(
+      expectedValidator1Cut
+    );
+    await expect(validator2BalanceAfter.sub(validator2BalanceBefore)).to.equal(
+      expectedValidator2Cut
+    );
+    await expect(validator3BalanceAfter.sub(validator3BalanceBefore)).to.equal(
+      expectedValidator3Cut
+    );
+    await expect(validator4BalanceAfter.sub(validator4BalanceBefore)).to.equal(
+      expectedValidator4Cut
+    );
+    await expect(validator5BalanceAfter.sub(validator5BalanceBefore)).to.equal(
+      expectedValidator5Cut
+    );
   });
 
   it("Should allow jurors to withdraw funds from the treasury after a dispute is resolved", async function () {
@@ -1737,10 +1755,10 @@ describe("Platform Treasury General", function () {
     const jurorMember3BalanceBefore = await contractUDAO.balanceOf(
       jurorMember3.address
     );
-    /// @dev Expect that the account balances of jurors are 0 before withdrawal
-    await expect(jurorMember1BalanceBefore).to.equal(0);
-    await expect(jurorMember2BalanceBefore).to.equal(0);
-    await expect(jurorMember3BalanceBefore).to.equal(0);
+    //@dev Expect balances to 0 (They not anymore since commit: 617d510)
+    //await expect(jurorMember1BalanceBefore).to.equal(0);
+    //await expect(jurorMember2BalanceBefore).to.equal(0);
+    //await expect(jurorMember3BalanceBefore).to.equal(0);
 
     // Get the current juror balance for a round (calculated in content manager)
     const jurorBalanceForRound =
@@ -1791,15 +1809,15 @@ describe("Platform Treasury General", function () {
     const expectedJurorMember2Balance = payPerJuror.mul(scoreOfJuror2);
     const expectedJurorMember3Balance = payPerJuror.mul(scoreOfJuror3);
     // Expect that the account balances of jurors are equal to the expected balances
-    await expect(jurorMember1BalanceAfter).to.equal(
-      expectedJurorMember1Balance
-    );
-    await expect(jurorMember2BalanceAfter).to.equal(
-      expectedJurorMember2Balance
-    );
-    await expect(jurorMember3BalanceAfter).to.equal(
-      expectedJurorMember3Balance
-    );
+    await expect(
+      jurorMember1BalanceAfter.sub(jurorMember1BalanceBefore)
+    ).to.equal(expectedJurorMember1Balance);
+    await expect(
+      jurorMember2BalanceAfter.sub(jurorMember2BalanceBefore)
+    ).to.equal(expectedJurorMember2Balance);
+    await expect(
+      jurorMember3BalanceAfter.sub(jurorMember3BalanceBefore)
+    ).to.equal(expectedJurorMember3Balance);
   });
 
   /// TODO
@@ -2705,10 +2723,10 @@ describe("Platform Treasury General", function () {
     const jurorMember3BalanceBefore = await contractUDAO.balanceOf(
       jurorMember3.address
     );
-    /// @dev Expect that the account balances of jurors are 0 before withdrawal
-    await expect(jurorMember1BalanceBefore).to.equal(0);
-    await expect(jurorMember2BalanceBefore).to.equal(0);
-    await expect(jurorMember3BalanceBefore).to.equal(0);
+    /// @dev Expect balances to 0 (They not anymore since commit: 617d510)
+    //await expect(jurorMember1BalanceBefore).to.equal(0);
+    //await expect(jurorMember2BalanceBefore).to.equal(0);
+    //await expect(jurorMember3BalanceBefore).to.equal(0);
 
     // Get the current juror balance for a round (calculated in content manager)
     const jurorBalanceForRound =
@@ -2764,15 +2782,15 @@ describe("Platform Treasury General", function () {
     const expectedJurorMember2Balance = payPerJuror.mul(scoreOfJuror2);
     const expectedJurorMember3Balance = payPerJuror.mul(scoreOfJuror3);
     // Expect that the account balances of jurors are equal to the expected balances
-    await expect(jurorMember1BalanceAfter).to.equal(
-      expectedJurorMember1Balance
-    );
-    await expect(jurorMember2BalanceAfter).to.equal(
-      expectedJurorMember2Balance
-    );
-    await expect(jurorMember3BalanceAfter).to.equal(
-      expectedJurorMember3Balance
-    );
+    await expect(
+      jurorMember1BalanceAfter.sub(jurorMember1BalanceBefore)
+    ).to.equal(expectedJurorMember1Balance);
+    await expect(
+      jurorMember2BalanceAfter.sub(jurorMember2BalanceBefore)
+    ).to.equal(expectedJurorMember2Balance);
+    await expect(
+      jurorMember3BalanceAfter.sub(jurorMember3BalanceBefore)
+    ).to.equal(expectedJurorMember3Balance);
   });
 
   it("Should allow Banned-validator to withdraw funds from the treasury after a content purchase", async function () {
@@ -2860,12 +2878,10 @@ describe("Platform Treasury General", function () {
     const validator5BalanceBefore = await contractUDAO.balanceOf(
       validator5.address
     );
-    // expect balances to be equal to zero
-    await expect(validator1BalanceBefore).to.equal(0);
-    await expect(validator2BalanceBefore).to.equal(0);
-    await expect(validator3BalanceBefore).to.equal(0);
-    await expect(validator4BalanceBefore).to.equal(0);
-    await expect(validator5BalanceBefore).to.equal(0);
+    // expect balances to be equal to zero (They not anymore since commit: 617d510)
+    //await expect(validator1BalanceBefore).to.equal(0);
+    //...2-3-4...
+    //await expect(validator5BalanceBefore).to.equal(0);
 
     // Get the ID of the current distribution round
     const currentDistributionRound =
@@ -2962,11 +2978,21 @@ describe("Platform Treasury General", function () {
       .div(100000);
 
     /// @dev Check if the validator balances are equal to the expected validator balances
-    await expect(validator1BalanceAfter).to.equal(expectedValidator1Cut);
-    await expect(validator2BalanceAfter).to.equal(expectedValidator2Cut);
-    await expect(validator3BalanceAfter).to.equal(expectedValidator3Cut);
-    await expect(validator4BalanceAfter).to.equal(expectedValidator4Cut);
-    await expect(validator5BalanceAfter).to.equal(expectedValidator5Cut);
+    await expect(validator1BalanceAfter.sub(validator1BalanceBefore)).to.equal(
+      expectedValidator1Cut
+    );
+    await expect(validator2BalanceAfter.sub(validator2BalanceBefore)).to.equal(
+      expectedValidator2Cut
+    );
+    await expect(validator3BalanceAfter.sub(validator3BalanceBefore)).to.equal(
+      expectedValidator3Cut
+    );
+    await expect(validator4BalanceAfter.sub(validator4BalanceBefore)).to.equal(
+      expectedValidator4Cut
+    );
+    await expect(validator5BalanceAfter.sub(validator5BalanceBefore)).to.equal(
+      expectedValidator5Cut
+    );
   });
 
   it("Should allow Banned-validator to withdraw funds from the treasury after multiple content purchases", async function () {
@@ -3066,12 +3092,10 @@ describe("Platform Treasury General", function () {
     const validator5BalanceBefore = await contractUDAO.balanceOf(
       validator5.address
     );
-    // expect balances to be equal to zero
-    await expect(validator1BalanceBefore).to.equal(0);
-    await expect(validator2BalanceBefore).to.equal(0);
-    await expect(validator3BalanceBefore).to.equal(0);
-    await expect(validator4BalanceBefore).to.equal(0);
-    await expect(validator5BalanceBefore).to.equal(0);
+    // expect balances to be equal to zero (They not anymore since commit: 617d510)
+    //await expect(validator1BalanceBefore).to.equal(0);
+    //...2-3-4...
+    //await expect(validator5BalanceBefore).to.equal(0);
 
     // Get the ID of the current distribution round
     const currentDistributionRound =
@@ -3170,11 +3194,21 @@ describe("Platform Treasury General", function () {
       .div(100000);
 
     /// @dev Check if the validator balances are equal to the expected validator balances
-    await expect(validator1BalanceAfter).to.equal(expectedValidator1Cut);
-    await expect(validator2BalanceAfter).to.equal(expectedValidator2Cut);
-    await expect(validator3BalanceAfter).to.equal(expectedValidator3Cut);
-    await expect(validator4BalanceAfter).to.equal(expectedValidator4Cut);
-    await expect(validator5BalanceAfter).to.equal(expectedValidator5Cut);
+    await expect(validator1BalanceAfter.sub(validator1BalanceBefore)).to.equal(
+      expectedValidator1Cut
+    );
+    await expect(validator2BalanceAfter.sub(validator2BalanceBefore)).to.equal(
+      expectedValidator2Cut
+    );
+    await expect(validator3BalanceAfter.sub(validator3BalanceBefore)).to.equal(
+      expectedValidator3Cut
+    );
+    await expect(validator4BalanceAfter.sub(validator4BalanceBefore)).to.equal(
+      expectedValidator4Cut
+    );
+    await expect(validator5BalanceAfter.sub(validator5BalanceBefore)).to.equal(
+      expectedValidator5Cut
+    );
   });
 
   it("Should allow governance to withdraw funds from the treasury after a content purchase while governance member banned", async function () {
@@ -3253,7 +3287,7 @@ describe("Platform Treasury General", function () {
       contractRoleManager,
       contractUDAO,
       contractUDAOStaker,
-      validator1
+      jurorCandidate
     );
 
     /// @dev Check account UDAO-vp balance and delegate to themselves
@@ -3262,11 +3296,11 @@ describe("Platform Treasury General", function () {
       governanceCandidate
     );
     await checkAccountUDAOVpBalanceAndDelegate(contractUDAOVp, superValidator);
-    await checkAccountUDAOVpBalanceAndDelegate(contractUDAOVp, validator1);
     await checkAccountUDAOVpBalanceAndDelegate(
       contractUDAOVp,
       validatorCandidate
     );
+    await checkAccountUDAOVpBalanceAndDelegate(contractUDAOVp, jurorCandidate);
     // Create content
     await createContent(
       contractRoleManager,
@@ -3375,7 +3409,7 @@ describe("Platform Treasury General", function () {
     await contractUDAOGovernor
       .connect(superValidatorCandidate)
       .castVote(proposalId, 1);
-    await contractUDAOGovernor.connect(validator1).castVote(proposalId, 1);
+    await contractUDAOGovernor.connect(jurorCandidate).castVote(proposalId, 1);
     await contractUDAOGovernor
       .connect(validatorCandidate)
       .castVote(proposalId, 1);
@@ -3533,7 +3567,7 @@ describe("Platform Treasury General", function () {
       contractRoleManager,
       contractUDAO,
       contractUDAOStaker,
-      validator1
+      jurorCandidate
     );
 
     /// @dev Check account UDAO-vp balance and delegate to themselves
@@ -3542,11 +3576,12 @@ describe("Platform Treasury General", function () {
       governanceCandidate
     );
     await checkAccountUDAOVpBalanceAndDelegate(contractUDAOVp, superValidator);
-    await checkAccountUDAOVpBalanceAndDelegate(contractUDAOVp, validator1);
     await checkAccountUDAOVpBalanceAndDelegate(
       contractUDAOVp,
       validatorCandidate
     );
+    await checkAccountUDAOVpBalanceAndDelegate(contractUDAOVp, jurorCandidate);
+
     // Create content
     await createContent(
       contractRoleManager,
@@ -3667,7 +3702,7 @@ describe("Platform Treasury General", function () {
     await contractUDAOGovernor
       .connect(superValidatorCandidate)
       .castVote(proposalId, 1);
-    await contractUDAOGovernor.connect(validator1).castVote(proposalId, 1);
+    await contractUDAOGovernor.connect(jurorCandidate).castVote(proposalId, 1);
     await contractUDAOGovernor
       .connect(validatorCandidate)
       .castVote(proposalId, 1);
