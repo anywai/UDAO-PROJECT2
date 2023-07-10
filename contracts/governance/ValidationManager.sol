@@ -86,9 +86,7 @@ contract ValidationManager is RoleController {
 
     /// @notice creates a validation for a token
     /// @param stakerAddress address of staking contract
-    function setStaker(
-        address stakerAddress
-    ) external onlyRole(BACKEND_ROLE) {
+    function setStaker(address stakerAddress) external onlyRole(BACKEND_ROLE) {
         staker = IStakingContract(stakerAddress);
     }
 
@@ -207,16 +205,19 @@ contract ValidationManager is RoleController {
     /// TODO 1 token aynı anda sadece 1 validasyonda olabilir
     /// TODO kontent sahibine eğer validasyon başlamadıysa önceki validasyonu iptal etme hakkı verilebilir
     /// TODO voucher eklendikten sonra score silinmeli buradan
-    function createValidation(
-        uint256 tokenId,
-        uint256 score
-    ) external {
-        require(udaoc.ownerOf(tokenId) != address(0), "Token owner is zero address");
-        require(udaoc.ownerOf(tokenId) == msg.sender, "Only token owner can create validation");
+    function createValidation(uint256 tokenId, uint256 score) external {
+        require(
+            udaoc.ownerOf(tokenId) != address(0),
+            "Token owner is zero address"
+        );
+        require(
+            udaoc.ownerOf(tokenId) == msg.sender,
+            "Only token owner can create validation"
+        );
         //make sure token owner is kyced and not banned
         require(IRM.isKYCed(msg.sender), "Token owner is not KYCed");
         require(!IRM.isBanned(msg.sender), "Token owner is banned");
-        
+
         Validation storage validation = validations.push();
         validation.id = validations.length - 1;
         validation.tokenId = tokenId;
@@ -256,7 +257,7 @@ contract ValidationManager is RoleController {
     function endDispute(
         uint validationId,
         bool result // result true means validators lost the case
-    ) external onlyRole(JUROR_CONTRACT) {
+    ) external onlyRole(SUPERVISION_CONTRACT) {
         Validation storage validation = validations[validationId];
         address[] memory disputedAddresses = validation.validators;
         uint disputeLength = disputedAddresses.length;
