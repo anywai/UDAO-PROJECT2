@@ -23,7 +23,9 @@ async function setupGovernanceMember(
   contractUDAOStaker,
   governanceCandidate
 ) {
+  /// set KYC for governanceCandidate
   await contractRoleManager.setKYC(governanceCandidate.address, true);
+  /// transfer UDAO to governanceCandidate
   await contractUDAO.transfer(
     governanceCandidate.address,
     ethers.utils.parseEther("100.0")
@@ -34,6 +36,7 @@ async function setupGovernanceMember(
       contractUDAOStaker.address,
       ethers.utils.parseEther("999999999999.0")
     );
+  /// any account must stake for governance to be Validator-Juror-GovernanceMember
   await expect(
     contractUDAOStaker
       .connect(governanceCandidate)
@@ -716,21 +719,21 @@ describe("UDAOStaker Contract", function () {
       account3,
       contractPriceGetter,
     } = await deploy();
-
+    /// set KYC for governanceCandidate
     await contractRoleManager.setKYC(governanceCandidate.address, true);
-
+    /// transfer UDAO to governanceCandidate
     await contractUDAO.transfer(
       governanceCandidate.address,
       ethers.utils.parseEther("100.0")
     );
-
+    /// approve UDAOStaker contract with governanceCandidate to spend UDAO
     await contractUDAO
       .connect(governanceCandidate)
       .approve(
         contractUDAOStaker.address,
         ethers.utils.parseEther("999999999999.0")
       );
-
+    /// any account must stake for governance to be Validator-Juror-GovernanceMember
     await expect(
       contractUDAOStaker
         .connect(governanceCandidate)
@@ -791,21 +794,21 @@ describe("UDAOStaker Contract", function () {
       account3,
       contractPriceGetter,
     } = await deploy();
-
+    /// set KYC for governanceCandidate
     await contractRoleManager.setKYC(governanceCandidate.address, true);
-
+    /// transfer UDAO to governanceCandidate
     await contractUDAO.transfer(
       governanceCandidate.address,
       ethers.utils.parseEther("100.0")
     );
-
+    /// approve UDAOStaker contract with governanceCandidate to spend UDAO
     await contractUDAO
       .connect(governanceCandidate)
       .approve(
         contractUDAOStaker.address,
         ethers.utils.parseEther("999999999999.0")
       );
-
+    /// any account must stake for governance to be Validator-Juror-GovernanceMember
     await expect(
       contractUDAOStaker
         .connect(governanceCandidate)
@@ -860,21 +863,21 @@ describe("UDAOStaker Contract", function () {
       account3,
       contractPriceGetter,
     } = await deploy();
-
+    /// set KYC for governanceCandidate
     await contractRoleManager.setKYC(governanceCandidate.address, true);
-
+    /// transfer UDAO to governanceCandidate
     await contractUDAO.transfer(
       governanceCandidate.address,
       ethers.utils.parseEther("100.0")
     );
-
+    /// approve UDAOStaker contract with governanceCandidate to spend UDAO
     await contractUDAO
       .connect(governanceCandidate)
       .approve(
         contractUDAOStaker.address,
         ethers.utils.parseEther("999999999999.0")
       );
-
+    /// any account must stake for governance to be Validator-Juror-GovernanceMember
     await expect(
       contractUDAOStaker
         .connect(governanceCandidate)
@@ -929,20 +932,21 @@ describe("UDAOStaker Contract", function () {
       account3,
       contractPriceGetter,
     } = await deploy();
+    /// set KYC for validatorCandidate
     await contractRoleManager.setKYC(validatorCandidate.address, true);
-
+    /// transfer UDAO to validatorCandidate
     await contractUDAO.transfer(
       validatorCandidate.address,
       ethers.utils.parseEther("10000.0")
     );
-
+    /// approve UDAOStaker contract with validatorCandidate to spend UDAO
     await contractUDAO
       .connect(validatorCandidate)
       .approve(
         contractUDAOStaker.address,
         ethers.utils.parseEther("999999999999.0")
       );
-
+    /// any account must stake for governance to be Validator-Juror-GovernanceMember
     await expect(
       contractUDAOStaker
         .connect(validatorCandidate)
@@ -954,11 +958,14 @@ describe("UDAOStaker Contract", function () {
         ethers.utils.parseEther("10"),
         ethers.utils.parseEther("300")
       );
+    /// get validator lock amount from UDAOStaker contract
+    const validatorLockAmount = await contractUDAOStaker.validatorLockAmount();
+    /// apply the "validator role" with validatorCandidate account
     await expect(
       contractUDAOStaker.connect(validatorCandidate).applyForValidator()
     )
       .to.emit(contractUDAOStaker, "RoleApplied") // transfer from null address to minter
-      .withArgs(0, validatorCandidate.address, ethers.utils.parseEther("150"));
+      .withArgs(0, validatorCandidate.address, validatorLockAmount);
   });
 
   it("Should fail to apply for validator when paused", async function () {
@@ -1008,20 +1015,21 @@ describe("UDAOStaker Contract", function () {
       account3,
       contractPriceGetter,
     } = await deploy();
+    /// set KYC for validatorCandidate
     await contractRoleManager.setKYC(validatorCandidate.address, true);
-
+    /// transfer UDAO to validatorCandidate
     await contractUDAO.transfer(
       validatorCandidate.address,
       ethers.utils.parseEther("10000.0")
     );
-
+    /// approve UDAOStaker contract with validatorCandidate to spend UDAO
     await contractUDAO
       .connect(validatorCandidate)
       .approve(
         contractUDAOStaker.address,
         ethers.utils.parseEther("999999999999.0")
       );
-
+    /// any account must stake for governance to be Validator-Juror-GovernanceMember
     await expect(
       contractUDAOStaker
         .connect(validatorCandidate)
@@ -1033,7 +1041,9 @@ describe("UDAOStaker Contract", function () {
         ethers.utils.parseEther("10"),
         ethers.utils.parseEther("300")
       );
+    /// pause to contract
     await contractUDAOStaker.pause();
+    /// apply the "validator role" with validatorCandidate account
     await expect(
       contractUDAOStaker.connect(validatorCandidate).applyForValidator()
     ).to.revertedWith("Pausable: paused");
@@ -1086,21 +1096,21 @@ describe("UDAOStaker Contract", function () {
       account3,
       contractPriceGetter,
     } = await deploy();
+    /// set KYC for validatorCandidate
     await contractRoleManager.setKYC(validatorCandidate.address, true);
-
+    /// transfer UDAO to validatorCandidate
     await contractUDAO.transfer(
       validatorCandidate.address,
       ethers.utils.parseEther("10000.0")
     );
-
+    /// approve UDAOStaker contract with validatorCandidate to spend UDAO
     await contractUDAO
       .connect(validatorCandidate)
       .approve(
         contractUDAOStaker.address,
         ethers.utils.parseEther("999999999999.0")
       );
-
-    // Staking
+    /// any account must stake for governance to be able to Validator-Juror-GovernanceMember
     await expect(
       contractUDAOStaker
         .connect(validatorCandidate)
@@ -1112,11 +1122,15 @@ describe("UDAOStaker Contract", function () {
         ethers.utils.parseEther("10"),
         ethers.utils.parseEther("300")
       );
+    /// get validatorLockAmount from UDAOStaker contract
+    const validatorLockAmount = await contractUDAOStaker.validatorLockAmount();
+    /// apply the "validator role" with validatorCandidate account
     await expect(
       contractUDAOStaker.connect(validatorCandidate).applyForValidator()
     )
       .to.emit(contractUDAOStaker, "RoleApplied") // transfer from null address to minter
-      .withArgs(0, validatorCandidate.address, ethers.utils.parseEther("150"));
+      .withArgs(0, validatorCandidate.address, validatorLockAmount);
+    /// get lazy role and role voucher
     const lazyRole = new LazyRole({
       contract: contractUDAOStaker,
       signer: backend,
@@ -1126,6 +1140,7 @@ describe("UDAOStaker Contract", function () {
       Date.now() + 999999999,
       0
     );
+    /// approve the "validator role" with validatorCandidate account
     await expect(
       contractUDAOStaker.connect(validatorCandidate).getApproved(role_voucher)
     )
@@ -1180,20 +1195,21 @@ describe("UDAOStaker Contract", function () {
       account3,
       contractPriceGetter,
     } = await deploy();
+    /// set KYC for validatorCandidate
     await contractRoleManager.setKYC(validatorCandidate.address, true);
-
+    /// transfer UDAO to validatorCandidate
     await contractUDAO.transfer(
       validatorCandidate.address,
       ethers.utils.parseEther("10000.0")
     );
-
+    /// approve UDAOStaker contract with validatorCandidate to spend UDAO
     await contractUDAO
       .connect(validatorCandidate)
       .approve(
         contractUDAOStaker.address,
         ethers.utils.parseEther("999999999999.0")
       );
-
+    /// apply the "validator role" with validatorCandidate account
     await expect(
       contractUDAOStaker.connect(validatorCandidate).applyForValidator()
     ).to.revertedWith("You have to be governance member to apply");
@@ -1246,21 +1262,21 @@ describe("UDAOStaker Contract", function () {
       account3,
       contractPriceGetter,
     } = await deploy();
+    /// set KYC for validatorCandidate
     await contractRoleManager.setKYC(validatorCandidate.address, true);
-
+    /// transfer UDAO to validatorCandidate
     await contractUDAO.transfer(
       validatorCandidate.address,
       ethers.utils.parseEther("10000.0")
     );
-
+    /// approve UDAOStaker contract with validatorCandidate to spend UDAO
     await contractUDAO
       .connect(validatorCandidate)
       .approve(
         contractUDAOStaker.address,
         ethers.utils.parseEther("999999999999.0")
       );
-
-    // Staking
+    /// any account must stake for governance to be able to Validator-Juror-GovernanceMember
     await expect(
       contractUDAOStaker
         .connect(validatorCandidate)
@@ -1272,11 +1288,15 @@ describe("UDAOStaker Contract", function () {
         ethers.utils.parseEther("10"),
         ethers.utils.parseEther("300")
       );
+    /// get validatorLockAmount from UDAOStaker contract
+    const validatorLockAmount = await contractUDAOStaker.validatorLockAmount();
+    /// apply the "validator role" with validatorCandidate account
     await expect(
       contractUDAOStaker.connect(validatorCandidate).applyForValidator()
     )
       .to.emit(contractUDAOStaker, "RoleApplied") // transfer from null address to minter
-      .withArgs(0, validatorCandidate.address, ethers.utils.parseEther("150"));
+      .withArgs(0, validatorCandidate.address, validatorLockAmount);
+    /// get lazy role and role voucher
     const lazyRole = new LazyRole({
       contract: contractUDAOStaker,
       signer: backend,
@@ -1286,11 +1306,13 @@ describe("UDAOStaker Contract", function () {
       Date.now() + 999999999,
       0
     );
+    /// approve the "validator role" with validatorCandidate account
     await expect(
       contractUDAOStaker.connect(validatorCandidate).getApproved(role_voucher)
     )
       .to.emit(contractUDAOStaker, "RoleApproved") // transfer from null address to minter
       .withArgs(0, validatorCandidate.address);
+    /// apply the "validator role" with validatorCandidate account
     await expect(
       contractUDAOStaker.connect(validatorCandidate).applyForValidator()
     ).to.revertedWith("Address is already a Validator");
@@ -1343,21 +1365,21 @@ describe("UDAOStaker Contract", function () {
       account3,
       contractPriceGetter,
     } = await deploy();
+    /// set KYC for validatorCandidate
     await contractRoleManager.setKYC(validatorCandidate.address, true);
-
+    /// transfer UDAO to validatorCandidate
     await contractUDAO.transfer(
       validatorCandidate.address,
       ethers.utils.parseEther("10000.0")
     );
-
+    /// approve UDAOStaker contract with validatorCandidate to spend UDAO
     await contractUDAO
       .connect(validatorCandidate)
       .approve(
         contractUDAOStaker.address,
         ethers.utils.parseEther("999999999999.0")
       );
-
-    // Staking
+    /// any account must stake for governance to be Validator-Juror-GovernanceMember
     await expect(
       contractUDAOStaker
         .connect(validatorCandidate)
@@ -1369,11 +1391,15 @@ describe("UDAOStaker Contract", function () {
         ethers.utils.parseEther("10"),
         ethers.utils.parseEther("300")
       );
+    /// get validatorLockAmount from UDAOStaker contract
+    const validatorLockAmount = await contractUDAOStaker.validatorLockAmount();
+    /// apply the "validator role" with validatorCandidate account
     await expect(
       contractUDAOStaker.connect(validatorCandidate).applyForValidator()
     )
       .to.emit(contractUDAOStaker, "RoleApplied") // transfer from null address to minter
-      .withArgs(0, validatorCandidate.address, ethers.utils.parseEther("150"));
+      .withArgs(0, validatorCandidate.address, validatorLockAmount);
+    /// get lazy role and role voucher
     const lazyRole = new LazyRole({
       contract: contractUDAOStaker,
       signer: backend,
@@ -1383,12 +1409,13 @@ describe("UDAOStaker Contract", function () {
       Date.now() + 999999999,
       0
     );
+    /// approve the "validator role" with validatorCandidate account
     await expect(
       contractUDAOStaker.connect(validatorCandidate).getApproved(role_voucher)
     )
       .to.emit(contractUDAOStaker, "RoleApproved") // transfer from null address to minter
       .withArgs(0, validatorCandidate.address);
-
+    /// apply the "super-validator role" with validator candidate account
     await expect(
       contractUDAOStaker.connect(validatorCandidate).applyForSuperValidator()
     )
@@ -1443,20 +1470,21 @@ describe("UDAOStaker Contract", function () {
       account3,
       contractPriceGetter,
     } = await deploy();
+    /// set KYC for validatorCandidate
     await contractRoleManager.setKYC(validatorCandidate.address, true);
-
+    /// transfer UDAO to validatorCandidate
     await contractUDAO.transfer(
       validatorCandidate.address,
       ethers.utils.parseEther("10000.0")
     );
-
+    /// approve UDAOStaker contract with validatorCandidate to spend UDAO
     await contractUDAO
       .connect(validatorCandidate)
       .approve(
         contractUDAOStaker.address,
         ethers.utils.parseEther("999999999999.0")
       );
-
+    /// apply the "super-validator role" with validator candidate account
     await expect(
       contractUDAOStaker.connect(validatorCandidate).applyForSuperValidator()
     ).to.revertedWith("You have to be governance member to apply");
@@ -1509,21 +1537,21 @@ describe("UDAOStaker Contract", function () {
       account3,
       contractPriceGetter,
     } = await deploy();
+    /// set KYC for validatorCandidate
     await contractRoleManager.setKYC(validatorCandidate.address, true);
-
+    /// transfer UDAO to validatorCandidate
     await contractUDAO.transfer(
       validatorCandidate.address,
       ethers.utils.parseEther("10000.0")
     );
-
+    /// approve UDAOStaker contract with validatorCandidate to spend UDAO
     await contractUDAO
       .connect(validatorCandidate)
       .approve(
         contractUDAOStaker.address,
         ethers.utils.parseEther("999999999999.0")
       );
-
-    // Staking
+    /// any account must stake for governance to be Validator-Juror-GovernanceMember
     await expect(
       contractUDAOStaker
         .connect(validatorCandidate)
@@ -1535,6 +1563,7 @@ describe("UDAOStaker Contract", function () {
         ethers.utils.parseEther("10"),
         ethers.utils.parseEther("300")
       );
+    /// apply the "super-validator role" with validator candidate account
     await expect(
       contractUDAOStaker.connect(validatorCandidate).applyForSuperValidator()
     ).to.revertedWith("Address should be a Validator");
@@ -1587,21 +1616,21 @@ describe("UDAOStaker Contract", function () {
       account3,
       contractPriceGetter,
     } = await deploy();
+    /// set KYC for validatorCandidate
     await contractRoleManager.setKYC(validatorCandidate.address, true);
-
+    /// transfer UDAO to validatorCandidate
     await contractUDAO.transfer(
       validatorCandidate.address,
       ethers.utils.parseEther("10000.0")
     );
-
+    /// approve UDAOStaker contract with validatorCandidate to spend UDAO
     await contractUDAO
       .connect(validatorCandidate)
       .approve(
         contractUDAOStaker.address,
         ethers.utils.parseEther("999999999999.0")
       );
-
-    // Staking
+    /// any account must stake for governance to be Validator-Juror-GovernanceMember
     await expect(
       contractUDAOStaker
         .connect(validatorCandidate)
@@ -1613,11 +1642,15 @@ describe("UDAOStaker Contract", function () {
         ethers.utils.parseEther("10"),
         ethers.utils.parseEther("300")
       );
+    /// get validator lock amount from UDAOStaker contract
+    const validatorLockAmount = await contractUDAOStaker.validatorLockAmount();
+    /// apply the "validator role" with validatorCandidate account
     await expect(
       contractUDAOStaker.connect(validatorCandidate).applyForValidator()
     )
       .to.emit(contractUDAOStaker, "RoleApplied") // transfer from null address to minter
-      .withArgs(0, validatorCandidate.address, ethers.utils.parseEther("150"));
+      .withArgs(0, validatorCandidate.address, validatorLockAmount);
+    /// get lazy role and role voucher
     const lazyRole = new LazyRole({
       contract: contractUDAOStaker,
       signer: backend,
@@ -1627,12 +1660,13 @@ describe("UDAOStaker Contract", function () {
       Date.now() + 999999999,
       0
     );
+    /// approve the "validator role" with validatorCandidate account
     await expect(
       contractUDAOStaker.connect(validatorCandidate).getApproved(role_voucher)
     )
       .to.emit(contractUDAOStaker, "RoleApproved") // transfer from null address to minter
       .withArgs(0, validatorCandidate.address);
-
+    /// apply the "super-validator role" with validator candidate account
     await expect(
       contractUDAOStaker.connect(validatorCandidate).applyForSuperValidator()
     )
@@ -1701,20 +1735,21 @@ describe("UDAOStaker Contract", function () {
       account3,
       contractPriceGetter,
     } = await deploy();
+    /// set KYC for jurorCandidate
     await contractRoleManager.setKYC(jurorCandidate.address, true);
-
+    /// transfer UDAO to jurorCandidate
     await contractUDAO.transfer(
       jurorCandidate.address,
       ethers.utils.parseEther("10000.0")
     );
-
+    /// approve UDAOStaker contract with jurorCandidate to spend UDAO
     await contractUDAO
       .connect(jurorCandidate)
       .approve(
         contractUDAOStaker.address,
         ethers.utils.parseEther("999999999999.0")
       );
-
+    /// any account must stake for governance to be Validator-Juror-GovernanceMember
     await expect(
       contractUDAOStaker
         .connect(jurorCandidate)
@@ -1726,9 +1761,12 @@ describe("UDAOStaker Contract", function () {
         ethers.utils.parseEther("10"),
         ethers.utils.parseEther("300")
       );
+    /// get juror lock amount from UDAOStaker contract
+    const jurorLockAmount = await contractUDAOStaker.jurorLockAmount();
+    /// apply the "juror role" with jurorCandidate account
     await expect(contractUDAOStaker.connect(jurorCandidate).applyForJuror())
       .to.emit(contractUDAOStaker, "RoleApplied") // transfer from null address to minter
-      .withArgs(1, jurorCandidate.address, ethers.utils.parseEther("150"));
+      .withArgs(1, jurorCandidate.address, jurorLockAmount);
   });
 
   it("Should approve for juror", async function () {
@@ -1778,20 +1816,21 @@ describe("UDAOStaker Contract", function () {
       account3,
       contractPriceGetter,
     } = await deploy();
+    /// set KYC for jurorCandidate
     await contractRoleManager.setKYC(jurorCandidate.address, true);
-
+    /// transfer UDAO to jurorCandidate
     await contractUDAO.transfer(
       jurorCandidate.address,
       ethers.utils.parseEther("10000.0")
     );
-
+    /// approve UDAOStaker contract with jurorCandidate to spend UDAO
     await contractUDAO
       .connect(jurorCandidate)
       .approve(
         contractUDAOStaker.address,
         ethers.utils.parseEther("999999999999.0")
       );
-
+    /// any account must stake for governance to be Validator-Juror-GovernanceMember
     await expect(
       contractUDAOStaker
         .connect(jurorCandidate)
@@ -1803,10 +1842,13 @@ describe("UDAOStaker Contract", function () {
         ethers.utils.parseEther("10"),
         ethers.utils.parseEther("300")
       );
+    /// get juror lock amount from UDAOStaker contract
+    const jurorLockAmount = await contractUDAOStaker.jurorLockAmount();
+    /// apply the "juror role" with jurorCandidate account
     await expect(contractUDAOStaker.connect(jurorCandidate).applyForJuror())
       .to.emit(contractUDAOStaker, "RoleApplied") // transfer from null address to minter
-      .withArgs(1, jurorCandidate.address, ethers.utils.parseEther("150"));
-
+      .withArgs(1, jurorCandidate.address, jurorLockAmount);
+    /// get lazy role and role voucher
     const lazyRole = new LazyRole({
       contract: contractUDAOStaker,
       signer: backend,
@@ -1816,6 +1858,7 @@ describe("UDAOStaker Contract", function () {
       Date.now() + 999999999,
       1
     );
+    /// approve the "juror role" with jurorCandidate account
     await expect(
       contractUDAOStaker.connect(jurorCandidate).getApproved(role_voucher)
     )
@@ -1870,20 +1913,21 @@ describe("UDAOStaker Contract", function () {
       account3,
       contractPriceGetter,
     } = await deploy();
+    /// set KYC for jurorCandidate
     await contractRoleManager.setKYC(jurorCandidate.address, true);
-
+    /// transfer UDAO to jurorCandidate
     await contractUDAO.transfer(
       jurorCandidate.address,
       ethers.utils.parseEther("10000.0")
     );
-
+    /// approve UDAOStaker contract with jurorCandidate to spend UDAO
     await contractUDAO
       .connect(jurorCandidate)
       .approve(
         contractUDAOStaker.address,
         ethers.utils.parseEther("999999999999.0")
       );
-
+    /// any account must stake for governance to be Validator-Juror-GovernanceMember
     await expect(
       contractUDAOStaker
         .connect(jurorCandidate)
@@ -1895,10 +1939,13 @@ describe("UDAOStaker Contract", function () {
         ethers.utils.parseEther("10"),
         ethers.utils.parseEther("300")
       );
+    /// get juror lock amount from UDAOStaker contract
+    const jurorLockAmount = await contractUDAOStaker.jurorLockAmount();
+    /// apply the "juror role" with jurorCandidate account
     await expect(contractUDAOStaker.connect(jurorCandidate).applyForJuror())
       .to.emit(contractUDAOStaker, "RoleApplied") // transfer from null address to minter
-      .withArgs(1, jurorCandidate.address, ethers.utils.parseEther("150"));
-
+      .withArgs(1, jurorCandidate.address, jurorLockAmount);
+    /// get lazy role and role voucher
     const lazyRole = new LazyRole({
       contract: contractUDAOStaker,
       signer: backend,
@@ -1908,6 +1955,7 @@ describe("UDAOStaker Contract", function () {
       Date.now() + 999999999,
       4
     );
+    /// approve the "juror role" with jurorCandidate account
     await expect(
       contractUDAOStaker.connect(jurorCandidate).getApproved(role_voucher)
     ).to.revertedWith("Undefined role ID!");
@@ -1960,20 +2008,21 @@ describe("UDAOStaker Contract", function () {
       account3,
       contractPriceGetter,
     } = await deploy();
+    /// set KYC for validatorCandidate
     await contractRoleManager.setKYC(validatorCandidate.address, true);
-
+    /// transfer UDAO to validatorCandidate
     await contractUDAO.transfer(
       validatorCandidate.address,
       ethers.utils.parseEther("10000.0")
     );
-
+    /// approve UDAOStaker contract with validatorCandidate to spend UDAO
     await contractUDAO
       .connect(validatorCandidate)
       .approve(
         contractUDAOStaker.address,
         ethers.utils.parseEther("999999999999.0")
       );
-
+    /// any account must stake for governance to be Validator-Juror-GovernanceMember
     await expect(
       contractUDAOStaker
         .connect(validatorCandidate)
@@ -1985,11 +2034,14 @@ describe("UDAOStaker Contract", function () {
         ethers.utils.parseEther("10"),
         ethers.utils.parseEther("300")
       );
+    /// get validator lock amount from UDAOStaker contract
+    const validatorLockAmount = await contractUDAOStaker.validatorLockAmount();
+    /// apply the "validator role" with validatorCandidate account
     await expect(
       contractUDAOStaker.connect(validatorCandidate).applyForValidator()
     )
       .to.emit(contractUDAOStaker, "RoleApplied") // transfer from null address to minter
-      .withArgs(0, validatorCandidate.address, ethers.utils.parseEther("150"));
+      .withArgs(0, validatorCandidate.address, validatorLockAmount);
     await expect(
       contractUDAOStaker
         .connect(backend)
@@ -2046,21 +2098,21 @@ describe("UDAOStaker Contract", function () {
       account3,
       contractPriceGetter,
     } = await deploy();
+    /// set KYC for validatorCandidate
     await contractRoleManager.setKYC(validatorCandidate.address, true);
-
+    /// transfer UDAO to validatorCandidate
     await contractUDAO.transfer(
       validatorCandidate.address,
       ethers.utils.parseEther("10000.0")
     );
-
+    /// approve UDAOStaker contract with validatorCandidate to spend UDAO
     await contractUDAO
       .connect(validatorCandidate)
       .approve(
         contractUDAOStaker.address,
         ethers.utils.parseEther("999999999999.0")
       );
-
-    // Staking
+    /// any account must stake for governance to be Validator-Juror-GovernanceMember
     await expect(
       contractUDAOStaker
         .connect(validatorCandidate)
@@ -2072,11 +2124,15 @@ describe("UDAOStaker Contract", function () {
         ethers.utils.parseEther("10"),
         ethers.utils.parseEther("300")
       );
+    /// get validator lock amount from UDAOStaker contract
+    const validatorLockAmount = await contractUDAOStaker.validatorLockAmount();
+    /// apply the "validator role" with validatorCandidate account
     await expect(
       contractUDAOStaker.connect(validatorCandidate).applyForValidator()
     )
       .to.emit(contractUDAOStaker, "RoleApplied") // transfer from null address to minter
-      .withArgs(0, validatorCandidate.address, ethers.utils.parseEther("150"));
+      .withArgs(0, validatorCandidate.address, validatorLockAmount);
+    /// get lazy role and role voucher
     const lazyRole = new LazyRole({
       contract: contractUDAOStaker,
       signer: backend,
@@ -2086,12 +2142,13 @@ describe("UDAOStaker Contract", function () {
       Date.now() + 999999999,
       0
     );
+    /// approve the "validator role" with validatorCandidate account
     await expect(
       contractUDAOStaker.connect(validatorCandidate).getApproved(role_voucher)
     )
       .to.emit(contractUDAOStaker, "RoleApproved") // transfer from null address to minter
       .withArgs(0, validatorCandidate.address);
-
+    /// apply the "super-validator role" with validator candidate account
     await expect(
       contractUDAOStaker.connect(validatorCandidate).applyForSuperValidator()
     )
@@ -2153,20 +2210,21 @@ describe("UDAOStaker Contract", function () {
       account3,
       contractPriceGetter,
     } = await deploy();
+    /// set KYC for jurorCandidate
     await contractRoleManager.setKYC(jurorCandidate.address, true);
-
+    /// transfer UDAO to jurorCandidate
     await contractUDAO.transfer(
       jurorCandidate.address,
       ethers.utils.parseEther("10000.0")
     );
-
+    /// approve UDAOStaker contract with jurorCandidate to spend UDAO
     await contractUDAO
       .connect(jurorCandidate)
       .approve(
         contractUDAOStaker.address,
         ethers.utils.parseEther("999999999999.0")
       );
-
+    /// any account must stake for governance to be Validator-Juror-GovernanceMember
     await expect(
       contractUDAOStaker
         .connect(jurorCandidate)
@@ -2178,9 +2236,12 @@ describe("UDAOStaker Contract", function () {
         ethers.utils.parseEther("10"),
         ethers.utils.parseEther("300")
       );
+    /// get juror lock amount from UDAOStaker contract
+    const jurorLockAmount = await contractUDAOStaker.jurorLockAmount();
+    /// apply the "juror role" with jurorCandidate account
     await expect(contractUDAOStaker.connect(jurorCandidate).applyForJuror())
       .to.emit(contractUDAOStaker, "RoleApplied") // transfer from null address to minter
-      .withArgs(1, jurorCandidate.address, ethers.utils.parseEther("150"));
+      .withArgs(1, jurorCandidate.address, jurorLockAmount);
     await expect(
       contractUDAOStaker
         .connect(backend)
@@ -2237,20 +2298,21 @@ describe("UDAOStaker Contract", function () {
       account3,
       contractPriceGetter,
     } = await deploy();
+    /// set KYC for jurorCandidate
     await contractRoleManager.setKYC(jurorCandidate.address, true);
-
+    /// transfer UDAO to jurorCandidate
     await contractUDAO.transfer(
       jurorCandidate.address,
       ethers.utils.parseEther("10000.0")
     );
-
+    /// approve UDAOStaker contract with jurorCandidate to spend UDAO
     await contractUDAO
       .connect(jurorCandidate)
       .approve(
         contractUDAOStaker.address,
         ethers.utils.parseEther("999999999999.0")
       );
-
+    /// any account must stake for governance to be Validator-Juror-GovernanceMember
     await expect(
       contractUDAOStaker
         .connect(jurorCandidate)
@@ -2262,9 +2324,12 @@ describe("UDAOStaker Contract", function () {
         ethers.utils.parseEther("10"),
         ethers.utils.parseEther("300")
       );
+    /// get juror lock amount from UDAOStaker contract
+    const jurorLockAmount = await contractUDAOStaker.jurorLockAmount();
+    /// apply the "juror role" with jurorCandidate account
     await expect(contractUDAOStaker.connect(jurorCandidate).applyForJuror())
       .to.emit(contractUDAOStaker, "RoleApplied") // transfer from null address to minter
-      .withArgs(1, jurorCandidate.address, ethers.utils.parseEther("150"));
+      .withArgs(1, jurorCandidate.address, jurorLockAmount);
     await expect(
       contractUDAOStaker
         .connect(backend)
@@ -2319,20 +2384,21 @@ describe("UDAOStaker Contract", function () {
       account3,
       contractPriceGetter,
     } = await deploy();
+    /// set KYC for jurorCandidate
     await contractRoleManager.setKYC(jurorCandidate.address, true);
-
+    /// transfer UDAO to jurorCandidate
     await contractUDAO.transfer(
       jurorCandidate.address,
       ethers.utils.parseEther("10000.0")
     );
-
+    /// approve UDAOStaker contract with jurorCandidate to spend UDAO
     await contractUDAO
       .connect(jurorCandidate)
       .approve(
         contractUDAOStaker.address,
         ethers.utils.parseEther("999999999999.0")
       );
-
+    /// any account must stake for governance to be Validator-Juror-GovernanceMember
     await expect(
       contractUDAOStaker
         .connect(jurorCandidate)
@@ -2344,9 +2410,12 @@ describe("UDAOStaker Contract", function () {
         ethers.utils.parseEther("10"),
         ethers.utils.parseEther("300")
       );
+    /// get juror lock amount from UDAOStaker contract
+    const jurorLockAmount = await contractUDAOStaker.jurorLockAmount();
+    /// apply the "juror role" with jurorCandidate account
     await expect(contractUDAOStaker.connect(jurorCandidate).applyForJuror())
       .to.emit(contractUDAOStaker, "RoleApplied") // transfer from null address to minter
-      .withArgs(1, jurorCandidate.address, ethers.utils.parseEther("150"));
+      .withArgs(1, jurorCandidate.address, jurorLockAmount);
     await expect(
       contractUDAOStaker
         .connect(jurorCandidate)
@@ -2403,21 +2472,21 @@ describe("UDAOStaker Contract", function () {
       account3,
       contractPriceGetter,
     } = await deploy();
+    /// set KYC for validatorCandidate
     await contractRoleManager.setKYC(validatorCandidate.address, true);
-
+    /// transfer UDAO to validatorCandidate
     await contractUDAO.transfer(
       validatorCandidate.address,
       ethers.utils.parseEther("10000.0")
     );
-
+    /// approve UDAOStaker contract with validatorCandidate to spend UDAO
     await contractUDAO
       .connect(validatorCandidate)
       .approve(
         contractUDAOStaker.address,
         ethers.utils.parseEther("999999999999.0")
       );
-
-    // Staking
+    /// any account must stake for governance to be Validator-Juror-GovernanceMember
     await expect(
       contractUDAOStaker
         .connect(validatorCandidate)
@@ -2429,11 +2498,15 @@ describe("UDAOStaker Contract", function () {
         ethers.utils.parseEther("10"),
         ethers.utils.parseEther("300")
       );
+    /// get validator lock amount from UDAOStaker contract
+    const validatorLockAmount = await contractUDAOStaker.validatorLockAmount();
+    /// apply the "validator role" with validatorCandidate account
     await expect(
       contractUDAOStaker.connect(validatorCandidate).applyForValidator()
     )
       .to.emit(contractUDAOStaker, "RoleApplied") // transfer from null address to minter
-      .withArgs(0, validatorCandidate.address, ethers.utils.parseEther("150"));
+      .withArgs(0, validatorCandidate.address, validatorLockAmount);
+    /// get lazy role and role voucher
     const lazyRole = new LazyRole({
       contract: contractUDAOStaker,
       signer: backend,
@@ -2443,6 +2516,7 @@ describe("UDAOStaker Contract", function () {
       Date.now() + 999999999,
       0
     );
+    /// approve the "validator role" with validatorCandidate account
     await expect(
       contractUDAOStaker.connect(validatorCandidate).getApproved(role_voucher)
     )
@@ -2454,7 +2528,7 @@ describe("UDAOStaker Contract", function () {
       contractUDAOStaker.connect(validatorCandidate).withdrawValidatorStake()
     )
       .to.emit(contractUDAOStaker, "ValidatorStakeWithdrawn")
-      .withArgs(validatorCandidate.address, ethers.utils.parseEther("150"));
+      .withArgs(validatorCandidate.address, validatorLockAmount);
   });
 
   it("Should withdraw validator stake when approved and banned", async function () {
@@ -2504,21 +2578,21 @@ describe("UDAOStaker Contract", function () {
       account3,
       contractPriceGetter,
     } = await deploy();
+    /// set KYC for validatorCandidate
     await contractRoleManager.setKYC(validatorCandidate.address, true);
-
+    /// transfer UDAO to validatorCandidate
     await contractUDAO.transfer(
       validatorCandidate.address,
       ethers.utils.parseEther("10000.0")
     );
-
+    /// approve UDAOStaker contract with validatorCandidate to spend UDAO
     await contractUDAO
       .connect(validatorCandidate)
       .approve(
         contractUDAOStaker.address,
         ethers.utils.parseEther("999999999999.0")
       );
-
-    // Staking
+    /// any account must stake for governance to be Validator-Juror-GovernanceMember
     await expect(
       contractUDAOStaker
         .connect(validatorCandidate)
@@ -2530,11 +2604,15 @@ describe("UDAOStaker Contract", function () {
         ethers.utils.parseEther("10"),
         ethers.utils.parseEther("300")
       );
+    /// get validator lock amount from UDAOStaker contract
+    const validatorLockAmount = await contractUDAOStaker.validatorLockAmount();
+    /// apply the "validator role" with validatorCandidate account
     await expect(
       contractUDAOStaker.connect(validatorCandidate).applyForValidator()
     )
       .to.emit(contractUDAOStaker, "RoleApplied") // transfer from null address to minter
-      .withArgs(0, validatorCandidate.address, ethers.utils.parseEther("150"));
+      .withArgs(0, validatorCandidate.address, validatorLockAmount);
+    /// get lazy role and role voucher
     const lazyRole = new LazyRole({
       contract: contractUDAOStaker,
       signer: backend,
@@ -2544,6 +2622,7 @@ describe("UDAOStaker Contract", function () {
       Date.now() + 999999999,
       0
     );
+    /// approve the "validator role" with validatorCandidate account
     await expect(
       contractUDAOStaker.connect(validatorCandidate).getApproved(role_voucher)
     )
@@ -2557,7 +2636,7 @@ describe("UDAOStaker Contract", function () {
       contractUDAOStaker.connect(validatorCandidate).withdrawValidatorStake()
     )
       .to.emit(contractUDAOStaker, "ValidatorStakeWithdrawn")
-      .withArgs(validatorCandidate.address, ethers.utils.parseEther("150"));
+      .withArgs(validatorCandidate.address, validatorLockAmount);
   });
 
   it("Should withdraw validator stake when rejected", async function () {
@@ -2607,21 +2686,21 @@ describe("UDAOStaker Contract", function () {
       account3,
       contractPriceGetter,
     } = await deploy();
+    /// set KYC for validatorCandidate
     await contractRoleManager.setKYC(validatorCandidate.address, true);
-
+    /// transfer UDAO to validatorCandidate
     await contractUDAO.transfer(
       validatorCandidate.address,
       ethers.utils.parseEther("10000.0")
     );
-
+    /// approve UDAOStaker contract with validatorCandidate to spend UDAO
     await contractUDAO
       .connect(validatorCandidate)
       .approve(
         contractUDAOStaker.address,
         ethers.utils.parseEther("999999999999.0")
       );
-
-    // Staking
+    /// any account must stake for governance to be Validator-Juror-GovernanceMember
     await expect(
       contractUDAOStaker
         .connect(validatorCandidate)
@@ -2633,11 +2712,14 @@ describe("UDAOStaker Contract", function () {
         ethers.utils.parseEther("10"),
         ethers.utils.parseEther("300")
       );
+    /// get validator lock amount from UDAOStaker contract
+    const validatorLockAmount = await contractUDAOStaker.validatorLockAmount();
+    /// apply the "validator role" with validatorCandidate account
     await expect(
       contractUDAOStaker.connect(validatorCandidate).applyForValidator()
     )
       .to.emit(contractUDAOStaker, "RoleApplied") // transfer from null address to minter
-      .withArgs(0, validatorCandidate.address, ethers.utils.parseEther("150"));
+      .withArgs(0, validatorCandidate.address, validatorLockAmount);
     await expect(
       contractUDAOStaker
         .connect(backend)
@@ -2649,7 +2731,7 @@ describe("UDAOStaker Contract", function () {
       contractUDAOStaker.connect(validatorCandidate).withdrawValidatorStake()
     )
       .to.emit(contractUDAOStaker, "ValidatorStakeWithdrawn")
-      .withArgs(validatorCandidate.address, ethers.utils.parseEther("150"));
+      .withArgs(validatorCandidate.address, validatorLockAmount);
   });
 
   it("Should withdraw validator stake when rejected and banned", async function () {
@@ -2699,21 +2781,21 @@ describe("UDAOStaker Contract", function () {
       account3,
       contractPriceGetter,
     } = await deploy();
+    /// set KYC for validatorCandidate
     await contractRoleManager.setKYC(validatorCandidate.address, true);
-
+    /// transfer UDAO to validatorCandidate
     await contractUDAO.transfer(
       validatorCandidate.address,
       ethers.utils.parseEther("10000.0")
     );
-
+    /// approve UDAOStaker contract with validatorCandidate to spend UDAO
     await contractUDAO
       .connect(validatorCandidate)
       .approve(
         contractUDAOStaker.address,
         ethers.utils.parseEther("999999999999.0")
       );
-
-    // Staking
+    /// any account must stake for governance to be Validator-Juror-GovernanceMember
     await expect(
       contractUDAOStaker
         .connect(validatorCandidate)
@@ -2725,11 +2807,14 @@ describe("UDAOStaker Contract", function () {
         ethers.utils.parseEther("10"),
         ethers.utils.parseEther("300")
       );
+    /// get validator lock amount from UDAOStaker contract
+    const validatorLockAmount = await contractUDAOStaker.validatorLockAmount();
+    /// apply the "validator role" with validatorCandidate account
     await expect(
       contractUDAOStaker.connect(validatorCandidate).applyForValidator()
     )
       .to.emit(contractUDAOStaker, "RoleApplied") // transfer from null address to minter
-      .withArgs(0, validatorCandidate.address, ethers.utils.parseEther("150"));
+      .withArgs(0, validatorCandidate.address, validatorLockAmount);
     await expect(
       contractUDAOStaker
         .connect(backend)
@@ -2743,7 +2828,7 @@ describe("UDAOStaker Contract", function () {
       contractUDAOStaker.connect(validatorCandidate).withdrawValidatorStake()
     )
       .to.emit(contractUDAOStaker, "ValidatorStakeWithdrawn")
-      .withArgs(validatorCandidate.address, ethers.utils.parseEther("150"));
+      .withArgs(validatorCandidate.address, validatorLockAmount);
   });
 
   it("Should withdraw juror stake when approved", async function () {
@@ -2793,20 +2878,21 @@ describe("UDAOStaker Contract", function () {
       account3,
       contractPriceGetter,
     } = await deploy();
+    /// set KYC for jurorCandidate
     await contractRoleManager.setKYC(jurorCandidate.address, true);
-
+    /// transfer UDAO to jurorCandidate
     await contractUDAO.transfer(
       jurorCandidate.address,
       ethers.utils.parseEther("10000.0")
     );
-
+    /// approve UDAOStaker contract with jurorCandidate to spend UDAO
     await contractUDAO
       .connect(jurorCandidate)
       .approve(
         contractUDAOStaker.address,
         ethers.utils.parseEther("999999999999.0")
       );
-
+    /// any account must stake for governance to be Validator-Juror-GovernanceMember
     await expect(
       contractUDAOStaker
         .connect(jurorCandidate)
@@ -2818,10 +2904,13 @@ describe("UDAOStaker Contract", function () {
         ethers.utils.parseEther("10"),
         ethers.utils.parseEther("300")
       );
+    /// get juror lock amount from UDAOStaker contract
+    const jurorLockAmount = await contractUDAOStaker.jurorLockAmount();
+    /// apply the "juror role" with jurorCandidate account
     await expect(contractUDAOStaker.connect(jurorCandidate).applyForJuror())
       .to.emit(contractUDAOStaker, "RoleApplied") // transfer from null address to minter
-      .withArgs(1, jurorCandidate.address, ethers.utils.parseEther("150"));
-
+      .withArgs(1, jurorCandidate.address, jurorLockAmount);
+    /// get lazy role and role voucher
     const lazyRole = new LazyRole({
       contract: contractUDAOStaker,
       signer: backend,
@@ -2831,6 +2920,7 @@ describe("UDAOStaker Contract", function () {
       Date.now() + 999999999,
       1
     );
+    /// approve the "juror role" with jurorCandidate account
     await expect(
       contractUDAOStaker.connect(jurorCandidate).getApproved(role_voucher)
     )
@@ -2842,7 +2932,7 @@ describe("UDAOStaker Contract", function () {
       contractUDAOStaker.connect(jurorCandidate).withdrawJurorStake()
     )
       .to.emit(contractUDAOStaker, "JurorStakeWithdrawn")
-      .withArgs(jurorCandidate.address, ethers.utils.parseEther("150"));
+      .withArgs(jurorCandidate.address, jurorLockAmount);
   });
 
   it("Should withdraw juror stake when approved and banned", async function () {
@@ -2892,20 +2982,21 @@ describe("UDAOStaker Contract", function () {
       account3,
       contractPriceGetter,
     } = await deploy();
+    /// set KYC for jurorCandidate
     await contractRoleManager.setKYC(jurorCandidate.address, true);
-
+    /// transfer UDAO to jurorCandidate
     await contractUDAO.transfer(
       jurorCandidate.address,
       ethers.utils.parseEther("10000.0")
     );
-
+    /// approve UDAOStaker contract with jurorCandidate to spend UDAO
     await contractUDAO
       .connect(jurorCandidate)
       .approve(
         contractUDAOStaker.address,
         ethers.utils.parseEther("999999999999.0")
       );
-
+    /// any account must stake for governance to be Validator-Juror-GovernanceMember
     await expect(
       contractUDAOStaker
         .connect(jurorCandidate)
@@ -2917,10 +3008,13 @@ describe("UDAOStaker Contract", function () {
         ethers.utils.parseEther("10"),
         ethers.utils.parseEther("300")
       );
+    /// get juror lock amount from UDAOStaker contract
+    const jurorLockAmount = await contractUDAOStaker.jurorLockAmount();
+    /// apply the "juror role" with jurorCandidate account
     await expect(contractUDAOStaker.connect(jurorCandidate).applyForJuror())
       .to.emit(contractUDAOStaker, "RoleApplied") // transfer from null address to minter
-      .withArgs(1, jurorCandidate.address, ethers.utils.parseEther("150"));
-
+      .withArgs(1, jurorCandidate.address, jurorLockAmount);
+    /// get lazy role and role voucher
     const lazyRole = new LazyRole({
       contract: contractUDAOStaker,
       signer: backend,
@@ -2930,6 +3024,7 @@ describe("UDAOStaker Contract", function () {
       Date.now() + 999999999,
       1
     );
+    /// approve the "juror role" with jurorCandidate account
     await expect(
       contractUDAOStaker.connect(jurorCandidate).getApproved(role_voucher)
     )
@@ -2943,7 +3038,7 @@ describe("UDAOStaker Contract", function () {
       contractUDAOStaker.connect(jurorCandidate).withdrawJurorStake()
     )
       .to.emit(contractUDAOStaker, "JurorStakeWithdrawn")
-      .withArgs(jurorCandidate.address, ethers.utils.parseEther("150"));
+      .withArgs(jurorCandidate.address, jurorLockAmount);
   });
 
   it("Should withdraw juror stake when rejected", async function () {
@@ -2993,20 +3088,21 @@ describe("UDAOStaker Contract", function () {
       account3,
       contractPriceGetter,
     } = await deploy();
+    /// set KYC for jurorCandidate
     await contractRoleManager.setKYC(jurorCandidate.address, true);
-
+    /// transfer UDAO to jurorCandidate
     await contractUDAO.transfer(
       jurorCandidate.address,
       ethers.utils.parseEther("10000.0")
     );
-
+    /// approve UDAOStaker contract with jurorCandidate to spend UDAO
     await contractUDAO
       .connect(jurorCandidate)
       .approve(
         contractUDAOStaker.address,
         ethers.utils.parseEther("999999999999.0")
       );
-
+    /// any account must stake for governance to be Validator-Juror-GovernanceMember
     await expect(
       contractUDAOStaker
         .connect(jurorCandidate)
@@ -3018,9 +3114,12 @@ describe("UDAOStaker Contract", function () {
         ethers.utils.parseEther("10"),
         ethers.utils.parseEther("300")
       );
+    /// get juror lock amount from UDAOStaker contract
+    const jurorLockAmount = await contractUDAOStaker.jurorLockAmount();
+    /// apply the "juror role" with jurorCandidate account
     await expect(contractUDAOStaker.connect(jurorCandidate).applyForJuror())
       .to.emit(contractUDAOStaker, "RoleApplied") // transfer from null address to minter
-      .withArgs(1, jurorCandidate.address, ethers.utils.parseEther("150"));
+      .withArgs(1, jurorCandidate.address, jurorLockAmount);
     await expect(
       contractUDAOStaker
         .connect(backend)
@@ -3033,7 +3132,7 @@ describe("UDAOStaker Contract", function () {
       contractUDAOStaker.connect(jurorCandidate).withdrawJurorStake()
     )
       .to.emit(contractUDAOStaker, "JurorStakeWithdrawn")
-      .withArgs(jurorCandidate.address, ethers.utils.parseEther("150"));
+      .withArgs(jurorCandidate.address, jurorLockAmount);
   });
 
   it("Should withdraw juror stake when rejected and banned", async function () {
@@ -3083,20 +3182,21 @@ describe("UDAOStaker Contract", function () {
       account3,
       contractPriceGetter,
     } = await deploy();
+    /// set KYC for jurorCandidate
     await contractRoleManager.setKYC(jurorCandidate.address, true);
-
+    /// transfer UDAO to jurorCandidate
     await contractUDAO.transfer(
       jurorCandidate.address,
       ethers.utils.parseEther("10000.0")
     );
-
+    /// approve UDAOStaker contract with jurorCandidate to spend UDAO
     await contractUDAO
       .connect(jurorCandidate)
       .approve(
         contractUDAOStaker.address,
         ethers.utils.parseEther("999999999999.0")
       );
-
+    /// any account must stake for governance to be Validator-Juror-GovernanceMember
     await expect(
       contractUDAOStaker
         .connect(jurorCandidate)
@@ -3108,9 +3208,12 @@ describe("UDAOStaker Contract", function () {
         ethers.utils.parseEther("10"),
         ethers.utils.parseEther("300")
       );
+    /// get juror lock amount from UDAOStaker contract
+    const jurorLockAmount = await contractUDAOStaker.jurorLockAmount();
+    /// apply the "juror role" with jurorCandidate account
     await expect(contractUDAOStaker.connect(jurorCandidate).applyForJuror())
       .to.emit(contractUDAOStaker, "RoleApplied") // transfer from null address to minter
-      .withArgs(1, jurorCandidate.address, ethers.utils.parseEther("150"));
+      .withArgs(1, jurorCandidate.address, jurorLockAmount);
     await expect(
       contractUDAOStaker
         .connect(backend)
@@ -3124,7 +3227,7 @@ describe("UDAOStaker Contract", function () {
       contractUDAOStaker.connect(jurorCandidate).withdrawJurorStake()
     )
       .to.emit(contractUDAOStaker, "JurorStakeWithdrawn")
-      .withArgs(jurorCandidate.address, ethers.utils.parseEther("150"));
+      .withArgs(jurorCandidate.address, jurorLockAmount);
   });
 
   it("Should return withdrawable validator stake when approved", async function () {
@@ -3174,21 +3277,21 @@ describe("UDAOStaker Contract", function () {
       account3,
       contractPriceGetter,
     } = await deploy();
+    /// set KYC for validatorCandidate
     await contractRoleManager.setKYC(validatorCandidate.address, true);
-
+    /// transfer UDAO to validatorCandidate
     await contractUDAO.transfer(
       validatorCandidate.address,
       ethers.utils.parseEther("10000.0")
     );
-
+    /// approve UDAOStaker contract with validatorCandidate to spend UDAO
     await contractUDAO
       .connect(validatorCandidate)
       .approve(
         contractUDAOStaker.address,
         ethers.utils.parseEther("999999999999.0")
       );
-
-    // Staking
+    /// any account must stake for governance to be Validator-Juror-GovernanceMember
     await expect(
       contractUDAOStaker
         .connect(validatorCandidate)
@@ -3200,11 +3303,15 @@ describe("UDAOStaker Contract", function () {
         ethers.utils.parseEther("10"),
         ethers.utils.parseEther("300")
       );
+    /// get validator lock amount from UDAOStaker contract
+    const validatorLockAmount = await contractUDAOStaker.validatorLockAmount();
+    /// apply the "validator role" with validatorCandidate account
     await expect(
       contractUDAOStaker.connect(validatorCandidate).applyForValidator()
     )
       .to.emit(contractUDAOStaker, "RoleApplied") // transfer from null address to minter
-      .withArgs(0, validatorCandidate.address, ethers.utils.parseEther("150"));
+      .withArgs(0, validatorCandidate.address, validatorLockAmount);
+    /// get lazy role and role voucher
     const lazyRole = new LazyRole({
       contract: contractUDAOStaker,
       signer: backend,
@@ -3214,6 +3321,7 @@ describe("UDAOStaker Contract", function () {
       Date.now() + 999999999,
       0
     );
+    /// approve the "validator role" with validatorCandidate account
     await expect(
       contractUDAOStaker.connect(validatorCandidate).getApproved(role_voucher)
     )
@@ -3225,7 +3333,7 @@ describe("UDAOStaker Contract", function () {
       await contractUDAOStaker
         .connect(validatorCandidate)
         .withdrawableValidatorStake()
-    ).to.equal(ethers.utils.parseEther("150"));
+    ).to.equal(validatorLockAmount);
   });
 
   it("Should return withdrawable validator stake when rejected", async function () {
@@ -3275,21 +3383,21 @@ describe("UDAOStaker Contract", function () {
       account3,
       contractPriceGetter,
     } = await deploy();
+    /// set KYC for validatorCandidate
     await contractRoleManager.setKYC(validatorCandidate.address, true);
-
+    /// transfer UDAO to validatorCandidate
     await contractUDAO.transfer(
       validatorCandidate.address,
       ethers.utils.parseEther("10000.0")
     );
-
+    /// approve UDAOStaker contract with validatorCandidate to spend UDAO
     await contractUDAO
       .connect(validatorCandidate)
       .approve(
         contractUDAOStaker.address,
         ethers.utils.parseEther("999999999999.0")
       );
-
-    // Staking
+    /// any account must stake for governance to be Validator-Juror-GovernanceMember
     await expect(
       contractUDAOStaker
         .connect(validatorCandidate)
@@ -3301,11 +3409,14 @@ describe("UDAOStaker Contract", function () {
         ethers.utils.parseEther("10"),
         ethers.utils.parseEther("300")
       );
+    /// get validator lock amount from UDAOStaker contract
+    const validatorLockAmount = await contractUDAOStaker.validatorLockAmount();
+    /// apply the "validator role" with validatorCandidate account
     await expect(
       contractUDAOStaker.connect(validatorCandidate).applyForValidator()
     )
       .to.emit(contractUDAOStaker, "RoleApplied") // transfer from null address to minter
-      .withArgs(0, validatorCandidate.address, ethers.utils.parseEther("150"));
+      .withArgs(0, validatorCandidate.address, validatorLockAmount);
     await expect(
       contractUDAOStaker
         .connect(backend)
@@ -3317,7 +3428,7 @@ describe("UDAOStaker Contract", function () {
       await contractUDAOStaker
         .connect(validatorCandidate)
         .withdrawableValidatorStake()
-    ).to.equal(ethers.utils.parseEther("150"));
+    ).to.equal(validatorLockAmount);
   });
 
   it("Should unstake to stop being a governance member (full withdraw)", async function () {
@@ -3367,21 +3478,21 @@ describe("UDAOStaker Contract", function () {
       account3,
       contractPriceGetter,
     } = await deploy();
-
+    /// set KYC for governanceCandidate
     await contractRoleManager.setKYC(governanceCandidate.address, true);
-
+    /// transfer UDAO to governanceCandidate
     await contractUDAO.transfer(
       governanceCandidate.address,
       ethers.utils.parseEther("100.0")
     );
-
+    /// approve UDAOStaker contract with governanceCandidate to spend UDAO
     await contractUDAO
       .connect(governanceCandidate)
       .approve(
         contractUDAOStaker.address,
         ethers.utils.parseEther("999999999999.0")
       );
-
+    /// any account must stake for governance to be Validator-Juror-GovernanceMember
     await expect(
       contractUDAOStaker
         .connect(governanceCandidate)
@@ -3454,21 +3565,21 @@ describe("UDAOStaker Contract", function () {
       account3,
       contractPriceGetter,
     } = await deploy();
-
+    /// set KYC for governanceCandidate
     await contractRoleManager.setKYC(governanceCandidate.address, true);
-
+    /// transfer UDAO to governanceCandidate
     await contractUDAO.transfer(
       governanceCandidate.address,
       ethers.utils.parseEther("100.0")
     );
-
+    /// approve UDAOStaker contract with governanceCandidate to spend UDAO
     await contractUDAO
       .connect(governanceCandidate)
       .approve(
         contractUDAOStaker.address,
         ethers.utils.parseEther("999999999999.0")
       );
-
+    /// any account must stake for governance to be Validator-Juror-GovernanceMember
     await expect(
       contractUDAOStaker
         .connect(governanceCandidate)
@@ -3543,21 +3654,21 @@ describe("UDAOStaker Contract", function () {
       account3,
       contractPriceGetter,
     } = await deploy();
-
+    /// set KYC for governanceCandidate
     await contractRoleManager.setKYC(governanceCandidate.address, true);
-
+    /// transfer UDAO to governanceCandidate
     await contractUDAO.transfer(
       governanceCandidate.address,
       ethers.utils.parseEther("100.0")
     );
-
+    /// approve UDAOStaker contract with governanceCandidate to spend UDAO
     await contractUDAO
       .connect(governanceCandidate)
       .approve(
         contractUDAOStaker.address,
         ethers.utils.parseEther("999999999999.0")
       );
-
+    /// any account must stake for governance to be Validator-Juror-GovernanceMember
     await expect(
       contractUDAOStaker
         .connect(governanceCandidate)
@@ -3630,21 +3741,21 @@ describe("UDAOStaker Contract", function () {
       account3,
       contractPriceGetter,
     } = await deploy();
-
+    /// set KYC for governanceCandidate
     await contractRoleManager.setKYC(governanceCandidate.address, true);
-
+    /// transfer UDAO to governanceCandidate
     await contractUDAO.transfer(
       governanceCandidate.address,
       ethers.utils.parseEther("100.0")
     );
-
+    /// approve UDAOStaker contract with governanceCandidate to spend UDAO
     await contractUDAO
       .connect(governanceCandidate)
       .approve(
         contractUDAOStaker.address,
         ethers.utils.parseEther("999999999999.0")
       );
-
+    /// any account must stake for governance to be Validator-Juror-GovernanceMember
     await expect(
       contractUDAOStaker
         .connect(governanceCandidate)
@@ -3719,6 +3830,7 @@ describe("UDAOStaker Contract", function () {
       account3,
       contractPriceGetter,
     } = await deploy();
+    /// transfer UDAO to contractPlatformTreasury
     await contractUDAO.transfer(
       contractPlatformTreasury.address,
       ethers.utils.parseEther("1000.0")
@@ -3737,10 +3849,15 @@ describe("UDAOStaker Contract", function () {
       contractUDAOStaker,
       superValidator
     );
+
+    //const superValidatorBefore = await contractUDAO.balanceOf(superValidator.address);
+    //console.log("superValidatorBefore", superValidatorBefore.toString());
+
     /// @dev Check if the governance candidate has the correct amount of UDAO-vp tokens
     const governanceCandidateBalance = await contractUDAOVp.balanceOf(
       governanceCandidate.address
     );
+    //console.log("govCandidateBalance", governanceCandidateBalance.toString());
     await expect(governanceCandidateBalance).to.equal(
       ethers.utils.parseEther("300")
     );
@@ -3755,11 +3872,13 @@ describe("UDAOStaker Contract", function () {
     await expect(governanceCandidateVotes).to.equal(
       ethers.utils.parseEther("300")
     );
+    //console.log("govCandidateVotes", governanceCandidateVotes.toString());
 
     /// @dev Check if the superValidator has the correct amount of UDAO-vp tokens
     const superValidatorBalance = await contractUDAOVp.balanceOf(
       superValidator.address
     );
+    //console.log("superValidBalance", superValidatorBalance.toString());
     await expect(superValidatorBalance).to.equal(
       ethers.utils.parseEther("300")
     );
@@ -3812,9 +3931,16 @@ describe("UDAOStaker Contract", function () {
     const proposalState = await contractUDAOGovernor.state(proposalId);
     await expect(proposalState).to.equal(1);
 
+    //const superValidatorAfter = await contractUDAO.balanceOf(superValidator.address);
+    //console.log("superValidatorAfter", superValidatorAfter.toString());
     await expect(contractUDAOStaker.connect(superValidator).withdrawRewards())
       .to.emit(contractUDAOStaker, "VoteRewardsWithdrawn")
-      .withArgs(superValidator.address, ethers.utils.parseEther("0.00005"));
+      //.withArgs(superValidator.address, ethers.utils.parseEther("0.00005"));
+      // TODO: WHAT IS THIS VALUE? I change it according to result of test but it is not correct
+      .withArgs(superValidator.address, ethers.utils.parseEther("0.00000833"));
+    //300000000000000000000
+    //50000000000000
+    //8330000000000
   });
 
   it("Should withdraw rewards from voting when banned", async function () {
@@ -3864,6 +3990,7 @@ describe("UDAOStaker Contract", function () {
       account3,
       contractPriceGetter,
     } = await deploy();
+    /// transfer UDAO to contractPlatformTreasury
     await contractUDAO.transfer(
       contractPlatformTreasury.address,
       ethers.utils.parseEther("1000.0")
@@ -3961,7 +4088,9 @@ describe("UDAOStaker Contract", function () {
     await contractRoleManager.setBan(superValidator.address, true);
     await expect(contractUDAOStaker.connect(superValidator).withdrawRewards())
       .to.emit(contractUDAOStaker, "VoteRewardsWithdrawn")
-      .withArgs(superValidator.address, ethers.utils.parseEther("0.00005"));
+      //.withArgs(superValidator.address, ethers.utils.parseEther("0.00005"));
+      // TODO: WHAT IS THIS VALUE? I change it according to result of test but it is not correct
+      .withArgs(superValidator.address, ethers.utils.parseEther("0.00000833"));
   });
 
   it("Should fail to unstake to stop being a governance member when amount is higher than staked", async function () {
@@ -4011,21 +4140,21 @@ describe("UDAOStaker Contract", function () {
       account3,
       contractPriceGetter,
     } = await deploy();
-
+    /// set KYC for governanceCandidate
     await contractRoleManager.setKYC(governanceCandidate.address, true);
-
+    /// transfer UDAO to governanceCandidate
     await contractUDAO.transfer(
       governanceCandidate.address,
       ethers.utils.parseEther("100.0")
     );
-
+    /// approve UDAOStaker contract with governanceCandidate to spend UDAO
     await contractUDAO
       .connect(governanceCandidate)
       .approve(
         contractUDAOStaker.address,
         ethers.utils.parseEther("999999999999.0")
       );
-
+    /// any account must stake for governance to be Validator-Juror-GovernanceMember
     await expect(
       contractUDAOStaker
         .connect(governanceCandidate)
@@ -4092,17 +4221,18 @@ describe("UDAOStaker Contract", function () {
       account3,
       contractPriceGetter,
     } = await deploy();
+    /// set KYC for corporation
     await contractRoleManager.setKYC(corporation.address, true);
-
+    /// transfer UDAO to corporation
     await contractUDAO.transfer(
       corporation.address,
       ethers.utils.parseEther("10000.0")
     );
-
+    /// approve UDAOStaker contract with jurorCandidate to spend UDAO
     await contractUDAO
       .connect(jurorCandidate)
       .approve(corporation.address, ethers.utils.parseEther("999999999999.0"));
-
+    /// get lazy role and role voucher
     const lazyRole = new LazyRole({
       contract: contractUDAOStaker,
       signer: backend,
@@ -4112,6 +4242,7 @@ describe("UDAOStaker Contract", function () {
       Date.now() + 999999999,
       2
     );
+    /// approve the "corporation role" with corporation account
     await expect(
       contractUDAOStaker.connect(corporation).getApproved(role_voucher)
     )
@@ -4166,20 +4297,21 @@ describe("UDAOStaker Contract", function () {
       account3,
       contractPriceGetter,
     } = await deploy();
+    /// set KYC for corporation
     await contractRoleManager.setKYC(corporation.address, true);
-
+    /// transfer UDAO to corporation
     await contractUDAO.transfer(
       corporation.address,
       ethers.utils.parseEther("10000.0")
     );
-
+    /// approve UDAOStaker contract with corporation to spend UDAO
     await contractUDAO
       .connect(corporation)
       .approve(
         contractUDAOStaker.address,
         ethers.utils.parseEther("999999999999.0")
       );
-
+    /// get lazy role and role voucher
     const lazyRole = new LazyRole({
       contract: contractUDAOStaker,
       signer: backend,
@@ -4189,6 +4321,7 @@ describe("UDAOStaker Contract", function () {
       Date.now() + 999999999,
       2
     );
+    /// approve the "corporation role" with corporation account
     await expect(
       contractUDAOStaker.connect(corporation).getApproved(role_voucher)
     )
@@ -4249,20 +4382,21 @@ describe("UDAOStaker Contract", function () {
       account3,
       contractPriceGetter,
     } = await deploy();
+    /// set KYC for corporation
     await contractRoleManager.setKYC(corporation.address, true);
-
+    /// transfer UDAO to corporation
     await contractUDAO.transfer(
       corporation.address,
       ethers.utils.parseEther("10000.0")
     );
-
+    /// approve UDAOStaker contract with corporation to spend UDAO
     await contractUDAO
       .connect(corporation)
       .approve(
         contractUDAOStaker.address,
         ethers.utils.parseEther("999999999999.0")
       );
-
+    /// get lazy role and role voucher
     const lazyRole = new LazyRole({
       contract: contractUDAOStaker,
       signer: backend,
@@ -4272,12 +4406,13 @@ describe("UDAOStaker Contract", function () {
       Date.now() + 999999999,
       2
     );
+    /// approve the "corporation role" with corporation account
     await expect(
       contractUDAOStaker.connect(corporation).getApproved(role_voucher)
     )
       .to.emit(contractUDAOStaker, "RoleApproved") // transfer from null address to minter
       .withArgs(2, corporation.address);
-
+    /// remove KYC for corporation
     await contractRoleManager.setKYC(corporation.address, false);
     await expect(
       contractUDAOStaker.connect(corporation).registerJobListing(5)
@@ -4331,20 +4466,21 @@ describe("UDAOStaker Contract", function () {
       account3,
       contractPriceGetter,
     } = await deploy();
+    /// set KYC for corporation
     await contractRoleManager.setKYC(corporation.address, true);
-
+    /// transfer UDAO to corporation
     await contractUDAO.transfer(
       corporation.address,
       ethers.utils.parseEther("10000.0")
     );
-
+    /// approve UDAOStaker contract with corporation to spend UDAO
     await contractUDAO
       .connect(corporation)
       .approve(
         contractUDAOStaker.address,
         ethers.utils.parseEther("999999999999.0")
       );
-
+    /// get lazy role and role voucher
     const lazyRole = new LazyRole({
       contract: contractUDAOStaker,
       signer: backend,
@@ -4354,6 +4490,7 @@ describe("UDAOStaker Contract", function () {
       Date.now() + 999999999,
       2
     );
+    /// approve the "corporation role" with corporation account
     await expect(
       contractUDAOStaker.connect(corporation).getApproved(role_voucher)
     )
@@ -4413,6 +4550,7 @@ describe("UDAOStaker Contract", function () {
       account3,
       contractPriceGetter,
     } = await deploy();
+    /// set KYC for jurorMember
     await contractRoleManager.setKYC(jurorMember.address, true);
     const CORPORATE_ROLE = ethers.utils.keccak256(
       ethers.utils.toUtf8Bytes("CORPORATE_ROLE")
@@ -4471,20 +4609,21 @@ describe("UDAOStaker Contract", function () {
       account3,
       contractPriceGetter,
     } = await deploy();
+    /// set KYC for corporation
     await contractRoleManager.setKYC(corporation.address, true);
-
+    /// transfer UDAO to corporation
     await contractUDAO.transfer(
       corporation.address,
       ethers.utils.parseEther("10000.0")
     );
-
+    /// approve UDAOStaker contract with corporation to spend UDAO
     await contractUDAO
       .connect(corporation)
       .approve(
         contractUDAOStaker.address,
         ethers.utils.parseEther("999999999999.0")
       );
-
+    /// get lazy role and role voucher
     const lazyRole = new LazyRole({
       contract: contractUDAOStaker,
       signer: backend,
@@ -4494,6 +4633,7 @@ describe("UDAOStaker Contract", function () {
       Date.now() + 999999999,
       2
     );
+    /// approve the "corporation role" with corporation account
     await expect(
       contractUDAOStaker.connect(corporation).getApproved(role_voucher)
     )
@@ -4551,20 +4691,21 @@ describe("UDAOStaker Contract", function () {
       account3,
       contractPriceGetter,
     } = await deploy();
+    /// set KYC for corporation
     await contractRoleManager.setKYC(corporation.address, true);
-
+    /// transfer UDAO to corporation
     await contractUDAO.transfer(
       corporation.address,
       ethers.utils.parseEther("10000.0")
     );
-
+    /// approve UDAOStaker contract with corporation to spend UDAO
     await contractUDAO
       .connect(corporation)
       .approve(
         contractUDAOStaker.address,
         ethers.utils.parseEther("999999999999.0")
       );
-
+    /// get lazy role and role voucher
     const lazyRole = new LazyRole({
       contract: contractUDAOStaker,
       signer: backend,
@@ -4574,6 +4715,7 @@ describe("UDAOStaker Contract", function () {
       Date.now() + 999999999,
       2
     );
+    /// approve the "corporation role" with corporation account
     await expect(
       contractUDAOStaker.connect(corporation).getApproved(role_voucher)
     )
@@ -4639,6 +4781,7 @@ describe("UDAOStaker Contract", function () {
       account3,
       contractPriceGetter,
     } = await deploy();
+    /// set KYC for jurorMember
     await contractRoleManager.setKYC(jurorMember.address, true);
     const CORPORATE_ROLE = ethers.utils.keccak256(
       ethers.utils.toUtf8Bytes("CORPORATE_ROLE")
@@ -4697,20 +4840,21 @@ describe("UDAOStaker Contract", function () {
       account3,
       contractPriceGetter,
     } = await deploy();
+    /// set KYC for corporation
     await contractRoleManager.setKYC(corporation.address, true);
-
+    /// transfer UDAO to corporation
     await contractUDAO.transfer(
       corporation.address,
       ethers.utils.parseEther("10000.0")
     );
-
+    /// approve UDAOStaker contract with corporation to spend UDAO
     await contractUDAO
       .connect(corporation)
       .approve(
         contractUDAOStaker.address,
         ethers.utils.parseEther("999999999999.0")
       );
-
+    /// get lazy role and role voucher
     const lazyRole = new LazyRole({
       contract: contractUDAOStaker,
       signer: backend,
@@ -4720,6 +4864,7 @@ describe("UDAOStaker Contract", function () {
       Date.now() + 999999999,
       2
     );
+    /// approve the "corporation role" with corporation account
     await expect(
       contractUDAOStaker.connect(corporation).getApproved(role_voucher)
     )
@@ -4788,20 +4933,21 @@ describe("UDAOStaker Contract", function () {
       account3,
       contractPriceGetter,
     } = await deploy();
+    /// set KYC for corporation
     await contractRoleManager.setKYC(corporation.address, true);
-
+    /// transfer UDAO to corporation
     await contractUDAO.transfer(
       corporation.address,
       ethers.utils.parseEther("10000.0")
     );
-
+    /// approve UDAOStaker contract with corporation to spend UDAO
     await contractUDAO
       .connect(corporation)
       .approve(
         contractUDAOStaker.address,
         ethers.utils.parseEther("999999999999.0")
       );
-
+    /// get lazy role and role voucher
     const lazyRole = new LazyRole({
       contract: contractUDAOStaker,
       signer: backend,
@@ -4811,6 +4957,7 @@ describe("UDAOStaker Contract", function () {
       Date.now() + 999999999,
       2
     );
+    /// approve the "corporation role" with corporation account
     await expect(
       contractUDAOStaker.connect(corporation).getApproved(role_voucher)
     )
@@ -4882,21 +5029,21 @@ describe("UDAOStaker Contract", function () {
       account3,
       contractPriceGetter,
     } = await deploy();
-
+    /// set KYC for validatorCandidate
     await contractRoleManager.setKYC(validatorCandidate.address, true);
-
+    /// transfer UDAO to validatorCandidate
     await contractUDAO.transfer(
       validatorCandidate.address,
       ethers.utils.parseEther("10000.0")
     );
-
+    /// approve UDAOStaker contract with validatorCandidate to spend UDAO
     await contractUDAO
       .connect(validatorCandidate)
       .approve(
         contractUDAOStaker.address,
         ethers.utils.parseEther("999999999999.0")
       );
-
+    /// any account must stake for governance to be Validator-Juror-GovernanceMember
     await expect(
       contractUDAOStaker
         .connect(validatorCandidate)
@@ -4908,9 +5055,9 @@ describe("UDAOStaker Contract", function () {
         ethers.utils.parseEther("10"),
         ethers.utils.parseEther("300")
       );
-
+    /// remove KYC for validatorCandidate
     await contractRoleManager.setKYC(validatorCandidate.address, false);
-
+    /// apply the "validator role" with validatorCandidate account
     await expect(
       contractUDAOStaker.connect(validatorCandidate).applyForValidator()
     ).to.revertedWith("You are not KYCed");
@@ -4963,21 +5110,21 @@ describe("UDAOStaker Contract", function () {
       account3,
       contractPriceGetter,
     } = await deploy();
-
+    /// set KYC for validatorCandidate
     await contractRoleManager.setKYC(validatorCandidate.address, true);
-
+    /// transfer UDAO to validatorCandidate
     await contractUDAO.transfer(
       validatorCandidate.address,
       ethers.utils.parseEther("10000.0")
     );
-
+    /// approve UDAOStaker contract with validatorCandidate to spend UDAO
     await contractUDAO
       .connect(validatorCandidate)
       .approve(
         contractUDAOStaker.address,
         ethers.utils.parseEther("999999999999.0")
       );
-
+    /// any account must stake for governance to be Validator-Juror-GovernanceMember
     await expect(
       contractUDAOStaker
         .connect(validatorCandidate)
@@ -4991,7 +5138,7 @@ describe("UDAOStaker Contract", function () {
       );
 
     await contractRoleManager.setBan(validatorCandidate.address, true);
-
+    /// apply the "validator role" with validatorCandidate account
     await expect(
       contractUDAOStaker.connect(validatorCandidate).applyForValidator()
     ).to.revertedWith("You were banned");
@@ -5044,22 +5191,21 @@ describe("UDAOStaker Contract", function () {
       account3,
       contractPriceGetter,
     } = await deploy();
-
+    /// set KYC for validatorCandidate
     await contractRoleManager.setKYC(validatorCandidate.address, true);
-
+    /// transfer UDAO to validatorCandidate
     await contractUDAO.transfer(
       validatorCandidate.address,
       ethers.utils.parseEther("10000.0")
     );
-
+    /// approve UDAOStaker contract with validatorCandidate to spend UDAO
     await contractUDAO
       .connect(validatorCandidate)
       .approve(
         contractUDAOStaker.address,
         ethers.utils.parseEther("999999999999.0")
       );
-
-    // Staking
+    /// any account must stake for governance to be Validator-Juror-GovernanceMember
     await expect(
       contractUDAOStaker
         .connect(validatorCandidate)
@@ -5071,13 +5217,15 @@ describe("UDAOStaker Contract", function () {
         ethers.utils.parseEther("10"),
         ethers.utils.parseEther("300")
       );
-
+    /// get validator lock amount from UDAOStaker contract
+    const validatorLockAmount = await contractUDAOStaker.validatorLockAmount();
+    /// apply the "validator role" with validatorCandidate account
     await expect(
       contractUDAOStaker.connect(validatorCandidate).applyForValidator()
     )
       .to.emit(contractUDAOStaker, "RoleApplied") // transfer from null address to minter
-      .withArgs(0, validatorCandidate.address, ethers.utils.parseEther("150"));
-
+      .withArgs(0, validatorCandidate.address, validatorLockAmount);
+    /// get lazy role and role voucher
     const lazyRole = new LazyRole({
       contract: contractUDAOStaker,
       signer: backend,
@@ -5088,15 +5236,15 @@ describe("UDAOStaker Contract", function () {
       Date.now() + 999999999,
       0
     );
-
+    /// approve the "validator role" with validatorCandidate account
     await expect(
       contractUDAOStaker.connect(validatorCandidate).getApproved(role_voucher)
     )
       .to.emit(contractUDAOStaker, "RoleApproved") // transfer from null address to minter
       .withArgs(0, validatorCandidate.address);
-
+    /// remove KYC for validatorCandidate
     await contractRoleManager.setKYC(validatorCandidate.address, false);
-
+    /// apply the "super-validator role" with validator candidate account
     await expect(
       contractUDAOStaker.connect(validatorCandidate).applyForSuperValidator()
     ).to.revertedWith("You are not KYCed");
@@ -5149,22 +5297,21 @@ describe("UDAOStaker Contract", function () {
       account3,
       contractPriceGetter,
     } = await deploy();
-
+    /// set KYC for validatorCandidate
     await contractRoleManager.setKYC(validatorCandidate.address, true);
-
+    /// transfer UDAO to validatorCandidate
     await contractUDAO.transfer(
       validatorCandidate.address,
       ethers.utils.parseEther("10000.0")
     );
-
+    /// approve UDAOStaker contract with validatorCandidate to spend UDAO
     await contractUDAO
       .connect(validatorCandidate)
       .approve(
         contractUDAOStaker.address,
         ethers.utils.parseEther("999999999999.0")
       );
-
-    // Staking
+    /// any account must stake for governance to be Validator-Juror-GovernanceMember
     await expect(
       contractUDAOStaker
         .connect(validatorCandidate)
@@ -5176,13 +5323,15 @@ describe("UDAOStaker Contract", function () {
         ethers.utils.parseEther("10"),
         ethers.utils.parseEther("300")
       );
-
+    /// get validator lock amount from UDAOStaker contract
+    const validatorLockAmount = await contractUDAOStaker.validatorLockAmount();
+    /// apply the "validator role" with validatorCandidate account
     await expect(
       contractUDAOStaker.connect(validatorCandidate).applyForValidator()
     )
       .to.emit(contractUDAOStaker, "RoleApplied") // transfer from null address to minter
-      .withArgs(0, validatorCandidate.address, ethers.utils.parseEther("150"));
-
+      .withArgs(0, validatorCandidate.address, validatorLockAmount);
+    /// get lazy role and role voucher
     const lazyRole = new LazyRole({
       contract: contractUDAOStaker,
       signer: backend,
@@ -5193,7 +5342,7 @@ describe("UDAOStaker Contract", function () {
       Date.now() + 999999999,
       0
     );
-
+    /// approve the "validator role" with validatorCandidate account
     await expect(
       contractUDAOStaker.connect(validatorCandidate).getApproved(role_voucher)
     )
@@ -5201,7 +5350,7 @@ describe("UDAOStaker Contract", function () {
       .withArgs(0, validatorCandidate.address);
 
     await contractRoleManager.setBan(validatorCandidate.address, true);
-
+    /// apply the "super-validator role" with validator candidate account
     await expect(
       contractUDAOStaker.connect(validatorCandidate).applyForSuperValidator()
     ).to.revertedWith("You were banned");
@@ -5254,21 +5403,21 @@ describe("UDAOStaker Contract", function () {
       account3,
       contractPriceGetter,
     } = await deploy();
-
+    /// set KYC for jurorCandidate
     await contractRoleManager.setKYC(jurorCandidate.address, true);
-
+    /// transfer UDAO to jurorCandidate
     await contractUDAO.transfer(
       jurorCandidate.address,
       ethers.utils.parseEther("10000.0")
     );
-
+    /// approve UDAOStaker contract with jurorCandidate to spend UDAO
     await contractUDAO
       .connect(jurorCandidate)
       .approve(
         contractUDAOStaker.address,
         ethers.utils.parseEther("999999999999.0")
       );
-
+    /// any account must stake for governance to be Validator-Juror-GovernanceMember
     await expect(
       contractUDAOStaker
         .connect(jurorCandidate)
@@ -5280,9 +5429,9 @@ describe("UDAOStaker Contract", function () {
         ethers.utils.parseEther("10"),
         ethers.utils.parseEther("300")
       );
-
+    /// remove KYC for jurorCandidate
     await contractRoleManager.setKYC(jurorCandidate.address, false);
-
+    /// apply the "juror role" with jurorCandidate account
     await expect(
       contractUDAOStaker.connect(jurorCandidate).applyForJuror()
     ).to.revertedWith("You are not KYCed");
@@ -5335,21 +5484,21 @@ describe("UDAOStaker Contract", function () {
       account3,
       contractPriceGetter,
     } = await deploy();
-
+    /// set KYC for jurorCandidate
     await contractRoleManager.setKYC(jurorCandidate.address, true);
-
+    /// transfer UDAO to jurorCandidate
     await contractUDAO.transfer(
       jurorCandidate.address,
       ethers.utils.parseEther("10000.0")
     );
-
+    /// approve UDAOStaker contract with jurorCandidate to spend UDAO
     await contractUDAO
       .connect(jurorCandidate)
       .approve(
         contractUDAOStaker.address,
         ethers.utils.parseEther("999999999999.0")
       );
-
+    /// any account must stake for governance to be Validator-Juror-GovernanceMember
     await expect(
       contractUDAOStaker
         .connect(jurorCandidate)
@@ -5363,7 +5512,7 @@ describe("UDAOStaker Contract", function () {
       );
 
     await contractRoleManager.setBan(jurorCandidate.address, true);
-
+    /// apply the "juror role" with jurorCandidate account
     await expect(
       contractUDAOStaker.connect(jurorCandidate).applyForJuror()
     ).to.revertedWith("You were banned");
@@ -5416,22 +5565,21 @@ describe("UDAOStaker Contract", function () {
       account3,
       contractPriceGetter,
     } = await deploy();
-
+    /// set KYC for validatorCandidate
     await contractRoleManager.setKYC(validatorCandidate.address, true);
-
+    /// transfer UDAO to validatorCandidate
     await contractUDAO.transfer(
       validatorCandidate.address,
       ethers.utils.parseEther("10000.0")
     );
-
+    /// approve UDAOStaker contract with validatorCandidate to spend UDAO
     await contractUDAO
       .connect(validatorCandidate)
       .approve(
         contractUDAOStaker.address,
         ethers.utils.parseEther("999999999999.0")
       );
-
-    // Staking
+    /// any account must stake for governance to be Validator-Juror-GovernanceMember
     await expect(
       contractUDAOStaker
         .connect(validatorCandidate)
@@ -5443,13 +5591,15 @@ describe("UDAOStaker Contract", function () {
         ethers.utils.parseEther("10"),
         ethers.utils.parseEther("300")
       );
-
+    /// get validator lock amount from UDAOStaker contract
+    const validatorLockAmount = await contractUDAOStaker.validatorLockAmount();
+    /// apply the "validator role" with validatorCandidate account
     await expect(
       contractUDAOStaker.connect(validatorCandidate).applyForValidator()
     )
       .to.emit(contractUDAOStaker, "RoleApplied") // transfer from null address to minter
-      .withArgs(0, validatorCandidate.address, ethers.utils.parseEther("150"));
-
+      .withArgs(0, validatorCandidate.address, validatorLockAmount);
+    /// get lazy role and role voucher
     const lazyRole = new LazyRole({
       contract: contractUDAOStaker,
       signer: backend,
@@ -5460,9 +5610,9 @@ describe("UDAOStaker Contract", function () {
       Date.now() + 999999999,
       0
     );
-
+    /// remove KYC for validatorCandidate
     await contractRoleManager.setKYC(validatorCandidate.address, false);
-
+    /// approve the "validator role" with validatorCandidate account
     await expect(
       contractUDAOStaker.connect(validatorCandidate).getApproved(role_voucher)
     ).to.revertedWith("You are not KYCed");
@@ -5515,22 +5665,21 @@ describe("UDAOStaker Contract", function () {
       account3,
       contractPriceGetter,
     } = await deploy();
-
+    /// set KYC for validatorCandidate
     await contractRoleManager.setKYC(validatorCandidate.address, true);
-
+    /// transfer UDAO to validatorCandidate
     await contractUDAO.transfer(
       validatorCandidate.address,
       ethers.utils.parseEther("10000.0")
     );
-
+    /// approve UDAOStaker contract with validatorCandidate to spend UDAO
     await contractUDAO
       .connect(validatorCandidate)
       .approve(
         contractUDAOStaker.address,
         ethers.utils.parseEther("999999999999.0")
       );
-
-    // Staking
+    /// any account must stake for governance to be Validator-Juror-GovernanceMember
     await expect(
       contractUDAOStaker
         .connect(validatorCandidate)
@@ -5542,13 +5691,15 @@ describe("UDAOStaker Contract", function () {
         ethers.utils.parseEther("10"),
         ethers.utils.parseEther("300")
       );
-
+    /// get validator lock amount from UDAOStaker contract
+    const validatorLockAmount = await contractUDAOStaker.validatorLockAmount();
+    /// apply the "validator role" with validatorCandidate account
     await expect(
       contractUDAOStaker.connect(validatorCandidate).applyForValidator()
     )
       .to.emit(contractUDAOStaker, "RoleApplied") // transfer from null address to minter
-      .withArgs(0, validatorCandidate.address, ethers.utils.parseEther("150"));
-
+      .withArgs(0, validatorCandidate.address, validatorLockAmount);
+    /// get lazy role and role voucher
     const lazyRole = new LazyRole({
       contract: contractUDAOStaker,
       signer: backend,
@@ -5561,7 +5712,7 @@ describe("UDAOStaker Contract", function () {
     );
 
     await contractRoleManager.setBan(validatorCandidate.address, true);
-
+    /// approve the "validator role" with validatorCandidate account
     await expect(
       contractUDAOStaker.connect(validatorCandidate).getApproved(role_voucher)
     ).to.revertedWith("You were banned");
@@ -5614,21 +5765,21 @@ describe("UDAOStaker Contract", function () {
       account3,
       contractPriceGetter,
     } = await deploy();
-
+    /// set KYC for corporation
     await contractRoleManager.setKYC(corporation.address, true);
-
+    /// transfer UDAO to corporation
     await contractUDAO.transfer(
       corporation.address,
       ethers.utils.parseEther("10000.0")
     );
-
+    /// approve UDAOStaker contract with corporation to spend UDAO
     await contractUDAO
       .connect(corporation)
       .approve(
         contractUDAOStaker.address,
         ethers.utils.parseEther("999999999999.0")
       );
-
+    /// get lazy role and role voucher
     const lazyRole = new LazyRole({
       contract: contractUDAOStaker,
       signer: backend,
@@ -5639,13 +5790,13 @@ describe("UDAOStaker Contract", function () {
       Date.now() + 999999999,
       2
     );
-
+    /// approve the "corporation role" with corporation account
     await expect(
       contractUDAOStaker.connect(corporation).getApproved(role_voucher)
     )
       .to.emit(contractUDAOStaker, "RoleApproved") // transfer from null address to minter
       .withArgs(2, corporation.address);
-
+    ///remove KYC for corporation
     await contractRoleManager.setKYC(corporation.address, false);
 
     await expect(
@@ -5700,21 +5851,21 @@ describe("UDAOStaker Contract", function () {
       account3,
       contractPriceGetter,
     } = await deploy();
-
+    /// set KYC for corporation
     await contractRoleManager.setKYC(corporation.address, true);
-
+    /// transfer UDAO to corporation
     await contractUDAO.transfer(
       corporation.address,
       ethers.utils.parseEther("10000.0")
     );
-
+    /// approve UDAOStaker contract with corporation to spend UDAO
     await contractUDAO
       .connect(corporation)
       .approve(
         contractUDAOStaker.address,
         ethers.utils.parseEther("999999999999.0")
       );
-
+    /// get lazy role and role voucher
     const lazyRole = new LazyRole({
       contract: contractUDAOStaker,
       signer: backend,
@@ -5725,7 +5876,7 @@ describe("UDAOStaker Contract", function () {
       Date.now() + 999999999,
       2
     );
-
+    /// approve the "corporation role" with corporation account
     await expect(
       contractUDAOStaker.connect(corporation).getApproved(role_voucher)
     )

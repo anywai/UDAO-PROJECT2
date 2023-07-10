@@ -2,6 +2,18 @@
 
 ## ContentManager
 
+### SIGNING_DOMAIN
+
+```solidity
+string SIGNING_DOMAIN
+```
+
+### SIGNATURE_VERSION
+
+```solidity
+string SIGNATURE_VERSION
+```
+
 ### ForcedPayment
 
 ```solidity
@@ -50,17 +62,6 @@ event ContentBought(uint256 tokenId, uint256[] parts, uint256 pricePaid, address
 
 triggered when content bought
 
-### ContentPurchaseVoucher
-
-```solidity
-struct ContentPurchaseVoucher {
-  uint256 tokenId;
-  bool fullContentPurchase;
-  uint256[] purchasedParts;
-  address giftReceiver;
-}
-```
-
 ### ContentDiscountVoucher
 
 ```solidity
@@ -73,16 +74,6 @@ struct ContentDiscountVoucher {
   address redeemer;
   address giftReceiver;
   bytes signature;
-}
-```
-
-### CoachingPurchaseVoucher
-
-```solidity
-struct CoachingPurchaseVoucher {
-  uint256 tokenId;
-  uint256 priceToPay;
-  bool isRefundable;
 }
 ```
 
@@ -124,16 +115,28 @@ mapping(uint256 => uint256[]) coachingIdsOfToken
 mapping(uint256 => struct ContentManager.CoachingStruct) coachingStructs
 ```
 
+### coachingIndex
+
+```solidity
+uint256 coachingIndex
+```
+
+### priceGetter
+
+```solidity
+contract IPriceGetter priceGetter
+```
+
 ### constructor
 
 ```solidity
-constructor() internal
+constructor(address priceGetterAddress) internal
 ```
 
 ### buyContent
 
 ```solidity
-function buyContent(struct ContentManager.ContentPurchaseVoucher voucher) external
+function buyContent(uint256 tokenId, bool fullContentPurchase, uint256[] purchasedParts, address giftReceiver) external
 ```
 
 allows users to purchase a content
@@ -142,7 +145,10 @@ allows users to purchase a content
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| voucher | struct ContentManager.ContentPurchaseVoucher | voucher for the content purchase |
+| tokenId | uint256 | id of the content |
+| fullContentPurchase | bool | is full content purchased |
+| purchasedParts | uint256[] | parts of the content purchased |
+| giftReceiver | address | address of the gift receiver if purchase is a gift |
 
 ### buyDiscountedContent
 
@@ -150,13 +156,30 @@ allows users to purchase a content
 function buyDiscountedContent(struct ContentManager.ContentDiscountVoucher voucher) external
 ```
 
-allows users to purchase a content
+allows users to purchase a content. Notice that there is no price conversion
+since the total payment amount is coming from backend with voucher where
+the total amount of payment in UDAO is calculated.
 
 #### Parameters
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | voucher | struct ContentManager.ContentDiscountVoucher | voucher for the content purchase |
+
+### _updateBalancesContent
+
+```solidity
+function _updateBalancesContent(uint256 priceToPay, address instructor) internal
+```
+
+allows users to purchase a content
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| priceToPay | uint256 | price to pay for the content |
+| instructor | address | instructor of the content |
 
 ### _updateOwned
 
@@ -177,16 +200,10 @@ an internal function to update owned contents of the user
 ### buyCoaching
 
 ```solidity
-function buyCoaching(struct ContentManager.CoachingPurchaseVoucher voucher) external
+function buyCoaching(uint256 tokenId) external
 ```
 
 Allows users to buy coaching service.
-
-#### Parameters
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| voucher | struct ContentManager.CoachingPurchaseVoucher | voucher for the coaching purchase |
 
 ### finalizeCoaching
 

@@ -36,6 +36,12 @@ _Below needs to be set during deployment_
 address IJMAddress
 ```
 
+### ISupervision
+
+```solidity
+address ISupervision
+```
+
 ### UdaoAddress
 
 ```solidity
@@ -57,7 +63,7 @@ address IrmAddress
 ### constructor
 
 ```solidity
-constructor(address _vmAddress, address _jmAddress, address _udaoAddress, address _udaocAddress, address _irmAddress) public
+constructor(address _vmAddress, address _jmAddress, address _supAddress, address _udaoAddress, address _udaocAddress, address _irmAddress) public
 ```
 
 ### setPlatformTreasuryAddress
@@ -88,6 +94,12 @@ function setAddressUdaoVp(address _udaoVpAddress) external
 
 ```solidity
 function setAddressIJMAddress(address _jmAddress) external
+```
+
+### setAddressISupervision
+
+```solidity
+function setAddressISupervision(address _supAddress) external
 ```
 
 ### setAddressUdaoAddress

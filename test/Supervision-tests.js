@@ -3,6 +3,7 @@ const hardhat = require("hardhat");
 const { ethers } = hardhat;
 const chai = require("chai");
 const BN = require("bn.js");
+const { LazyRole } = require("../lib/LazyRole");
 const helpers = require("@nomicfoundation/hardhat-network-helpers");
 const { deploy } = require("../lib/deployments");
 
@@ -1114,7 +1115,7 @@ describe("Supervision Contract", function () {
     const caseTokenRelated = true;
     const caseTokenId = 0;
     const emptyData = "0x";
-    const randomAddress = ethers.constants.AddressZero; 
+    const randomAddress = ethers.constants.AddressZero;
     /// @dev Give validator role to jurorMember1
     const VALIDATOR_ROLE = ethers.utils.keccak256(
       ethers.utils.toUtf8Bytes("VALIDATOR_ROLE")
@@ -2444,5 +2445,58 @@ describe("Supervision Contract", function () {
     await expect(
       contractSupervision.connect(jurorMember1).assignDispute(disputeId)
     ).to.revertedWith("You were banned");
+  });
+
+  it("Should get the role expire dates from staking contract", async function () {
+    await reDeploy();
+    await contractRoleManager.setKYC(jurorCandidate.address, true);
+
+    await contractUDAO.transfer(
+      jurorCandidate.address,
+      ethers.utils.parseEther("10000.0")
+    );
+
+    await contractUDAO
+      .connect(jurorCandidate)
+      .approve(
+        contractUDAOStaker.address,
+        ethers.utils.parseEther("999999999999.0")
+      );
+
+    await expect(
+      contractUDAOStaker
+        .connect(jurorCandidate)
+        .stakeForGovernance(ethers.utils.parseEther("10"), 30)
+    )
+      .to.emit(contractUDAOStaker, "GovernanceStake") // transfer from null address to minter
+      .withArgs(
+        jurorCandidate.address,
+        ethers.utils.parseEther("10"),
+        ethers.utils.parseEther("300")
+      );
+    const jurorLockAmount = await contractUDAOStaker.jurorLockAmount;
+    await expect(contractUDAOStaker.connect(jurorCandidate).applyForJuror())
+      .to.emit(contractUDAOStaker, "RoleApplied") // transfer from null address to minter
+      .withArgs(1, jurorCandidate.address, jurorLockAmount);
+
+    const lazyRole = new LazyRole({
+      contract: contractUDAOStaker,
+      signer: backend,
+    });
+    const role_voucher = await lazyRole.createVoucher(
+      jurorCandidate.address,
+      Date.now() + 999999999,
+      1
+    );
+    await expect(
+      contractUDAOStaker.connect(jurorCandidate).getApproved(role_voucher)
+    )
+      .to.emit(contractUDAOStaker, "RoleApproved") // transfer from null address to minter
+      .withArgs(1, jurorCandidate.address);
+
+    /// @dev Get the expire date
+    const expireDate = await contractSupervision.checkApplicationN(
+      jurorCandidate.address
+    );
   });
 });

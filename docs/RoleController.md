@@ -38,6 +38,12 @@ bytes32 STAKING_CONTRACT
 bytes32 GOVERNANCE_ROLE
 ```
 
+### GOVERNANCE_CONTRACT
+
+```solidity
+bytes32 GOVERNANCE_CONTRACT
+```
+
 ### JUROR_ROLE
 
 ```solidity

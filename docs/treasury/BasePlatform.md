@@ -116,10 +116,10 @@ contract IUDAOC udaoc
 uint256 coachingFoundationCut
 ```
 
-### coachingGovernancenCut
+### coachingGovernanceCut
 
 ```solidity
-uint256 coachingGovernancenCut
+uint256 coachingGovernanceCut
 ```
 
 ### contentFoundationCut
@@ -128,10 +128,10 @@ uint256 coachingGovernancenCut
 uint256 contentFoundationCut
 ```
 
-### contentGovernancenCut
+### contentGovernanceCut
 
 ```solidity
-uint256 contentGovernancenCut
+uint256 contentGovernanceCut
 ```
 
 ### contentJurorCut
@@ -170,22 +170,6 @@ contract IValidationManager IVM
 contract IJurorManager IJM
 ```
 
-### checkCoachingCuts
-
-```solidity
-modifier checkCoachingCuts()
-```
-
-Ensures the cut won't exceed %100
-
-### checkContentCuts
-
-```solidity
-modifier checkContentCuts()
-```
-
-Ensures the cut won't exceed %100
-
 ### RewardsDistributed
 
 ```solidity
@@ -202,11 +186,71 @@ event CutsUpdated(uint256 coachFnd, uint256 coachGov, uint256 contentFnd, uint25
 
 This event is triggered if a cut is updated.
 
+### GovernanceTreasuryUpdated
+
+```solidity
+event GovernanceTreasuryUpdated(address newAddress)
+```
+
+This event is triggered if the governance treasury address is updated.
+
+### FoundationWalletUpdated
+
+```solidity
+event FoundationWalletUpdated(address newAddress)
+```
+
+This event is triggered if the foundation wallet address is updated.
+
+### ContractManagerUpdated
+
+```solidity
+event ContractManagerUpdated(address newAddress)
+```
+
+This event is triggered if the contract manager address is updated.
+
+### AddressesUpdated
+
+```solidity
+event AddressesUpdated(address udao, address udaoc, address ivm, address ijm, address irm)
+```
+
+This event is triggered if the contract manager updates the addresses.
+
 ### constructor
 
 ```solidity
 constructor(address _contractManager, address _rmAddress) internal
 ```
+
+### setGovernanceTreasuryAddress
+
+```solidity
+function setGovernanceTreasuryAddress(address _newAddress) external
+```
+
+Sets the address of the governance treasury
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _newAddress | address | New address of the governance treasury |
+
+### setFoundationWalletAddress
+
+```solidity
+function setFoundationWalletAddress(address _newAddress) external
+```
+
+Sets the address of the foundation wallet
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _newAddress | address | New address of the foundation wallet |
 
 ### setContractManagerAddress
 
@@ -323,4 +367,5 @@ function distributeRewards() external
 distributes rewards for round
 Gets balance accumulated this round and distributes it per point
 for validators to claim it later.
+TODO Automate this process with sentinels?
 

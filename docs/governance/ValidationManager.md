@@ -88,10 +88,10 @@ struct Validation {
 }
 ```
 
-### requiredValidator
+### requiredValidators
 
 ```solidity
-uint128 requiredValidator
+uint128 requiredValidators
 ```
 
 ### minRequiredAcceptVote
@@ -174,13 +174,28 @@ function setUDAOC(address udaocAddress) external
 function setStaker(address stakerAddress) external
 ```
 
+creates a validation for a token
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| stakerAddress | address | address of staking contract |
+
 ### sendValidation
 
 ```solidity
 function sendValidation(uint256 validationId, bool result) external
 ```
 
-_this is possibly deprecated, moved to offchain?_
+Sends validation result of validator to blockchain
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| validationId | uint256 | id of validation |
+| result | bool | result of validation |
 
 ### finalizeValidation
 
@@ -197,7 +212,7 @@ function dismissValidation(uint256 validationId) external
 ### setRequiredValidators
 
 ```solidity
-function setRequiredValidators(uint128 _requiredValidator) external
+function setRequiredValidators(uint128 _requiredValidators) external
 ```
 
 sets required validator vote count per content
@@ -206,7 +221,7 @@ sets required validator vote count per content
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| _requiredValidator | uint128 | new required vote count |
+| _requiredValidators | uint128 | new required vote count |
 
 ### createValidation
 
@@ -220,8 +235,8 @@ starts new validation for content
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| tokenId | uint256 | id of the content that will be validated |
-| score | uint256 | validation score of the content |
+| tokenId | uint256 | id of the content that will be validated TODO 1 token aynı anda sadece 1 validasyonda olabilir TODO kontent sahibine eğer validasyon başlamadıysa önceki validasyonu iptal etme hakkı verilebilir TODO voucher eklendikten sonra score silinmeli buradan |
+| score | uint256 |  |
 
 ### getValidationResults
 
