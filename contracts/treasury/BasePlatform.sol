@@ -7,8 +7,7 @@ import "@openzeppelin/contracts/utils/Counters.sol";
 import "../ContractManager.sol";
 import "../interfaces/IUDAOC.sol";
 import "../RoleController.sol";
-import "../interfaces/IVM.sol";
-import "../interfaces/IJM.sol";
+import "../interfaces/ISupervision.sol";
 
 abstract contract BasePlatform is Pausable, RoleController {
     ContractManager public contractManager;
@@ -79,8 +78,7 @@ abstract contract BasePlatform is Pausable, RoleController {
     address governanceTreasury; // timelock controller address
     address foundationWallet;
 
-    IValidationManager IVM;
-    IJurorManager IJM;
+    ISupervision ISupVis;
 
     /// @notice Triggered after every round is finalized and rewards are distributed
     event RewardsDistributed(
@@ -112,8 +110,7 @@ abstract contract BasePlatform is Pausable, RoleController {
     event AddressesUpdated(
         address udao,
         address udaoc,
-        address ivm,
-        address ijm,
+        address isupvis,
         address irm
     );
 
@@ -127,8 +124,7 @@ abstract contract BasePlatform is Pausable, RoleController {
         contractManager = ContractManager(_contractManager);
         udao = IERC20(contractManager.UdaoAddress());
         udaoc = IUDAOC(contractManager.UdaocAddress());
-        IVM = IValidationManager(contractManager.IVMAddress());
-        IJM = IJurorManager(contractManager.IJMAddress());
+        ISupVis = ISupervision(contractManager.ISupVisAddress());
     }
 
     // SETTERS
@@ -164,14 +160,12 @@ abstract contract BasePlatform is Pausable, RoleController {
     function updateAddresses() external onlyRole(BACKEND_ROLE) {
         udao = IERC20(contractManager.UdaoAddress());
         udaoc = IUDAOC(contractManager.UdaocAddress());
-        IVM = IValidationManager(contractManager.IVMAddress());
-        IJM = IJurorManager(contractManager.IJMAddress());
+        ISupVis = ISupervision(contractManager.ISupVisAddress());
         IRM = IRoleManager(contractManager.IrmAddress());
         emit AddressesUpdated(
             contractManager.UdaoAddress(),
             contractManager.UdaocAddress(),
-            contractManager.IVMAddress(),
-            contractManager.IJMAddress(),
+            contractManager.ISupVisAddress(),
             contractManager.IrmAddress()
         );
     }
@@ -322,25 +316,24 @@ abstract contract BasePlatform is Pausable, RoleController {
         onlyRoles(administrator_roles)
     {
         // Validator reward distribution
-        uint currentTotalValidatorScore = IVM.getTotalValidationScore();
+        uint currentTotalValidatorScore = ISupVis.getTotalValidationScore();
         if (validatorBalanceForRound > 0 && currentTotalValidatorScore > 0) {
             payPerValidationScore[distributionRound] =
                 validatorBalanceForRound /
                 currentTotalValidatorScore;
             validatorBalanceForRound = 0;
         }
-        IVM.nextRound();
 
         // Juror reward distribution
-        uint currentJurorTotalScore = IJM.getTotalJurorScore();
+        uint currentJurorTotalScore = ISupVis.getTotalJurorScore();
         if (jurorBalanceForRound > 0 && currentJurorTotalScore > 0) {
             payPerJuror[distributionRound] =
                 jurorBalanceForRound /
                 currentJurorTotalScore;
             jurorBalanceForRound = 0;
         }
-        IJM.nextRound();
 
+        ISupVis.nextRound();
         distributionRound++;
 
         emit RewardsDistributed(
