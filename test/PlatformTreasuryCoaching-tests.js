@@ -18,7 +18,7 @@ const {
 chai.use(require("chai-bn")(BN));
 
 async function runValidation(
-  contractValidationManager,
+  contractSupervision,
   backend,
   validator1,
   validator2,
@@ -28,100 +28,80 @@ async function runValidation(
   contentCreator
 ) {
   await expect(
-    contractValidationManager.connect(contentCreator).createValidation(0, 50)
+    contractSupervision.connect(contentCreator).createValidation(0, 50)
   )
-    .to.emit(contractValidationManager, "ValidationCreated")
+    .to.emit(contractSupervision, "ValidationCreated")
     .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1));
-  await expect(
-    contractValidationManager.connect(validator1).assignValidation(1)
-  )
-    .to.emit(contractValidationManager, "ValidationAssigned")
+  await expect(contractSupervision.connect(validator1).assignValidation(1))
+    .to.emit(contractSupervision, "ValidationAssigned")
     .withArgs(
       ethers.BigNumber.from(0),
       ethers.BigNumber.from(1),
       validator1.address
     );
-  await expect(
-    contractValidationManager.connect(validator2).assignValidation(1)
-  )
-    .to.emit(contractValidationManager, "ValidationAssigned")
+  await expect(contractSupervision.connect(validator2).assignValidation(1))
+    .to.emit(contractSupervision, "ValidationAssigned")
     .withArgs(
       ethers.BigNumber.from(0),
       ethers.BigNumber.from(1),
       validator2.address
     );
-  await expect(
-    contractValidationManager.connect(validator3).assignValidation(1)
-  )
-    .to.emit(contractValidationManager, "ValidationAssigned")
+  await expect(contractSupervision.connect(validator3).assignValidation(1))
+    .to.emit(contractSupervision, "ValidationAssigned")
     .withArgs(
       ethers.BigNumber.from(0),
       ethers.BigNumber.from(1),
       validator3.address
     );
-  await expect(
-    contractValidationManager.connect(validator4).assignValidation(1)
-  )
-    .to.emit(contractValidationManager, "ValidationAssigned")
+  await expect(contractSupervision.connect(validator4).assignValidation(1))
+    .to.emit(contractSupervision, "ValidationAssigned")
     .withArgs(
       ethers.BigNumber.from(0),
       ethers.BigNumber.from(1),
       validator4.address
     );
-  await expect(
-    contractValidationManager.connect(validator5).assignValidation(1)
-  )
-    .to.emit(contractValidationManager, "ValidationAssigned")
+  await expect(contractSupervision.connect(validator5).assignValidation(1))
+    .to.emit(contractSupervision, "ValidationAssigned")
     .withArgs(
       ethers.BigNumber.from(0),
       ethers.BigNumber.from(1),
       validator5.address
     );
 
-  await expect(
-    contractValidationManager.connect(validator1).sendValidation(1, true)
-  )
-    .to.emit(contractValidationManager, "ValidationResultSent")
+  await expect(contractSupervision.connect(validator1).sendValidation(1, true))
+    .to.emit(contractSupervision, "ValidationResultSent")
     .withArgs(
       ethers.BigNumber.from(0),
       ethers.BigNumber.from(1),
       validator1.address,
       true
     );
-  await expect(
-    contractValidationManager.connect(validator2).sendValidation(1, true)
-  )
-    .to.emit(contractValidationManager, "ValidationResultSent")
+  await expect(contractSupervision.connect(validator2).sendValidation(1, true))
+    .to.emit(contractSupervision, "ValidationResultSent")
     .withArgs(
       ethers.BigNumber.from(0),
       ethers.BigNumber.from(1),
       validator2.address,
       true
     );
-  await expect(
-    contractValidationManager.connect(validator3).sendValidation(1, true)
-  )
-    .to.emit(contractValidationManager, "ValidationResultSent")
+  await expect(contractSupervision.connect(validator3).sendValidation(1, true))
+    .to.emit(contractSupervision, "ValidationResultSent")
     .withArgs(
       ethers.BigNumber.from(0),
       ethers.BigNumber.from(1),
       validator3.address,
       true
     );
-  await expect(
-    contractValidationManager.connect(validator4).sendValidation(1, true)
-  )
-    .to.emit(contractValidationManager, "ValidationResultSent")
+  await expect(contractSupervision.connect(validator4).sendValidation(1, true))
+    .to.emit(contractSupervision, "ValidationResultSent")
     .withArgs(
       ethers.BigNumber.from(0),
       ethers.BigNumber.from(1),
       validator4.address,
       true
     );
-  await expect(
-    contractValidationManager.connect(validator5).sendValidation(1, false)
-  )
-    .to.emit(contractValidationManager, "ValidationResultSent")
+  await expect(contractSupervision.connect(validator5).sendValidation(1, false))
+    .to.emit(contractSupervision, "ValidationResultSent")
     .withArgs(
       ethers.BigNumber.from(0),
       ethers.BigNumber.from(1),
@@ -129,9 +109,9 @@ async function runValidation(
       false
     );
   await expect(
-    contractValidationManager.connect(contentCreator).finalizeValidation(1)
+    contractSupervision.connect(contentCreator).finalizeValidation(1)
   )
-    .to.emit(contractValidationManager, "ValidationEnded")
+    .to.emit(contractSupervision, "ValidationEnded")
     .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), true);
 }
 
@@ -167,14 +147,12 @@ describe("Platform Treasury Contract - Coaching", function () {
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
-      contractValidationManager,
       contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
-      contractJurorManager,
       GOVERNANCE_ROLE,
       BACKEND_ROLE,
       contractContractManager,
@@ -182,7 +160,7 @@ describe("Platform Treasury Contract - Coaching", function () {
       account2,
       account3,
       contractPriceGetter,
-    } = await deploy(false, true);
+    } = await deploy();
     /// Set KYC
     await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer.address, true);
@@ -210,7 +188,7 @@ describe("Platform Treasury Contract - Coaching", function () {
 
     /// Start validation and finalize it
     await runValidation(
-      contractValidationManager,
+      contractSupervision,
       backend,
       validator1,
       validator2,
@@ -282,14 +260,12 @@ describe("Platform Treasury Contract - Coaching", function () {
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
-      contractValidationManager,
       contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
-      contractJurorManager,
       GOVERNANCE_ROLE,
       BACKEND_ROLE,
       contractContractManager,
@@ -297,7 +273,7 @@ describe("Platform Treasury Contract - Coaching", function () {
       account2,
       account3,
       contractPriceGetter,
-    } = await deploy(false, true);
+    } = await deploy();
 
     /// Set KYC
     await contractRoleManager.setKYC(contentCreator.address, true);
@@ -325,7 +301,7 @@ describe("Platform Treasury Contract - Coaching", function () {
       );
     /// Start validation and finalize it
     await runValidation(
-      contractValidationManager,
+      contractSupervision,
       backend,
       validator1,
       validator2,
@@ -390,14 +366,12 @@ describe("Platform Treasury Contract - Coaching", function () {
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
-      contractValidationManager,
       contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
-      contractJurorManager,
       GOVERNANCE_ROLE,
       BACKEND_ROLE,
       contractContractManager,
@@ -405,7 +379,7 @@ describe("Platform Treasury Contract - Coaching", function () {
       account2,
       account3,
       contractPriceGetter,
-    } = await deploy(false, true);
+    } = await deploy();
 
     /// Set KYC
     await contractRoleManager.setKYC(contentCreator.address, true);
@@ -433,7 +407,7 @@ describe("Platform Treasury Contract - Coaching", function () {
       );
     /// Start validation and finalize it
     await runValidation(
-      contractValidationManager,
+      contractSupervision,
       backend,
       validator1,
       validator2,
@@ -491,14 +465,12 @@ describe("Platform Treasury Contract - Coaching", function () {
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
-      contractValidationManager,
       contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
-      contractJurorManager,
       GOVERNANCE_ROLE,
       BACKEND_ROLE,
       contractContractManager,
@@ -548,14 +520,12 @@ describe("Platform Treasury Contract - Coaching", function () {
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
-      contractValidationManager,
       contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
-      contractJurorManager,
       GOVERNANCE_ROLE,
       BACKEND_ROLE,
       contractContractManager,
@@ -638,14 +608,12 @@ describe("Platform Treasury Contract - Coaching", function () {
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
-      contractValidationManager,
       contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
-      contractJurorManager,
       GOVERNANCE_ROLE,
       BACKEND_ROLE,
       contractContractManager,
@@ -653,7 +621,7 @@ describe("Platform Treasury Contract - Coaching", function () {
       account2,
       account3,
       contractPriceGetter,
-    } = await deploy(false, true);
+    } = await deploy();
 
     /// Set KYC
     await contractRoleManager.setKYC(contentCreator.address, true);
@@ -681,7 +649,7 @@ describe("Platform Treasury Contract - Coaching", function () {
       );
     /// Start validation and finalize it
     await runValidation(
-      contractValidationManager,
+      contractSupervision,
       backend,
       validator1,
       validator2,
@@ -743,14 +711,12 @@ describe("Platform Treasury Contract - Coaching", function () {
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
-      contractValidationManager,
       contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
-      contractJurorManager,
       GOVERNANCE_ROLE,
       BACKEND_ROLE,
       contractContractManager,
@@ -758,7 +724,7 @@ describe("Platform Treasury Contract - Coaching", function () {
       account2,
       account3,
       contractPriceGetter,
-    } = await deploy(false, true);
+    } = await deploy();
 
     /// Set KYC
     await contractRoleManager.setKYC(contentCreator.address, true);
@@ -786,7 +752,7 @@ describe("Platform Treasury Contract - Coaching", function () {
       );
     /// Start validation and finalize it
     await runValidation(
-      contractValidationManager,
+      contractSupervision,
       backend,
       validator1,
       validator2,
@@ -847,14 +813,12 @@ describe("Platform Treasury Contract - Coaching", function () {
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
-      contractValidationManager,
       contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
-      contractJurorManager,
       GOVERNANCE_ROLE,
       BACKEND_ROLE,
       contractContractManager,
@@ -862,7 +826,7 @@ describe("Platform Treasury Contract - Coaching", function () {
       account2,
       account3,
       contractPriceGetter,
-    } = await deploy(false, true);
+    } = await deploy();
 
     /// Set KYC
     await contractRoleManager.setKYC(contentCreator.address, true);
@@ -890,7 +854,7 @@ describe("Platform Treasury Contract - Coaching", function () {
       );
     /// Start validation and finalize it
     await runValidation(
-      contractValidationManager,
+      contractSupervision,
       backend,
       validator1,
       validator2,
@@ -952,14 +916,12 @@ describe("Platform Treasury Contract - Coaching", function () {
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
-      contractValidationManager,
       contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
-      contractJurorManager,
       GOVERNANCE_ROLE,
       BACKEND_ROLE,
       contractContractManager,
@@ -967,7 +929,7 @@ describe("Platform Treasury Contract - Coaching", function () {
       account2,
       account3,
       contractPriceGetter,
-    } = await deploy(false, true);
+    } = await deploy();
 
     /// Set KYC
     await contractRoleManager.setKYC(contentCreator.address, true);
@@ -995,7 +957,7 @@ describe("Platform Treasury Contract - Coaching", function () {
       );
     /// Start validation and finalize it
     await runValidation(
-      contractValidationManager,
+      contractSupervision,
       backend,
       validator1,
       validator2,
@@ -1056,14 +1018,12 @@ describe("Platform Treasury Contract - Coaching", function () {
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
-      contractValidationManager,
       contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
-      contractJurorManager,
       GOVERNANCE_ROLE,
       BACKEND_ROLE,
       contractContractManager,
@@ -1071,7 +1031,7 @@ describe("Platform Treasury Contract - Coaching", function () {
       account2,
       account3,
       contractPriceGetter,
-    } = await deploy(false, true);
+    } = await deploy();
 
     /// Set KYC
     await contractRoleManager.setKYC(contentCreator.address, true);
@@ -1100,7 +1060,7 @@ describe("Platform Treasury Contract - Coaching", function () {
 
     /// Start validation and finalize it
     await runValidation(
-      contractValidationManager,
+      contractSupervision,
       backend,
       validator1,
       validator2,
@@ -1177,14 +1137,12 @@ describe("Platform Treasury Contract - Coaching", function () {
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
-      contractValidationManager,
       contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
-      contractJurorManager,
       GOVERNANCE_ROLE,
       BACKEND_ROLE,
       contractContractManager,
@@ -1192,7 +1150,7 @@ describe("Platform Treasury Contract - Coaching", function () {
       account2,
       account3,
       contractPriceGetter,
-    } = await deploy(false, true);
+    } = await deploy();
 
     /// Set KYC
     await contractRoleManager.setKYC(contentCreator.address, true);
@@ -1220,7 +1178,7 @@ describe("Platform Treasury Contract - Coaching", function () {
       );
     /// Start validation and finalize it
     await runValidation(
-      contractValidationManager,
+      contractSupervision,
       backend,
       validator1,
       validator2,
@@ -1298,14 +1256,12 @@ describe("Platform Treasury Contract - Coaching", function () {
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
-      contractValidationManager,
       contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
-      contractJurorManager,
       GOVERNANCE_ROLE,
       BACKEND_ROLE,
       contractContractManager,
@@ -1313,7 +1269,7 @@ describe("Platform Treasury Contract - Coaching", function () {
       account2,
       account3,
       contractPriceGetter,
-    } = await deploy(false, true);
+    } = await deploy();
 
     /// Set KYC
     await contractRoleManager.setKYC(contentCreator.address, true);
@@ -1341,7 +1297,7 @@ describe("Platform Treasury Contract - Coaching", function () {
       );
     /// Start validation and finalize it
     await runValidation(
-      contractValidationManager,
+      contractSupervision,
       backend,
       validator1,
       validator2,
@@ -1416,14 +1372,12 @@ describe("Platform Treasury Contract - Coaching", function () {
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
-      contractValidationManager,
       contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
-      contractJurorManager,
       GOVERNANCE_ROLE,
       BACKEND_ROLE,
       contractContractManager,
@@ -1431,7 +1385,7 @@ describe("Platform Treasury Contract - Coaching", function () {
       account2,
       account3,
       contractPriceGetter,
-    } = await deploy(false, true);
+    } = await deploy();
 
     /// Set KYC
     await contractRoleManager.setKYC(contentCreator.address, true);
@@ -1459,7 +1413,7 @@ describe("Platform Treasury Contract - Coaching", function () {
       );
     /// Start validation and finalize it
     await runValidation(
-      contractValidationManager,
+      contractSupervision,
       backend,
       validator1,
       validator2,
@@ -1538,14 +1492,12 @@ describe("Platform Treasury Contract - Coaching", function () {
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
-      contractValidationManager,
       contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
-      contractJurorManager,
       GOVERNANCE_ROLE,
       BACKEND_ROLE,
       contractContractManager,
@@ -1553,7 +1505,7 @@ describe("Platform Treasury Contract - Coaching", function () {
       account2,
       account3,
       contractPriceGetter,
-    } = await deploy(false, true);
+    } = await deploy();
 
     /// Set KYC
     await contractRoleManager.setKYC(contentCreator.address, true);
@@ -1581,7 +1533,7 @@ describe("Platform Treasury Contract - Coaching", function () {
       );
     /// Start validation and finalize it
     await runValidation(
-      contractValidationManager,
+      contractSupervision,
       backend,
       validator1,
       validator2,
@@ -1660,14 +1612,12 @@ describe("Platform Treasury Contract - Coaching", function () {
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
-      contractValidationManager,
       contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
-      contractJurorManager,
       GOVERNANCE_ROLE,
       BACKEND_ROLE,
       contractContractManager,
@@ -1675,7 +1625,7 @@ describe("Platform Treasury Contract - Coaching", function () {
       account2,
       account3,
       contractPriceGetter,
-    } = await deploy(false, true);
+    } = await deploy();
 
     /// Set KYC
     await contractRoleManager.setKYC(contentCreator.address, true);
@@ -1703,7 +1653,7 @@ describe("Platform Treasury Contract - Coaching", function () {
       );
     /// Start validation and finalize it
     await runValidation(
-      contractValidationManager,
+      contractSupervision,
       backend,
       validator1,
       validator2,
@@ -1784,14 +1734,12 @@ describe("Platform Treasury Contract - Coaching", function () {
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
-      contractValidationManager,
       contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
-      contractJurorManager,
       GOVERNANCE_ROLE,
       BACKEND_ROLE,
       contractContractManager,
@@ -1799,7 +1747,7 @@ describe("Platform Treasury Contract - Coaching", function () {
       account2,
       account3,
       contractPriceGetter,
-    } = await deploy(false, true);
+    } = await deploy();
 
     /// Set KYC
     await contractRoleManager.setKYC(contentCreator.address, true);
@@ -1827,7 +1775,7 @@ describe("Platform Treasury Contract - Coaching", function () {
       );
     /// Start validation and finalize it
     await runValidation(
-      contractValidationManager,
+      contractSupervision,
       backend,
       validator1,
       validator2,
@@ -1907,14 +1855,12 @@ describe("Platform Treasury Contract - Coaching", function () {
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
-      contractValidationManager,
       contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
-      contractJurorManager,
       GOVERNANCE_ROLE,
       BACKEND_ROLE,
       contractContractManager,
@@ -1922,7 +1868,7 @@ describe("Platform Treasury Contract - Coaching", function () {
       account2,
       account3,
       contractPriceGetter,
-    } = await deploy(false, true);
+    } = await deploy();
 
     /// Set KYC
     await contractRoleManager.setKYC(contentCreator.address, true);
@@ -1950,7 +1896,7 @@ describe("Platform Treasury Contract - Coaching", function () {
       );
     /// Start validation and finalize it
     await runValidation(
-      contractValidationManager,
+      contractSupervision,
       backend,
       validator1,
       validator2,
@@ -2026,14 +1972,12 @@ describe("Platform Treasury Contract - Coaching", function () {
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
-      contractValidationManager,
       contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
-      contractJurorManager,
       GOVERNANCE_ROLE,
       BACKEND_ROLE,
       contractContractManager,
@@ -2041,7 +1985,7 @@ describe("Platform Treasury Contract - Coaching", function () {
       account2,
       account3,
       contractPriceGetter,
-    } = await deploy(false, true);
+    } = await deploy();
 
     /// Set KYC
     await contractRoleManager.setKYC(contentCreator.address, true);
@@ -2069,7 +2013,7 @@ describe("Platform Treasury Contract - Coaching", function () {
       );
     /// Start validation and finalize it
     await runValidation(
-      contractValidationManager,
+      contractSupervision,
       backend,
       validator1,
       validator2,
@@ -2145,14 +2089,12 @@ describe("Platform Treasury Contract - Coaching", function () {
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
-      contractValidationManager,
       contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
-      contractJurorManager,
       GOVERNANCE_ROLE,
       BACKEND_ROLE,
       contractContractManager,
@@ -2160,7 +2102,7 @@ describe("Platform Treasury Contract - Coaching", function () {
       account2,
       account3,
       contractPriceGetter,
-    } = await deploy(false, true);
+    } = await deploy();
 
     /// Set KYC
     await contractRoleManager.setKYC(contentCreator.address, true);
@@ -2188,7 +2130,7 @@ describe("Platform Treasury Contract - Coaching", function () {
       );
     /// Start validation and finalize it
     await runValidation(
-      contractValidationManager,
+      contractSupervision,
       backend,
       validator1,
       validator2,
@@ -2264,14 +2206,12 @@ describe("Platform Treasury Contract - Coaching", function () {
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
-      contractValidationManager,
       contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
-      contractJurorManager,
       GOVERNANCE_ROLE,
       BACKEND_ROLE,
       contractContractManager,
@@ -2279,7 +2219,7 @@ describe("Platform Treasury Contract - Coaching", function () {
       account2,
       account3,
       contractPriceGetter,
-    } = await deploy(false, true);
+    } = await deploy();
 
     /// Set KYC
     await contractRoleManager.setKYC(contentCreator.address, true);
@@ -2307,7 +2247,7 @@ describe("Platform Treasury Contract - Coaching", function () {
       );
     /// Start validation and finalize it
     await runValidation(
-      contractValidationManager,
+      contractSupervision,
       backend,
       validator1,
       validator2,
@@ -2387,14 +2327,12 @@ describe("Platform Treasury Contract - Coaching", function () {
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
-      contractValidationManager,
       contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
-      contractJurorManager,
       GOVERNANCE_ROLE,
       BACKEND_ROLE,
       contractContractManager,
@@ -2402,7 +2340,7 @@ describe("Platform Treasury Contract - Coaching", function () {
       account2,
       account3,
       contractPriceGetter,
-    } = await deploy(false, true);
+    } = await deploy();
 
     /// Set KYC
     await contractRoleManager.setKYC(contentCreator.address, true);
@@ -2430,7 +2368,7 @@ describe("Platform Treasury Contract - Coaching", function () {
       );
     /// Start validation and finalize it
     await runValidation(
-      contractValidationManager,
+      contractSupervision,
       backend,
       validator1,
       validator2,
@@ -2506,14 +2444,12 @@ describe("Platform Treasury Contract - Coaching", function () {
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
-      contractValidationManager,
       contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
-      contractJurorManager,
       GOVERNANCE_ROLE,
       BACKEND_ROLE,
       contractContractManager,
@@ -2521,7 +2457,7 @@ describe("Platform Treasury Contract - Coaching", function () {
       account2,
       account3,
       contractPriceGetter,
-    } = await deploy(false, true);
+    } = await deploy();
 
     /// Set KYC
     await contractRoleManager.setKYC(contentCreator.address, true);
@@ -2549,7 +2485,7 @@ describe("Platform Treasury Contract - Coaching", function () {
       );
     /// Start validation and finalize it
     await runValidation(
-      contractValidationManager,
+      contractSupervision,
       backend,
       validator1,
       validator2,
@@ -2625,14 +2561,12 @@ describe("Platform Treasury Contract - Coaching", function () {
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
-      contractValidationManager,
       contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
-      contractJurorManager,
       GOVERNANCE_ROLE,
       BACKEND_ROLE,
       contractContractManager,
@@ -2640,7 +2574,7 @@ describe("Platform Treasury Contract - Coaching", function () {
       account2,
       account3,
       contractPriceGetter,
-    } = await deploy(false, true);
+    } = await deploy();
 
     /// Set KYC
     await contractRoleManager.setKYC(contentCreator.address, true);
@@ -2668,7 +2602,7 @@ describe("Platform Treasury Contract - Coaching", function () {
       );
     /// Start validation and finalize it
     await runValidation(
-      contractValidationManager,
+      contractSupervision,
       backend,
       validator1,
       validator2,
@@ -2746,14 +2680,12 @@ describe("Platform Treasury Contract - Coaching", function () {
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
-      contractValidationManager,
       contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
-      contractJurorManager,
       GOVERNANCE_ROLE,
       BACKEND_ROLE,
       contractContractManager,
@@ -2761,7 +2693,7 @@ describe("Platform Treasury Contract - Coaching", function () {
       account2,
       account3,
       contractPriceGetter,
-    } = await deploy(false, true);
+    } = await deploy();
 
     /// Set KYC
     await contractRoleManager.setKYC(contentCreator.address, true);
@@ -2789,7 +2721,7 @@ describe("Platform Treasury Contract - Coaching", function () {
       );
     /// Start validation and finalize it
     await runValidation(
-      contractValidationManager,
+      contractSupervision,
       backend,
       validator1,
       validator2,
@@ -2869,14 +2801,12 @@ describe("Platform Treasury Contract - Coaching", function () {
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
-      contractValidationManager,
       contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
-      contractJurorManager,
       GOVERNANCE_ROLE,
       BACKEND_ROLE,
       contractContractManager,
@@ -2884,7 +2814,7 @@ describe("Platform Treasury Contract - Coaching", function () {
       account2,
       account3,
       contractPriceGetter,
-    } = await deploy(false, true);
+    } = await deploy();
 
     /// Set KYC
     await contractRoleManager.setKYC(contentCreator.address, true);
@@ -2912,7 +2842,7 @@ describe("Platform Treasury Contract - Coaching", function () {
       );
     /// Start validation and finalize it
     await runValidation(
-      contractValidationManager,
+      contractSupervision,
       backend,
       validator1,
       validator2,
