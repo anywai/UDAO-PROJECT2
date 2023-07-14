@@ -9,9 +9,20 @@ contract RoleManager is AccessControl, IRoleManager {
     bytes32 public constant VALIDATOR_ROLE = keccak256("VALIDATOR_ROLE");
     bytes32 public constant SUPER_VALIDATOR_ROLE =
         keccak256("SUPER_VALIDATOR_ROLE");
-    bytes32 public constant JUROR_ROLE = keccak256("JUROR_ROLE");
     bytes32 public constant BACKEND_ROLE = keccak256("BACKEND_ROLE");
+    bytes32 public constant FOUNDATION_ROLE = keccak256("FOUNDATION_ROLE");
     bytes32 public constant STAKING_CONTRACT = keccak256("STAKING_CONTRACT");
+    bytes32 public constant GOVERNANCE_ROLE = keccak256("GOVERNANCE_ROLE");
+    bytes32 public constant GOVERNANCE_CONTRACT =
+        keccak256("GOVERNANCE_CONTRACT");
+    bytes32 public constant JUROR_ROLE = keccak256("JUROR_ROLE");
+    bytes32 public constant SUPERVISION_CONTRACT =
+        keccak256("SUPERVISION_CONTRACT");
+    bytes32 public constant TREASURY_CONTRACT = keccak256("TREASURY_CONTRACT");
+    bytes32 public constant CORPORATE_ROLE = keccak256("CORPORATE_ROLE");
+
+    /// Role group for contract roles
+    bytes32[] contract_roles;
 
     mapping(address => bool) KYCList;
     mapping(address => bool) BanList;
@@ -23,6 +34,10 @@ contract RoleManager is AccessControl, IRoleManager {
     /// @notice Deployer gets the admin role.
     constructor() {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        contract_roles.push(STAKING_CONTRACT);
+        contract_roles.push(GOVERNANCE_CONTRACT);
+        contract_roles.push(TREASURY_CONTRACT);
+        contract_roles.push(SUPERVISION_CONTRACT);
     }
 
     /// @notice Used for checking if the given account has the asked role
@@ -77,12 +92,32 @@ contract RoleManager is AccessControl, IRoleManager {
     /// @notice set ban for an account address
     /// @param _address address that will be ban set
     /// @param _isBanned ban set result
-    function setBan(
-        address _address,
-        bool _isBanned
-    ) external onlyRole(BACKEND_ROLE) {
+    function setBan(address _address, bool _isBanned) external {
+        require(
+            hasRole(BACKEND_ROLE, msg.sender) ||
+                hasRole(SUPERVISION_CONTRACT, msg.sender),
+            "Only backend or supervision contract can set ban"
+        );
+        require(!hasRole(BACKEND_ROLE, _address), "Backend cannot be banned");
+        require(
+            !hasRole(FOUNDATION_ROLE, _address),
+            "Foundation cannot be banned"
+        );
+        require(!isContract(_address), "Contracts cannot be banned");
+
         BanList[_address] = _isBanned;
         emit SetBan(_address, _isBanned);
+    }
+
+    /// Checks if a given address is contract address or not
+    /// @param _address address that will be checked
+    function isContract(address _address) public view returns (bool) {
+        for (uint256 i = 0; i < contract_roles.length; i++) {
+            if (hasRole(contract_roles[i], _address)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /// @notice gets KYC result of the address
