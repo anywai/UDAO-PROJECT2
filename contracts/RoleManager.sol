@@ -4,6 +4,7 @@ pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "./interfaces/IRoleManager.sol";
+import "./interfaces/ISupervision.sol";
 
 contract RoleManager is AccessControl, IRoleManager {
     bytes32 public constant VALIDATOR_ROLE = keccak256("VALIDATOR_ROLE");
@@ -18,6 +19,8 @@ contract RoleManager is AccessControl, IRoleManager {
     bytes32 public constant JUROR_ROLE = keccak256("JUROR_ROLE");
     bytes32 public constant SUPERVISION_CONTRACT =
         keccak256("SUPERVISION_CONTRACT");
+    bytes32 public constant ROLEMANAGER_CONTRACT =
+        keccak256("ROLEMANAGER_CONTRACT");
     bytes32 public constant TREASURY_CONTRACT = keccak256("TREASURY_CONTRACT");
     bytes32 public constant CORPORATE_ROLE = keccak256("CORPORATE_ROLE");
 
@@ -38,6 +41,7 @@ contract RoleManager is AccessControl, IRoleManager {
         contract_roles.push(GOVERNANCE_CONTRACT);
         contract_roles.push(TREASURY_CONTRACT);
         contract_roles.push(SUPERVISION_CONTRACT);
+        contract_roles.push(ROLEMANAGER_CONTRACT);
     }
 
     /// @notice Used for checking if the given account has the asked role
@@ -106,6 +110,7 @@ contract RoleManager is AccessControl, IRoleManager {
         require(!isContract(_address), "Contracts cannot be banned");
 
         BanList[_address] = _isBanned;
+
         emit SetBan(_address, _isBanned);
     }
 

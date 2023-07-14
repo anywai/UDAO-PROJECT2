@@ -26,6 +26,10 @@ interface ISupervision {
     ) external view returns (uint);
 
     function getTotalJurorScore() external view returns (uint);
+    
+    function dismissValidation(
+        address demissionAdress
+    ) external;
 
     function nextRound() external;
 }

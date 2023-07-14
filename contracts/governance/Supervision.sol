@@ -42,6 +42,7 @@ contract Supervision is RoleController {
         uint256 validationId,
         address validator
     );
+    event ValidatorRemovedFromValidation(uint256 tokenId, address validator, uint256 validationId);
     event ValidationResultSent(
         uint256 tokenId,
         uint256 validationId,
@@ -67,6 +68,7 @@ contract Supervision is RoleController {
     mapping(address => mapping(uint256 => uint256))
         public validatorScorePerRound;
     mapping(address => uint) public validationCount;
+    // validator => validationId
     mapping(address => uint) public activeValidation;
     mapping(address => bool) public isInDispute;
     mapping(address => uint) public successfulValidation;
@@ -573,23 +575,38 @@ contract Supervision is RoleController {
     }
 
     function dismissValidation(
-        uint validationId
-    ) external onlyRoles(validator_roles) {
-        /// @notice allows validators to dismiss a validation assignment
-        /// @param validationId id of the content that will be dismissed
-        require(
-            activeValidation[msg.sender] == validationId,
-            "This content is not assigned to this wallet"
-        );
-        activeValidation[msg.sender] = 0;
+        address demissionAdress
+    ) external {
+        // @notice allows validators to be fired or resigned
+        // @param demissionAdress is the address that will be revoked from validator role
+        if (msg.sender == demissionAdress) {
+            removeValidatorFromValidation(demissionAdress);
+        }
+         else {
+            require(IRM.hasRole(BACKEND_ROLE, msg.sender) ||
+                IRM.hasRole(ROLEMANAGER_CONTRACT, msg.sender),
+            "Only backend or role manager contract can set ban"
+            );
+            removeValidatorFromValidation(demissionAdress);
+        }
+    }
+
+    function removeValidatorFromValidation(
+        address demissionAddress
+    ) internal {
+        // @notice allows validators to dismiss a validation assignment
+        // @param validationId id of the content that will be dismissed
+        uint validationId = activeValidation[demissionAddress];
+        activeValidation[demissionAddress] = 0;
         for (uint i; i < validations[validationId].validators.length; i++) {
-            if (msg.sender == validations[validationId].validators[i]) {
+            if (demissionAddress == validations[validationId].validators[i]) {
                 validations[validationId].validators[i] = validations[
                     validationId
                 ].validators[validations[validationId].validators.length - 1];
                 validations[validationId].validators.pop();
             }
         }
+        emit ValidatorRemovedFromValidation(validations[validationId].tokenId, demissionAddress, validationId);
     }
 
     /// @notice starts new validation for content
