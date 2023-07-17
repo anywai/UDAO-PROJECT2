@@ -7,8 +7,6 @@ import "./interfaces/IRoleManager.sol";
 
 contract RoleManager is AccessControl, IRoleManager {
     bytes32 public constant VALIDATOR_ROLE = keccak256("VALIDATOR_ROLE");
-    bytes32 public constant SUPER_VALIDATOR_ROLE =
-        keccak256("SUPER_VALIDATOR_ROLE");
     bytes32 public constant BACKEND_ROLE = keccak256("BACKEND_ROLE");
     bytes32 public constant FOUNDATION_ROLE = keccak256("FOUNDATION_ROLE");
     bytes32 public constant STAKING_CONTRACT = keccak256("STAKING_CONTRACT");
