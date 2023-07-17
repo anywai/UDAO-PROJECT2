@@ -34,7 +34,7 @@ var superValidatorCandidate, superValidator;
 // CONTRACTS & ROLES
 var contractUDAO, contractUDAOVp, contractUDAOCertificate, contractUDAOContent;
 
-var contractJurorManager, contractValidationManager, contractSupervision;
+var contractSupervision, contractSupervision, contractSupervision;
 var contractUDAOStaker, contractUDAOTimelockController, contractUDAOGovernor;
 
 var contractRoleManager, contractContractManagervar;
@@ -75,14 +75,14 @@ async function reDeploy() {
   contractRoleManager = replace.contractRoleManager;
   contractUDAOCertificate = replace.contractUDAOCertificate;
   contractUDAOContent = replace.contractUDAOContent;
-  contractValidationManager = replace.contractValidationManager;
+  contractSupervision = replace.contractSupervision;
   contractSupervision = replace.contractSupervision;
   contractPlatformTreasury = replace.contractPlatformTreasury;
   contractUDAOVp = replace.contractUDAOVp;
   contractUDAOStaker = replace.contractUDAOStaker;
   contractUDAOTimelockController = replace.contractUDAOTimelockController;
   contractUDAOGovernor = replace.contractUDAOGovernor;
-  contractJurorManager = replace.contractJurorManager;
+  contractSupervision = replace.contractSupervision;
   GOVERNANCE_ROLE = replace.GOVERNANCE_ROLE;
   BACKEND_ROLE = replace.BACKEND_ROLE;
   contractContractManager = replace.contractContractManager;
@@ -933,14 +933,12 @@ describe("Supervision Contract", function () {
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
-      contractValidationManager,
       contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
-      contractJurorManager,
       GOVERNANCE_ROLE,
       BACKEND_ROLE,
       contractContractManager,

@@ -17,11 +17,9 @@ abstract contract RoleController is Context, Pausable {
     bytes32 public constant GOVERNANCE_CONTRACT =
         keccak256("GOVERNANCE_CONTRACT");
     bytes32 public constant JUROR_ROLE = keccak256("JUROR_ROLE");
-    bytes32 public constant JUROR_CONTRACT = keccak256("JUROR_CONTRACT");
+    bytes32 public constant SUPERVISION_CONTRACT =
+        keccak256("SUPERVISION_CONTRACT");
     bytes32 public constant TREASURY_CONTRACT = keccak256("TREASURY_CONTRACT");
-    // TODO VALIDATION_MANAGER is not used
-    bytes32 public constant VALIDATION_MANAGER =
-        keccak256("VALIDATION_MANAGER");
     bytes32 public constant CORPORATE_ROLE = keccak256("CORPORATE_ROLE");
 
     /// Role group for validators

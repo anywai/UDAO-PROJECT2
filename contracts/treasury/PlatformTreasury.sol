@@ -76,7 +76,10 @@ contract PlatformTreasury is Pausable, ContentManager {
         uint withdrawableBalance = 0;
         uint validatorScore = 0;
         for (uint i = claimableRound; i < distributionRound; i++) {
-            validatorScore += IVM.getValidatorScore(msg.sender, claimableRound);
+            validatorScore += ISupVis.getValidatorScore(
+                msg.sender,
+                claimableRound
+            );
             withdrawableBalance += (payPerValidationScore[claimableRound] *
                 validatorScore);
         }
@@ -91,7 +94,7 @@ contract PlatformTreasury is Pausable, ContentManager {
         uint withdrawableBalance = 0;
         uint jurorScore = 0;
         for (uint i = claimableRound; i < distributionRound; i++) {
-            jurorScore += IJM.getJurorScore(msg.sender, claimableRound);
+            jurorScore += ISupVis.getJurorScore(msg.sender, claimableRound);
             withdrawableBalance += (payPerJuror[claimableRound] * jurorScore);
         }
         lastJurorClaim[msg.sender] = distributionRound;

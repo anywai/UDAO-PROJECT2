@@ -18,7 +18,7 @@ const {
 // Enable and inject BN dependency
 chai.use(require("chai-bn")(BN));
 async function runValidation(
-  contractValidationManager,
+  contractSupervision,
   backend,
   validator1,
   validator2,
@@ -28,100 +28,80 @@ async function runValidation(
   contentCreator
 ) {
   await expect(
-    contractValidationManager.connect(contentCreator).createValidation(0, 50)
+    contractSupervision.connect(contentCreator).createValidation(0, 50)
   )
-    .to.emit(contractValidationManager, "ValidationCreated")
+    .to.emit(contractSupervision, "ValidationCreated")
     .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1));
-  await expect(
-    contractValidationManager.connect(validator1).assignValidation(1)
-  )
-    .to.emit(contractValidationManager, "ValidationAssigned")
+  await expect(contractSupervision.connect(validator1).assignValidation(1))
+    .to.emit(contractSupervision, "ValidationAssigned")
     .withArgs(
       ethers.BigNumber.from(0),
       ethers.BigNumber.from(1),
       validator1.address
     );
-  await expect(
-    contractValidationManager.connect(validator2).assignValidation(1)
-  )
-    .to.emit(contractValidationManager, "ValidationAssigned")
+  await expect(contractSupervision.connect(validator2).assignValidation(1))
+    .to.emit(contractSupervision, "ValidationAssigned")
     .withArgs(
       ethers.BigNumber.from(0),
       ethers.BigNumber.from(1),
       validator2.address
     );
-  await expect(
-    contractValidationManager.connect(validator3).assignValidation(1)
-  )
-    .to.emit(contractValidationManager, "ValidationAssigned")
+  await expect(contractSupervision.connect(validator3).assignValidation(1))
+    .to.emit(contractSupervision, "ValidationAssigned")
     .withArgs(
       ethers.BigNumber.from(0),
       ethers.BigNumber.from(1),
       validator3.address
     );
-  await expect(
-    contractValidationManager.connect(validator4).assignValidation(1)
-  )
-    .to.emit(contractValidationManager, "ValidationAssigned")
+  await expect(contractSupervision.connect(validator4).assignValidation(1))
+    .to.emit(contractSupervision, "ValidationAssigned")
     .withArgs(
       ethers.BigNumber.from(0),
       ethers.BigNumber.from(1),
       validator4.address
     );
-  await expect(
-    contractValidationManager.connect(validator5).assignValidation(1)
-  )
-    .to.emit(contractValidationManager, "ValidationAssigned")
+  await expect(contractSupervision.connect(validator5).assignValidation(1))
+    .to.emit(contractSupervision, "ValidationAssigned")
     .withArgs(
       ethers.BigNumber.from(0),
       ethers.BigNumber.from(1),
       validator5.address
     );
 
-  await expect(
-    contractValidationManager.connect(validator1).sendValidation(1, true)
-  )
-    .to.emit(contractValidationManager, "ValidationResultSent")
+  await expect(contractSupervision.connect(validator1).sendValidation(1, true))
+    .to.emit(contractSupervision, "ValidationResultSent")
     .withArgs(
       ethers.BigNumber.from(0),
       ethers.BigNumber.from(1),
       validator1.address,
       true
     );
-  await expect(
-    contractValidationManager.connect(validator2).sendValidation(1, true)
-  )
-    .to.emit(contractValidationManager, "ValidationResultSent")
+  await expect(contractSupervision.connect(validator2).sendValidation(1, true))
+    .to.emit(contractSupervision, "ValidationResultSent")
     .withArgs(
       ethers.BigNumber.from(0),
       ethers.BigNumber.from(1),
       validator2.address,
       true
     );
-  await expect(
-    contractValidationManager.connect(validator3).sendValidation(1, true)
-  )
-    .to.emit(contractValidationManager, "ValidationResultSent")
+  await expect(contractSupervision.connect(validator3).sendValidation(1, true))
+    .to.emit(contractSupervision, "ValidationResultSent")
     .withArgs(
       ethers.BigNumber.from(0),
       ethers.BigNumber.from(1),
       validator3.address,
       true
     );
-  await expect(
-    contractValidationManager.connect(validator4).sendValidation(1, true)
-  )
-    .to.emit(contractValidationManager, "ValidationResultSent")
+  await expect(contractSupervision.connect(validator4).sendValidation(1, true))
+    .to.emit(contractSupervision, "ValidationResultSent")
     .withArgs(
       ethers.BigNumber.from(0),
       ethers.BigNumber.from(1),
       validator4.address,
       true
     );
-  await expect(
-    contractValidationManager.connect(validator5).sendValidation(1, false)
-  )
-    .to.emit(contractValidationManager, "ValidationResultSent")
+  await expect(contractSupervision.connect(validator5).sendValidation(1, false))
+    .to.emit(contractSupervision, "ValidationResultSent")
     .withArgs(
       ethers.BigNumber.from(0),
       ethers.BigNumber.from(1),
@@ -129,9 +109,9 @@ async function runValidation(
       false
     );
   await expect(
-    contractValidationManager.connect(contentCreator).finalizeValidation(1)
+    contractSupervision.connect(contentCreator).finalizeValidation(1)
   )
-    .to.emit(contractValidationManager, "ValidationEnded")
+    .to.emit(contractSupervision, "ValidationEnded")
     .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), true);
 }
 
@@ -167,14 +147,12 @@ describe("Platform Treasury Contract - Content", function () {
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
-      contractValidationManager,
       contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
-      contractJurorManager,
       GOVERNANCE_ROLE,
       BACKEND_ROLE,
       contractContractManager,
@@ -185,7 +163,7 @@ describe("Platform Treasury Contract - Content", function () {
     } = await deploy();
     await contractContractManager
       .connect(backend)
-      .setAddressIVM("0x5B38Da6a701c568545dCfcB03FcB875f56beddC4");
+      .setAddressISupVisAddress("0x5B38Da6a701c568545dCfcB03FcB875f56beddC4");
     // Get updated address
     await expect(contractPlatformTreasury.connect(backend).updateAddresses())
       .to.emit(contractPlatformTreasury, "AddressesUpdated")
@@ -193,22 +171,15 @@ describe("Platform Treasury Contract - Content", function () {
         anyValue,
         anyValue,
         "0x5B38Da6a701c568545dCfcB03FcB875f56beddC4",
-        anyValue,
         anyValue
       );
     await contractContractManager
       .connect(backend)
-      .setAddressIVM(contractValidationManager.address);
+      .setAddressISupVisAddress(contractSupervision.address);
     // Get updated address
     await expect(contractPlatformTreasury.connect(backend).updateAddresses())
       .to.emit(contractPlatformTreasury, "AddressesUpdated")
-      .withArgs(
-        anyValue,
-        anyValue,
-        contractValidationManager.address,
-        anyValue,
-        anyValue
-      );
+      .withArgs(anyValue, anyValue, contractSupervision.address, anyValue);
   });
 
   it("Should fail to set validation manager if not FOUNDATION", async function () {
@@ -242,14 +213,12 @@ describe("Platform Treasury Contract - Content", function () {
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
-      contractValidationManager,
       contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
-      contractJurorManager,
       GOVERNANCE_ROLE,
       BACKEND_ROLE,
       contractContractManager,
@@ -299,14 +268,12 @@ describe("Platform Treasury Contract - Content", function () {
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
-      contractValidationManager,
       contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
-      contractJurorManager,
       GOVERNANCE_ROLE,
       BACKEND_ROLE,
       contractContractManager,
@@ -314,7 +281,7 @@ describe("Platform Treasury Contract - Content", function () {
       account2,
       account3,
       contractPriceGetter,
-    } = await deploy(false, true);
+    } = await deploy();
 
     /// Set KYC
     await contractRoleManager.setKYC(contentCreator.address, true);
@@ -343,7 +310,7 @@ describe("Platform Treasury Contract - Content", function () {
 
     /// Start validation and finalize it
     await runValidation(
-      contractValidationManager,
+      contractSupervision,
       backend,
       validator1,
       validator2,
@@ -408,14 +375,12 @@ describe("Platform Treasury Contract - Content", function () {
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
-      contractValidationManager,
       contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
-      contractJurorManager,
       GOVERNANCE_ROLE,
       BACKEND_ROLE,
       contractContractManager,
@@ -423,7 +388,7 @@ describe("Platform Treasury Contract - Content", function () {
       account2,
       account3,
       contractPriceGetter,
-    } = await deploy(false, true);
+    } = await deploy();
 
     /// Set KYC
     await contractRoleManager.setKYC(contentCreator.address, true);
@@ -456,7 +421,7 @@ describe("Platform Treasury Contract - Content", function () {
       );
     /// Start validation and finalize it
     await runValidation(
-      contractValidationManager,
+      contractSupervision,
       backend,
       validator1,
       validator2,
@@ -524,14 +489,12 @@ describe("Platform Treasury Contract - Content", function () {
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
-      contractValidationManager,
       contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
-      contractJurorManager,
       GOVERNANCE_ROLE,
       BACKEND_ROLE,
       contractContractManager,
@@ -539,7 +502,7 @@ describe("Platform Treasury Contract - Content", function () {
       account2,
       account3,
       contractPriceGetter,
-    } = await deploy(false, true);
+    } = await deploy();
 
     /// Set KYC
     await contractRoleManager.setKYC(contentCreator.address, true);
@@ -572,7 +535,7 @@ describe("Platform Treasury Contract - Content", function () {
       );
     /// Start validation and finalize it
     await runValidation(
-      contractValidationManager,
+      contractSupervision,
       backend,
       validator1,
       validator2,
@@ -637,14 +600,12 @@ describe("Platform Treasury Contract - Content", function () {
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
-      contractValidationManager,
       contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
-      contractJurorManager,
       GOVERNANCE_ROLE,
       BACKEND_ROLE,
       contractContractManager,
@@ -704,14 +665,12 @@ describe("Platform Treasury Contract - Content", function () {
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
-      contractValidationManager,
       contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
-      contractJurorManager,
       GOVERNANCE_ROLE,
       BACKEND_ROLE,
       contractContractManager,
@@ -719,7 +678,7 @@ describe("Platform Treasury Contract - Content", function () {
       account2,
       account3,
       contractPriceGetter,
-    } = await deploy(false, true);
+    } = await deploy();
 
     /// Set KYC
     await contractRoleManager.setKYC(contentCreator.address, true);
@@ -750,7 +709,7 @@ describe("Platform Treasury Contract - Content", function () {
       );
     /// Start validation and finalize it
     await runValidation(
-      contractValidationManager,
+      contractSupervision,
       backend,
       validator1,
       validator2,
@@ -811,14 +770,12 @@ describe("Platform Treasury Contract - Content", function () {
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
-      contractValidationManager,
       contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
-      contractJurorManager,
       GOVERNANCE_ROLE,
       BACKEND_ROLE,
       contractContractManager,
@@ -826,7 +783,7 @@ describe("Platform Treasury Contract - Content", function () {
       account2,
       account3,
       contractPriceGetter,
-    } = await deploy(false, true);
+    } = await deploy();
 
     /// Set KYC
     await contractRoleManager.setKYC(contentCreator.address, true);
@@ -854,7 +811,7 @@ describe("Platform Treasury Contract - Content", function () {
       );
     /// Start validation and finalize it
     await runValidation(
-      contractValidationManager,
+      contractSupervision,
       backend,
       validator1,
       validator2,
@@ -918,14 +875,12 @@ describe("Platform Treasury Contract - Content", function () {
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
-      contractValidationManager,
       contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
-      contractJurorManager,
       GOVERNANCE_ROLE,
       BACKEND_ROLE,
       contractContractManager,
@@ -933,7 +888,7 @@ describe("Platform Treasury Contract - Content", function () {
       account2,
       account3,
       contractPriceGetter,
-    } = await deploy(false, true);
+    } = await deploy();
 
     /// Set KYC
     await contractRoleManager.setKYC(contentCreator.address, true);
@@ -961,7 +916,7 @@ describe("Platform Treasury Contract - Content", function () {
       );
     /// Start validation and finalize it
     await runValidation(
-      contractValidationManager,
+      contractSupervision,
       backend,
       validator1,
       validator2,
@@ -1025,14 +980,12 @@ describe("Platform Treasury Contract - Content", function () {
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
-      contractValidationManager,
       contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
-      contractJurorManager,
       GOVERNANCE_ROLE,
       BACKEND_ROLE,
       contractContractManager,
@@ -1040,7 +993,7 @@ describe("Platform Treasury Contract - Content", function () {
       account2,
       account3,
       contractPriceGetter,
-    } = await deploy(false, true);
+    } = await deploy();
 
     /// Set KYC
     await contractRoleManager.setKYC(contentCreator.address, true);
@@ -1068,7 +1021,7 @@ describe("Platform Treasury Contract - Content", function () {
       );
     /// Start validation and finalize it
     await runValidation(
-      contractValidationManager,
+      contractSupervision,
       backend,
       validator1,
       validator2,
@@ -1131,14 +1084,12 @@ describe("Platform Treasury Contract - Content", function () {
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
-      contractValidationManager,
       contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
-      contractJurorManager,
       GOVERNANCE_ROLE,
       BACKEND_ROLE,
       contractContractManager,
@@ -1146,7 +1097,7 @@ describe("Platform Treasury Contract - Content", function () {
       account2,
       account3,
       contractPriceGetter,
-    } = await deploy(false, true);
+    } = await deploy();
 
     /// Set KYC
     await contractRoleManager.setKYC(contentCreator.address, true);
@@ -1179,7 +1130,7 @@ describe("Platform Treasury Contract - Content", function () {
       );
     /// Start validation and finalize it
     await runValidation(
-      contractValidationManager,
+      contractSupervision,
       backend,
       validator1,
       validator2,
@@ -1244,14 +1195,12 @@ describe("Platform Treasury Contract - Content", function () {
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
-      contractValidationManager,
       contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
-      contractJurorManager,
       GOVERNANCE_ROLE,
       BACKEND_ROLE,
       contractContractManager,
@@ -1259,7 +1208,7 @@ describe("Platform Treasury Contract - Content", function () {
       account2,
       account3,
       contractPriceGetter,
-    } = await deploy(false, true);
+    } = await deploy();
 
     /// Set KYC
     await contractRoleManager.setKYC(contentCreator.address, true);
@@ -1291,50 +1240,40 @@ describe("Platform Treasury Contract - Content", function () {
         0
       );
     await expect(
-      contractValidationManager.connect(contentCreator).createValidation(0, 50)
+      contractSupervision.connect(contentCreator).createValidation(0, 50)
     )
-      .to.emit(contractValidationManager, "ValidationCreated")
+      .to.emit(contractSupervision, "ValidationCreated")
       .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1));
-    await expect(
-      contractValidationManager.connect(validator1).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
+    await expect(contractSupervision.connect(validator1).assignValidation(1))
+      .to.emit(contractSupervision, "ValidationAssigned")
       .withArgs(
         ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator1.address
       );
-    await expect(
-      contractValidationManager.connect(validator2).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
+    await expect(contractSupervision.connect(validator2).assignValidation(1))
+      .to.emit(contractSupervision, "ValidationAssigned")
       .withArgs(
         ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator2.address
       );
-    await expect(
-      contractValidationManager.connect(validator3).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
+    await expect(contractSupervision.connect(validator3).assignValidation(1))
+      .to.emit(contractSupervision, "ValidationAssigned")
       .withArgs(
         ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator3.address
       );
-    await expect(
-      contractValidationManager.connect(validator4).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
+    await expect(contractSupervision.connect(validator4).assignValidation(1))
+      .to.emit(contractSupervision, "ValidationAssigned")
       .withArgs(
         ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator4.address
       );
-    await expect(
-      contractValidationManager.connect(validator5).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
+    await expect(contractSupervision.connect(validator5).assignValidation(1))
+      .to.emit(contractSupervision, "ValidationAssigned")
       .withArgs(
         ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
@@ -1342,9 +1281,9 @@ describe("Platform Treasury Contract - Content", function () {
       );
 
     await expect(
-      contractValidationManager.connect(validator1).sendValidation(1, true)
+      contractSupervision.connect(validator1).sendValidation(1, true)
     )
-      .to.emit(contractValidationManager, "ValidationResultSent")
+      .to.emit(contractSupervision, "ValidationResultSent")
       .withArgs(
         ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
@@ -1352,9 +1291,9 @@ describe("Platform Treasury Contract - Content", function () {
         true
       );
     await expect(
-      contractValidationManager.connect(validator2).sendValidation(1, true)
+      contractSupervision.connect(validator2).sendValidation(1, true)
     )
-      .to.emit(contractValidationManager, "ValidationResultSent")
+      .to.emit(contractSupervision, "ValidationResultSent")
       .withArgs(
         ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
@@ -1362,9 +1301,9 @@ describe("Platform Treasury Contract - Content", function () {
         true
       );
     await expect(
-      contractValidationManager.connect(validator3).sendValidation(1, true)
+      contractSupervision.connect(validator3).sendValidation(1, true)
     )
-      .to.emit(contractValidationManager, "ValidationResultSent")
+      .to.emit(contractSupervision, "ValidationResultSent")
       .withArgs(
         ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
@@ -1372,9 +1311,9 @@ describe("Platform Treasury Contract - Content", function () {
         true
       );
     await expect(
-      contractValidationManager.connect(validator4).sendValidation(1, false)
+      contractSupervision.connect(validator4).sendValidation(1, false)
     )
-      .to.emit(contractValidationManager, "ValidationResultSent")
+      .to.emit(contractSupervision, "ValidationResultSent")
       .withArgs(
         ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
@@ -1382,9 +1321,9 @@ describe("Platform Treasury Contract - Content", function () {
         false
       );
     await expect(
-      contractValidationManager.connect(validator5).sendValidation(1, false)
+      contractSupervision.connect(validator5).sendValidation(1, false)
     )
-      .to.emit(contractValidationManager, "ValidationResultSent")
+      .to.emit(contractSupervision, "ValidationResultSent")
       .withArgs(
         ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
@@ -1392,9 +1331,9 @@ describe("Platform Treasury Contract - Content", function () {
         false
       );
     await expect(
-      contractValidationManager.connect(contentCreator).finalizeValidation(1)
+      contractSupervision.connect(contentCreator).finalizeValidation(1)
     )
-      .to.emit(contractValidationManager, "ValidationEnded")
+      .to.emit(contractSupervision, "ValidationEnded")
       .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), true);
 
     /// Send UDAO to the buyer's wallet
@@ -1450,14 +1389,12 @@ describe("Platform Treasury Contract - Content", function () {
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
-      contractValidationManager,
       contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
-      contractJurorManager,
       GOVERNANCE_ROLE,
       BACKEND_ROLE,
       contractContractManager,
@@ -1465,7 +1402,7 @@ describe("Platform Treasury Contract - Content", function () {
       account2,
       account3,
       contractPriceGetter,
-    } = await deploy(false, true);
+    } = await deploy();
 
     /// Set KYC
     await contractRoleManager.setKYC(contentCreator.address, true);
@@ -1497,50 +1434,40 @@ describe("Platform Treasury Contract - Content", function () {
         0
       );
     await expect(
-      contractValidationManager.connect(contentCreator).createValidation(0, 50)
+      contractSupervision.connect(contentCreator).createValidation(0, 50)
     )
-      .to.emit(contractValidationManager, "ValidationCreated")
+      .to.emit(contractSupervision, "ValidationCreated")
       .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1));
-    await expect(
-      contractValidationManager.connect(validator1).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
+    await expect(contractSupervision.connect(validator1).assignValidation(1))
+      .to.emit(contractSupervision, "ValidationAssigned")
       .withArgs(
         ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator1.address
       );
-    await expect(
-      contractValidationManager.connect(validator2).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
+    await expect(contractSupervision.connect(validator2).assignValidation(1))
+      .to.emit(contractSupervision, "ValidationAssigned")
       .withArgs(
         ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator2.address
       );
-    await expect(
-      contractValidationManager.connect(validator3).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
+    await expect(contractSupervision.connect(validator3).assignValidation(1))
+      .to.emit(contractSupervision, "ValidationAssigned")
       .withArgs(
         ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator3.address
       );
-    await expect(
-      contractValidationManager.connect(validator4).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
+    await expect(contractSupervision.connect(validator4).assignValidation(1))
+      .to.emit(contractSupervision, "ValidationAssigned")
       .withArgs(
         ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
         validator4.address
       );
-    await expect(
-      contractValidationManager.connect(validator5).assignValidation(1)
-    )
-      .to.emit(contractValidationManager, "ValidationAssigned")
+    await expect(contractSupervision.connect(validator5).assignValidation(1))
+      .to.emit(contractSupervision, "ValidationAssigned")
       .withArgs(
         ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
@@ -1548,9 +1475,9 @@ describe("Platform Treasury Contract - Content", function () {
       );
 
     await expect(
-      contractValidationManager.connect(validator1).sendValidation(1, true)
+      contractSupervision.connect(validator1).sendValidation(1, true)
     )
-      .to.emit(contractValidationManager, "ValidationResultSent")
+      .to.emit(contractSupervision, "ValidationResultSent")
       .withArgs(
         ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
@@ -1558,9 +1485,9 @@ describe("Platform Treasury Contract - Content", function () {
         true
       );
     await expect(
-      contractValidationManager.connect(validator2).sendValidation(1, true)
+      contractSupervision.connect(validator2).sendValidation(1, true)
     )
-      .to.emit(contractValidationManager, "ValidationResultSent")
+      .to.emit(contractSupervision, "ValidationResultSent")
       .withArgs(
         ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
@@ -1568,9 +1495,9 @@ describe("Platform Treasury Contract - Content", function () {
         true
       );
     await expect(
-      contractValidationManager.connect(validator3).sendValidation(1, true)
+      contractSupervision.connect(validator3).sendValidation(1, true)
     )
-      .to.emit(contractValidationManager, "ValidationResultSent")
+      .to.emit(contractSupervision, "ValidationResultSent")
       .withArgs(
         ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
@@ -1578,9 +1505,9 @@ describe("Platform Treasury Contract - Content", function () {
         true
       );
     await expect(
-      contractValidationManager.connect(validator4).sendValidation(1, false)
+      contractSupervision.connect(validator4).sendValidation(1, false)
     )
-      .to.emit(contractValidationManager, "ValidationResultSent")
+      .to.emit(contractSupervision, "ValidationResultSent")
       .withArgs(
         ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
@@ -1588,9 +1515,9 @@ describe("Platform Treasury Contract - Content", function () {
         false
       );
     await expect(
-      contractValidationManager.connect(validator5).sendValidation(1, false)
+      contractSupervision.connect(validator5).sendValidation(1, false)
     )
-      .to.emit(contractValidationManager, "ValidationResultSent")
+      .to.emit(contractSupervision, "ValidationResultSent")
       .withArgs(
         ethers.BigNumber.from(0),
         ethers.BigNumber.from(1),
@@ -1598,9 +1525,9 @@ describe("Platform Treasury Contract - Content", function () {
         false
       );
     await expect(
-      contractValidationManager.connect(contentCreator).finalizeValidation(1)
+      contractSupervision.connect(contentCreator).finalizeValidation(1)
     )
-      .to.emit(contractValidationManager, "ValidationEnded")
+      .to.emit(contractSupervision, "ValidationEnded")
       .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), true);
 
     /// Send UDAO to the buyer's wallet
@@ -1654,14 +1581,12 @@ describe("Platform Treasury Contract - Content", function () {
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
-      contractValidationManager,
       contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
-      contractJurorManager,
       GOVERNANCE_ROLE,
       BACKEND_ROLE,
       contractContractManager,
@@ -1669,7 +1594,7 @@ describe("Platform Treasury Contract - Content", function () {
       account2,
       account3,
       contractPriceGetter,
-    } = await deploy(false, true);
+    } = await deploy();
 
     /// Set KYC
     await contractRoleManager.setKYC(contentCreator.address, true);
@@ -1698,7 +1623,7 @@ describe("Platform Treasury Contract - Content", function () {
       );
     /// Start validation and finalize it
     await runValidation(
-      contractValidationManager,
+      contractSupervision,
       backend,
       validator1,
       validator2,
@@ -1763,14 +1688,12 @@ describe("Platform Treasury Contract - Content", function () {
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
-      contractValidationManager,
       contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
-      contractJurorManager,
       GOVERNANCE_ROLE,
       BACKEND_ROLE,
       contractContractManager,
@@ -1778,7 +1701,7 @@ describe("Platform Treasury Contract - Content", function () {
       account2,
       account3,
       contractPriceGetter,
-    } = await deploy(false, true);
+    } = await deploy();
 
     /// Set KYC
     await contractRoleManager.setKYC(contentCreator.address, true);
@@ -1811,7 +1734,7 @@ describe("Platform Treasury Contract - Content", function () {
       );
     /// Start validation and finalize it
     await runValidation(
-      contractValidationManager,
+      contractSupervision,
       backend,
       validator1,
       validator2,
@@ -1879,14 +1802,12 @@ describe("Platform Treasury Contract - Content", function () {
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
-      contractValidationManager,
       contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
-      contractJurorManager,
       GOVERNANCE_ROLE,
       BACKEND_ROLE,
       contractContractManager,
@@ -1894,7 +1815,7 @@ describe("Platform Treasury Contract - Content", function () {
       account2,
       account3,
       contractPriceGetter,
-    } = await deploy(false, true);
+    } = await deploy();
 
     /// Set KYC
     await contractRoleManager.setKYC(contentCreator.address, true);
@@ -1922,7 +1843,7 @@ describe("Platform Treasury Contract - Content", function () {
       );
     /// Start validation and finalize it
     await runValidation(
-      contractValidationManager,
+      contractSupervision,
       backend,
       validator1,
       validator2,
@@ -1986,14 +1907,12 @@ describe("Platform Treasury Contract - Content", function () {
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
-      contractValidationManager,
       contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
-      contractJurorManager,
       GOVERNANCE_ROLE,
       BACKEND_ROLE,
       contractContractManager,
@@ -2001,7 +1920,7 @@ describe("Platform Treasury Contract - Content", function () {
       account2,
       account3,
       contractPriceGetter,
-    } = await deploy(false, true);
+    } = await deploy();
 
     /// Set KYC
     await contractRoleManager.setKYC(contentCreator.address, true);
@@ -2030,7 +1949,7 @@ describe("Platform Treasury Contract - Content", function () {
       );
     /// Start validation and finalize it
     await runValidation(
-      contractValidationManager,
+      contractSupervision,
       backend,
       validator1,
       validator2,
@@ -2091,14 +2010,12 @@ describe("Platform Treasury Contract - Content", function () {
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
-      contractValidationManager,
       contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
-      contractJurorManager,
       GOVERNANCE_ROLE,
       BACKEND_ROLE,
       contractContractManager,
@@ -2106,7 +2023,7 @@ describe("Platform Treasury Contract - Content", function () {
       account2,
       account3,
       contractPriceGetter,
-    } = await deploy(false, true);
+    } = await deploy();
 
     /// Set KYC
     await contractRoleManager.setKYC(contentCreator.address, true);
@@ -2134,7 +2051,7 @@ describe("Platform Treasury Contract - Content", function () {
       );
     /// Start validation and finalize it
     await runValidation(
-      contractValidationManager,
+      contractSupervision,
       backend,
       validator1,
       validator2,

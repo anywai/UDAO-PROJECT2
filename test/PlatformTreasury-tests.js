@@ -39,7 +39,7 @@ async function checkAccountUDAOVpBalanceAndDelegate(contractUDAOVp, account) {
   await expect(accountVotes).to.equal(ethers.utils.parseEther("300"));
 }
 async function runValidation(
-  contractValidationManager,
+  contractSupervision,
   backend,
   validator1,
   validator2,
@@ -49,100 +49,80 @@ async function runValidation(
   contentCreator
 ) {
   await expect(
-    contractValidationManager.connect(contentCreator).createValidation(0, 50)
+    contractSupervision.connect(contentCreator).createValidation(0, 50)
   )
-    .to.emit(contractValidationManager, "ValidationCreated")
+    .to.emit(contractSupervision, "ValidationCreated")
     .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1));
-  await expect(
-    contractValidationManager.connect(validator1).assignValidation(1)
-  )
-    .to.emit(contractValidationManager, "ValidationAssigned")
+  await expect(contractSupervision.connect(validator1).assignValidation(1))
+    .to.emit(contractSupervision, "ValidationAssigned")
     .withArgs(
       ethers.BigNumber.from(0),
       ethers.BigNumber.from(1),
       validator1.address
     );
-  await expect(
-    contractValidationManager.connect(validator2).assignValidation(1)
-  )
-    .to.emit(contractValidationManager, "ValidationAssigned")
+  await expect(contractSupervision.connect(validator2).assignValidation(1))
+    .to.emit(contractSupervision, "ValidationAssigned")
     .withArgs(
       ethers.BigNumber.from(0),
       ethers.BigNumber.from(1),
       validator2.address
     );
-  await expect(
-    contractValidationManager.connect(validator3).assignValidation(1)
-  )
-    .to.emit(contractValidationManager, "ValidationAssigned")
+  await expect(contractSupervision.connect(validator3).assignValidation(1))
+    .to.emit(contractSupervision, "ValidationAssigned")
     .withArgs(
       ethers.BigNumber.from(0),
       ethers.BigNumber.from(1),
       validator3.address
     );
-  await expect(
-    contractValidationManager.connect(validator4).assignValidation(1)
-  )
-    .to.emit(contractValidationManager, "ValidationAssigned")
+  await expect(contractSupervision.connect(validator4).assignValidation(1))
+    .to.emit(contractSupervision, "ValidationAssigned")
     .withArgs(
       ethers.BigNumber.from(0),
       ethers.BigNumber.from(1),
       validator4.address
     );
-  await expect(
-    contractValidationManager.connect(validator5).assignValidation(1)
-  )
-    .to.emit(contractValidationManager, "ValidationAssigned")
+  await expect(contractSupervision.connect(validator5).assignValidation(1))
+    .to.emit(contractSupervision, "ValidationAssigned")
     .withArgs(
       ethers.BigNumber.from(0),
       ethers.BigNumber.from(1),
       validator5.address
     );
 
-  await expect(
-    contractValidationManager.connect(validator1).sendValidation(1, true)
-  )
-    .to.emit(contractValidationManager, "ValidationResultSent")
+  await expect(contractSupervision.connect(validator1).sendValidation(1, true))
+    .to.emit(contractSupervision, "ValidationResultSent")
     .withArgs(
       ethers.BigNumber.from(0),
       ethers.BigNumber.from(1),
       validator1.address,
       true
     );
-  await expect(
-    contractValidationManager.connect(validator2).sendValidation(1, true)
-  )
-    .to.emit(contractValidationManager, "ValidationResultSent")
+  await expect(contractSupervision.connect(validator2).sendValidation(1, true))
+    .to.emit(contractSupervision, "ValidationResultSent")
     .withArgs(
       ethers.BigNumber.from(0),
       ethers.BigNumber.from(1),
       validator2.address,
       true
     );
-  await expect(
-    contractValidationManager.connect(validator3).sendValidation(1, true)
-  )
-    .to.emit(contractValidationManager, "ValidationResultSent")
+  await expect(contractSupervision.connect(validator3).sendValidation(1, true))
+    .to.emit(contractSupervision, "ValidationResultSent")
     .withArgs(
       ethers.BigNumber.from(0),
       ethers.BigNumber.from(1),
       validator3.address,
       true
     );
-  await expect(
-    contractValidationManager.connect(validator4).sendValidation(1, true)
-  )
-    .to.emit(contractValidationManager, "ValidationResultSent")
+  await expect(contractSupervision.connect(validator4).sendValidation(1, true))
+    .to.emit(contractSupervision, "ValidationResultSent")
     .withArgs(
       ethers.BigNumber.from(0),
       ethers.BigNumber.from(1),
       validator4.address,
       true
     );
-  await expect(
-    contractValidationManager.connect(validator5).sendValidation(1, false)
-  )
-    .to.emit(contractValidationManager, "ValidationResultSent")
+  await expect(contractSupervision.connect(validator5).sendValidation(1, false))
+    .to.emit(contractSupervision, "ValidationResultSent")
     .withArgs(
       ethers.BigNumber.from(0),
       ethers.BigNumber.from(1),
@@ -150,9 +130,9 @@ async function runValidation(
       false
     );
   await expect(
-    contractValidationManager.connect(contentCreator).finalizeValidation(1)
+    contractSupervision.connect(contentCreator).finalizeValidation(1)
   )
-    .to.emit(contractValidationManager, "ValidationEnded")
+    .to.emit(contractSupervision, "ValidationEnded")
     .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), true);
 }
 
@@ -189,7 +169,7 @@ async function createContent(
   contractRoleManager,
   contractUDAOContent,
   contentCreator,
-  contractValidationManager,
+  contractSupervision,
   backend,
   validator1,
   validator2,
@@ -224,7 +204,7 @@ async function createContent(
 
   /// Start validation and finalize it
   await runValidation(
-    contractValidationManager,
+    contractSupervision,
     backend,
     validator1,
     validator2,
@@ -335,14 +315,12 @@ describe("Platform Treasury General", function () {
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
-      contractValidationManager,
       contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
-      contractJurorManager,
       GOVERNANCE_ROLE,
       BACKEND_ROLE,
       contractContractManager,
@@ -394,14 +372,12 @@ describe("Platform Treasury General", function () {
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
-      contractValidationManager,
       contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
-      contractJurorManager,
       GOVERNANCE_ROLE,
       BACKEND_ROLE,
       contractContractManager,
@@ -454,14 +430,12 @@ describe("Platform Treasury General", function () {
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
-      contractValidationManager,
       contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
-      contractJurorManager,
       GOVERNANCE_ROLE,
       BACKEND_ROLE,
       contractContractManager,
@@ -469,7 +443,7 @@ describe("Platform Treasury General", function () {
       account2,
       account3,
       contractPriceGetter,
-    } = await deploy(false, true, true);
+    } = await deploy();
     /// @dev Setup governance member
     await setupGovernanceMember(
       contractRoleManager,
@@ -519,7 +493,7 @@ describe("Platform Treasury General", function () {
       contractRoleManager,
       contractUDAOContent,
       contentCreator,
-      contractValidationManager,
+      contractSupervision,
       backend,
       validator1,
       validator2,
@@ -731,14 +705,12 @@ describe("Platform Treasury General", function () {
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
-      contractValidationManager,
       contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
-      contractJurorManager,
       GOVERNANCE_ROLE,
       BACKEND_ROLE,
       contractContractManager,
@@ -746,7 +718,7 @@ describe("Platform Treasury General", function () {
       account2,
       account3,
       contractPriceGetter,
-    } = await deploy(false, true);
+    } = await deploy();
     /// @dev Setup governance member
     await setupGovernanceMember(
       contractRoleManager,
@@ -795,7 +767,7 @@ describe("Platform Treasury General", function () {
       contractRoleManager,
       contractUDAOContent,
       contentCreator,
-      contractValidationManager,
+      contractSupervision,
       backend,
       validator1,
       validator2,
@@ -1020,14 +992,12 @@ describe("Platform Treasury General", function () {
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
-      contractValidationManager,
       contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
-      contractJurorManager,
       GOVERNANCE_ROLE,
       BACKEND_ROLE,
       contractContractManager,
@@ -1035,13 +1005,13 @@ describe("Platform Treasury General", function () {
       account2,
       account3,
       contractPriceGetter,
-    } = await deploy(false, true);
+    } = await deploy();
     // Create content
     await createContent(
       contractRoleManager,
       contractUDAOContent,
       contentCreator,
-      contractValidationManager,
+      contractSupervision,
       backend,
       validator1,
       validator2,
@@ -1121,14 +1091,12 @@ describe("Platform Treasury General", function () {
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
-      contractValidationManager,
       contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
-      contractJurorManager,
       GOVERNANCE_ROLE,
       BACKEND_ROLE,
       contractContractManager,
@@ -1136,13 +1104,13 @@ describe("Platform Treasury General", function () {
       account2,
       account3,
       contractPriceGetter,
-    } = await deploy(false, true);
+    } = await deploy();
     // Create content
     await createContent(
       contractRoleManager,
       contractUDAOContent,
       contentCreator,
-      contractValidationManager,
+      contractSupervision,
       backend,
       validator1,
       validator2,
@@ -1236,14 +1204,12 @@ describe("Platform Treasury General", function () {
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
-      contractValidationManager,
       contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
-      contractJurorManager,
       GOVERNANCE_ROLE,
       BACKEND_ROLE,
       contractContractManager,
@@ -1251,13 +1217,13 @@ describe("Platform Treasury General", function () {
       account2,
       account3,
       contractPriceGetter,
-    } = await deploy(false, true);
+    } = await deploy();
     // Create content
     await createContent(
       contractRoleManager,
       contractUDAOContent,
       contentCreator,
-      contractValidationManager,
+      contractSupervision,
       backend,
       validator1,
       validator2,
@@ -1297,7 +1263,7 @@ describe("Platform Treasury General", function () {
 
     // Get the ID of the current distribution round
     const currentDistributionRound =
-      await contractValidationManager.distributionRound();
+      await contractSupervision.distributionRound();
     // Foundation should call distributeRewards to distribute rewards to validators
     await contractPlatformTreasury.connect(foundation).distributeRewards();
 
@@ -1333,25 +1299,25 @@ describe("Platform Treasury General", function () {
     const contentPrice = await contractUDAOContent.contentPrice(0, 0);
     // Get the total validation score
     const totalValidationScore =
-      await contractValidationManager.totalValidationScore();
+      await contractSupervision.totalValidationScore();
     // Get the validator scores of validators
-    const validator1Score = await contractValidationManager.getValidatorScore(
+    const validator1Score = await contractSupervision.getValidatorScore(
       validator1.address,
       currentDistributionRound
     );
-    const validator2Score = await contractValidationManager.getValidatorScore(
+    const validator2Score = await contractSupervision.getValidatorScore(
       validator2.address,
       currentDistributionRound
     );
-    const validator3Score = await contractValidationManager.getValidatorScore(
+    const validator3Score = await contractSupervision.getValidatorScore(
       validator3.address,
       currentDistributionRound
     );
-    const validator4Score = await contractValidationManager.getValidatorScore(
+    const validator4Score = await contractSupervision.getValidatorScore(
       validator4.address,
       currentDistributionRound
     );
-    const validator5Score = await contractValidationManager.getValidatorScore(
+    const validator5Score = await contractSupervision.getValidatorScore(
       validator5.address,
       currentDistributionRound
     );
@@ -1431,14 +1397,12 @@ describe("Platform Treasury General", function () {
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
-      contractValidationManager,
       contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
-      contractJurorManager,
       GOVERNANCE_ROLE,
       BACKEND_ROLE,
       contractContractManager,
@@ -1446,13 +1410,13 @@ describe("Platform Treasury General", function () {
       account2,
       account3,
       contractPriceGetter,
-    } = await deploy(false, true);
+    } = await deploy();
     // Create content
     await createContent(
       contractRoleManager,
       contractUDAOContent,
       contentCreator,
-      contractValidationManager,
+      contractSupervision,
       backend,
       validator1,
       validator2,
@@ -1504,7 +1468,7 @@ describe("Platform Treasury General", function () {
 
     // Get the ID of the current distribution round
     const currentDistributionRound =
-      await contractValidationManager.distributionRound();
+      await contractSupervision.distributionRound();
     // Foundation should call distributeRewards to distribute rewards to validators
     await contractPlatformTreasury.connect(foundation).distributeRewards();
 
@@ -1542,25 +1506,25 @@ describe("Platform Treasury General", function () {
     const totalContentPrice = contentPrice.mul(3);
     // Get the total validation score
     const totalValidationScore =
-      await contractValidationManager.totalValidationScore();
+      await contractSupervision.totalValidationScore();
     // Get the validator scores of validators
-    const validator1Score = await contractValidationManager.getValidatorScore(
+    const validator1Score = await contractSupervision.getValidatorScore(
       validator1.address,
       currentDistributionRound
     );
-    const validator2Score = await contractValidationManager.getValidatorScore(
+    const validator2Score = await contractSupervision.getValidatorScore(
       validator2.address,
       currentDistributionRound
     );
-    const validator3Score = await contractValidationManager.getValidatorScore(
+    const validator3Score = await contractSupervision.getValidatorScore(
       validator3.address,
       currentDistributionRound
     );
-    const validator4Score = await contractValidationManager.getValidatorScore(
+    const validator4Score = await contractSupervision.getValidatorScore(
       validator4.address,
       currentDistributionRound
     );
-    const validator5Score = await contractValidationManager.getValidatorScore(
+    const validator5Score = await contractSupervision.getValidatorScore(
       validator5.address,
       currentDistributionRound
     );
@@ -1640,14 +1604,12 @@ describe("Platform Treasury General", function () {
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
-      contractValidationManager,
       contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
-      contractJurorManager,
       GOVERNANCE_ROLE,
       BACKEND_ROLE,
       contractContractManager,
@@ -1655,7 +1617,7 @@ describe("Platform Treasury General", function () {
       account2,
       account3,
       contractPriceGetter,
-    } = await deploy(false, true, true);
+    } = await deploy();
     /// Set KYC
     await contractRoleManager.setKYC(jurorMember1.address, true);
     await contractRoleManager.setKYC(jurorMember2.address, true);
@@ -1665,14 +1627,14 @@ describe("Platform Treasury General", function () {
     const caseQuestion = "Should we remove this content?";
     const caseTokenRelated = true;
     const caseTokenId = 0;
-    const caseRefund = false;
-    const caseRefundId = 0;
+    const _data = "0x";
+    const _targetContract = ethers.constants.AddressZero;
     // Create content
     await createContent(
       contractRoleManager,
       contractUDAOContent,
       contentCreator,
-      contractValidationManager,
+      contractSupervision,
       backend,
       validator1,
       validator2,
@@ -1688,56 +1650,55 @@ describe("Platform Treasury General", function () {
       contractRoleManager,
       contractUDAO
     );
-
     /// @dev Create dispute
-    await contractJurorManager
+    await contractSupervision
       .connect(backend)
       .createDispute(
         caseScope,
         caseQuestion,
         caseTokenRelated,
         caseTokenId,
-        caseRefund,
-        caseRefundId
+        _data,
+        _targetContract
       );
     /// @dev Assign dispute to juror
     const disputeId = 1;
-    await contractJurorManager.connect(jurorMember1).assignDispute(disputeId);
-    await contractJurorManager.connect(jurorMember2).assignDispute(disputeId);
-    await contractJurorManager.connect(jurorMember3).assignDispute(disputeId);
+    await contractSupervision.connect(jurorMember1).assignDispute(disputeId);
+    await contractSupervision.connect(jurorMember2).assignDispute(disputeId);
+    await contractSupervision.connect(jurorMember3).assignDispute(disputeId);
     /// @dev Send dispute result
     const disputeResultOfJurorMember1 = 1;
     const disputeResultOfJurorMember2 = 0;
     const disputeResultOfJurorMember3 = 0;
     const disputeVerdict = false;
-    await contractJurorManager
+    await contractSupervision
       .connect(jurorMember1)
       .sendDisputeResult(disputeId, disputeResultOfJurorMember1);
-    await contractJurorManager
+    await contractSupervision
       .connect(jurorMember2)
       .sendDisputeResult(disputeId, disputeResultOfJurorMember2);
     await expect(
-      contractJurorManager
+      contractSupervision
         .connect(jurorMember3)
         .sendDisputeResult(disputeId, disputeResultOfJurorMember3)
     )
-      .to.emit(contractJurorManager, "DisputeEnded")
+      .to.emit(contractSupervision, "DisputeEnded")
       .withArgs(disputeId, disputeVerdict);
 
     // Get the ID of the current distribution round
     const currentDistributionRound =
-      await contractValidationManager.distributionRound();
+      await contractSupervision.distributionRound();
 
     /// @dev Check scores of jurors in this round
-    const scoreOfJuror1 = await contractJurorManager.getJurorScore(
+    const scoreOfJuror1 = await contractSupervision.getJurorScore(
       jurorMember1.address,
       currentDistributionRound
     );
-    const scoreOfJuror2 = await contractJurorManager.getJurorScore(
+    const scoreOfJuror2 = await contractSupervision.getJurorScore(
       jurorMember2.address,
       currentDistributionRound
     );
-    const scoreOfJuror3 = await contractJurorManager.getJurorScore(
+    const scoreOfJuror3 = await contractSupervision.getJurorScore(
       jurorMember3.address,
       currentDistributionRound
     );
@@ -1790,7 +1751,7 @@ describe("Platform Treasury General", function () {
     const totalJurorScore = scoreOfJuror1.add(scoreOfJuror2).add(scoreOfJuror3);
     // Check if this matches with getTotalJurorScore result
     const getCumulativeJurorScore =
-      await contractJurorManager.getTotalJurorScore();
+      await contractSupervision.getTotalJurorScore();
     expect(getCumulativeJurorScore).to.equal(totalJurorScore);
     // Expect calculated juror balance for round to be equal to content price * juror cut / 100000
     expect(jurorBalanceForRound).to.equal(
@@ -1854,14 +1815,12 @@ describe("Platform Treasury General", function () {
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
-      contractValidationManager,
       contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
-      contractJurorManager,
       GOVERNANCE_ROLE,
       BACKEND_ROLE,
       contractContractManager,
@@ -1869,13 +1828,13 @@ describe("Platform Treasury General", function () {
       account2,
       account3,
       contractPriceGetter,
-    } = await deploy(false, true);
+    } = await deploy();
     // Create content
     await createContent(
       contractRoleManager,
       contractUDAOContent,
       contentCreator,
-      contractValidationManager,
+      contractSupervision,
       backend,
       validator1,
       validator2,
@@ -1971,14 +1930,12 @@ describe("Platform Treasury General", function () {
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
-      contractValidationManager,
       contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
-      contractJurorManager,
       GOVERNANCE_ROLE,
       BACKEND_ROLE,
       contractContractManager,
@@ -1986,14 +1943,14 @@ describe("Platform Treasury General", function () {
       account2,
       account3,
       contractPriceGetter,
-    } = await deploy(false, true);
+    } = await deploy();
 
     /// Create content
     await createContent(
       contractRoleManager,
       contractUDAOContent,
       contentCreator,
-      contractValidationManager,
+      contractSupervision,
       backend,
       validator1,
       validator2,
@@ -2091,14 +2048,12 @@ describe("Platform Treasury General", function () {
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
-      contractValidationManager,
       contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
-      contractJurorManager,
       GOVERNANCE_ROLE,
       BACKEND_ROLE,
       contractContractManager,
@@ -2106,13 +2061,13 @@ describe("Platform Treasury General", function () {
       account2,
       account3,
       contractPriceGetter,
-    } = await deploy(false, true);
+    } = await deploy();
     /// Create content
     await createContent(
       contractRoleManager,
       contractUDAOContent,
       contentCreator,
-      contractValidationManager,
+      contractSupervision,
       backend,
       validator1,
       validator2,
@@ -2203,14 +2158,12 @@ describe("Platform Treasury General", function () {
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
-      contractValidationManager,
       contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
-      contractJurorManager,
       GOVERNANCE_ROLE,
       BACKEND_ROLE,
       contractContractManager,
@@ -2218,13 +2171,13 @@ describe("Platform Treasury General", function () {
       account2,
       account3,
       contractPriceGetter,
-    } = await deploy(false, true);
+    } = await deploy();
     /// Create content
     await createContent(
       contractRoleManager,
       contractUDAOContent,
       contentCreator,
-      contractValidationManager,
+      contractSupervision,
       backend,
       validator1,
       validator2,
@@ -2294,14 +2247,12 @@ describe("Platform Treasury General", function () {
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
-      contractValidationManager,
       contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
-      contractJurorManager,
       GOVERNANCE_ROLE,
       BACKEND_ROLE,
       contractContractManager,
@@ -2309,13 +2260,13 @@ describe("Platform Treasury General", function () {
       account2,
       account3,
       contractPriceGetter,
-    } = await deploy(false, true);
+    } = await deploy();
     /// Create content
     await createContent(
       contractRoleManager,
       contractUDAOContent,
       contentCreator,
-      contractValidationManager,
+      contractSupervision,
       backend,
       validator1,
       validator2,
@@ -2422,14 +2373,12 @@ describe("Platform Treasury General", function () {
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
-      contractValidationManager,
       contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
-      contractJurorManager,
       GOVERNANCE_ROLE,
       BACKEND_ROLE,
       contractContractManager,
@@ -2437,14 +2386,13 @@ describe("Platform Treasury General", function () {
       account2,
       account3,
       contractPriceGetter,
-      jurorContract,
-    } = await deploy(false, true);
+    } = await deploy();
     /// Create content
     await createContent(
       contractRoleManager,
       contractUDAOContent,
       contentCreator,
-      contractValidationManager,
+      contractSupervision,
       backend,
       validator1,
       validator2,
@@ -2464,13 +2412,13 @@ describe("Platform Treasury General", function () {
     const contentBuyer1BalanceBefore = await contractUDAO.balanceOf(
       contentBuyer1.address
     );
-    /// send some eth to the contractJurorManager and impersonate it
+    /// send some eth to the contractSupervision and impersonate it
     await helpers.setBalance(
-      contractJurorManager.address,
+      contractSupervision.address,
       hre.ethers.utils.parseEther("1")
     );
     const signerJurorManager = await ethers.getImpersonatedSigner(
-      contractJurorManager.address
+      contractSupervision.address
     );
     /// Juror should call forcedRefundJuror from platformtreasury contract
     await contractPlatformTreasury
@@ -2491,7 +2439,7 @@ describe("Platform Treasury General", function () {
     );
   });
 
-  it("Should fail only JUROR_ROLE can force refund the coaching", async function () {
+  it("Should fail if caller is not the SUPERVISION CONTRACT when force refund coaching", async function () {
     const {
       backend,
       contentCreator,
@@ -2522,14 +2470,12 @@ describe("Platform Treasury General", function () {
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
-      contractValidationManager,
       contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
-      contractJurorManager,
       GOVERNANCE_ROLE,
       BACKEND_ROLE,
       contractContractManager,
@@ -2537,14 +2483,13 @@ describe("Platform Treasury General", function () {
       account2,
       account3,
       contractPriceGetter,
-      JUROR_ROLE,
-    } = await deploy(false, true);
+    } = await deploy();
     /// Create content
     await createContent(
       contractRoleManager,
       contractUDAOContent,
       contentCreator,
-      contractValidationManager,
+      contractSupervision,
       backend,
       validator1,
       validator2,
@@ -2565,15 +2510,15 @@ describe("Platform Treasury General", function () {
       contentBuyer1.address
     );
     /// Juror should call forcedRefundJuror from platformtreasury contract
-    hashedJUROR_ROLE =
-      "0x297de9766668e7caa540695c8342fe9e3874514aea0954531c7d3f7f2aecabfd";
+    hashedSUPERVISION_CONTRACT =
+      "0xa461b0c8b00184aee0f24c2e6aa332abab3b69e34d06cee32c14792e697b131d";
     /// Foundation should call forcedRefundAdmin from platformtreasury contract
     await expect(
       contractPlatformTreasury
         .connect(foundation)
         .forcedRefundJuror(coachingId1)
     ).to.be.revertedWith(
-      `'AccessControl: account ${foundation.address.toLowerCase()} is missing role ${hashedJUROR_ROLE}'`
+      `'AccessControl: account ${foundation.address.toLowerCase()} is missing role ${hashedSUPERVISION_CONTRACT}'`
     );
   });
 
@@ -2608,14 +2553,12 @@ describe("Platform Treasury General", function () {
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
-      contractValidationManager,
       contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
-      contractJurorManager,
       GOVERNANCE_ROLE,
       BACKEND_ROLE,
       contractContractManager,
@@ -2623,7 +2566,7 @@ describe("Platform Treasury General", function () {
       account2,
       account3,
       contractPriceGetter,
-    } = await deploy(false, true, true);
+    } = await deploy();
     /// Set KYC
     await contractRoleManager.setKYC(jurorMember1.address, true);
     await contractRoleManager.setKYC(jurorMember2.address, true);
@@ -2635,12 +2578,14 @@ describe("Platform Treasury General", function () {
     const caseTokenId = 0;
     const caseRefund = false;
     const caseRefundId = 0;
+    const _data = "0x";
+    const _targetContract = ethers.constants.AddressZero;
     // Create content
     await createContent(
       contractRoleManager,
       contractUDAOContent,
       contentCreator,
-      contractValidationManager,
+      contractSupervision,
       backend,
       validator1,
       validator2,
@@ -2658,54 +2603,54 @@ describe("Platform Treasury General", function () {
     );
 
     /// @dev Create dispute
-    await contractJurorManager
+    await contractSupervision
       .connect(backend)
       .createDispute(
         caseScope,
         caseQuestion,
         caseTokenRelated,
         caseTokenId,
-        caseRefund,
-        caseRefundId
+        _data,
+        _targetContract
       );
     /// @dev Assign dispute to juror
     const disputeId = 1;
-    await contractJurorManager.connect(jurorMember1).assignDispute(disputeId);
-    await contractJurorManager.connect(jurorMember2).assignDispute(disputeId);
-    await contractJurorManager.connect(jurorMember3).assignDispute(disputeId);
+    await contractSupervision.connect(jurorMember1).assignDispute(disputeId);
+    await contractSupervision.connect(jurorMember2).assignDispute(disputeId);
+    await contractSupervision.connect(jurorMember3).assignDispute(disputeId);
     /// @dev Send dispute result
     const disputeResultOfJurorMember1 = 1;
     const disputeResultOfJurorMember2 = 0;
     const disputeResultOfJurorMember3 = 0;
     const disputeVerdict = false;
-    await contractJurorManager
+    await contractSupervision
       .connect(jurorMember1)
       .sendDisputeResult(disputeId, disputeResultOfJurorMember1);
-    await contractJurorManager
+    await contractSupervision
       .connect(jurorMember2)
       .sendDisputeResult(disputeId, disputeResultOfJurorMember2);
     await expect(
-      contractJurorManager
+      contractSupervision
         .connect(jurorMember3)
         .sendDisputeResult(disputeId, disputeResultOfJurorMember3)
     )
-      .to.emit(contractJurorManager, "DisputeEnded")
+      .to.emit(contractSupervision, "DisputeEnded")
       .withArgs(disputeId, disputeVerdict);
 
     // Get the ID of the current distribution round
     const currentDistributionRound =
-      await contractValidationManager.distributionRound();
+      await contractSupervision.distributionRound();
 
     /// @dev Check scores of jurors in this round
-    const scoreOfJuror1 = await contractJurorManager.getJurorScore(
+    const scoreOfJuror1 = await contractSupervision.getJurorScore(
       jurorMember1.address,
       currentDistributionRound
     );
-    const scoreOfJuror2 = await contractJurorManager.getJurorScore(
+    const scoreOfJuror2 = await contractSupervision.getJurorScore(
       jurorMember2.address,
       currentDistributionRound
     );
-    const scoreOfJuror3 = await contractJurorManager.getJurorScore(
+    const scoreOfJuror3 = await contractSupervision.getJurorScore(
       jurorMember3.address,
       currentDistributionRound
     );
@@ -2763,7 +2708,7 @@ describe("Platform Treasury General", function () {
     const totalJurorScore = scoreOfJuror1.add(scoreOfJuror2).add(scoreOfJuror3);
     // Check if this matches with getTotalJurorScore result
     const getCumulativeJurorScore =
-      await contractJurorManager.getTotalJurorScore();
+      await contractSupervision.getTotalJurorScore();
     expect(getCumulativeJurorScore).to.equal(totalJurorScore);
     // Expect calculated juror balance for round to be equal to content price * juror cut / 100000
     expect(jurorBalanceForRound).to.equal(
@@ -2824,14 +2769,12 @@ describe("Platform Treasury General", function () {
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
-      contractValidationManager,
       contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
-      contractJurorManager,
       GOVERNANCE_ROLE,
       BACKEND_ROLE,
       contractContractManager,
@@ -2839,13 +2782,13 @@ describe("Platform Treasury General", function () {
       account2,
       account3,
       contractPriceGetter,
-    } = await deploy(false, true);
+    } = await deploy();
     // Create content
     await createContent(
       contractRoleManager,
       contractUDAOContent,
       contentCreator,
-      contractValidationManager,
+      contractSupervision,
       backend,
       validator1,
       validator2,
@@ -2885,7 +2828,7 @@ describe("Platform Treasury General", function () {
 
     // Get the ID of the current distribution round
     const currentDistributionRound =
-      await contractValidationManager.distributionRound();
+      await contractSupervision.distributionRound();
     // Foundation should call distributeRewards to distribute rewards to validators
     await contractPlatformTreasury.connect(foundation).distributeRewards();
 
@@ -2928,25 +2871,25 @@ describe("Platform Treasury General", function () {
     const contentPrice = await contractUDAOContent.contentPrice(0, 0);
     // Get the total validation score
     const totalValidationScore =
-      await contractValidationManager.totalValidationScore();
+      await contractSupervision.totalValidationScore();
     // Get the validator scores of validators
-    const validator1Score = await contractValidationManager.getValidatorScore(
+    const validator1Score = await contractSupervision.getValidatorScore(
       validator1.address,
       currentDistributionRound
     );
-    const validator2Score = await contractValidationManager.getValidatorScore(
+    const validator2Score = await contractSupervision.getValidatorScore(
       validator2.address,
       currentDistributionRound
     );
-    const validator3Score = await contractValidationManager.getValidatorScore(
+    const validator3Score = await contractSupervision.getValidatorScore(
       validator3.address,
       currentDistributionRound
     );
-    const validator4Score = await contractValidationManager.getValidatorScore(
+    const validator4Score = await contractSupervision.getValidatorScore(
       validator4.address,
       currentDistributionRound
     );
-    const validator5Score = await contractValidationManager.getValidatorScore(
+    const validator5Score = await contractSupervision.getValidatorScore(
       validator5.address,
       currentDistributionRound
     );
@@ -3026,14 +2969,12 @@ describe("Platform Treasury General", function () {
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
-      contractValidationManager,
       contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
-      contractJurorManager,
       GOVERNANCE_ROLE,
       BACKEND_ROLE,
       contractContractManager,
@@ -3041,13 +2982,13 @@ describe("Platform Treasury General", function () {
       account2,
       account3,
       contractPriceGetter,
-    } = await deploy(false, true);
+    } = await deploy();
     // Create content
     await createContent(
       contractRoleManager,
       contractUDAOContent,
       contentCreator,
-      contractValidationManager,
+      contractSupervision,
       backend,
       validator1,
       validator2,
@@ -3099,7 +3040,7 @@ describe("Platform Treasury General", function () {
 
     // Get the ID of the current distribution round
     const currentDistributionRound =
-      await contractValidationManager.distributionRound();
+      await contractSupervision.distributionRound();
     // Foundation should call distributeRewards to distribute rewards to validators
     await contractPlatformTreasury.connect(foundation).distributeRewards();
 
@@ -3144,25 +3085,25 @@ describe("Platform Treasury General", function () {
     const totalContentPrice = contentPrice.mul(3);
     // Get the total validation score
     const totalValidationScore =
-      await contractValidationManager.totalValidationScore();
+      await contractSupervision.totalValidationScore();
     // Get the validator scores of validators
-    const validator1Score = await contractValidationManager.getValidatorScore(
+    const validator1Score = await contractSupervision.getValidatorScore(
       validator1.address,
       currentDistributionRound
     );
-    const validator2Score = await contractValidationManager.getValidatorScore(
+    const validator2Score = await contractSupervision.getValidatorScore(
       validator2.address,
       currentDistributionRound
     );
-    const validator3Score = await contractValidationManager.getValidatorScore(
+    const validator3Score = await contractSupervision.getValidatorScore(
       validator3.address,
       currentDistributionRound
     );
-    const validator4Score = await contractValidationManager.getValidatorScore(
+    const validator4Score = await contractSupervision.getValidatorScore(
       validator4.address,
       currentDistributionRound
     );
-    const validator5Score = await contractValidationManager.getValidatorScore(
+    const validator5Score = await contractSupervision.getValidatorScore(
       validator5.address,
       currentDistributionRound
     );
@@ -3242,14 +3183,12 @@ describe("Platform Treasury General", function () {
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
-      contractValidationManager,
       contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
-      contractJurorManager,
       GOVERNANCE_ROLE,
       BACKEND_ROLE,
       contractContractManager,
@@ -3257,7 +3196,7 @@ describe("Platform Treasury General", function () {
       account2,
       account3,
       contractPriceGetter,
-    } = await deploy(false, true, true);
+    } = await deploy();
     /// @dev Setup governance member
     await setupGovernanceMember(
       contractRoleManager,
@@ -3306,7 +3245,7 @@ describe("Platform Treasury General", function () {
       contractRoleManager,
       contractUDAOContent,
       contentCreator,
-      contractValidationManager,
+      contractSupervision,
       backend,
       validator1,
       validator2,
@@ -3522,14 +3461,12 @@ describe("Platform Treasury General", function () {
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
-      contractValidationManager,
       contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
-      contractJurorManager,
       GOVERNANCE_ROLE,
       BACKEND_ROLE,
       contractContractManager,
@@ -3537,7 +3474,7 @@ describe("Platform Treasury General", function () {
       account2,
       account3,
       contractPriceGetter,
-    } = await deploy(false, true);
+    } = await deploy();
     /// @dev Setup governance member
     await setupGovernanceMember(
       contractRoleManager,
@@ -3587,7 +3524,7 @@ describe("Platform Treasury General", function () {
       contractRoleManager,
       contractUDAOContent,
       contentCreator,
-      contractValidationManager,
+      contractSupervision,
       backend,
       validator1,
       validator2,
@@ -3816,14 +3753,12 @@ describe("Platform Treasury General", function () {
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
-      contractValidationManager,
       contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
-      contractJurorManager,
       GOVERNANCE_ROLE,
       BACKEND_ROLE,
       contractContractManager,
@@ -3831,13 +3766,13 @@ describe("Platform Treasury General", function () {
       account2,
       account3,
       contractPriceGetter,
-    } = await deploy(false, true);
+    } = await deploy();
     // Create content
     await createContent(
       contractRoleManager,
       contractUDAOContent,
       contentCreator,
-      contractValidationManager,
+      contractSupervision,
       backend,
       validator1,
       validator2,
@@ -3937,14 +3872,12 @@ describe("Platform Treasury General", function () {
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
-      contractValidationManager,
       contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
-      contractJurorManager,
       GOVERNANCE_ROLE,
       BACKEND_ROLE,
       contractContractManager,
@@ -3952,14 +3885,14 @@ describe("Platform Treasury General", function () {
       account2,
       account3,
       contractPriceGetter,
-    } = await deploy(false, true);
+    } = await deploy();
 
     /// Create content
     await createContent(
       contractRoleManager,
       contractUDAOContent,
       contentCreator,
-      contractValidationManager,
+      contractSupervision,
       backend,
       validator1,
       validator2,
@@ -4061,14 +3994,12 @@ describe("Platform Treasury General", function () {
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
-      contractValidationManager,
       contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
-      contractJurorManager,
       GOVERNANCE_ROLE,
       BACKEND_ROLE,
       contractContractManager,
@@ -4076,13 +4007,13 @@ describe("Platform Treasury General", function () {
       account2,
       account3,
       contractPriceGetter,
-    } = await deploy(false, true);
+    } = await deploy();
     /// Create content
     await createContent(
       contractRoleManager,
       contractUDAOContent,
       contentCreator,
-      contractValidationManager,
+      contractSupervision,
       backend,
       validator1,
       validator2,
@@ -4177,14 +4108,12 @@ describe("Platform Treasury General", function () {
       contractRoleManager,
       contractUDAOCertificate,
       contractUDAOContent,
-      contractValidationManager,
       contractSupervision,
       contractPlatformTreasury,
       contractUDAOVp,
       contractUDAOStaker,
       contractUDAOTimelockController,
       contractUDAOGovernor,
-      contractJurorManager,
       GOVERNANCE_ROLE,
       BACKEND_ROLE,
       contractContractManager,
@@ -4192,13 +4121,13 @@ describe("Platform Treasury General", function () {
       account2,
       account3,
       contractPriceGetter,
-    } = await deploy(false, true);
+    } = await deploy();
     /// Create content
     await createContent(
       contractRoleManager,
       contractUDAOContent,
       contentCreator,
-      contractValidationManager,
+      contractSupervision,
       backend,
       validator1,
       validator2,
@@ -4276,123 +4205,5 @@ describe("Platform Treasury General", function () {
         .add(coachingPaymentAmount.mul(2))
         .sub(instructorDebt)
     );
-  });
-
-  it("Should allow foundation to withdraw funds from the treasury after multiple content purchases when Foundation Banned", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractValidationManager,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      contractJurorManager,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy(false, true);
-    // Create content
-    await createContent(
-      contractRoleManager,
-      contractUDAOContent,
-      contentCreator,
-      contractValidationManager,
-      backend,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      contentCreator
-    );
-    // Make a content purchase to gather funds for governance
-    await makeContentPurchase(
-      contractPlatformTreasury,
-      contentBuyer1,
-      contractRoleManager,
-      contractUDAO
-    );
-    await makeContentPurchase(
-      contractPlatformTreasury,
-      contentBuyer2,
-      contractRoleManager,
-      contractUDAO
-    );
-    await makeContentPurchase(
-      contractPlatformTreasury,
-      contentBuyer3,
-      contractRoleManager,
-      contractUDAO
-    );
-
-    // set foundation wallet address
-    await expect(
-      contractPlatformTreasury
-        .connect(backend)
-        .setFoundationWalletAddress(foundation.address)
-    )
-      .to.emit(contractPlatformTreasury, "FoundationWalletUpdated")
-      .withArgs(foundation.address);
-
-    // Ban the Foundation
-    await contractRoleManager.setBan(foundation.address, true);
-
-    /// @dev Withdraw foundation funds from the treasury
-    await contractPlatformTreasury.connect(foundation).withdrawFoundation();
-
-    /// @dev Get the current percent cut of the foundation
-    const currentFoundationCut =
-      await contractPlatformTreasury.contentFoundationCut();
-
-    /// Get the current foundation balance
-    const currentFoundationBalance = await contractUDAO.balanceOf(
-      foundation.address
-    );
-    /// Get the content price of token Id 0 from UDAOC (first 0 is token ID, second 0 is full price of content)
-    const contentPrice = await contractUDAOContent.contentPrice(0, 0);
-    /// Multiply content price with 3 since 3 content purchases were made
-    const contentPriceTimesThree = contentPrice.mul(3);
-    /// Multiply the content price with the current foundation cut and divide by 100000 to get the expected foundation balance
-    const expectedFoundationBalanceBeforePercentage =
-      contentPriceTimesThree.mul(currentFoundationCut);
-    const expectedFoundationBalance =
-      expectedFoundationBalanceBeforePercentage.div(100000);
-
-    /// Check if the governance treasury balance is equal to the expected governance treasury balance
-    await expect(currentFoundationBalance).to.equal(expectedFoundationBalance);
   });
 });

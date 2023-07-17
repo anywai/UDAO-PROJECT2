@@ -317,7 +317,10 @@ abstract contract ContentManager is EIP712, BasePlatform {
             udaoc.coachingEnabled(tokenId),
             "Coaching is not enabled for this content"
         );
-        require(IVM.getIsValidated(tokenId), "Content is not validated yet");
+        require(
+            ISupVis.getIsValidated(tokenId),
+            "Content is not validated yet"
+        );
         (uint priceToPay, bytes32 sellingCurrency) = udaoc
             .getCoachingPriceAndCurrency(tokenId);
         uint priceToPayUdao;
@@ -423,7 +426,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
     /// @param _coachingId id of the coaching service
     function forcedPaymentJuror(
         uint256 _coachingId
-    ) external whenNotPaused onlyRole(JUROR_CONTRACT) {
+    ) external whenNotPaused onlyRole(SUPERVISION_CONTRACT) {
         CoachingStruct storage currentCoaching = coachingStructs[_coachingId];
         instructorBalance[currentCoaching.coach] += coachingStructs[_coachingId]
             .coachingPaymentAmount;
@@ -521,7 +524,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
     /// @param _coachingId The ID of the coaching service
     function forcedRefundJuror(
         uint256 _coachingId
-    ) external whenNotPaused onlyRole(JUROR_CONTRACT) {
+    ) external whenNotPaused onlyRole(SUPERVISION_CONTRACT) {
         uint256 startGas = gasleft();
         CoachingStruct storage currentCoaching = coachingStructs[_coachingId];
         uint256 totalPaymentAmount = currentCoaching.totalPaymentAmount;
