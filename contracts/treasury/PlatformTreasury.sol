@@ -70,7 +70,7 @@ contract PlatformTreasury is Pausable, ContentManager {
     function withdrawValidator()
         external
         whenNotPaused
-        onlyRoles(validator_roles)
+        onlyRole(VALIDATOR_ROLE)
     {
         uint claimableRound = lastValidatorClaim[msg.sender];
         uint withdrawableBalance = 0;
