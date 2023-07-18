@@ -87,7 +87,7 @@ contract UDAOStaker is RoleController, EIP712 {
     mapping(address => bool) public activeApplicationForValidator;
     mapping(address => bool) public activeApplicationForJuror;
 
-    uint256 public corporateStakePerListing = 500 ether; //setter getter, decider=adminler
+    uint256 public corporateStakePerListing = 500 ether; // TODO setter getter, decider=adminler
     mapping(address => uint) corporateStakedUDAO;
     mapping(address => uint) corporateLockedUDAO;
     mapping(address => uint) corporateActiveListingAmount;
