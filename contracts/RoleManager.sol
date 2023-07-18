@@ -110,7 +110,9 @@ contract RoleManager is AccessControl, IRoleManager {
     function isBanned(address _address) external view returns (bool) {
         return BanList[_address];
     }
-
+    /// @notice grants a role to an account
+    /// @param role The name of the role to grant
+    /// @param user The address of the account to grant the role to
     function grantRoleStaker(
         bytes32 role,
         address user
@@ -118,10 +120,26 @@ contract RoleManager is AccessControl, IRoleManager {
         _grantRole(role, user);
     }
 
+    /// @notice revokes a role from an account
+    /// @param role The name of the role to revoke
+    /// @param user The address of the account to revoke the role from
     function revokeRoleStaker(
         bytes32 role,
         address user
     ) external onlyRole(STAKING_CONTRACT) {
         _revokeRole(role, user);
+    }
+
+    /// @notice grants BACKEND_ROLE to a new address
+    /// @param backendAddress The address of the backend to grant
+    function grantBackend(address backendAddress) external onlyRole(FOUNDATION_ROLE) {
+        _grantRole(BACKEND_ROLE, backendAddress);
+    }
+
+    /// @notice revokes BACKEND_ROLE and bans the backend address
+    /// @param backendAddress The address of the backend to revoke
+    function revokeBackend(address backendAddress) external onlyRole(FOUNDATION_ROLE) {
+        _revokeRole(BACKEND_ROLE, backendAddress);
+        BanList[backendAddress] = true;
     }
 }
