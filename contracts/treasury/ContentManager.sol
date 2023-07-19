@@ -5,7 +5,7 @@ import "./BasePlatform.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
 
-import "../interfaces/IPriceGetter.sol";
+//import "../interfaces/IPriceGetter.sol";
 
 abstract contract ContentManager is EIP712, BasePlatform {
     string private constant SIGNING_DOMAIN = "ContentManager";
@@ -95,12 +95,12 @@ abstract contract ContentManager is EIP712, BasePlatform {
     mapping(uint256 => CoachingStruct) public coachingStructs;
     uint256 private coachingIndex;
 
-    IPriceGetter priceGetter;
+    //IPriceGetter priceGetter;
 
     constructor(
-        address priceGetterAddress
+       // address priceGetterAddress
     ) EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION) {
-        priceGetter = IPriceGetter(priceGetterAddress);
+        //priceGetter = IPriceGetter(priceGetterAddress);
     }
 
     /// @notice allows users to purchase a content

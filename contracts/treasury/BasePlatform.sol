@@ -9,6 +9,9 @@ import "../interfaces/IUDAOC.sol";
 import "../RoleController.sol";
 import "../interfaces/ISupervision.sol";
 
+import "../interfaces/IPriceGetter.sol";
+
+
 abstract contract BasePlatform is Pausable, RoleController {
     ContractManager public contractManager;
 
@@ -114,17 +117,21 @@ abstract contract BasePlatform is Pausable, RoleController {
         address irm
     );
 
+    IPriceGetter priceGetter;
+
     /**
 
      */
     constructor(
         address _contractManager,
-        address _rmAddress
+        address _rmAddress,
+        address priceGetterAddress
     ) RoleController(_rmAddress) {
         contractManager = ContractManager(_contractManager);
         udao = IERC20(contractManager.UdaoAddress());
         udaoc = IUDAOC(contractManager.UdaocAddress());
         ISupVis = ISupervision(contractManager.ISupVisAddress());
+        priceGetter = IPriceGetter(priceGetterAddress);
     }
 
     // SETTERS
@@ -162,6 +169,9 @@ abstract contract BasePlatform is Pausable, RoleController {
         udaoc = IUDAOC(contractManager.UdaocAddress());
         ISupVis = ISupervision(contractManager.ISupVisAddress());
         IRM = IRoleManager(contractManager.IrmAddress());
+
+        priceGetter = IPriceGetter(contractManager.IPriceGetterAddress());
+
         emit AddressesUpdated(
             contractManager.UdaoAddress(),
             contractManager.UdaocAddress(),
