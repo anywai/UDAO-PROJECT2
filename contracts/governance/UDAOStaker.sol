@@ -272,7 +272,7 @@ contract UDAOStaker is RoleController, EIP712 {
         address redeemer;
         /// @notice The date until the voucher is valid
         uint256 validUntil;
-        /// @notice 0 validator, 1 juror, 2 corporate, //3 super validator(removed)
+        /// @notice 0 validator, 1 juror, 2 corporate
         uint256 roleId;
         /// @notice the EIP-712 signature of all other fields in the RoleVoucher struct.
         bytes signature;
@@ -287,7 +287,6 @@ contract UDAOStaker is RoleController, EIP712 {
             udaovp.balanceOf(msg.sender) > 0,
             "You have to be governance member to apply"
         );
-        //require(!IRM.hasRole(SUPER_VALIDATOR_ROLE, msg.sender), "Address is a Super Validator");
         require(
             !IRM.hasRole(VALIDATOR_ROLE, msg.sender),
             "Address is already a Validator"
@@ -307,41 +306,6 @@ contract UDAOStaker is RoleController, EIP712 {
         udao.transferFrom(msg.sender, address(this), validatorLockAmount);
         emit RoleApplied(0, msg.sender, validatorLockAmount);
     }
-
-    /*
-    /// @notice Allows validators to apply for super validator role
-    function applyForSuperValidator() external whenNotPaused {
-        //make sure redeemer is kyced and not banned
-        require(IRM.isKYCed(msg.sender), "You are not KYCed");
-        require(!IRM.isBanned(msg.sender), "You were banned");
-        /// TODO super validator requirementlari ekle
-        require(
-            udaovp.balanceOf(msg.sender) > 0,
-            "You have to be governance member to apply"
-        );
-        require(
-            IRM.hasRole(VALIDATOR_ROLE, msg.sender),
-            "Address should be a Validator"
-        );
-        require(
-            !IRM.hasRole(SUPER_VALIDATOR_ROLE, msg.sender),
-            "Address is a Super Validator"
-        );
-        require(
-            !activeApplicationForValidator[msg.sender],
-            "You already have an active application"
-        );
-
-        ValidationApplication
-            storage validationApplication = validatorApplications.push();
-        validationApplication.applicant = msg.sender;
-        validatorApplicationId[msg.sender] = validationApplicationIndex;
-        validationApplicationIndex++;
-
-        activeApplicationForValidator[msg.sender] = true;
-        emit RoleApplied(3, msg.sender, 0);
-    }
-    */
 
     /// @notice allows users to apply for juror role
     function applyForJuror() external whenNotPaused {
@@ -422,18 +386,6 @@ contract UDAOStaker is RoleController, EIP712 {
         } else if (roleId == 2) {
             IRM.grantRoleStaker(CORPORATE_ROLE, voucher.redeemer);
         }
-        /*else if (roleId == 3) {
-            // TODO Check issue 51 on meeting minutes
-            // TODO lock time is waiting for issue 51
-            ValidationApplication
-                storage validationApplication = validatorApplications[
-                    validatorApplicationId[voucher.redeemer]
-                ];
-
-            IRM.grantRoleStaker(SUPER_VALIDATOR_ROLE, voucher.redeemer);
-            activeApplicationForValidator[voucher.redeemer] = false;
-            validationApplication.isFinished = true;
-        }*/
         else {
             revert("Undefined role ID!");
         }
@@ -472,7 +424,6 @@ contract UDAOStaker is RoleController, EIP712 {
     function checkExpireDateValidator(
         address _user
     ) external view returns (uint256 expireDate) {
-        // TODO There is no check for supervalidator yet
         expireDate = validatorApplications[validatorApplicationId[_user]]
             .expire;
         return expireDate;
