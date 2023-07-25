@@ -5,18 +5,42 @@ pragma solidity ^0.8.4;
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
+import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
+import "../ContractManager.sol";
 import "../RoleController.sol";
 import "../interfaces/IPriceGetter.sol";
 import "../interfaces/IUDAOC.sol";
+import "../interfaces/ISupervision.sol";
+import "hardhat/console.sol";
 
-contract UDAOContent is IUDAOC, ERC721, ERC721URIStorage, RoleController {
+contract UDAOContent is
+    IUDAOC,
+    ERC721,
+    EIP712,
+    ERC721URIStorage,
+    RoleController
+{
+    ContractManager public contractManager;
     using Counters for Counters.Counter;
     Counters.Counter private _tokenIds;
+
+    string private constant SIGNING_DOMAIN = "UDAOCMinter";
+    string private constant SIGNATURE_VERSION = "1";
+
+    ISupervision ISupVis;
 
     /// @param irmAdress The address of the deployed role manager
     constructor(
         address irmAdress
-    ) ERC721("UDAO Content", "UDAOC") RoleController(irmAdress) {}
+    )
+        ERC721("UDAO Content", "UDAOC")
+        RoleController(irmAdress)
+        EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION)
+    {
+        //contractManager = ContractManager(_contractManager);
+        //ISupVis = ISupervision(contractManager.ISupVisAddress());
+    }
 
     // tokenId => (partId => price), first part is the full price
     mapping(uint => mapping(uint => uint)) public contentPrice;
@@ -35,65 +59,107 @@ contract UDAOContent is IUDAOC, ERC721, ERC721URIStorage, RoleController {
     mapping(uint => bool) public coachingRefundable;
 
     event newPartAdded(uint tokenId, uint newPartId, uint newPartPrice);
+    /// @notice This event is triggered if the contract manager updates the addresses.
+    event AddressesUpdated(
+        address isupvis
+    );
+
+    ///@notice A signed voucher can be redeemed for a real content NFT using the redeem function.
+    struct RedeemVoucher {
+        /// @notice The date until the voucher is valid
+        uint256 validUntil;
+        /// @notice The price of the content, first price is the full price
+        uint256[] _contentPrice;
+        /// @notice Token id of the content, not used if new content creation
+        uint256 tokenId;
+        /// @notice Name of the selling currency
+        string _currencyName;
+        /// @notice The metadata URI to associate with this token.
+        string _uri;
+        /// @notice Address of the redeemer
+        address _redeemer;
+        /// @notice The price of the coaching service
+        uint256 _coachingPrice;
+        /// @notice Name of the coaching currency
+        string _coachingCurrencyName;
+        /// @notice Whether learner can buy coaching or not
+        bool _isCoachingEnabled;
+        /// @notice Whether coaching is refundable or not
+        bool _isCoachingRefundable;
+        /// @notice Whether new content or modification, 0 undefined, 1 new content, 2 modification
+        uint256 redeemType;
+        /// @notice validaton score of the content
+        uint256 validationScore;
+        /// @notice the EIP-712 signature of all other fields in the CertificateVoucher struct.
+        bytes signature;
+    }
+
+    function setContractManager(
+        address _contractManager
+    ) external onlyRole(BACKEND_ROLE) {
+        contractManager = ContractManager(_contractManager);
+    }
+
+        /// @notice Get the updated addresses from contract manager
+    function updateAddresses() external onlyRole(BACKEND_ROLE) {
+        ISupVis = ISupervision(contractManager.ISupVisAddress());
+
+        emit AddressesUpdated(
+            contractManager.ISupVisAddress()
+        );
+    }
 
     // TODO No name or description for individual NFT. Is this a problem?
-    /// @notice Redeems a ContentVoucher for an actual NFT, creating it in the process.
-    /// @param _contentPrice The price of the content, first price is the full price
-    /// @param _currencyName Name of the selling currency
-    /// @param _uri The metadata URI to associate with this token.
-    /// @param _redeemer Address of the redeemer
-    /// @param _coachingPrice The price of the coaching service
-    /// @param _coachingCurrencyName Name of the coaching currency
-    /// @param _isCoachingEnabled Whether learner can buy coaching or not
-    /// @param _isCoachingRefundable Whether coaching is refundable or not
-    function redeem(
-        uint256[] calldata _contentPrice,
-        string calldata _currencyName,
-        string calldata _uri,
-        address _redeemer,
-        uint256 _coachingPrice,
-        string calldata _coachingCurrencyName,
-        bool _isCoachingEnabled,
-        bool _isCoachingRefundable
-    ) public whenNotPaused {
+    /// @notice Redeems a RedeemVoucher for an actual NFT, creating it in the process.
+    function redeem(RedeemVoucher calldata voucher) public whenNotPaused {
+        // make sure signature is valid and get the address of the signer
+        // 0x9965507d1a55bcc2695c58ba16fb37d819b0a4dc is this content Creator?
+        console.log(voucher._redeemer);
+        address signer = _verify(voucher);
+        require(
+            IRM.hasRole(BACKEND_ROLE, signer),
+            "Signature invalid or unauthorized"
+        );
+        require(voucher.validUntil >= block.timestamp, "Voucher has expired.");
+        require(voucher.redeemType == 1, "Redeem type is not new content");
         uint tokenId = _tokenIds.current();
         // make sure redeemer is redeeming
-        require(_redeemer == msg.sender, "You are not the redeemer");
+        require(voucher._redeemer == msg.sender, "You are not the redeemer");
         //make sure redeemer is kyced
         require(IRM.isKYCed(msg.sender), "You are not KYCed");
         //make sure redeemer is not banned
         require(!IRM.isBanned(msg.sender), "Redeemer is banned!");
-        coachingEnabled[tokenId] = _isCoachingEnabled;
-        coachingRefundable[tokenId] = _isCoachingRefundable;
+        coachingEnabled[tokenId] = voucher._isCoachingEnabled;
+        coachingRefundable[tokenId] = voucher._isCoachingRefundable;
 
         // save the content price (it should test removing for partLength)
-        uint partLength = _contentPrice.length;
+        uint partLength = voucher._contentPrice.length;
         partNumberOfContent[tokenId] = partLength;
 
-        currencyName[tokenId] = keccak256(abi.encodePacked(_currencyName));
+        currencyName[tokenId] = keccak256(
+            abi.encodePacked(voucher._currencyName)
+        );
 
-        coachingPrice[tokenId] = _coachingPrice;
+        coachingPrice[tokenId] = voucher._coachingPrice;
         coachingCurrency[tokenId] = keccak256(
-            abi.encodePacked(_coachingCurrencyName)
+            abi.encodePacked(voucher._coachingCurrencyName)
         );
 
         /// @dev First index is the full price for the content
         for (uint i = 0; i < partLength; i++) {
-            contentPrice[tokenId][i] = _contentPrice[i];
+            contentPrice[tokenId][i] = voucher._contentPrice[i];
         }
 
-        _mint(_redeemer, tokenId);
-        _setTokenURI(tokenId, _uri);
+        _mint(voucher._redeemer, tokenId);
+        _setTokenURI(tokenId, voucher._uri);
         _tokenIds.increment();
+        //ISupVis.createValidation(3, 5, voucher.validationScore);
     }
 
     /// Allows token owners to burn the token
     // TODO Content should be marked as not validated
     function modifyContent(
-        uint tokenId,
-        uint256[] calldata _contentPrice,
-        string calldata _currencyName,
-        string calldata _uri
+        RedeemVoucher calldata voucher
     ) external whenNotPaused {
         // score bilgisini çek
         // bool defaultu false
@@ -101,8 +167,16 @@ contract UDAOContent is IUDAOC, ERC721, ERC721URIStorage, RoleController {
         // require(score hesaplandı == true, "score henüz hesaplanmadı");
         // uint score = SkorContractı.getScore(tokenId);
         // if(score > 0){createValidation}; // score 0 dan büyükse validasyon oluştur,0 ise sadece order değişti
+        // make sure signature is valid and get the address of the signer
+        address signer = _verify(voucher);
         require(
-            ownerOf(tokenId) == msg.sender,
+            IRM.hasRole(BACKEND_ROLE, signer),
+            "Signature invalid or unauthorized"
+        );
+        require(voucher.validUntil >= block.timestamp, "Voucher has expired.");
+        require(voucher.redeemType == 2, "Redeem type is not modification");
+        require(
+            ownerOf(voucher.tokenId) == msg.sender,
             "You are not the owner of token"
         );
         //make sure caller is kyced
@@ -112,15 +186,22 @@ contract UDAOContent is IUDAOC, ERC721, ERC721URIStorage, RoleController {
 
         // Create the new token
         // save the content price (it should test removing for partLength)
-        uint partLength = _contentPrice.length;
-        partNumberOfContent[tokenId] = partLength;
+        uint partLength = voucher._contentPrice.length;
+        partNumberOfContent[voucher.tokenId] = partLength;
 
-        currencyName[tokenId] = keccak256(abi.encodePacked(_currencyName));
+        currencyName[voucher.tokenId] = keccak256(
+            abi.encodePacked(voucher._currencyName)
+        );
         /// @dev First index is the full price for the content
         for (uint i = 0; i < partLength; i++) {
-            contentPrice[tokenId][i] = _contentPrice[i];
+            contentPrice[voucher.tokenId][i] = voucher._contentPrice[i];
         }
-        _setTokenURI(tokenId, _uri);
+        _setTokenURI(voucher.tokenId, voucher._uri);
+        /*
+        if(voucher.validationScore =! 0){
+            ISupVis.createValidation(3, 5, voucher.validationScore);
+        }
+        */
     }
 
     /// @dev Allows content owners to insert new parts
@@ -433,6 +514,56 @@ contract UDAOContent is IUDAOC, ERC721, ERC721URIStorage, RoleController {
         uint256 tokenId
     ) public view override(ERC721, ERC721URIStorage) returns (string memory) {
         return super.tokenURI(tokenId);
+    }
+
+    /// @notice Returns a hash of the given RedeemVoucher, prepared using EIP712 typed data hashing rules.
+    /// @param voucher A RedeemVoucher to hash.
+    function _hash(
+        RedeemVoucher calldata voucher
+    ) internal view returns (bytes32) {
+        return
+            _hashTypedDataV4(
+                keccak256(
+                    abi.encode(
+                        keccak256(
+                            "RedeemVoucher(uint256 validUntil,uint256[] _contentPrice,uint256 tokenId,string _currencyName,string _uri,address _redeemer,uint256 _coachingPrice,string _coachingCurrencyName,bool _isCoachingEnabled,bool _isCoachingRefundable,uint256 redeemType,uint256 validationScore)"
+                        ),
+                        voucher.validUntil,
+                        keccak256(abi.encodePacked(voucher._contentPrice)),
+                        voucher.tokenId,
+                        keccak256(bytes(voucher._currencyName)),
+                        keccak256(bytes(voucher._uri)),
+                        voucher._redeemer,
+                        voucher._coachingPrice,
+                        keccak256(bytes(voucher._coachingCurrencyName)),
+                        voucher._isCoachingEnabled,
+                        voucher._isCoachingRefundable,
+                        voucher.redeemType,
+                        voucher.validationScore
+                    )
+                )
+            );
+    }
+
+    /// @notice Returns the chain id of the current blockchain.
+    /// @dev This is used to workaround an issue with ganache returning different values from the on-chain chainid() function and
+    ///  the eth_chainId RPC method. See https://github.com/protocol/nft-website/issues/121 for context.
+    function getChainID() external view returns (uint256) {
+        uint256 id;
+        assembly {
+            id := chainid()
+        }
+        return id;
+    }
+
+    /// @notice Verifies the signature for a given RedeemVoucher, returning the address of the signer.
+    /// @dev Will revert if the signature is invalid. Does not verify that the signer is authorized to mint NFTs.
+    /// @param voucher A RedeemVoucher describing an unminted NFT.
+    function _verify(
+        RedeemVoucher calldata voucher
+    ) internal view returns (address) {
+        bytes32 digest = _hash(voucher);
+        return ECDSA.recover(digest, voucher.signature);
     }
 
     function supportsInterface(

@@ -27,5 +27,7 @@ interface ISupervision {
 
     function getTotalJurorScore() external view returns (uint);
 
+    function createValidation(uint256 tokenId, uint256 score) external;
+
     function nextRound() external;
 }

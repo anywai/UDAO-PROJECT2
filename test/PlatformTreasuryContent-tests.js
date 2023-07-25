@@ -4,6 +4,7 @@ const { ethers } = hardhat;
 const chai = require("chai");
 const BN = require("bn.js");
 const { DiscountedPurchase } = require("../lib/DiscountedPurchase");
+const { Redeem } = require("../lib/Redeem");
 const helpers = require("@nomicfoundation/hardhat-network-helpers");
 const { deploy } = require("../lib/deployments");
 const { anyValue } = require("@nomicfoundation/hardhat-chai-matchers/withArgs");
@@ -287,18 +288,38 @@ describe("Platform Treasury Contract - Content", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
+    // Get the current block timestamp
+    const block = await ethers.provider.getBlock("latest");
+    // add some minutes to it and convert it to a BigNumber
+    const futureBlock = block.timestamp + 1000;
+    const futureBlockBigNumber = ethers.BigNumber.from(futureBlock);
+
+    ///Create RedeemVoucher from redeem.js
+    console.log("Step 1");
+    const voucher = await new Redeem({
+      contract: contractUDAOContent,
+      signer: backend,
+    }).createVoucher(
+      futureBlockBigNumber,
+      [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
+      0,
+      "udao",
+      "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
+      contentCreator.address,
+      ethers.utils.parseEther("1"),
+      "udao",
+      true,
+      true,
+      1,
+      0
+    );
+
+    console.log("Step 2");
     await expect(
       contractUDAOContent
         .connect(contentCreator)
         .redeem(
-          [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
-          "udao",
-          "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
-          contentCreator.address,
-          ethers.utils.parseEther("2"),
-          "udao",
-          true,
-          true
+          voucher
         )
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
