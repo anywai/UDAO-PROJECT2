@@ -38,9 +38,9 @@ contract PlatformTreasury is Pausable, ContentManager {
         address _rmAddress,
         address priceGetterAddress
     )
-        ContentManager(priceGetterAddress)
-        BasePlatform(_contractManagerAddress, _rmAddress)
+        BasePlatform(_contractManagerAddress, _rmAddress, priceGetterAddress)
     {}
+
 
     /// @notice withdraws governance balance to governance treasury
     function withdrawGovernance()
@@ -70,7 +70,7 @@ contract PlatformTreasury is Pausable, ContentManager {
     function withdrawValidator()
         external
         whenNotPaused
-        onlyRoles(validator_roles)
+        onlyRole(VALIDATOR_ROLE)
     {
         uint claimableRound = lastValidatorClaim[msg.sender];
         uint withdrawableBalance = 0;

@@ -496,7 +496,7 @@ contract Supervision is RoleController {
     function sendValidation(
         uint validationId,
         bool result
-    ) external onlyRoles(validator_roles) {
+    ) external onlyRole(VALIDATOR_ROLE) {
         /// @notice sends validation result
         /// @param validationId id of the validation
         /// @param result result of validation
@@ -574,7 +574,7 @@ contract Supervision is RoleController {
 
     function dismissValidation(
         uint validationId
-    ) external onlyRoles(validator_roles) {
+    ) external onlyRole(VALIDATOR_ROLE) {
         /// @notice allows validators to dismiss a validation assignment
         /// @param validationId id of the content that will be dismissed
         require(
@@ -619,7 +619,7 @@ contract Supervision is RoleController {
     /// @param validationId id of the validation
     function assignValidation(
         uint256 validationId
-    ) external onlyRoles(validator_roles) {
+    ) external onlyRole(VALIDATOR_ROLE) {
         require(
             staker.checkExpireDateValidator(msg.sender) > block.timestamp,
             "Validation is expired"

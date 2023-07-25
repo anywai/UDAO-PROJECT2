@@ -104,7 +104,7 @@ describe("UDAOStaker Contract", function () {
     await contractUDAOStaker.connect(backend).updateAddresses();
   });
 
-  it("Should set super validator lock amount", async function () {
+  it("Should set validator lock amount", async function () {
     const {
       backend,
       contentCreator,
@@ -149,15 +149,522 @@ describe("UDAOStaker Contract", function () {
       account3,
       contractPriceGetter,
     } = await deploy();
-
+    // set validator lock amount to 100
     await expect(
       contractUDAOStaker.connect(foundation).setValidatorLockAmount("100")
     )
       .to.emit(contractUDAOStaker, "SetValidatorLockAmount") // transfer from null address to minter
       .withArgs("100");
-
+    // check validator lock amount variable from contract
     expect(await contractUDAOStaker.validatorLockAmount()).to.eql(
       ethers.BigNumber.from("100")
+    );
+  });
+
+  it("Should fail to set validator lock amount as unauthorized user", async function () {
+    const {
+      backend,
+      contentCreator,
+      contentBuyer,
+      contentBuyer1,
+      contentBuyer2,
+      contentBuyer3,
+      validatorCandidate,
+      validator,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember,
+      jurorMember1,
+      jurorMember2,
+      jurorMember3,
+      jurorMember4,
+      corporation,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractSupervision,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+      GOVERNANCE_ROLE,
+      BACKEND_ROLE,
+      contractContractManager,
+      account1,
+      account2,
+      account3,
+      contractPriceGetter,
+    } = await deploy();
+    // set validator lock amount with-out admin role
+    await expect(
+      contractUDAOStaker.connect(validator).setValidatorLockAmount("100")
+    ).to.revertedWith(
+      `AccessControl: account ${validator.address
+        .toString()
+        .toLowerCase()} is missing role`
+    );
+  });
+
+  it("Should set juror lock amount", async function () {
+    const {
+      backend,
+      contentCreator,
+      contentBuyer,
+      contentBuyer1,
+      contentBuyer2,
+      contentBuyer3,
+      validatorCandidate,
+      validator,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember,
+      jurorMember1,
+      jurorMember2,
+      jurorMember3,
+      jurorMember4,
+      corporation,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractSupervision,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+      GOVERNANCE_ROLE,
+      BACKEND_ROLE,
+      contractContractManager,
+      account1,
+      account2,
+      account3,
+      contractPriceGetter,
+    } = await deploy();
+    // set juror lock amount to 100
+    await expect(
+      contractUDAOStaker.connect(foundation).setJurorLockAmount("100")
+    )
+      .to.emit(contractUDAOStaker, "SetJurorLockAmount") // transfer from null address to minter
+      .withArgs("100");
+    // check juror lock amount variable from contract
+    expect(await contractUDAOStaker.jurorLockAmount()).to.eql(
+      ethers.BigNumber.from("100")
+    );
+  });
+
+  it("Should fail to set juror lock amount as unauthorized user", async function () {
+    const {
+      backend,
+      contentCreator,
+      contentBuyer,
+      contentBuyer1,
+      contentBuyer2,
+      contentBuyer3,
+      validatorCandidate,
+      validator,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember,
+      jurorMember1,
+      jurorMember2,
+      jurorMember3,
+      jurorMember4,
+      corporation,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractSupervision,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+      GOVERNANCE_ROLE,
+      BACKEND_ROLE,
+      contractContractManager,
+      account1,
+      account2,
+      account3,
+      contractPriceGetter,
+    } = await deploy();
+    // set juror lock amount with-out admin role
+    await expect(
+      contractUDAOStaker.connect(validator).setJurorLockAmount("100")
+    ).to.revertedWith(
+      `AccessControl: account ${validator.address
+        .toString()
+        .toLowerCase()} is missing role`
+    );
+  });
+
+  it("Should set validator lock time", async function () {
+    const {
+      backend,
+      contentCreator,
+      contentBuyer,
+      contentBuyer1,
+      contentBuyer2,
+      contentBuyer3,
+      validatorCandidate,
+      validator,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember,
+      jurorMember1,
+      jurorMember2,
+      jurorMember3,
+      jurorMember4,
+      corporation,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractSupervision,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+      GOVERNANCE_ROLE,
+      BACKEND_ROLE,
+      contractContractManager,
+      account1,
+      account2,
+      account3,
+      contractPriceGetter,
+    } = await deploy();
+    // 1 day equal to 86400 seconds in Unix time
+    const unixOneDay = 86400;
+    // set validator lock time to 13 day
+    await expect(
+      contractUDAOStaker.connect(foundation).setValidatorLockTime("13")
+    )
+      .to.emit(contractUDAOStaker, "SetValidatorLockTime") // transfer from null address to minter
+      .withArgs((unixOneDay * 13).toString());
+    // check validator lock time variable from contract
+    expect(await contractUDAOStaker.validatorLockTime()).to.eql(
+      ethers.BigNumber.from((unixOneDay * 13).toString())
+    );
+  });
+
+  it("Should fail to set validator lock time as unauthorized user", async function () {
+    const {
+      backend,
+      contentCreator,
+      contentBuyer,
+      contentBuyer1,
+      contentBuyer2,
+      contentBuyer3,
+      validatorCandidate,
+      validator,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember,
+      jurorMember1,
+      jurorMember2,
+      jurorMember3,
+      jurorMember4,
+      corporation,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractSupervision,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+      GOVERNANCE_ROLE,
+      BACKEND_ROLE,
+      contractContractManager,
+      account1,
+      account2,
+      account3,
+      contractPriceGetter,
+    } = await deploy();
+    // set validator lock time with-out admin role
+    await expect(
+      contractUDAOStaker.connect(validator).setValidatorLockTime("13")
+    ).to.revertedWith(
+      `AccessControl: account ${validator.address
+        .toString()
+        .toLowerCase()} is missing role`
+    );
+  });
+
+  it("Should set juror lock time", async function () {
+    const {
+      backend,
+      contentCreator,
+      contentBuyer,
+      contentBuyer1,
+      contentBuyer2,
+      contentBuyer3,
+      validatorCandidate,
+      validator,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember,
+      jurorMember1,
+      jurorMember2,
+      jurorMember3,
+      jurorMember4,
+      corporation,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractSupervision,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+      GOVERNANCE_ROLE,
+      BACKEND_ROLE,
+      contractContractManager,
+      account1,
+      account2,
+      account3,
+      contractPriceGetter,
+    } = await deploy();
+    // 1 day equal to 86400 seconds in Unix time
+    const unixOneDay = 86400;
+    // set juror lock time to 13 day
+    await expect(contractUDAOStaker.connect(foundation).setJurorLockTime("13"))
+      .to.emit(contractUDAOStaker, "SetJurorLockTime") // transfer from null address to minter
+      .withArgs((unixOneDay * 13).toString());
+    // check juror lock time variable from contract
+    expect(await contractUDAOStaker.jurorLockTime()).to.eql(
+      ethers.BigNumber.from((unixOneDay * 13).toString())
+    );
+  });
+
+  it("Should fail to set juror lock time as unauthorized user", async function () {
+    const {
+      backend,
+      contentCreator,
+      contentBuyer,
+      contentBuyer1,
+      contentBuyer2,
+      contentBuyer3,
+      validatorCandidate,
+      validator,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember,
+      jurorMember1,
+      jurorMember2,
+      jurorMember3,
+      jurorMember4,
+      corporation,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractSupervision,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+      GOVERNANCE_ROLE,
+      BACKEND_ROLE,
+      contractContractManager,
+      account1,
+      account2,
+      account3,
+      contractPriceGetter,
+    } = await deploy();
+    // set juror lock time with-out admin role
+    await expect(
+      contractUDAOStaker.connect(validator).setJurorLockTime("13")
+    ).to.revertedWith(
+      `AccessControl: account ${validator.address
+        .toString()
+        .toLowerCase()} is missing role`
+    );
+  });
+
+  it("Should set application lock time", async function () {
+    const {
+      backend,
+      contentCreator,
+      contentBuyer,
+      contentBuyer1,
+      contentBuyer2,
+      contentBuyer3,
+      validatorCandidate,
+      validator,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember,
+      jurorMember1,
+      jurorMember2,
+      jurorMember3,
+      jurorMember4,
+      corporation,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractSupervision,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+      GOVERNANCE_ROLE,
+      BACKEND_ROLE,
+      contractContractManager,
+      account1,
+      account2,
+      account3,
+      contractPriceGetter,
+    } = await deploy();
+    // 1 day equal to 86400 seconds in Unix time
+    const unixOneDay = 86400;
+    // set application lock time to 13 day
+    await expect(
+      contractUDAOStaker.connect(foundation).setApplicationLockTime("13")
+    )
+      .to.emit(contractUDAOStaker, "SetApplicationLockTime") // transfer from null address to minter
+      .withArgs((unixOneDay * 13).toString());
+    // check application lock time variable from contract
+    expect(await contractUDAOStaker.applicationLockTime()).to.eql(
+      ethers.BigNumber.from((unixOneDay * 13).toString())
+    );
+  });
+
+  it("Should fail to set application lock time as unauthorized user", async function () {
+    const {
+      backend,
+      contentCreator,
+      contentBuyer,
+      contentBuyer1,
+      contentBuyer2,
+      contentBuyer3,
+      validatorCandidate,
+      validator,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember,
+      jurorMember1,
+      jurorMember2,
+      jurorMember3,
+      jurorMember4,
+      corporation,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractSupervision,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+      GOVERNANCE_ROLE,
+      BACKEND_ROLE,
+      contractContractManager,
+      account1,
+      account2,
+      account3,
+      contractPriceGetter,
+    } = await deploy();
+    // set application lock time with-out admin role
+    await expect(
+      contractUDAOStaker.connect(validator).setApplicationLockTime("13")
+    ).to.revertedWith(
+      `AccessControl: account ${validator.address
+        .toString()
+        .toLowerCase()} is missing role`
     );
   });
 
@@ -206,15 +713,17 @@ describe("UDAOStaker Contract", function () {
       account3,
       contractPriceGetter,
     } = await deploy();
-
+    // 1 day equal to 86400 seconds in Unix time
+    const unixOneDay = 86400;
+    // set maximum lock days to 1000 days
     await expect(
       contractUDAOStaker.connect(foundation).setMaximumStakeDays("1000")
     )
       .to.emit(contractUDAOStaker, "SetMaximumStakeDays") // transfer from null address to minter
-      .withArgs("1000");
-
+      .withArgs((1000 * unixOneDay).toString());
+    // check maximum lock days variable in contract
     expect(await contractUDAOStaker.maximum_stake_days()).to.eql(
-      ethers.BigNumber.from("1000")
+      ethers.BigNumber.from((1000 * unixOneDay).toString())
     );
   });
 
@@ -263,15 +772,17 @@ describe("UDAOStaker Contract", function () {
       account3,
       contractPriceGetter,
     } = await deploy();
-
+    // 1 day equal to 86400 seconds in Unix time
+    const unixOneDay = 86400;
+    // set minimum lock days to 1 day
     await expect(
       contractUDAOStaker.connect(foundation).setMinimumStakeDays("1")
     )
       .to.emit(contractUDAOStaker, "SetMinimumStakeDays") // transfer from null address to minter
-      .withArgs("1");
-
+      .withArgs((1 * unixOneDay).toString());
+    // check minimum lock days variable in contract
     expect(await contractUDAOStaker.minimum_stake_days()).to.eql(
-      ethers.BigNumber.from("1")
+      ethers.BigNumber.from((1 * unixOneDay).toString())
     );
   });
 
@@ -320,13 +831,13 @@ describe("UDAOStaker Contract", function () {
       account3,
       contractPriceGetter,
     } = await deploy();
-
+    // set maximum lock days to 1 days while minimum lock days is [7] day
     await expect(
       contractUDAOStaker.connect(foundation).setMaximumStakeDays("1")
     ).to.revertedWith("Maximum stake days must be greater than minimum days");
   });
 
-  it("Should fail to set minimum lock days", async function () {
+  it("Should fail to set minimum lock days if more than maximum days", async function () {
     const {
       backend,
       contentCreator,
@@ -371,65 +882,10 @@ describe("UDAOStaker Contract", function () {
       account3,
       contractPriceGetter,
     } = await deploy();
-
+    // set minimum lock days to 3000 days while minimum lock days is [1460] day
     await expect(
       contractUDAOStaker.connect(foundation).setMinimumStakeDays("3000")
     ).to.revertedWith("Minimum stake days must be less than maximum days");
-  });
-
-  it("Should fail to set super validator lock amount as unauthorized user", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
-
-    await expect(
-      contractUDAOStaker.connect(validator).setValidatorLockAmount("100")
-    ).to.revertedWith(
-      `AccessControl: account ${validator.address
-        .toString()
-        .toLowerCase()} is missing role`
-    );
   });
 
   it("Should set super vote reward amount", async function () {
@@ -477,7 +933,7 @@ describe("UDAOStaker Contract", function () {
       account3,
       contractPriceGetter,
     } = await deploy();
-
+    // set vote reward amount to 100
     await expect(contractUDAOStaker.connect(foundation).setVoteReward("100"))
       .to.emit(contractUDAOStaker, "SetVoteReward") // transfer from null address to minter
       .withArgs("100");
@@ -528,7 +984,7 @@ describe("UDAOStaker Contract", function () {
       account3,
       contractPriceGetter,
     } = await deploy();
-
+    // set vote reward amount with-out admin role
     await expect(
       contractUDAOStaker.connect(validator).setVoteReward("100")
     ).to.revertedWith(
@@ -1280,368 +1736,6 @@ describe("UDAOStaker Contract", function () {
     ).to.revertedWith("Address is already a Validator");
   });
 
-  it("Should apply as Super Validator", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
-    /// set KYC for validatorCandidate
-    await contractRoleManager.setKYC(validatorCandidate.address, true);
-    /// transfer UDAO to validatorCandidate
-    await contractUDAO.transfer(
-      validatorCandidate.address,
-      ethers.utils.parseEther("10000.0")
-    );
-    /// approve UDAOStaker contract with validatorCandidate to spend UDAO
-    await contractUDAO
-      .connect(validatorCandidate)
-      .approve(
-        contractUDAOStaker.address,
-        ethers.utils.parseEther("999999999999.0")
-      );
-    /// any account must stake for governance to be Validator-Juror-GovernanceMember
-    await expect(
-      contractUDAOStaker
-        .connect(validatorCandidate)
-        .stakeForGovernance(ethers.utils.parseEther("10"), 30)
-    )
-      .to.emit(contractUDAOStaker, "GovernanceStake") // transfer from null address to minter
-      .withArgs(
-        validatorCandidate.address,
-        ethers.utils.parseEther("10"),
-        ethers.utils.parseEther("300")
-      );
-    /// get validatorLockAmount from UDAOStaker contract
-    const validatorLockAmount = await contractUDAOStaker.validatorLockAmount();
-    /// apply the "validator role" with validatorCandidate account
-    await expect(
-      contractUDAOStaker.connect(validatorCandidate).applyForValidator()
-    )
-      .to.emit(contractUDAOStaker, "RoleApplied") // transfer from null address to minter
-      .withArgs(0, validatorCandidate.address, validatorLockAmount);
-    /// get lazy role and role voucher
-    const lazyRole = new LazyRole({
-      contract: contractUDAOStaker,
-      signer: backend,
-    });
-    const role_voucher = await lazyRole.createVoucher(
-      validatorCandidate.address,
-      Date.now() + 999999999,
-      0
-    );
-    /// approve the "validator role" with validatorCandidate account
-    await expect(
-      contractUDAOStaker.connect(validatorCandidate).getApproved(role_voucher)
-    )
-      .to.emit(contractUDAOStaker, "RoleApproved") // transfer from null address to minter
-      .withArgs(0, validatorCandidate.address);
-    /// apply the "super-validator role" with validator candidate account
-    await expect(
-      contractUDAOStaker.connect(validatorCandidate).applyForSuperValidator()
-    )
-      .to.emit(contractUDAOStaker, "RoleApplied") // transfer from null address to minter
-      .withArgs(3, validatorCandidate.address, 0);
-  });
-
-  it("Should fail to apply as Super Validator if not governance member", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
-    /// set KYC for validatorCandidate
-    await contractRoleManager.setKYC(validatorCandidate.address, true);
-    /// transfer UDAO to validatorCandidate
-    await contractUDAO.transfer(
-      validatorCandidate.address,
-      ethers.utils.parseEther("10000.0")
-    );
-    /// approve UDAOStaker contract with validatorCandidate to spend UDAO
-    await contractUDAO
-      .connect(validatorCandidate)
-      .approve(
-        contractUDAOStaker.address,
-        ethers.utils.parseEther("999999999999.0")
-      );
-    /// apply the "super-validator role" with validator candidate account
-    await expect(
-      contractUDAOStaker.connect(validatorCandidate).applyForSuperValidator()
-    ).to.revertedWith("You have to be governance member to apply");
-  });
-
-  it("Should fail to apply as Super Validator if not validator", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
-    /// set KYC for validatorCandidate
-    await contractRoleManager.setKYC(validatorCandidate.address, true);
-    /// transfer UDAO to validatorCandidate
-    await contractUDAO.transfer(
-      validatorCandidate.address,
-      ethers.utils.parseEther("10000.0")
-    );
-    /// approve UDAOStaker contract with validatorCandidate to spend UDAO
-    await contractUDAO
-      .connect(validatorCandidate)
-      .approve(
-        contractUDAOStaker.address,
-        ethers.utils.parseEther("999999999999.0")
-      );
-    /// any account must stake for governance to be Validator-Juror-GovernanceMember
-    await expect(
-      contractUDAOStaker
-        .connect(validatorCandidate)
-        .stakeForGovernance(ethers.utils.parseEther("10"), 30)
-    )
-      .to.emit(contractUDAOStaker, "GovernanceStake") // transfer from null address to minter
-      .withArgs(
-        validatorCandidate.address,
-        ethers.utils.parseEther("10"),
-        ethers.utils.parseEther("300")
-      );
-    /// apply the "super-validator role" with validator candidate account
-    await expect(
-      contractUDAOStaker.connect(validatorCandidate).applyForSuperValidator()
-    ).to.revertedWith("Address should be a Validator");
-  });
-
-  it("Should approve as Super Validator", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
-    /// set KYC for validatorCandidate
-    await contractRoleManager.setKYC(validatorCandidate.address, true);
-    /// transfer UDAO to validatorCandidate
-    await contractUDAO.transfer(
-      validatorCandidate.address,
-      ethers.utils.parseEther("10000.0")
-    );
-    /// approve UDAOStaker contract with validatorCandidate to spend UDAO
-    await contractUDAO
-      .connect(validatorCandidate)
-      .approve(
-        contractUDAOStaker.address,
-        ethers.utils.parseEther("999999999999.0")
-      );
-    /// any account must stake for governance to be Validator-Juror-GovernanceMember
-    await expect(
-      contractUDAOStaker
-        .connect(validatorCandidate)
-        .stakeForGovernance(ethers.utils.parseEther("10"), 30)
-    )
-      .to.emit(contractUDAOStaker, "GovernanceStake") // transfer from null address to minter
-      .withArgs(
-        validatorCandidate.address,
-        ethers.utils.parseEther("10"),
-        ethers.utils.parseEther("300")
-      );
-    /// get validator lock amount from UDAOStaker contract
-    const validatorLockAmount = await contractUDAOStaker.validatorLockAmount();
-    /// apply the "validator role" with validatorCandidate account
-    await expect(
-      contractUDAOStaker.connect(validatorCandidate).applyForValidator()
-    )
-      .to.emit(contractUDAOStaker, "RoleApplied") // transfer from null address to minter
-      .withArgs(0, validatorCandidate.address, validatorLockAmount);
-    /// get lazy role and role voucher
-    const lazyRole = new LazyRole({
-      contract: contractUDAOStaker,
-      signer: backend,
-    });
-    const role_voucher = await lazyRole.createVoucher(
-      validatorCandidate.address,
-      Date.now() + 999999999,
-      0
-    );
-    /// approve the "validator role" with validatorCandidate account
-    await expect(
-      contractUDAOStaker.connect(validatorCandidate).getApproved(role_voucher)
-    )
-      .to.emit(contractUDAOStaker, "RoleApproved") // transfer from null address to minter
-      .withArgs(0, validatorCandidate.address);
-    /// apply the "super-validator role" with validator candidate account
-    await expect(
-      contractUDAOStaker.connect(validatorCandidate).applyForSuperValidator()
-    )
-      .to.emit(contractUDAOStaker, "RoleApplied") // transfer from null address to minter
-      .withArgs(3, validatorCandidate.address, 0);
-
-    const role_voucher_super = await lazyRole.createVoucher(
-      validatorCandidate.address,
-      Date.now() + 999999999,
-      3
-    );
-
-    await expect(
-      contractUDAOStaker
-        .connect(validatorCandidate)
-        .getApproved(role_voucher_super)
-    )
-      .to.emit(contractUDAOStaker, "RoleApproved") // transfer from null address to minter
-      .withArgs(3, validatorCandidate.address);
-  });
-
   it("Should apply for juror", async function () {
     const {
       backend,
@@ -1995,116 +2089,6 @@ describe("UDAOStaker Contract", function () {
     )
       .to.emit(contractUDAOStaker, "RoleRejected")
       .withArgs(0, validatorCandidate.address); // transfer from null address to minter
-  });
-
-  it("Should reject for Super Validator", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
-    /// set KYC for validatorCandidate
-    await contractRoleManager.setKYC(validatorCandidate.address, true);
-    /// transfer UDAO to validatorCandidate
-    await contractUDAO.transfer(
-      validatorCandidate.address,
-      ethers.utils.parseEther("10000.0")
-    );
-    /// approve UDAOStaker contract with validatorCandidate to spend UDAO
-    await contractUDAO
-      .connect(validatorCandidate)
-      .approve(
-        contractUDAOStaker.address,
-        ethers.utils.parseEther("999999999999.0")
-      );
-    /// any account must stake for governance to be Validator-Juror-GovernanceMember
-    await expect(
-      contractUDAOStaker
-        .connect(validatorCandidate)
-        .stakeForGovernance(ethers.utils.parseEther("10"), 30)
-    )
-      .to.emit(contractUDAOStaker, "GovernanceStake") // transfer from null address to minter
-      .withArgs(
-        validatorCandidate.address,
-        ethers.utils.parseEther("10"),
-        ethers.utils.parseEther("300")
-      );
-    /// get validator lock amount from UDAOStaker contract
-    const validatorLockAmount = await contractUDAOStaker.validatorLockAmount();
-    /// apply the "validator role" with validatorCandidate account
-    await expect(
-      contractUDAOStaker.connect(validatorCandidate).applyForValidator()
-    )
-      .to.emit(contractUDAOStaker, "RoleApplied") // transfer from null address to minter
-      .withArgs(0, validatorCandidate.address, validatorLockAmount);
-    /// get lazy role and role voucher
-    const lazyRole = new LazyRole({
-      contract: contractUDAOStaker,
-      signer: backend,
-    });
-    const role_voucher = await lazyRole.createVoucher(
-      validatorCandidate.address,
-      Date.now() + 999999999,
-      0
-    );
-    /// approve the "validator role" with validatorCandidate account
-    await expect(
-      contractUDAOStaker.connect(validatorCandidate).getApproved(role_voucher)
-    )
-      .to.emit(contractUDAOStaker, "RoleApproved") // transfer from null address to minter
-      .withArgs(0, validatorCandidate.address);
-    /// apply the "super-validator role" with validator candidate account
-    await expect(
-      contractUDAOStaker.connect(validatorCandidate).applyForSuperValidator()
-    )
-      .to.emit(contractUDAOStaker, "RoleApplied") // transfer from null address to minter
-      .withArgs(3, validatorCandidate.address, 0);
-    await expect(
-      contractUDAOStaker
-        .connect(backend)
-        .rejectApplication(validatorCandidate.address, 3)
-    )
-      .to.emit(contractUDAOStaker, "RoleRejected")
-      .withArgs(3, validatorCandidate.address); // transfer from null address to minter
   });
 
   it("Should reject for juror", async function () {
@@ -5021,214 +5005,6 @@ describe("UDAOStaker Contract", function () {
     /// apply the "validator role" with validatorCandidate account
     await expect(
       contractUDAOStaker.connect(validatorCandidate).applyForValidator()
-    ).to.revertedWith("You were banned");
-  });
-
-  it("Should fail to apply as Super Validator when user hasn't kyced", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
-    /// set KYC for validatorCandidate
-    await contractRoleManager.setKYC(validatorCandidate.address, true);
-    /// transfer UDAO to validatorCandidate
-    await contractUDAO.transfer(
-      validatorCandidate.address,
-      ethers.utils.parseEther("10000.0")
-    );
-    /// approve UDAOStaker contract with validatorCandidate to spend UDAO
-    await contractUDAO
-      .connect(validatorCandidate)
-      .approve(
-        contractUDAOStaker.address,
-        ethers.utils.parseEther("999999999999.0")
-      );
-    /// any account must stake for governance to be Validator-Juror-GovernanceMember
-    await expect(
-      contractUDAOStaker
-        .connect(validatorCandidate)
-        .stakeForGovernance(ethers.utils.parseEther("10"), 30)
-    )
-      .to.emit(contractUDAOStaker, "GovernanceStake") // transfer from null address to minter
-      .withArgs(
-        validatorCandidate.address,
-        ethers.utils.parseEther("10"),
-        ethers.utils.parseEther("300")
-      );
-    /// get validator lock amount from UDAOStaker contract
-    const validatorLockAmount = await contractUDAOStaker.validatorLockAmount();
-    /// apply the "validator role" with validatorCandidate account
-    await expect(
-      contractUDAOStaker.connect(validatorCandidate).applyForValidator()
-    )
-      .to.emit(contractUDAOStaker, "RoleApplied") // transfer from null address to minter
-      .withArgs(0, validatorCandidate.address, validatorLockAmount);
-    /// get lazy role and role voucher
-    const lazyRole = new LazyRole({
-      contract: contractUDAOStaker,
-      signer: backend,
-    });
-
-    const role_voucher = await lazyRole.createVoucher(
-      validatorCandidate.address,
-      Date.now() + 999999999,
-      0
-    );
-    /// approve the "validator role" with validatorCandidate account
-    await expect(
-      contractUDAOStaker.connect(validatorCandidate).getApproved(role_voucher)
-    )
-      .to.emit(contractUDAOStaker, "RoleApproved") // transfer from null address to minter
-      .withArgs(0, validatorCandidate.address);
-    /// remove KYC for validatorCandidate
-    await contractRoleManager.setKYC(validatorCandidate.address, false);
-    /// apply the "super-validator role" with validator candidate account
-    await expect(
-      contractUDAOStaker.connect(validatorCandidate).applyForSuperValidator()
-    ).to.revertedWith("You are not KYCed");
-  });
-
-  it("Should fail to apply as Super Validator when user banned", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
-    /// set KYC for validatorCandidate
-    await contractRoleManager.setKYC(validatorCandidate.address, true);
-    /// transfer UDAO to validatorCandidate
-    await contractUDAO.transfer(
-      validatorCandidate.address,
-      ethers.utils.parseEther("10000.0")
-    );
-    /// approve UDAOStaker contract with validatorCandidate to spend UDAO
-    await contractUDAO
-      .connect(validatorCandidate)
-      .approve(
-        contractUDAOStaker.address,
-        ethers.utils.parseEther("999999999999.0")
-      );
-    /// any account must stake for governance to be Validator-Juror-GovernanceMember
-    await expect(
-      contractUDAOStaker
-        .connect(validatorCandidate)
-        .stakeForGovernance(ethers.utils.parseEther("10"), 30)
-    )
-      .to.emit(contractUDAOStaker, "GovernanceStake") // transfer from null address to minter
-      .withArgs(
-        validatorCandidate.address,
-        ethers.utils.parseEther("10"),
-        ethers.utils.parseEther("300")
-      );
-    /// get validator lock amount from UDAOStaker contract
-    const validatorLockAmount = await contractUDAOStaker.validatorLockAmount();
-    /// apply the "validator role" with validatorCandidate account
-    await expect(
-      contractUDAOStaker.connect(validatorCandidate).applyForValidator()
-    )
-      .to.emit(contractUDAOStaker, "RoleApplied") // transfer from null address to minter
-      .withArgs(0, validatorCandidate.address, validatorLockAmount);
-    /// get lazy role and role voucher
-    const lazyRole = new LazyRole({
-      contract: contractUDAOStaker,
-      signer: backend,
-    });
-
-    const role_voucher = await lazyRole.createVoucher(
-      validatorCandidate.address,
-      Date.now() + 999999999,
-      0
-    );
-    /// approve the "validator role" with validatorCandidate account
-    await expect(
-      contractUDAOStaker.connect(validatorCandidate).getApproved(role_voucher)
-    )
-      .to.emit(contractUDAOStaker, "RoleApproved") // transfer from null address to minter
-      .withArgs(0, validatorCandidate.address);
-
-    await contractRoleManager.setBan(validatorCandidate.address, true);
-    /// apply the "super-validator role" with validator candidate account
-    await expect(
-      contractUDAOStaker.connect(validatorCandidate).applyForSuperValidator()
     ).to.revertedWith("You were banned");
   });
 

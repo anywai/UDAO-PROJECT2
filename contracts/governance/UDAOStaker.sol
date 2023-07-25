@@ -37,14 +37,15 @@ contract UDAOStaker is RoleController, EIP712 {
     /// @notice Amount to deduct from juror application
     uint256 public jurorLockAmount = 1 ether;
     /// @notice the minimum duration for governance stake
-    uint256 public minimum_stake_days = 7; // 1 WEEK
+    uint256 public minimum_stake_days = 7 days; // 1 WEEK
     /// @notice the maximum duration for governance stake
-    uint256 public maximum_stake_days = 1460; // 4 YEARS
+    uint256 public maximum_stake_days = 1460 days; // 4 YEARS
 
     event SetValidatorLockAmount(uint256 _newAmount);
     event SetJurorLockAmount(uint256 _newAmount);
     event SetValidatorLockTime(uint256 _newLockTime);
     event SetJurorLockTime(uint256 _newLockTime);
+    event SetApplicationLockTime(uint256 _newLockTime);
     event SetVoteReward(uint256 _newAmount);
     event SetPlatformTreasuryAddress(address _newAddress);
     event RoleApplied(uint256 _roleId, address _user, uint256 _jobAmount);
@@ -86,7 +87,7 @@ contract UDAOStaker is RoleController, EIP712 {
     mapping(address => bool) public activeApplicationForValidator;
     mapping(address => bool) public activeApplicationForJuror;
 
-    uint256 public corporateStakePerListing = 500 ether; //setter getter, decider=adminler
+    uint256 public corporateStakePerListing = 500 ether; // TODO setter getter, decider=adminler
     mapping(address => uint) corporateStakedUDAO;
     mapping(address => uint) corporateLockedUDAO;
     mapping(address => uint) corporateActiveListingAmount;
@@ -177,6 +178,8 @@ contract UDAOStaker is RoleController, EIP712 {
     function setValidatorLockTime(
         uint256 _lockTime
     ) external onlyRoles(administrator_roles) {
+        //convert it to unix timestamp
+        _lockTime = _lockTime * (1 days);
         validatorLockTime = _lockTime;
         emit SetValidatorLockTime(_lockTime);
     }
@@ -188,8 +191,23 @@ contract UDAOStaker is RoleController, EIP712 {
     function setJurorLockTime(
         uint256 _lockTime
     ) external onlyRoles(administrator_roles) {
+        //convert it to unix timestamp
+        _lockTime = _lockTime * (1 days);
         jurorLockTime = _lockTime;
         emit SetJurorLockTime(_lockTime);
+    }
+
+    /**
+     * @notice set the required application lock time for role apllications
+     * @param _lockTime is new lock time for role applications
+     * */
+    function setApplicationLockTime(
+        uint256 _lockTime
+    ) external onlyRoles(administrator_roles) {
+        //convert it to unix timestamp
+        _lockTime = _lockTime * (1 days);
+        applicationLockTime = _lockTime;
+        emit SetApplicationLockTime(_lockTime);
     }
 
     /**
@@ -221,6 +239,8 @@ contract UDAOStaker is RoleController, EIP712 {
     function setMaximumStakeDays(
         uint256 _maximum_stake_days
     ) external onlyRoles(administrator_roles) {
+        //convert it to unix timestamp
+        _maximum_stake_days = _maximum_stake_days * (1 days);
         require(
             _maximum_stake_days >= minimum_stake_days,
             "Maximum stake days must be greater than minimum days"
@@ -236,6 +256,8 @@ contract UDAOStaker is RoleController, EIP712 {
     function setMinimumStakeDays(
         uint256 _minimum_stake_days
     ) external onlyRoles(administrator_roles) {
+        //convert it to unix timestamp
+        _minimum_stake_days = _minimum_stake_days * (1 days);
         require(
             _minimum_stake_days <= maximum_stake_days,
             "Minimum stake days must be less than maximum days"
@@ -250,7 +272,7 @@ contract UDAOStaker is RoleController, EIP712 {
         address redeemer;
         /// @notice The date until the voucher is valid
         uint256 validUntil;
-        /// @notice 0 validator, 1 juror, 2 corporate, 3 super validator
+        /// @notice 0 validator, 1 juror, 2 corporate
         uint256 roleId;
         /// @notice the EIP-712 signature of all other fields in the RoleVoucher struct.
         bytes signature;
@@ -264,10 +286,6 @@ contract UDAOStaker is RoleController, EIP712 {
         require(
             udaovp.balanceOf(msg.sender) > 0,
             "You have to be governance member to apply"
-        );
-        require(
-            !IRM.hasRole(SUPER_VALIDATOR_ROLE, msg.sender),
-            "Address is a Super Validator"
         );
         require(
             !IRM.hasRole(VALIDATOR_ROLE, msg.sender),
@@ -287,39 +305,6 @@ contract UDAOStaker is RoleController, EIP712 {
         activeApplicationForValidator[msg.sender] = true;
         udao.transferFrom(msg.sender, address(this), validatorLockAmount);
         emit RoleApplied(0, msg.sender, validatorLockAmount);
-    }
-
-    /// @notice Allows validators to apply for super validator role
-    function applyForSuperValidator() external whenNotPaused {
-        //make sure redeemer is kyced and not banned
-        require(IRM.isKYCed(msg.sender), "You are not KYCed");
-        require(!IRM.isBanned(msg.sender), "You were banned");
-        /// TODO super validator requirementlari ekle
-        require(
-            udaovp.balanceOf(msg.sender) > 0,
-            "You have to be governance member to apply"
-        );
-        require(
-            IRM.hasRole(VALIDATOR_ROLE, msg.sender),
-            "Address should be a Validator"
-        );
-        require(
-            !IRM.hasRole(SUPER_VALIDATOR_ROLE, msg.sender),
-            "Address is a Super Validator"
-        );
-        require(
-            !activeApplicationForValidator[msg.sender],
-            "You already have an active application"
-        );
-
-        ValidationApplication
-            storage validationApplication = validatorApplications.push();
-        validationApplication.applicant = msg.sender;
-        validatorApplicationId[msg.sender] = validationApplicationIndex;
-        validationApplicationIndex++;
-
-        activeApplicationForValidator[msg.sender] = true;
-        emit RoleApplied(3, msg.sender, 0);
     }
 
     /// @notice allows users to apply for juror role
@@ -400,18 +385,8 @@ contract UDAOStaker is RoleController, EIP712 {
             jurorApplication.expire = block.timestamp + jurorLockTime;
         } else if (roleId == 2) {
             IRM.grantRoleStaker(CORPORATE_ROLE, voucher.redeemer);
-        } else if (roleId == 3) {
-            // TODO Check issue 51 on meeting minutes
-            // TODO lock time is waiting for issue 51
-            ValidationApplication
-                storage validationApplication = validatorApplications[
-                    validatorApplicationId[voucher.redeemer]
-                ];
-
-            IRM.grantRoleStaker(SUPER_VALIDATOR_ROLE, voucher.redeemer);
-            activeApplicationForValidator[voucher.redeemer] = false;
-            validationApplication.isFinished = true;
-        } else {
+        }
+        else {
             revert("Undefined role ID!");
         }
 
@@ -449,7 +424,6 @@ contract UDAOStaker is RoleController, EIP712 {
     function checkExpireDateValidator(
         address _user
     ) external view returns (uint256 expireDate) {
-        // TODO There is no check for supervalidator yet
         expireDate = validatorApplications[validatorApplicationId[_user]]
             .expire;
         return expireDate;
@@ -588,11 +562,11 @@ contract UDAOStaker is RoleController, EIP712 {
         require(!IRM.isBanned(msg.sender), "Address is banned");
         udao.transferFrom(msg.sender, address(this), _amount);
         require(
-            _days >= minimum_stake_days,
+            _days * (1 days) >= minimum_stake_days,
             "Can't stake less than minimum_stake_days"
         );
         require(
-            _days <= maximum_stake_days,
+            _days * (1 days) <= maximum_stake_days,
             "Can't stake more than maximum_stake_days"
         );
 

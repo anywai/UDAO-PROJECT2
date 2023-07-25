@@ -8,8 +8,6 @@ import "@openzeppelin/contracts/utils/Context.sol";
 
 abstract contract RoleController is Context, Pausable {
     bytes32 public constant VALIDATOR_ROLE = keccak256("VALIDATOR_ROLE");
-    bytes32 public constant SUPER_VALIDATOR_ROLE =
-        keccak256("SUPER_VALIDATOR_ROLE");
     bytes32 public constant BACKEND_ROLE = keccak256("BACKEND_ROLE");
     bytes32 public constant FOUNDATION_ROLE = keccak256("FOUNDATION_ROLE");
     bytes32 public constant STAKING_CONTRACT = keccak256("STAKING_CONTRACT");
@@ -21,9 +19,6 @@ abstract contract RoleController is Context, Pausable {
         keccak256("SUPERVISION_CONTRACT");
     bytes32 public constant TREASURY_CONTRACT = keccak256("TREASURY_CONTRACT");
     bytes32 public constant CORPORATE_ROLE = keccak256("CORPORATE_ROLE");
-
-    /// Role group for validators
-    bytes32[] validator_roles;
 
     /// Role group for administrator roles
     bytes32[] administrator_roles;
@@ -49,8 +44,7 @@ abstract contract RoleController is Context, Pausable {
     /// @param rmAddress The address of the deployed role manager
     constructor(address rmAddress) {
         IRM = IRoleManager(rmAddress);
-        validator_roles.push(VALIDATOR_ROLE);
-        validator_roles.push(SUPER_VALIDATOR_ROLE);
+
         administrator_roles.push(FOUNDATION_ROLE);
         administrator_roles.push(GOVERNANCE_ROLE);
     }

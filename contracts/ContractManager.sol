@@ -17,6 +17,9 @@ contract ContractManager is RoleController {
     address public UdaocAddress; // content token address
     address public IrmAddress; // role manager interface address
 
+    /// @dev unknown if before or after
+    address public IPriceGetterAddress; // price getter interface address
+
     constructor(
         address _supAddress,
         address _udaoAddress,
@@ -70,5 +73,11 @@ contract ContractManager is RoleController {
         address _irmAddress
     ) external onlyRole(BACKEND_ROLE) {
         IrmAddress = _irmAddress;
+    }
+
+    function setAddressIPriceGetterAddress(
+        address _priceGetterAddress
+    ) external onlyRole(BACKEND_ROLE) {
+        IPriceGetterAddress = _priceGetterAddress;
     }
 }
