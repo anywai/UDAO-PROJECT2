@@ -12,7 +12,6 @@ import "../RoleController.sol";
 import "../interfaces/IPriceGetter.sol";
 import "../interfaces/IUDAOC.sol";
 import "../interfaces/ISupervision.sol";
-import "hardhat/console.sol";
 
 contract UDAOContent is
     IUDAOC,
@@ -60,9 +59,7 @@ contract UDAOContent is
 
     event newPartAdded(uint tokenId, uint newPartId, uint newPartPrice);
     /// @notice This event is triggered if the contract manager updates the addresses.
-    event AddressesUpdated(
-        address isupvis
-    );
+    event AddressesUpdated(address isupvis);
 
     ///@notice A signed voucher can be redeemed for a real content NFT using the redeem function.
     struct RedeemVoucher {
@@ -100,21 +97,17 @@ contract UDAOContent is
         contractManager = ContractManager(_contractManager);
     }
 
-        /// @notice Get the updated addresses from contract manager
+    /// @notice Get the updated addresses from contract manager
     function updateAddresses() external onlyRole(BACKEND_ROLE) {
         ISupVis = ISupervision(contractManager.ISupVisAddress());
 
-        emit AddressesUpdated(
-            contractManager.ISupVisAddress()
-        );
+        emit AddressesUpdated(contractManager.ISupVisAddress());
     }
 
     // TODO No name or description for individual NFT. Is this a problem?
     /// @notice Redeems a RedeemVoucher for an actual NFT, creating it in the process.
     function redeem(RedeemVoucher calldata voucher) public whenNotPaused {
         // make sure signature is valid and get the address of the signer
-        // 0x9965507d1a55bcc2695c58ba16fb37d819b0a4dc is this content Creator?
-        console.log(voucher._redeemer);
         address signer = _verify(voucher);
         require(
             IRM.hasRole(BACKEND_ROLE, signer),
