@@ -4,6 +4,7 @@ const { ethers } = hardhat;
 const chai = require("chai");
 const BN = require("bn.js");
 const bn = require("bignumber.js");
+const { Redeem } = require("../lib/Redeem");
 const helpers = require("@nomicfoundation/hardhat-network-helpers");
 const { deploy } = require("../lib/deployments");
 
@@ -207,18 +208,37 @@ describe("Uniswap DEX Tests", function () {
     await contractRoleManager.setKYC(contentBuyer.address, true);
     await contractRoleManager.setKYC(validator1.address, true);
 
+    // Get the current block timestamp
+    const block = await ethers.provider.getBlock("latest");
+    // add some minutes to it and convert it to a BigNumber
+    const futureBlock = block.timestamp + 1000;
+    // convert it to a BigNumber
+    const futureBlockBigNumber = ethers.BigNumber.from(futureBlock);
+
+    /// Create content voucher
+    const createContentVoucherSample = await new Redeem({
+      contract: contractUDAOContent,
+      signer: backend,
+    }).createVoucher(
+      futureBlockBigNumber,
+      [10],
+      0,
+      "usd",
+      "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
+      contentCreator.address,
+      ethers.utils.parseEther("2"),
+      "udao",
+      true,
+      true,
+      1,
+      0
+    );
+
+    /// Create content
     await expect(
-      contractUDAOContent.connect(contentCreator).redeem(
-        //[ethers.utils.parseEther("1")],
-        [10],
-        "usd",
-        "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
-        contentCreator.address,
-        ethers.utils.parseEther("2"),
-        "udao",
-        true,
-        true
-      )
+      contractUDAOContent
+        .connect(contentCreator)
+        .redeem(createContentVoucherSample)
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
@@ -344,19 +364,37 @@ describe("Uniswap DEX Tests", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
+    // Get the current block timestamp
+    const block = await ethers.provider.getBlock("latest");
+    // add some minutes to it and convert it to a BigNumber
+    const futureBlock = block.timestamp + 1000;
+    // convert it to a BigNumber
+    const futureBlockBigNumber = ethers.BigNumber.from(futureBlock);
+
+    /// Create content voucher
+    const createContentVoucherSample = await new Redeem({
+      contract: contractUDAOContent,
+      signer: backend,
+    }).createVoucher(
+      futureBlockBigNumber,
+      [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
+      0,
+      "udao",
+      "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
+      contentCreator.address,
+      [10],
+      "usd",
+      true,
+      true,
+      1,
+      0
+    );
+
+    /// Create content
     await expect(
       contractUDAOContent
         .connect(contentCreator)
-        .redeem(
-          [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
-          "udao",
-          "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
-          contentCreator.address,
-          [10],
-          "usd",
-          true,
-          true
-        )
+        .redeem(createContentVoucherSample)
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(

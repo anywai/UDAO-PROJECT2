@@ -4,6 +4,7 @@ const { ethers } = hardhat;
 const chai = require("chai");
 const BN = require("bn.js");
 const { LazyCoaching } = require("../lib/LazyCoaching");
+const { Redeem } = require("../lib/Redeem");
 const helpers = require("@nomicfoundation/hardhat-network-helpers");
 const { deploy } = require("../lib/deployments");
 
@@ -115,6 +116,38 @@ async function runValidation(
     .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), true);
 }
 
+async function createContentVoucher(
+  contractUDAOContent,
+  backend,
+  contentCreator,
+  partPrices
+) {
+  // Get the current block timestamp
+  const block = await ethers.provider.getBlock("latest");
+  // add some minutes to it and convert it to a BigNumber
+  const futureBlock = block.timestamp + 1000;
+  // convert it to a BigNumber
+  const futureBlockBigNumber = ethers.BigNumber.from(futureBlock);
+
+  return await new Redeem({
+    contract: contractUDAOContent,
+    signer: backend,
+  }).createVoucher(
+    futureBlockBigNumber,
+    partPrices,
+    0,
+    "udao",
+    "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
+    contentCreator.address,
+    ethers.utils.parseEther("1"),
+    "udao",
+    true,
+    true,
+    1,
+    0
+  );
+}
+
 describe("Platform Treasury Contract - Coaching", function () {
   it("Should a user able to buy a coaching", async function () {
     const {
@@ -165,19 +198,25 @@ describe("Platform Treasury Contract - Coaching", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
+    /// part prices must be determined before creating content
+    const partPricesArray = [
+      ethers.utils.parseEther("1"),
+      ethers.utils.parseEther("1"),
+    ];
+
+    /// Create Voucher from redeem.js and use it for creating content
+    const createContentVoucherSample = await createContentVoucher(
+      contractUDAOContent,
+      backend,
+      contentCreator,
+      partPricesArray
+    );
+
+    /// Create content
     await expect(
       contractUDAOContent
         .connect(contentCreator)
-        .redeem(
-          [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
-          "udao",
-          "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
-          contentCreator.address,
-          ethers.utils.parseEther("2"),
-          "udao",
-          true,
-          true
-        )
+        .redeem(createContentVoucherSample)
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
@@ -279,19 +318,22 @@ describe("Platform Treasury Contract - Coaching", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
+    /// part prices must be determined before creating content
+    const partPricesArray = [ethers.utils.parseEther("1")];
+
+    /// Create Voucher from redeem.js and use it for creating content
+    const createContentVoucherSample = await createContentVoucher(
+      contractUDAOContent,
+      backend,
+      contentCreator,
+      partPricesArray
+    );
+
+    /// Create content
     await expect(
       contractUDAOContent
         .connect(contentCreator)
-        .redeem(
-          [ethers.utils.parseEther("1")],
-          "udao",
-          "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
-          contentCreator.address,
-          ethers.utils.parseEther("2"),
-          "udao",
-          true,
-          true
-        )
+        .redeem(createContentVoucherSample)
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
@@ -385,19 +427,39 @@ describe("Platform Treasury Contract - Coaching", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
+    /// part prices must be determined before creating content
+    const partPricesArray = [ethers.utils.parseEther("1")];
+
+    // Get the current block timestamp
+    const block = await ethers.provider.getBlock("latest");
+    // add some minutes to it and convert it to a BigNumber
+    const futureBlock = block.timestamp + 1000;
+    // convert it to a BigNumber
+    const futureBlockBigNumber = ethers.BigNumber.from(futureBlock);
+    // create Content Voucher
+    const createContentVoucherSample = await new Redeem({
+      contract: contractUDAOContent,
+      signer: backend,
+    }).createVoucher(
+      futureBlockBigNumber,
+      partPricesArray,
+      0,
+      "udao",
+      "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
+      contentCreator.address,
+      ethers.utils.parseEther("1"),
+      "udao",
+      false,
+      false,
+      1,
+      0
+    );
+
+    /// Create content
     await expect(
       contractUDAOContent
         .connect(contentCreator)
-        .redeem(
-          [ethers.utils.parseEther("1")],
-          "udao",
-          "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
-          contentCreator.address,
-          ethers.utils.parseEther("2"),
-          "udao",
-          false,
-          false
-        )
+        .redeem(createContentVoucherSample)
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
@@ -539,19 +601,22 @@ describe("Platform Treasury Contract - Coaching", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
+    /// part prices must be determined before creating content
+    const partPricesArray = [ethers.utils.parseEther("1")];
+
+    /// Create Voucher from redeem.js and use it for creating content
+    const createContentVoucherSample = await createContentVoucher(
+      contractUDAOContent,
+      backend,
+      contentCreator,
+      partPricesArray
+    );
+
+    /// Create content
     await expect(
       contractUDAOContent
         .connect(contentCreator)
-        .redeem(
-          [ethers.utils.parseEther("1")],
-          "udao",
-          "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
-          contentCreator.address,
-          ethers.utils.parseEther("2"),
-          "udao",
-          true,
-          true
-        )
+        .redeem(createContentVoucherSample)
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
@@ -627,19 +692,22 @@ describe("Platform Treasury Contract - Coaching", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
+    /// part prices must be determined before creating content
+    const partPricesArray = [ethers.utils.parseEther("1")];
+
+    /// Create Voucher from redeem.js and use it for creating content
+    const createContentVoucherSample = await createContentVoucher(
+      contractUDAOContent,
+      backend,
+      contentCreator,
+      partPricesArray
+    );
+
+    /// Create content
     await expect(
       contractUDAOContent
         .connect(contentCreator)
-        .redeem(
-          [ethers.utils.parseEther("1")],
-          "udao",
-          "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
-          contentCreator.address,
-          ethers.utils.parseEther("2"),
-          "udao",
-          true,
-          true
-        )
+        .redeem(createContentVoucherSample)
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
@@ -730,19 +798,22 @@ describe("Platform Treasury Contract - Coaching", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
+    /// part prices must be determined before creating content
+    const partPricesArray = [ethers.utils.parseEther("1")];
+
+    /// Create Voucher from redeem.js and use it for creating content
+    const createContentVoucherSample = await createContentVoucher(
+      contractUDAOContent,
+      backend,
+      contentCreator,
+      partPricesArray
+    );
+
+    /// Create content
     await expect(
       contractUDAOContent
         .connect(contentCreator)
-        .redeem(
-          [ethers.utils.parseEther("1")],
-          "udao",
-          "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
-          contentCreator.address,
-          ethers.utils.parseEther("2"),
-          "udao",
-          true,
-          true
-        )
+        .redeem(createContentVoucherSample)
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
@@ -832,19 +903,22 @@ describe("Platform Treasury Contract - Coaching", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
+    /// part prices must be determined before creating content
+    const partPricesArray = [ethers.utils.parseEther("1")];
+
+    /// Create Voucher from redeem.js and use it for creating content
+    const createContentVoucherSample = await createContentVoucher(
+      contractUDAOContent,
+      backend,
+      contentCreator,
+      partPricesArray
+    );
+
+    /// Create content
     await expect(
       contractUDAOContent
         .connect(contentCreator)
-        .redeem(
-          [ethers.utils.parseEther("1")],
-          "udao",
-          "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
-          contentCreator.address,
-          ethers.utils.parseEther("2"),
-          "udao",
-          true,
-          true
-        )
+        .redeem(createContentVoucherSample)
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
@@ -935,19 +1009,22 @@ describe("Platform Treasury Contract - Coaching", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
+    /// part prices must be determined before creating content
+    const partPricesArray = [ethers.utils.parseEther("1")];
+
+    /// Create Voucher from redeem.js and use it for creating content
+    const createContentVoucherSample = await createContentVoucher(
+      contractUDAOContent,
+      backend,
+      contentCreator,
+      partPricesArray
+    );
+
+    /// Create content
     await expect(
       contractUDAOContent
         .connect(contentCreator)
-        .redeem(
-          [ethers.utils.parseEther("1")],
-          "udao",
-          "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
-          contentCreator.address,
-          ethers.utils.parseEther("2"),
-          "udao",
-          true,
-          true
-        )
+        .redeem(createContentVoucherSample)
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
@@ -1037,19 +1114,39 @@ describe("Platform Treasury Contract - Coaching", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
+    /// part prices must be determined before creating content
+    const partPricesArray = [ethers.utils.parseEther("1")];
+
+    // Get the current block timestamp
+    const block = await ethers.provider.getBlock("latest");
+    // add some minutes to it and convert it to a BigNumber
+    const futureBlock = block.timestamp + 1000;
+    // convert it to a BigNumber
+    const futureBlockBigNumber = ethers.BigNumber.from(futureBlock);
+
+    const createContentVoucherSample = await new Redeem({
+      contract: contractUDAOContent,
+      signer: backend,
+    }).createVoucher(
+      futureBlockBigNumber,
+      partPricesArray,
+      0,
+      "udao",
+      "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
+      contentCreator.address,
+      ethers.utils.parseEther("2"),
+      "udao",
+      true,
+      true,
+      1,
+      0
+    );
+
+    /// Create content
     await expect(
       contractUDAOContent
         .connect(contentCreator)
-        .redeem(
-          [ethers.utils.parseEther("1")],
-          "udao",
-          "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
-          contentCreator.address,
-          ethers.utils.parseEther("2"),
-          "udao",
-          true,
-          true
-        )
+        .redeem(createContentVoucherSample)
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
@@ -1156,19 +1253,39 @@ describe("Platform Treasury Contract - Coaching", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
+    /// part prices must be determined before creating content
+    const partPricesArray = [ethers.utils.parseEther("1")];
+
+    // Get the current block timestamp
+    const block = await ethers.provider.getBlock("latest");
+    // add some minutes to it and convert it to a BigNumber
+    const futureBlock = block.timestamp + 1000;
+    // convert it to a BigNumber
+    const futureBlockBigNumber = ethers.BigNumber.from(futureBlock);
+
+    const createContentVoucherSample = await new Redeem({
+      contract: contractUDAOContent,
+      signer: backend,
+    }).createVoucher(
+      futureBlockBigNumber,
+      partPricesArray,
+      0,
+      "udao",
+      "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
+      contentCreator.address,
+      ethers.utils.parseEther("2"),
+      "udao",
+      true,
+      true,
+      1,
+      0
+    );
+
+    /// Create content
     await expect(
       contractUDAOContent
         .connect(contentCreator)
-        .redeem(
-          [ethers.utils.parseEther("1")],
-          "udao",
-          "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
-          contentCreator.address,
-          ethers.utils.parseEther("2"),
-          "udao",
-          true,
-          true
-        )
+        .redeem(createContentVoucherSample)
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
@@ -1275,19 +1392,22 @@ describe("Platform Treasury Contract - Coaching", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
+    /// part prices must be determined before creating content
+    const partPricesArray = [ethers.utils.parseEther("1")];
+
+    /// Create Voucher from redeem.js and use it for creating content
+    const createContentVoucherSample = await createContentVoucher(
+      contractUDAOContent,
+      backend,
+      contentCreator,
+      partPricesArray
+    );
+
+    /// Create content
     await expect(
       contractUDAOContent
         .connect(contentCreator)
-        .redeem(
-          [ethers.utils.parseEther("1")],
-          "udao",
-          "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
-          contentCreator.address,
-          ethers.utils.parseEther("2"),
-          "udao",
-          true,
-          true
-        )
+        .redeem(createContentVoucherSample)
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
@@ -1391,19 +1511,22 @@ describe("Platform Treasury Contract - Coaching", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
+    /// part prices must be determined before creating content
+    const partPricesArray = [ethers.utils.parseEther("1")];
+
+    /// Create Voucher from redeem.js and use it for creating content
+    const createContentVoucherSample = await createContentVoucher(
+      contractUDAOContent,
+      backend,
+      contentCreator,
+      partPricesArray
+    );
+
+    /// Create content
     await expect(
       contractUDAOContent
         .connect(contentCreator)
-        .redeem(
-          [ethers.utils.parseEther("1")],
-          "udao",
-          "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
-          contentCreator.address,
-          ethers.utils.parseEther("2"),
-          "udao",
-          true,
-          true
-        )
+        .redeem(createContentVoucherSample)
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
@@ -1511,19 +1634,22 @@ describe("Platform Treasury Contract - Coaching", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
+    /// part prices must be determined before creating content
+    const partPricesArray = [ethers.utils.parseEther("1")];
+
+    /// Create Voucher from redeem.js and use it for creating content
+    const createContentVoucherSample = await createContentVoucher(
+      contractUDAOContent,
+      backend,
+      contentCreator,
+      partPricesArray
+    );
+
+    /// Create content
     await expect(
       contractUDAOContent
         .connect(contentCreator)
-        .redeem(
-          [ethers.utils.parseEther("1")],
-          "udao",
-          "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
-          contentCreator.address,
-          ethers.utils.parseEther("2"),
-          "udao",
-          true,
-          true
-        )
+        .redeem(createContentVoucherSample)
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
@@ -1631,19 +1757,22 @@ describe("Platform Treasury Contract - Coaching", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
+    /// part prices must be determined before creating content
+    const partPricesArray = [ethers.utils.parseEther("1")];
+
+    /// Create Voucher from redeem.js and use it for creating content
+    const createContentVoucherSample = await createContentVoucher(
+      contractUDAOContent,
+      backend,
+      contentCreator,
+      partPricesArray
+    );
+
+    /// Create content
     await expect(
       contractUDAOContent
         .connect(contentCreator)
-        .redeem(
-          [ethers.utils.parseEther("1")],
-          "udao",
-          "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
-          contentCreator.address,
-          ethers.utils.parseEther("2"),
-          "udao",
-          true,
-          true
-        )
+        .redeem(createContentVoucherSample)
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
@@ -1753,19 +1882,22 @@ describe("Platform Treasury Contract - Coaching", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
+    /// part prices must be determined before creating content
+    const partPricesArray = [ethers.utils.parseEther("1")];
+
+    /// Create Voucher from redeem.js and use it for creating content
+    const createContentVoucherSample = await createContentVoucher(
+      contractUDAOContent,
+      backend,
+      contentCreator,
+      partPricesArray
+    );
+
+    /// Create content
     await expect(
       contractUDAOContent
         .connect(contentCreator)
-        .redeem(
-          [ethers.utils.parseEther("1")],
-          "udao",
-          "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
-          contentCreator.address,
-          ethers.utils.parseEther("2"),
-          "udao",
-          true,
-          true
-        )
+        .redeem(createContentVoucherSample)
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
@@ -1874,19 +2006,22 @@ describe("Platform Treasury Contract - Coaching", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
+    /// part prices must be determined before creating content
+    const partPricesArray = [ethers.utils.parseEther("1")];
+
+    /// Create Voucher from redeem.js and use it for creating content
+    const createContentVoucherSample = await createContentVoucher(
+      contractUDAOContent,
+      backend,
+      contentCreator,
+      partPricesArray
+    );
+
+    /// Create content
     await expect(
       contractUDAOContent
         .connect(contentCreator)
-        .redeem(
-          [ethers.utils.parseEther("1")],
-          "udao",
-          "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
-          contentCreator.address,
-          ethers.utils.parseEther("2"),
-          "udao",
-          true,
-          true
-        )
+        .redeem(createContentVoucherSample)
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
@@ -1991,19 +2126,22 @@ describe("Platform Treasury Contract - Coaching", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
+    /// part prices must be determined before creating content
+    const partPricesArray = [ethers.utils.parseEther("1")];
+
+    /// Create Voucher from redeem.js and use it for creating content
+    const createContentVoucherSample = await createContentVoucher(
+      contractUDAOContent,
+      backend,
+      contentCreator,
+      partPricesArray
+    );
+
+    /// Create content
     await expect(
       contractUDAOContent
         .connect(contentCreator)
-        .redeem(
-          [ethers.utils.parseEther("1")],
-          "udao",
-          "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
-          contentCreator.address,
-          ethers.utils.parseEther("2"),
-          "udao",
-          true,
-          true
-        )
+        .redeem(createContentVoucherSample)
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
@@ -2108,19 +2246,22 @@ describe("Platform Treasury Contract - Coaching", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
+    /// part prices must be determined before creating content
+    const partPricesArray = [ethers.utils.parseEther("1")];
+
+    /// Create Voucher from redeem.js and use it for creating content
+    const createContentVoucherSample = await createContentVoucher(
+      contractUDAOContent,
+      backend,
+      contentCreator,
+      partPricesArray
+    );
+
+    /// Create content
     await expect(
       contractUDAOContent
         .connect(contentCreator)
-        .redeem(
-          [ethers.utils.parseEther("1")],
-          "udao",
-          "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
-          contentCreator.address,
-          ethers.utils.parseEther("2"),
-          "udao",
-          true,
-          true
-        )
+        .redeem(createContentVoucherSample)
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
@@ -2225,19 +2366,22 @@ describe("Platform Treasury Contract - Coaching", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
+    /// part prices must be determined before creating content
+    const partPricesArray = [ethers.utils.parseEther("1")];
+
+    /// Create Voucher from redeem.js and use it for creating content
+    const createContentVoucherSample = await createContentVoucher(
+      contractUDAOContent,
+      backend,
+      contentCreator,
+      partPricesArray
+    );
+
+    /// Create content
     await expect(
       contractUDAOContent
         .connect(contentCreator)
-        .redeem(
-          [ethers.utils.parseEther("1")],
-          "udao",
-          "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
-          contentCreator.address,
-          ethers.utils.parseEther("2"),
-          "udao",
-          true,
-          true
-        )
+        .redeem(createContentVoucherSample)
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
@@ -2346,19 +2490,39 @@ describe("Platform Treasury Contract - Coaching", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
+    /// part prices must be determined before creating content
+    const partPricesArray = [ethers.utils.parseEther("1")];
+
+    // Get the current block timestamp
+    const block = await ethers.provider.getBlock("latest");
+    // add some minutes to it and convert it to a BigNumber
+    const futureBlock = block.timestamp + 1000;
+    // convert it to a BigNumber
+    const futureBlockBigNumber = ethers.BigNumber.from(futureBlock);
+
+    const createContentVoucherSample = await new Redeem({
+      contract: contractUDAOContent,
+      signer: backend,
+    }).createVoucher(
+      futureBlockBigNumber,
+      partPricesArray,
+      0,
+      "udao",
+      "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
+      contentCreator.address,
+      ethers.utils.parseEther("2"),
+      "udao",
+      true,
+      true,
+      1,
+      0
+    );
+
+    /// Create content
     await expect(
       contractUDAOContent
         .connect(contentCreator)
-        .redeem(
-          [ethers.utils.parseEther("1")],
-          "udao",
-          "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
-          contentCreator.address,
-          ethers.utils.parseEther("2"),
-          "udao",
-          true,
-          true
-        )
+        .redeem(createContentVoucherSample)
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
@@ -2463,19 +2627,22 @@ describe("Platform Treasury Contract - Coaching", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
+    /// part prices must be determined before creating content
+    const partPricesArray = [ethers.utils.parseEther("1")];
+
+    /// Create Voucher from redeem.js and use it for creating content
+    const createContentVoucherSample = await createContentVoucher(
+      contractUDAOContent,
+      backend,
+      contentCreator,
+      partPricesArray
+    );
+
+    /// Create content
     await expect(
       contractUDAOContent
         .connect(contentCreator)
-        .redeem(
-          [ethers.utils.parseEther("1")],
-          "udao",
-          "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
-          contentCreator.address,
-          ethers.utils.parseEther("2"),
-          "udao",
-          true,
-          true
-        )
+        .redeem(createContentVoucherSample)
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
@@ -2580,19 +2747,39 @@ describe("Platform Treasury Contract - Coaching", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
+    /// part prices must be determined before creating content
+    const partPricesArray = [ethers.utils.parseEther("1")];
+
+    // Get the current block timestamp
+    const block = await ethers.provider.getBlock("latest");
+    // add some minutes to it and convert it to a BigNumber
+    const futureBlock = block.timestamp + 1000;
+    // convert it to a BigNumber
+    const futureBlockBigNumber = ethers.BigNumber.from(futureBlock);
+
+    const createContentVoucherSample = await new Redeem({
+      contract: contractUDAOContent,
+      signer: backend,
+    }).createVoucher(
+      futureBlockBigNumber,
+      partPricesArray,
+      0,
+      "udao",
+      "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
+      contentCreator.address,
+      ethers.utils.parseEther("2"),
+      "udao",
+      true,
+      true,
+      1,
+      0
+    );
+
+    /// Create content
     await expect(
       contractUDAOContent
         .connect(contentCreator)
-        .redeem(
-          [ethers.utils.parseEther("1")],
-          "udao",
-          "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
-          contentCreator.address,
-          ethers.utils.parseEther("2"),
-          "udao",
-          true,
-          true
-        )
+        .redeem(createContentVoucherSample)
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
@@ -2699,19 +2886,22 @@ describe("Platform Treasury Contract - Coaching", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
+    /// part prices must be determined before creating content
+    const partPricesArray = [ethers.utils.parseEther("1")];
+
+    /// Create Voucher from redeem.js and use it for creating content
+    const createContentVoucherSample = await createContentVoucher(
+      contractUDAOContent,
+      backend,
+      contentCreator,
+      partPricesArray
+    );
+
+    /// Create content
     await expect(
       contractUDAOContent
         .connect(contentCreator)
-        .redeem(
-          [ethers.utils.parseEther("1")],
-          "udao",
-          "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
-          contentCreator.address,
-          ethers.utils.parseEther("2"),
-          "udao",
-          true,
-          true
-        )
+        .redeem(createContentVoucherSample)
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
@@ -2820,19 +3010,38 @@ describe("Platform Treasury Contract - Coaching", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
+    /// part prices must be determined before creating content
+    const partPricesArray = [ethers.utils.parseEther("1")];
+
+    // Get the current block timestamp
+    const block = await ethers.provider.getBlock("latest");
+    // add some minutes to it and convert it to a BigNumber
+    const futureBlock = block.timestamp + 1000;
+    // convert it to a BigNumber
+    const futureBlockBigNumber = ethers.BigNumber.from(futureBlock);
+
+    const createContentVoucherSample = await new Redeem({
+      contract: contractUDAOContent,
+      signer: backend,
+    }).createVoucher(
+      futureBlockBigNumber,
+      partPricesArray,
+      0,
+      "udao",
+      "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
+      contentCreator.address,
+      ethers.utils.parseEther("2"),
+      "udao",
+      true,
+      false,
+      1,
+      0
+    );
+    /// Create content
     await expect(
       contractUDAOContent
         .connect(contentCreator)
-        .redeem(
-          [ethers.utils.parseEther("1")],
-          "udao",
-          "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
-          contentCreator.address,
-          ethers.utils.parseEther("2"),
-          "udao",
-          true,
-          false
-        )
+        .redeem(createContentVoucherSample)
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(

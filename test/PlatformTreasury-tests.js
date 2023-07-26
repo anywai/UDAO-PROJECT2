@@ -4,6 +4,7 @@ const { ethers } = hardhat;
 const chai = require("chai");
 const BN = require("bn.js");
 const helpers = require("@nomicfoundation/hardhat-network-helpers");
+const { Redeem } = require("../lib/Redeem");
 const { deploy } = require("../lib/deployments");
 const { anyValue } = require("@nomicfoundation/hardhat-chai-matchers/withArgs");
 
@@ -180,20 +181,26 @@ async function createContent(
 ) {
   /// Set KYC
   await contractRoleManager.setKYC(contentCreator.address, true);
+
+  /// part prices must be determined before creating content
+  const partPricesArray = [
+    ethers.utils.parseEther("1"),
+    ethers.utils.parseEther("1"),
+  ];
+
+  /// Create Voucher from redeem.js and use it for creating content
+  const createContentVoucherSample = await createContentVoucher(
+    contractUDAOContent,
+    backend,
+    contentCreator,
+    partPricesArray
+  );
+
   /// Redeem content
   await expect(
     contractUDAOContent
       .connect(contentCreator)
-      .redeem(
-        [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
-        "udao",
-        "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
-        contentCreator.address,
-        ethers.utils.parseEther("2"),
-        "udao",
-        true,
-        true
-      )
+      .redeem(createContentVoucherSample)
   )
     .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
     .withArgs(
@@ -281,6 +288,38 @@ async function makeCoachingPurchase(
   // Check if returned learner address is the same as the buyer address
   expect(coachingStruct.learner).to.equal(contentBuyer.address);
   return coachingId;
+}
+
+async function createContentVoucher(
+  contractUDAOContent,
+  backend,
+  contentCreator,
+  partPrices
+) {
+  // Get the current block timestamp
+  const block = await ethers.provider.getBlock("latest");
+  // add some minutes to it and convert it to a BigNumber
+  const futureBlock = block.timestamp + 1000;
+  // convert it to a BigNumber
+  const futureBlockBigNumber = ethers.BigNumber.from(futureBlock);
+
+  return await new Redeem({
+    contract: contractUDAOContent,
+    signer: backend,
+  }).createVoucher(
+    futureBlockBigNumber,
+    partPrices,
+    0,
+    "udao",
+    "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
+    contentCreator.address,
+    ethers.utils.parseEther("1"),
+    "udao",
+    true,
+    true,
+    1,
+    0
+  );
 }
 
 describe("Platform Treasury General", function () {
