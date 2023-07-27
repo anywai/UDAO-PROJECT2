@@ -220,7 +220,7 @@ async function createContent(
   await expect(
     contractUDAOContent
       .connect(contentCreator)
-      .redeem(createContentVoucherSample)
+      .createContent(createContentVoucherSample)
   )
     .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
     .withArgs(
@@ -293,7 +293,7 @@ describe("Supervision Contract", function () {
     await expect(
       contractUDAOContent
         .connect(contentCreator)
-        .redeem(createContentVoucherSample)
+        .createContent(createContentVoucherSample)
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
@@ -327,7 +327,7 @@ describe("Supervision Contract", function () {
     await expect(
       contractUDAOContent
         .connect(contentCreator)
-        .redeem(createContentVoucherSample)
+        .createContent(createContentVoucherSample)
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
@@ -369,7 +369,7 @@ describe("Supervision Contract", function () {
     await expect(
       contractUDAOContent
         .connect(contentCreator)
-        .redeem(createContentVoucherSample)
+        .createContent(createContentVoucherSample)
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
@@ -498,7 +498,7 @@ describe("Supervision Contract", function () {
     await expect(
       contractUDAOContent
         .connect(contentCreator)
-        .redeem(createContentVoucherSample)
+        .createContent(createContentVoucherSample)
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
@@ -633,7 +633,7 @@ describe("Supervision Contract", function () {
     await expect(
       contractUDAOContent
         .connect(contentCreator)
-        .redeem(createContentVoucherSample)
+        .createContent(createContentVoucherSample)
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
@@ -772,7 +772,7 @@ describe("Supervision Contract", function () {
     await expect(
       contractUDAOContent
         .connect(contentCreator)
-        .redeem(createContentVoucherSample)
+        .createContent(createContentVoucherSample)
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
@@ -924,7 +924,7 @@ describe("Supervision Contract", function () {
     await expect(
       contractUDAOContent
         .connect(contentCreator)
-        .redeem(createContentVoucherSample)
+        .createContent(createContentVoucherSample)
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
@@ -1006,7 +1006,7 @@ describe("Supervision Contract", function () {
     await expect(
       contractUDAOContent
         .connect(contentCreator)
-        .redeem(createContentVoucherSample)
+        .createContent(createContentVoucherSample)
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(

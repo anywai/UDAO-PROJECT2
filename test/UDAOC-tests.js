@@ -222,7 +222,7 @@ describe("UDAOC Contract", function () {
     await expect(
       contractUDAOContent
         .connect(contentCreator)
-        .redeem(createContentVoucherSample)
+        .createContent(createContentVoucherSample)
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
@@ -294,7 +294,7 @@ describe("UDAOC Contract", function () {
     await expect(
       contractUDAOContent
         .connect(contentBuyer)
-        .redeem(createContentVoucherSample)
+        .createContent(createContentVoucherSample)
     ).to.revertedWith("You are not the redeemer");
   });
 
@@ -339,7 +339,7 @@ describe("UDAOC Contract", function () {
   //     "Content Description"
   //   );
   //   await expect(
-  //     contractUDAOContent.connect(contentCreator).redeem(voucher)
+  //     contractUDAOContent.connect(contentCreator).createContent(voucher)
   //   ).to.revertedWith("Signature invalid or unauthorized");
   // });
 
@@ -407,7 +407,7 @@ describe("UDAOC Contract", function () {
     await expect(
       contractUDAOContent
         .connect(contentCreator)
-        .redeem(createContentVoucherSample)
+        .createContent(createContentVoucherSample)
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
@@ -485,7 +485,7 @@ describe("UDAOC Contract", function () {
     await expect(
       contractUDAOContent
         .connect(contentCreator)
-        .redeem(createContentVoucherSample)
+        .createContent(createContentVoucherSample)
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
@@ -567,7 +567,7 @@ describe("UDAOC Contract", function () {
     await expect(
       contractUDAOContent
         .connect(contentCreator)
-        .redeem(createContentVoucherSample)
+        .createContent(createContentVoucherSample)
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
@@ -649,7 +649,7 @@ describe("UDAOC Contract", function () {
     await expect(
       contractUDAOContent
         .connect(contentCreator)
-        .redeem(createContentVoucherSample)
+        .createContent(createContentVoucherSample)
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
@@ -732,7 +732,7 @@ describe("UDAOC Contract", function () {
     await expect(
       contractUDAOContent
         .connect(contentCreator)
-        .redeem(createContentVoucherSample)
+        .createContent(createContentVoucherSample)
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
@@ -812,7 +812,7 @@ describe("UDAOC Contract", function () {
     await expect(
       contractUDAOContent
         .connect(contentCreator)
-        .redeem(createContentVoucherSample)
+        .createContent(createContentVoucherSample)
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
@@ -894,7 +894,7 @@ describe("UDAOC Contract", function () {
     await expect(
       contractUDAOContent
         .connect(contentCreator)
-        .redeem(createContentVoucherSample)
+        .createContent(createContentVoucherSample)
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
@@ -976,7 +976,7 @@ describe("UDAOC Contract", function () {
     await expect(
       contractUDAOContent
         .connect(contentCreator)
-        .redeem(createContentVoucherSample)
+        .createContent(createContentVoucherSample)
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
@@ -1109,7 +1109,7 @@ describe("UDAOC Contract", function () {
     await expect(
       contractUDAOContent
         .connect(contentCreator)
-        .redeem(createContentVoucherSample)
+        .createContent(createContentVoucherSample)
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
@@ -1185,7 +1185,7 @@ describe("UDAOC Contract", function () {
     await expect(
       contractUDAOContent
         .connect(contentCreator)
-        .redeem(createContentVoucherSample)
+        .createContent(createContentVoucherSample)
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
@@ -1263,7 +1263,7 @@ describe("UDAOC Contract", function () {
     await expect(
       contractUDAOContent
         .connect(contentCreator)
-        .redeem(createContentVoucherSample)
+        .createContent(createContentVoucherSample)
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
@@ -1340,7 +1340,7 @@ describe("UDAOC Contract", function () {
     await expect(
       contractUDAOContent
         .connect(contentCreator)
-        .redeem(createContentVoucherSample)
+        .createContent(createContentVoucherSample)
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(
@@ -1420,7 +1420,7 @@ describe("UDAOC Contract", function () {
     await expect(
       contractUDAOContent
         .connect(contentCreator)
-        .redeem(createContentVoucherSample)
+        .createContent(createContentVoucherSample)
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to min
       .withArgs(
@@ -1567,7 +1567,7 @@ describe("UDAOC Contract", function () {
     await expect(
       contractUDAOContent
         .connect(contentCreator)
-        .redeem(createContentVoucherSample)
+        .createContent(createContentVoucherSample)
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to
       .withArgs(
@@ -1674,7 +1674,7 @@ describe("UDAOC Contract", function () {
     await expect(
       contractUDAOContent
         .connect(contentCreator)
-        .redeem(createContentVoucherSample)
+        .createContent(createContentVoucherSample)
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to
       .withArgs(
@@ -1780,7 +1780,7 @@ describe("UDAOC Contract", function () {
     await expect(
       contractUDAOContent
         .connect(contentCreator)
-        .redeem(createContentVoucherSample)
+        .createContent(createContentVoucherSample)
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to
       .withArgs(
@@ -1867,7 +1867,7 @@ describe("UDAOC Contract", function () {
     await expect(
       contractUDAOContent
         .connect(contentCreator)
-        .redeem(createContentVoucherSample)
+        .createContent(createContentVoucherSample)
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to
       .withArgs(
@@ -1954,7 +1954,7 @@ describe("UDAOC Contract", function () {
     await expect(
       contractUDAOContent
         .connect(contentCreator)
-        .redeem(createContentVoucherSample)
+        .createContent(createContentVoucherSample)
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to
       .withArgs(
@@ -2045,7 +2045,7 @@ describe("UDAOC Contract", function () {
     await expect(
       contractUDAOContent
         .connect(contentCreator)
-        .redeem(createContentVoucherSample)
+        .createContent(createContentVoucherSample)
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address
       .withArgs(
@@ -2134,7 +2134,7 @@ describe("UDAOC Contract", function () {
     await expect(
       contractUDAOContent
         .connect(contentCreator)
-        .redeem(createContentVoucherSample)
+        .createContent(createContentVoucherSample)
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address
       .withArgs(
@@ -2224,7 +2224,7 @@ describe("UDAOC Contract", function () {
     await expect(
       contractUDAOContent
         .connect(contentCreator)
-        .redeem(createContentVoucherSample)
+        .createContent(createContentVoucherSample)
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address
       .withArgs(

@@ -106,7 +106,9 @@ contract UDAOContent is
 
     // TODO No name or description for individual NFT. Is this a problem?
     /// @notice Redeems a RedeemVoucher for an actual NFT, creating it in the process.
-    function redeem(RedeemVoucher calldata voucher) public whenNotPaused {
+    function createContent(
+        RedeemVoucher calldata voucher
+    ) public whenNotPaused {
         // make sure signature is valid and get the address of the signer
         address signer = _verify(voucher);
         require(
