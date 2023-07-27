@@ -104,11 +104,6 @@ async function runValidation(
   validator4,
   validator5
 ) {
-  await expect(
-    contractSupervision.connect(contentCreator).createValidation(0, 50)
-  )
-    .to.emit(contractSupervision, "ValidationCreated")
-    .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1));
   await expect(contractSupervision.connect(validator1).assignValidation(1))
     .to.emit(contractSupervision, "ValidationAssigned")
     .withArgs(
@@ -245,7 +240,8 @@ async function createContentVoucher(
   contractUDAOContent,
   backend,
   contentCreator,
-  partPrices
+  partPrices,
+  score = 0
 ) {
   // Get the current block timestamp
   const block = await ethers.provider.getBlock("latest");
@@ -269,7 +265,7 @@ async function createContentVoucher(
     true,
     true,
     1,
-    0
+    score
   );
 }
 /// TESTS-----------------------------------------------------------------------
@@ -294,16 +290,6 @@ describe("Supervision Contract", function () {
       contractUDAOContent
         .connect(contentCreator)
         .createContent(createContentVoucherSample)
-    )
-      .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
-      .withArgs(
-        "0x0000000000000000000000000000000000000000",
-        contentCreator.address,
-        0
-      );
-    /// create validation
-    await expect(
-      contractSupervision.connect(contentCreator).createValidation(0, 50)
     )
       .to.emit(contractSupervision, "ValidationCreated")
       .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1));
@@ -335,12 +321,6 @@ describe("Supervision Contract", function () {
         contentCreator.address,
         0
       );
-    /// create validation
-    await expect(
-      contractSupervision.connect(contentCreator).createValidation(0, 50)
-    )
-      .to.emit(contractSupervision, "ValidationCreated")
-      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1));
     /// assign validation with validator1
     await expect(contractSupervision.connect(validator1).assignValidation(1))
       .to.emit(contractSupervision, "ValidationAssigned")
@@ -377,12 +357,6 @@ describe("Supervision Contract", function () {
         contentCreator.address,
         0
       );
-    /// create validation
-    await expect(
-      contractSupervision.connect(contentCreator).createValidation(0, 50)
-    )
-      .to.emit(contractSupervision, "ValidationCreated")
-      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1));
     /// assign validation with validator1
     await expect(contractSupervision.connect(validator1).assignValidation(1))
       .to.emit(contractSupervision, "ValidationAssigned")
@@ -506,12 +480,6 @@ describe("Supervision Contract", function () {
         contentCreator.address,
         0
       );
-    /// create validation
-    await expect(
-      contractSupervision.connect(contentCreator).createValidation(0, 50)
-    )
-      .to.emit(contractSupervision, "ValidationCreated")
-      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1));
     /// assign validation with validator1
     await expect(contractSupervision.connect(validator1).assignValidation(1))
       .to.emit(contractSupervision, "ValidationAssigned")
@@ -625,7 +593,8 @@ describe("Supervision Contract", function () {
       contractUDAOContent,
       backend,
       contentCreator,
-      partPricesArray
+      partPricesArray,
+      50
     );
     /// set kyc for content creator
     await contractRoleManager.setKYC(contentCreator.address, true);
@@ -641,12 +610,6 @@ describe("Supervision Contract", function () {
         contentCreator.address,
         0
       );
-    /// create validation
-    await expect(
-      contractSupervision.connect(contentCreator).createValidation(0, 50)
-    )
-      .to.emit(contractSupervision, "ValidationCreated")
-      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1));
     /// assign validation with validator1
     await expect(contractSupervision.connect(validator1).assignValidation(1))
       .to.emit(contractSupervision, "ValidationAssigned")
@@ -764,7 +727,8 @@ describe("Supervision Contract", function () {
       contractUDAOContent,
       backend,
       contentCreator,
-      partPricesArray
+      partPricesArray,
+      50
     );
     /// set kyc for content creator
     await contractRoleManager.setKYC(contentCreator.address, true);
@@ -780,12 +744,6 @@ describe("Supervision Contract", function () {
         contentCreator.address,
         0
       );
-    /// create validation
-    await expect(
-      contractSupervision.connect(contentCreator).createValidation(0, 50)
-    )
-      .to.emit(contractSupervision, "ValidationCreated")
-      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1));
     /// assign validation with validator1
     await expect(contractSupervision.connect(validator1).assignValidation(1))
       .to.emit(contractSupervision, "ValidationAssigned")
@@ -892,7 +850,7 @@ describe("Supervision Contract", function () {
       ethers.BigNumber.from(200)
     );
   });
-
+  /*
   it("Should not create validation if content does not exist", async function () {
     await reDeploy();
     /// set KYC for content creator
@@ -1023,7 +981,7 @@ describe("Supervision Contract", function () {
       contractSupervision.connect(contentCreator).createValidation(0, 50)
     ).to.revertedWith("Token owner is banned");
   });
-
+  */
   /// JUROR TESTS
   it("Should create new dispute asd", async function () {
     await reDeploy();

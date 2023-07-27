@@ -49,11 +49,6 @@ async function runValidation(
   validator5,
   contentCreator
 ) {
-  await expect(
-    contractSupervision.connect(contentCreator).createValidation(0, 50)
-  )
-    .to.emit(contractSupervision, "ValidationCreated")
-    .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1));
   await expect(contractSupervision.connect(validator1).assignValidation(1))
     .to.emit(contractSupervision, "ValidationAssigned")
     .withArgs(
@@ -166,10 +161,9 @@ async function setupGovernanceMember(
       ethers.utils.parseEther("300")
     );
 }
-async function createContent(
+async function _createContent(
   contractRoleManager,
   contractUDAOContent,
-  contentCreator,
   contractSupervision,
   backend,
   validator1,
@@ -177,7 +171,8 @@ async function createContent(
   validator3,
   validator4,
   validator5,
-  contentCreator
+  contentCreator,
+  validationScore = 0
 ) {
   /// Set KYC
   await contractRoleManager.setKYC(contentCreator.address, true);
@@ -193,7 +188,8 @@ async function createContent(
     contractUDAOContent,
     backend,
     contentCreator,
-    partPricesArray
+    partPricesArray,
+    validationScore
   );
 
   /// Redeem content
@@ -294,7 +290,8 @@ async function createContentVoucher(
   contractUDAOContent,
   backend,
   contentCreator,
-  partPrices
+  partPrices,
+  validationScore = 0
 ) {
   // Get the current block timestamp
   const block = await ethers.provider.getBlock("latest");
@@ -318,7 +315,7 @@ async function createContentVoucher(
     true,
     true,
     1,
-    0
+    validationScore
   );
 }
 
@@ -528,10 +525,9 @@ describe("Platform Treasury General", function () {
     );
     await checkAccountUDAOVpBalanceAndDelegate(contractUDAOVp, jurorCandidate);
     // Create content
-    await createContent(
+    await _createContent(
       contractRoleManager,
       contractUDAOContent,
-      contentCreator,
       contractSupervision,
       backend,
       validator1,
@@ -802,10 +798,9 @@ describe("Platform Treasury General", function () {
     );
     await checkAccountUDAOVpBalanceAndDelegate(contractUDAOVp, jurorCandidate);
     // Create content
-    await createContent(
+    await _createContent(
       contractRoleManager,
       contractUDAOContent,
-      contentCreator,
       contractSupervision,
       backend,
       validator1,
@@ -1046,10 +1041,9 @@ describe("Platform Treasury General", function () {
       contractPriceGetter,
     } = await deploy();
     // Create content
-    await createContent(
+    await _createContent(
       contractRoleManager,
       contractUDAOContent,
-      contentCreator,
       contractSupervision,
       backend,
       validator1,
@@ -1145,10 +1139,9 @@ describe("Platform Treasury General", function () {
       contractPriceGetter,
     } = await deploy();
     // Create content
-    await createContent(
+    await _createContent(
       contractRoleManager,
       contractUDAOContent,
-      contentCreator,
       contractSupervision,
       backend,
       validator1,
@@ -1258,10 +1251,9 @@ describe("Platform Treasury General", function () {
       contractPriceGetter,
     } = await deploy();
     // Create content
-    await createContent(
+    await _createContent(
       contractRoleManager,
       contractUDAOContent,
-      contentCreator,
       contractSupervision,
       backend,
       validator1,
@@ -1269,7 +1261,8 @@ describe("Platform Treasury General", function () {
       validator3,
       validator4,
       validator5,
-      contentCreator
+      contentCreator,
+      500
     );
     // Make a content purchase to gather funds for governance
     await makeContentPurchase(
@@ -1451,10 +1444,9 @@ describe("Platform Treasury General", function () {
       contractPriceGetter,
     } = await deploy();
     // Create content
-    await createContent(
+    await _createContent(
       contractRoleManager,
       contractUDAOContent,
-      contentCreator,
       contractSupervision,
       backend,
       validator1,
@@ -1462,7 +1454,8 @@ describe("Platform Treasury General", function () {
       validator3,
       validator4,
       validator5,
-      contentCreator
+      contentCreator,
+      500
     );
     // Make a content purchase to gather funds for governance
     await makeContentPurchase(
@@ -1669,10 +1662,9 @@ describe("Platform Treasury General", function () {
     const _data = "0x";
     const _targetContract = ethers.constants.AddressZero;
     // Create content
-    await createContent(
+    await _createContent(
       contractRoleManager,
       contractUDAOContent,
-      contentCreator,
       contractSupervision,
       backend,
       validator1,
@@ -1869,10 +1861,9 @@ describe("Platform Treasury General", function () {
       contractPriceGetter,
     } = await deploy();
     // Create content
-    await createContent(
+    await _createContent(
       contractRoleManager,
       contractUDAOContent,
-      contentCreator,
       contractSupervision,
       backend,
       validator1,
@@ -1985,10 +1976,9 @@ describe("Platform Treasury General", function () {
     } = await deploy();
 
     /// Create content
-    await createContent(
+    await _createContent(
       contractRoleManager,
       contractUDAOContent,
-      contentCreator,
       contractSupervision,
       backend,
       validator1,
@@ -2102,10 +2092,9 @@ describe("Platform Treasury General", function () {
       contractPriceGetter,
     } = await deploy();
     /// Create content
-    await createContent(
+    await _createContent(
       contractRoleManager,
       contractUDAOContent,
-      contentCreator,
       contractSupervision,
       backend,
       validator1,
@@ -2212,10 +2201,9 @@ describe("Platform Treasury General", function () {
       contractPriceGetter,
     } = await deploy();
     /// Create content
-    await createContent(
+    await _createContent(
       contractRoleManager,
       contractUDAOContent,
-      contentCreator,
       contractSupervision,
       backend,
       validator1,
@@ -2301,10 +2289,9 @@ describe("Platform Treasury General", function () {
       contractPriceGetter,
     } = await deploy();
     /// Create content
-    await createContent(
+    await _createContent(
       contractRoleManager,
       contractUDAOContent,
-      contentCreator,
       contractSupervision,
       backend,
       validator1,
@@ -2427,10 +2414,9 @@ describe("Platform Treasury General", function () {
       contractPriceGetter,
     } = await deploy();
     /// Create content
-    await createContent(
+    await _createContent(
       contractRoleManager,
       contractUDAOContent,
-      contentCreator,
       contractSupervision,
       backend,
       validator1,
@@ -2524,10 +2510,9 @@ describe("Platform Treasury General", function () {
       contractPriceGetter,
     } = await deploy();
     /// Create content
-    await createContent(
+    await _createContent(
       contractRoleManager,
       contractUDAOContent,
-      contentCreator,
       contractSupervision,
       backend,
       validator1,
@@ -2620,10 +2605,9 @@ describe("Platform Treasury General", function () {
     const _data = "0x";
     const _targetContract = ethers.constants.AddressZero;
     // Create content
-    await createContent(
+    await _createContent(
       contractRoleManager,
       contractUDAOContent,
-      contentCreator,
       contractSupervision,
       backend,
       validator1,
@@ -2823,10 +2807,9 @@ describe("Platform Treasury General", function () {
       contractPriceGetter,
     } = await deploy();
     // Create content
-    await createContent(
+    await _createContent(
       contractRoleManager,
       contractUDAOContent,
-      contentCreator,
       contractSupervision,
       backend,
       validator1,
@@ -2834,7 +2817,8 @@ describe("Platform Treasury General", function () {
       validator3,
       validator4,
       validator5,
-      contentCreator
+      contentCreator,
+      500
     );
     // Make a content purchase to gather funds for governance
     await makeContentPurchase(
@@ -3023,10 +3007,9 @@ describe("Platform Treasury General", function () {
       contractPriceGetter,
     } = await deploy();
     // Create content
-    await createContent(
+    await _createContent(
       contractRoleManager,
       contractUDAOContent,
-      contentCreator,
       contractSupervision,
       backend,
       validator1,
@@ -3034,7 +3017,8 @@ describe("Platform Treasury General", function () {
       validator3,
       validator4,
       validator5,
-      contentCreator
+      contentCreator,
+      500
     );
     // Make a content purchase to gather funds for governance
     await makeContentPurchase(
@@ -3280,10 +3264,9 @@ describe("Platform Treasury General", function () {
     );
     await checkAccountUDAOVpBalanceAndDelegate(contractUDAOVp, jurorCandidate);
     // Create content
-    await createContent(
+    await _createContent(
       contractRoleManager,
       contractUDAOContent,
-      contentCreator,
       contractSupervision,
       backend,
       validator1,
@@ -3559,10 +3542,9 @@ describe("Platform Treasury General", function () {
     await checkAccountUDAOVpBalanceAndDelegate(contractUDAOVp, jurorCandidate);
 
     // Create content
-    await createContent(
+    await _createContent(
       contractRoleManager,
       contractUDAOContent,
-      contentCreator,
       contractSupervision,
       backend,
       validator1,
@@ -3807,10 +3789,9 @@ describe("Platform Treasury General", function () {
       contractPriceGetter,
     } = await deploy();
     // Create content
-    await createContent(
+    await _createContent(
       contractRoleManager,
       contractUDAOContent,
-      contentCreator,
       contractSupervision,
       backend,
       validator1,
@@ -3927,10 +3908,9 @@ describe("Platform Treasury General", function () {
     } = await deploy();
 
     /// Create content
-    await createContent(
+    await _createContent(
       contractRoleManager,
       contractUDAOContent,
-      contentCreator,
       contractSupervision,
       backend,
       validator1,
@@ -4048,10 +4028,9 @@ describe("Platform Treasury General", function () {
       contractPriceGetter,
     } = await deploy();
     /// Create content
-    await createContent(
+    await _createContent(
       contractRoleManager,
       contractUDAOContent,
-      contentCreator,
       contractSupervision,
       backend,
       validator1,
@@ -4162,10 +4141,9 @@ describe("Platform Treasury General", function () {
       contractPriceGetter,
     } = await deploy();
     /// Create content
-    await createContent(
+    await _createContent(
       contractRoleManager,
       contractUDAOContent,
-      contentCreator,
       contractSupervision,
       backend,
       validator1,
