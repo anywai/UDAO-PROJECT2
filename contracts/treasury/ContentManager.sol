@@ -97,9 +97,10 @@ abstract contract ContentManager is EIP712, BasePlatform {
 
     //IPriceGetter priceGetter;
 
-    constructor(
-       // address priceGetterAddress
-    ) EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION) {
+    constructor()
+        // address priceGetterAddress
+        EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION)
+    {
         //priceGetter = IPriceGetter(priceGetterAddress);
     }
 
@@ -318,7 +319,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
             "Coaching is not enabled for this content"
         );
         require(
-            ISupVis.getIsValidated(tokenId),
+            ISupVis.getIsValidated(tokenId) == 1,
             "Content is not validated yet"
         );
         (uint priceToPay, bytes32 sellingCurrency) = udaoc

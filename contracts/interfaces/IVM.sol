@@ -14,7 +14,11 @@ interface IValidationManager {
 
     function nextRound() external;
 
-    function getValidatorsOfVal(uint validationId) external view returns(address[] memory);
+    function getValidatorsOfVal(
+        uint validationId
+    ) external view returns (address[] memory);
 
-    function getLatestValidationIdOfToken(uint tokenId) external view returns (uint);
+    function getLatestValidationIdOfToken(
+        uint tokenId
+    ) external view returns (uint);
 }

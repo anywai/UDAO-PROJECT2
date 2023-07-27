@@ -60,7 +60,8 @@ contract Supervision is RoleController {
     mapping(address => uint) public unsuccessfulDispute;
     // Validation mappings
     // tokenId => is validation done
-    mapping(uint256 => bool) public isValidated;
+    // mapping(uint256 => bool) public isValidated;
+    mapping(uint256 => uint256) public isValidated; // 0: rejected, 1: validated, 2: in validation
     // tokenId => validationId
     mapping(uint256 => uint256) public latestValidationOfToken;
     // validator => round => score
@@ -71,7 +72,8 @@ contract Supervision is RoleController {
     mapping(address => bool) public isInDispute;
     mapping(address => uint) public successfulValidation;
     mapping(address => uint) public unsuccessfulValidation;
-
+    // token id => objection count
+    mapping(uint256 => uint256) objectionCount;
     /// @dev Structs
     struct Dispute {
         /// @dev The id of the case
@@ -142,6 +144,7 @@ contract Supervision is RoleController {
     uint128 public minAcceptVoteValidation = 3;
     /// @dev is used during the calculation of a validator score
     uint256 public totalValidationScore;
+    uint256 maxObjection = 3;
 
     /// @dev Constructor
     constructor(
@@ -204,6 +207,14 @@ contract Supervision is RoleController {
         requiredValidators = _requiredValidators;
     }
 
+    /// @notice sets maximum objection count per latest validation
+    /// @param _maxObjection new objection count
+    function setMaxObjectionCount(
+        uint256 _maxObjection
+    ) external onlyRole(GOVERNANCE_ROLE) {
+        maxObjection = _maxObjection;
+    }
+
     /// @dev Getters
     // Juror getters
     /// @notice returns successful and unsuccessful case count of the account
@@ -252,7 +263,7 @@ contract Supervision is RoleController {
 
     /// @notice Returns the validation result of a token
     /// @param tokenId The ID of a token
-    function getIsValidated(uint tokenId) external view returns (bool) {
+    function getIsValidated(uint tokenId) external view returns (uint256) {
         return isValidated[tokenId];
     }
 
@@ -497,9 +508,6 @@ contract Supervision is RoleController {
         uint validationId,
         bool result
     ) external onlyRole(VALIDATOR_ROLE) {
-        /// @notice sends validation result
-        /// @param validationId id of the validation
-        /// @param result result of validation
         require(
             activeValidation[msg.sender] == validationId,
             "This content is not assigned to this wallet"
@@ -520,9 +528,9 @@ contract Supervision is RoleController {
         );
     }
 
+    /// @notice finalizes validation if enough validation is sent
+    /// @param validationId id of the validation
     function finalizeValidation(uint256 validationId) external {
-        /// @notice finalizes validation if enough validation is sent
-        /// @param validationId id of the validation
         require(
             validations[validationId].validationCount >= requiredValidators,
             "Not enough validation"
@@ -532,14 +540,16 @@ contract Supervision is RoleController {
         ) {
             validations[validationId].finalValidationResult = true;
             /// @dev Easier to check the validation result with token Id
-            isValidated[validations[validationId].tokenId] = true;
+            isValidated[validations[validationId].tokenId] = 1;
+            objectionCount[validations[validationId].tokenId] = 0;
         } else {
             validations[validationId].finalValidationResult = false;
             /// @dev Easier to check the validation result with token Id
-            isValidated[validations[validationId].tokenId] = false;
+            isValidated[validations[validationId].tokenId] = 0;
         }
-
+        /// @dev Record the date of the validation
         validations[validationId].resultDate = block.timestamp;
+        /// @dev Record the validation result
         for (uint i; i < validations[validationId].validators.length; i++) {
             if (
                 validations[validationId].finalValidationResult ==
@@ -562,6 +572,7 @@ contract Supervision is RoleController {
                 ]++;
             }
         }
+        /// @dev Record the latest validation of a token
         latestValidationOfToken[
             validations[validationId].tokenId
         ] = validationId;
@@ -595,23 +606,62 @@ contract Supervision is RoleController {
     /// @notice starts new validation for content
     /// @param tokenId id of the content that will be validated
     /// @param score validation score of the content
-    function createValidation(uint256 tokenId, uint256 score) external {
+    function createValidation(
+        uint256 tokenId,
+        uint256 score
+    ) external onlyRole(UDAOC_CONTRACT) {
         require(
             udaoc.ownerOf(tokenId) != address(0),
             "Token owner is zero address"
         );
-        require(
-            udaoc.ownerOf(tokenId) == msg.sender,
-            "Only token owner can create validation"
-        );
-        //make sure token owner is kyced and not banned
-        require(IRM.isKYCed(msg.sender), "Token owner is not KYCed");
-        require(!IRM.isBanned(msg.sender), "Token owner is banned");
+        //require(
+        //    isValidated[tokenId] == 0,
+        //    "Content must be invalidated to create new validation"
+        //);
 
+        address tokenOwner = udaoc.ownerOf(tokenId);
+        //make sure token owner is kyced and not banned
+        require(IRM.isKYCed(tokenOwner), "Token owner is not KYCed");
+        require(!IRM.isBanned(tokenOwner), "Token owner is banned");
+
+        // Change status to in validation
+        isValidated[tokenId] = 2;
         Validation storage validation = validations.push();
         validation.id = validations.length - 1;
         validation.tokenId = tokenId;
         validation.validationScore = score;
+        emit ValidationCreated(tokenId, validations.length - 1);
+    }
+
+    /// @notice re-creates validation for unchanged content if it is invalidated for no valid reason
+    function objectToLatestValidation(uint256 tokenId) external {
+        require(
+            isValidated[tokenId] == 0,
+            "Content must be invalidated to create new validation"
+        );
+        require(
+            objectionCount[tokenId] < maxObjection,
+            "Maximum objection count reached"
+        );
+        address tokenOwner = udaoc.ownerOf(tokenId);
+        require(
+            tokenOwner == msg.sender,
+            "Only token owner can re-create validation"
+        );
+        //make sure token owner is kyced and not banned
+        require(IRM.isKYCed(tokenOwner), "Token owner is not KYCed");
+        require(!IRM.isBanned(tokenOwner), "Token owner is banned");
+        // Get the latest validation for this token
+        uint256 validationId = latestValidationOfToken[tokenId];
+        // Get the score
+        uint256 score = validations[validationId].validationScore;
+        // Change status to in validation
+        isValidated[tokenId] = 2;
+        Validation storage validation = validations.push();
+        validation.id = validations.length - 1;
+        validation.tokenId = tokenId;
+        validation.validationScore = score;
+        objectionCount[tokenId]++;
         emit ValidationCreated(tokenId, validations.length - 1);
     }
 
@@ -647,6 +697,13 @@ contract Supervision is RoleController {
             validationId,
             msg.sender
         );
+    }
+
+    function setValidationStatus(
+        uint256 tokenId,
+        uint256 status
+    ) external onlyRole(UDAOC_CONTRACT) {
+        isValidated[tokenId] = status;
     }
 
     /// @dev Common functions

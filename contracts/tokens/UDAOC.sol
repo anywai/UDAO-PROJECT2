@@ -124,6 +124,28 @@ contract UDAOContent is
         require(IRM.isKYCed(msg.sender), "You are not KYCed");
         //make sure redeemer is not banned
         require(!IRM.isBanned(msg.sender), "Redeemer is banned!");
+        //require(voucher.validationScore != 0, "Validation score cannot be 0");
+        // make sure the content price is not 0
+        require(voucher._contentPrice[0] != 0, "Content price cannot be 0");
+        // make sure the content price is not 0
+        require(voucher._coachingPrice != 0, "Coaching price cannot be 0");
+        /*
+        // make sure the content price is not 0
+        require(
+            voucher._coachingCurrencyName != "",
+            "Coaching currency cannot be empty"
+        );
+        // make sure the content price is not 0
+        require(
+            voucher._currencyName != "",
+            "Content currency cannot be empty"
+        );
+        // make sure the content price is not 0
+        require(
+            voucher._uri != "",
+            "Content URI cannot be empty"
+        );
+        */
         coachingEnabled[tokenId] = voucher._isCoachingEnabled;
         coachingRefundable[tokenId] = voucher._isCoachingRefundable;
 
@@ -148,7 +170,8 @@ contract UDAOContent is
         _mint(voucher._redeemer, tokenId);
         _setTokenURI(tokenId, voucher._uri);
         _tokenIds.increment();
-        //ISupVis.createValidation(3, 5, voucher.validationScore);
+
+        ISupVis.createValidation(tokenId, voucher.validationScore);
     }
 
     /// Allows token owners to burn the token
@@ -179,6 +202,12 @@ contract UDAOContent is
         //make sure caller is not banned
         require(!IRM.isBanned(msg.sender), "You are banned");
 
+        if (voucher.validationScore != 0) {
+            require(
+                ISupVis.getIsValidated(voucher.tokenId) != 2,
+                "Content is already in validation"
+            );
+        }
         // Create the new token
         // save the content price (it should test removing for partLength)
         uint partLength = voucher._contentPrice.length;
@@ -192,11 +221,11 @@ contract UDAOContent is
             contentPrice[voucher.tokenId][i] = voucher._contentPrice[i];
         }
         _setTokenURI(voucher.tokenId, voucher._uri);
-        /*
-        if(voucher.validationScore =! 0){
-            ISupVis.createValidation(3, 5, voucher.validationScore);
+
+        if (voucher.validationScore != 0) {
+            //ISupVis.setValidationStatus(voucher.tokenId, 0);
+            ISupVis.createValidation(voucher.tokenId, voucher.validationScore);
         }
-        */
     }
 
     /// @dev Allows content owners to insert new parts

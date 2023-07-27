@@ -14,6 +14,7 @@ abstract contract RoleController is Context, Pausable {
     bytes32 public constant GOVERNANCE_ROLE = keccak256("GOVERNANCE_ROLE");
     bytes32 public constant GOVERNANCE_CONTRACT =
         keccak256("GOVERNANCE_CONTRACT");
+    bytes32 public constant UDAOC_CONTRACT = keccak256("UDAOC_CONTRACT");
     bytes32 public constant JUROR_ROLE = keccak256("JUROR_ROLE");
     bytes32 public constant SUPERVISION_CONTRACT =
         keccak256("SUPERVISION_CONTRACT");

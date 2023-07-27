@@ -3,12 +3,14 @@
 pragma solidity ^0.8.4;
 
 interface ISupervision {
-    function getIsValidated(uint tokenId) external view returns (bool);
+    function getIsValidated(uint tokenId) external view returns (uint256);
 
     function getValidatorScore(
         address _validator,
         uint _round
     ) external view returns (uint);
+
+    function setValidationStatus(uint256 tokenId, uint256 status) external;
 
     function getTotalValidationScore() external view returns (uint);
 
