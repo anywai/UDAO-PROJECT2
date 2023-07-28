@@ -4,6 +4,7 @@ const { ethers } = hardhat;
 const chai = require("chai");
 const BN = require("bn.js");
 const { LazyCoaching } = require("../lib/LazyCoaching");
+const { LazyRole } = require("../lib/LazyRole");
 const { Redeem } = require("../lib/Redeem");
 const helpers = require("@nomicfoundation/hardhat-network-helpers");
 const { deploy } = require("../lib/deployments");
@@ -17,7 +18,168 @@ const {
 
 // Enable and inject BN dependency
 chai.use(require("chai-bn")(BN));
+/// HELPERS---------------------------------------------------------------------
+/// @dev Deploy contracts and assign them
+async function reDeploy(reApplyRolesViaVoucher = true, isDexRequired = false) {
+  const replace = await deploy(isDexRequired);
+  backend = replace.backend;
+  contentCreator = replace.contentCreator;
+  contentBuyer = replace.contentBuyer;
+  contentBuyer1 = replace.contentBuyer1;
+  contentBuyer2 = replace.contentBuyer2;
+  contentBuyer3 = replace.contentBuyer3;
+  validatorCandidate = replace.validatorCandidate;
+  validator = replace.validator;
+  validator1 = replace.validator1;
+  validator2 = replace.validator2;
+  validator3 = replace.validator3;
+  validator4 = replace.validator4;
+  validator5 = replace.validator5;
+  superValidatorCandidate = replace.superValidatorCandidate;
+  superValidator = replace.superValidator;
+  foundation = replace.foundation;
+  governanceCandidate = replace.governanceCandidate;
+  governanceMember = replace.governanceMember;
+  jurorCandidate = replace.jurorCandidate;
+  jurorMember = replace.jurorMember;
+  jurorMember1 = replace.jurorMember1;
+  jurorMember2 = replace.jurorMember2;
+  jurorMember3 = replace.jurorMember3;
+  jurorMember4 = replace.jurorMember4;
+  corporation = replace.corporation;
+  contractUDAO = replace.contractUDAO;
+  contractRoleManager = replace.contractRoleManager;
+  contractUDAOCertificate = replace.contractUDAOCertificate;
+  contractUDAOContent = replace.contractUDAOContent;
+  contractSupervision = replace.contractSupervision;
+  contractSupervision = replace.contractSupervision;
+  contractPlatformTreasury = replace.contractPlatformTreasury;
+  contractUDAOVp = replace.contractUDAOVp;
+  contractUDAOStaker = replace.contractUDAOStaker;
+  contractUDAOTimelockController = replace.contractUDAOTimelockController;
+  contractUDAOGovernor = replace.contractUDAOGovernor;
+  contractSupervision = replace.contractSupervision;
+  GOVERNANCE_ROLE = replace.GOVERNANCE_ROLE;
+  BACKEND_ROLE = replace.BACKEND_ROLE;
+  contractContractManager = replace.contractContractManager;
+  account1 = replace.account1;
+  account2 = replace.account2;
+  account3 = replace.account3;
+  contractPriceGetter = replace.contractPriceGetter;
+  const reApplyValidatorRoles = [validator, validator1, validator2, validator3, validator4, validator5];
+  const reApplyJurorRoles = [jurorMember, jurorMember1, jurorMember2, jurorMember3, jurorMember4];
+  const VALIDATOR_ROLE = ethers.utils.keccak256(
+    ethers.utils.toUtf8Bytes("VALIDATOR_ROLE")
+  );
+  const JUROR_ROLE = ethers.utils.keccak256(
+    ethers.utils.toUtf8Bytes("JUROR_ROLE")
+  );
+  if (reApplyRolesViaVoucher) {
+    for (let i = 0; i < reApplyValidatorRoles.length; i++) {
+      await contractRoleManager.revokeRole(
+        VALIDATOR_ROLE,
+        reApplyValidatorRoles[i].address
+      );
+    }
+    for (let i = 0; i < reApplyJurorRoles.length; i++) {
+      await contractRoleManager.revokeRole(
+        JUROR_ROLE,
+        reApplyJurorRoles[i].address
+      );
+    }
+    for (let i = 0; i < reApplyValidatorRoles.length; i++) {
+      await grantValidatorRole(
+        reApplyValidatorRoles[i],
+        contractRoleManager,
+        contractUDAO,
+        contractUDAOStaker,
+        backend
+      );
+    }
+    for (let i = 0; i < reApplyJurorRoles.length; i++) {
+      await grantJurorRole(
+        reApplyJurorRoles[i],
+        contractRoleManager,
+        contractUDAO,
+        contractUDAOStaker,
+        backend
+      );
+    }
+  }
+}
+async function grantValidatorRole(
+  account,
+  contractRoleManager,
+  contractUDAO,
+  contractUDAOStaker,
+  backend
+) {
+  await contractRoleManager.setKYC(account.address, true);
+  await contractUDAO.transfer(
+    account.address,
+    ethers.utils.parseEther("100.0")
+  );
+  await contractUDAO
+    .connect(account)
+    .approve(
+      contractUDAOStaker.address,
+      ethers.utils.parseEther("999999999999.0")
+    );
 
+  // Staking
+  await contractUDAOStaker
+    .connect(account)
+    .stakeForGovernance(ethers.utils.parseEther("10"), 30);
+  await contractUDAOStaker.connect(account).applyForValidator();
+  const lazyRole = new LazyRole({
+    contract: contractUDAOStaker,
+    signer: backend,
+  });
+  const role_voucher = await lazyRole.createVoucher(
+    account.address,
+    Date.now() + 999999999,
+    0
+  );
+  await contractUDAOStaker.connect(account).getApproved(role_voucher);
+}
+
+async function grantJurorRole(
+  account,
+  contractRoleManager,
+  contractUDAO,
+  contractUDAOStaker,
+  backend
+) {
+  await contractRoleManager.setKYC(account.address, true);
+  await contractUDAO.transfer(
+    account.address,
+    ethers.utils.parseEther("100.0")
+  );
+
+  await contractUDAO
+    .connect(account)
+    .approve(
+      contractUDAOStaker.address,
+      ethers.utils.parseEther("999999999999.0")
+    );
+
+  // Staking
+
+  await contractUDAOStaker
+    .connect(account)
+    .stakeForGovernance(ethers.utils.parseEther("10"), 30);
+  await contractUDAOStaker.connect(account).applyForJuror();
+  const lazyRole = new LazyRole({
+    contract: contractUDAOStaker,
+    signer: backend,
+  });
+  const role_voucher = await lazyRole.createVoucher(
+    account.address,
+    Date.now() + 999999999,
+    1
+  );
+  await contractUDAOStaker.connect(account).getApproved(role_voucher);
+}
 async function runValidation(
   contractSupervision,
   backend,
@@ -145,50 +307,7 @@ async function createContentVoucher(
 
 describe("Platform Treasury Contract - Coaching", function () {
   it("Should a user able to buy a coaching", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     /// Set KYC
     await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer.address, true);
@@ -264,50 +383,7 @@ describe("Platform Treasury Contract - Coaching", function () {
   });
 
   it("Should return coaching list of token", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
 
     /// Set KYC
     await contractRoleManager.setKYC(contentCreator.address, true);
@@ -373,50 +449,7 @@ describe("Platform Treasury Contract - Coaching", function () {
   });
 
   it("Should fail to buy a coaching if coaching is not enabled", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
 
     /// Set KYC
     await contractRoleManager.setKYC(contentCreator.address, true);
@@ -492,50 +525,7 @@ describe("Platform Treasury Contract - Coaching", function () {
   });
 
   it("Should fail to buy coaching if content does not exists", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
 
     /// Set KYC
     await contractRoleManager.setKYC(contentCreator.address, true);
@@ -547,50 +537,7 @@ describe("Platform Treasury Contract - Coaching", function () {
   });
 
   it("Should fail to buy coaching if content is not validated yet", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
 
     /// Set KYC
     await contractRoleManager.setKYC(contentCreator.address, true);
@@ -638,50 +585,7 @@ describe("Platform Treasury Contract - Coaching", function () {
   });
 
   it("Should fail to buy coaching if buyer is banned", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
 
     /// Set KYC
     await contractRoleManager.setKYC(contentCreator.address, true);
@@ -744,50 +648,7 @@ describe("Platform Treasury Contract - Coaching", function () {
   });
 
   it("Should fail to buy coaching if instructer is banned", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
 
     /// Set KYC
     await contractRoleManager.setKYC(contentCreator.address, true);
@@ -849,50 +710,7 @@ describe("Platform Treasury Contract - Coaching", function () {
   });
 
   it("Should fail to buy coaching if instructer is not KYCed", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
 
     /// Set KYC
     await contractRoleManager.setKYC(contentCreator.address, true);
@@ -955,50 +773,7 @@ describe("Platform Treasury Contract - Coaching", function () {
   });
 
   it("Should fail to buy coaching if buyer is not KYCed", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
 
     /// Set KYC
     await contractRoleManager.setKYC(contentCreator.address, true);
@@ -1060,50 +835,7 @@ describe("Platform Treasury Contract - Coaching", function () {
   });
 
   it("Should finalize coaching as learner", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
 
     /// Set KYC
     await contractRoleManager.setKYC(contentCreator.address, true);
@@ -1199,50 +931,7 @@ describe("Platform Treasury Contract - Coaching", function () {
   });
 
   it("Should finalize coaching as instructor when deadline met", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
 
     /// Set KYC
     await contractRoleManager.setKYC(contentCreator.address, true);
@@ -1338,50 +1027,7 @@ describe("Platform Treasury Contract - Coaching", function () {
   });
 
   it("Should fail coaching as instructor if deadline is not met", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
 
     /// Set KYC
     await contractRoleManager.setKYC(contentCreator.address, true);
@@ -1457,50 +1103,7 @@ describe("Platform Treasury Contract - Coaching", function () {
   });
 
   it("Should fail to finalize coaching if neither learner or instructor", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
 
     /// Set KYC
     await contractRoleManager.setKYC(contentCreator.address, true);
@@ -1580,50 +1183,7 @@ describe("Platform Treasury Contract - Coaching", function () {
   });
 
   it("Should fail to finalize coaching if coaching does not exist", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
 
     /// Set KYC
     await contractRoleManager.setKYC(contentCreator.address, true);
@@ -1703,50 +1263,7 @@ describe("Platform Treasury Contract - Coaching", function () {
   });
 
   it("Should delay coaching deadline if learner", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
 
     /// Set KYC
     await contractRoleManager.setKYC(contentCreator.address, true);
@@ -1828,50 +1345,7 @@ describe("Platform Treasury Contract - Coaching", function () {
   });
 
   it("Should delay coaching deadline if coach", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
 
     /// Set KYC
     await contractRoleManager.setKYC(contentCreator.address, true);
@@ -1952,50 +1426,7 @@ describe("Platform Treasury Contract - Coaching", function () {
   });
 
   it("Should fail to delay coaching deadline if not last 3 days", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
 
     /// Set KYC
     await contractRoleManager.setKYC(contentCreator.address, true);
@@ -2072,50 +1503,7 @@ describe("Platform Treasury Contract - Coaching", function () {
   });
 
   it("Should fail to delay coaching deadline if sender is neither coach nor learner", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
 
     /// Set KYC
     await contractRoleManager.setKYC(contentCreator.address, true);
@@ -2192,50 +1580,7 @@ describe("Platform Treasury Contract - Coaching", function () {
   });
 
   it("Should force payment for coaching", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
 
     /// Set KYC
     await contractRoleManager.setKYC(contentCreator.address, true);
@@ -2312,50 +1657,7 @@ describe("Platform Treasury Contract - Coaching", function () {
   });
 
   it("Should fail force payment for coaching if not admin role", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
 
     /// Set KYC
     await contractRoleManager.setKYC(contentCreator.address, true);
@@ -2436,50 +1738,7 @@ describe("Platform Treasury Contract - Coaching", function () {
   });
 
   it("Should refund payment for coaching", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
 
     /// Set KYC
     await contractRoleManager.setKYC(contentCreator.address, true);
@@ -2573,50 +1832,7 @@ describe("Platform Treasury Contract - Coaching", function () {
   });
 
   it("Should fail to refund payment for coaching if not coach", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
 
     /// Set KYC
     await contractRoleManager.setKYC(contentCreator.address, true);
@@ -2693,50 +1909,7 @@ describe("Platform Treasury Contract - Coaching", function () {
   });
 
   it("Should refund payment for coaching as admin", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
 
     /// Set KYC
     await contractRoleManager.setKYC(contentCreator.address, true);
@@ -2832,50 +2005,7 @@ describe("Platform Treasury Contract - Coaching", function () {
   });
 
   it("Should fail refund payment for coaching as admin if not admin", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
 
     /// Set KYC
     await contractRoleManager.setKYC(contentCreator.address, true);
@@ -2956,50 +2086,7 @@ describe("Platform Treasury Contract - Coaching", function () {
   });
 
   it("Should fail refund payment for coaching as admin if not refundable", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
 
     /// Set KYC
     await contractRoleManager.setKYC(contentCreator.address, true);
