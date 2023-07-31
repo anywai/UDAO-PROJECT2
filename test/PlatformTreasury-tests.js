@@ -403,7 +403,7 @@ async function makeContentPurchase(
 
   await contractPlatformTreasury
     .connect(contentBuyer)
-    .buyContent(0, true, [1], ethers.constants.AddressZero);
+    .buyContent([0], [true], [[1]], [ethers.constants.AddressZero]);
   const result = await contractPlatformTreasury
     .connect(contentBuyer)
     .getOwnedContent(contentBuyer.address);

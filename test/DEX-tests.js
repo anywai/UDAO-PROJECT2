@@ -394,7 +394,7 @@ describe("Uniswap DEX Tests", function () {
     await expect(
       contractPlatformTreasury
         .connect(contentBuyer)
-        .buyContent(0, true, [1], validator1.address)
+        .buyContent([0], [true], [[1]], [validator1.address])
     )
       .to.emit(contractPlatformTreasury, "ContentBought")
       .withArgs(0, [1], "886525018013279181", contentBuyer.address); // Content bought event

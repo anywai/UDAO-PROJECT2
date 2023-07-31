@@ -403,7 +403,7 @@ describe("Platform Treasury Contract - Content", function () {
 
     await contractPlatformTreasury
       .connect(contentBuyer)
-      .buyContent(0, true, [1], ethers.constants.AddressZero);
+      .buyContent([0], [true], [[1]], [ethers.constants.AddressZero]);
     const result = await contractPlatformTreasury
       .connect(contentBuyer)
       .getOwnedContent(contentBuyer.address);
@@ -474,7 +474,7 @@ describe("Platform Treasury Contract - Content", function () {
 
     await contractPlatformTreasury
       .connect(contentBuyer)
-      .buyContent(0, false, [1, 2, 3], contentBuyer.address);
+      .buyContent([0], [false], [[1, 2, 3]], [contentBuyer.address]);
     const result = await contractPlatformTreasury
       .connect(contentBuyer)
       .getOwnedContent(contentBuyer.address);
@@ -548,12 +548,12 @@ describe("Platform Treasury Contract - Content", function () {
 
     await contractPlatformTreasury
       .connect(contentBuyer)
-      .buyContent(0, false, [2], contentBuyer.address);
+      .buyContent([0], [false], [[2]], [contentBuyer.address]);
 
     await expect(
       contractPlatformTreasury
         .connect(contentBuyer)
-        .buyContent(0, false, [2], contentBuyer.address)
+        .buyContent([0], [false], [[2]], [contentBuyer.address])
     ).to.revertedWith("Content part is already bought");
   });
 
@@ -575,7 +575,7 @@ describe("Platform Treasury Contract - Content", function () {
     await expect(
       contractPlatformTreasury
         .connect(contentBuyer)
-        .buyContent(0, true, [1], ethers.constants.AddressZero)
+        .buyContent([0], [true], [[1]], [ethers.constants.AddressZero])
     ).to.revertedWith("Content does not exist!");
   });
 
@@ -643,7 +643,7 @@ describe("Platform Treasury Contract - Content", function () {
     await expect(
       contractPlatformTreasury
         .connect(contentBuyer)
-        .buyContent(0, true, [1], ethers.constants.AddressZero)
+        .buyContent([0], [true], [[1]], [ethers.constants.AddressZero])
     ).to.revertedWith("You are banned");
   });
 
@@ -711,7 +711,7 @@ describe("Platform Treasury Contract - Content", function () {
     await expect(
       contractPlatformTreasury
         .connect(contentBuyer)
-        .buyContent(0, true, [1], ethers.constants.AddressZero)
+        .buyContent([0], [true], [[1]], [ethers.constants.AddressZero])
     ).to.revertedWith("Instructor is banned");
   });
 
@@ -779,7 +779,7 @@ describe("Platform Treasury Contract - Content", function () {
     await expect(
       contractPlatformTreasury
         .connect(contentBuyer)
-        .buyContent(0, true, [1], ethers.constants.AddressZero)
+        .buyContent([0], [true], [[1]], [ethers.constants.AddressZero])
     ).to.revertedWith("Instructor is not KYCed");
   });
 
@@ -846,7 +846,7 @@ describe("Platform Treasury Contract - Content", function () {
     await expect(
       contractPlatformTreasury
         .connect(contentBuyer)
-        .buyContent(0, true, [1], ethers.constants.AddressZero)
+        .buyContent([0], [true], [[1]], [ethers.constants.AddressZero])
     ).to.revertedWith("You are not KYCed");
   });
 
@@ -912,12 +912,12 @@ describe("Platform Treasury Contract - Content", function () {
 
     await contractPlatformTreasury
       .connect(contentBuyer)
-      .buyContent(0, true, [1], ethers.constants.AddressZero);
+      .buyContent([0], [true], [[1]], [ethers.constants.AddressZero]);
 
     await expect(
       contractPlatformTreasury
         .connect(contentBuyer)
-        .buyContent(0, false, [3], contentBuyer.address)
+        .buyContent([0], [false], [[3]], [contentBuyer.address])
     ).to.revertedWith("Full content is already bought");
   });
 
@@ -1064,7 +1064,7 @@ describe("Platform Treasury Contract - Content", function () {
     await expect(
       contractPlatformTreasury
         .connect(contentBuyer)
-        .buyContent(0, false, [0], ethers.constants.AddressZero)
+        .buyContent([0], [false], [[0]], [ethers.constants.AddressZero])
     ).to.revertedWith(
       "Purchased parts says 0, but fullContentPurchase is false!"
     );
@@ -1213,7 +1213,7 @@ describe("Platform Treasury Contract - Content", function () {
     await expect(
       contractPlatformTreasury
         .connect(contentBuyer)
-        .buyContent(0, false, [20], ethers.constants.AddressZero)
+        .buyContent([0], [false], [[20]], [ethers.constants.AddressZero])
     ).to.revertedWith("Part does not exist!");
   });
 
@@ -1278,7 +1278,7 @@ describe("Platform Treasury Contract - Content", function () {
 
     await contractPlatformTreasury
       .connect(contentBuyer)
-      .buyContent(0, true, [1], validator1.address);
+      .buyContent([0], [true], [[1]], [validator1.address]);
     const result = await contractPlatformTreasury
       .connect(contentBuyer)
       .getOwnedContent(validator1.address);
@@ -1349,7 +1349,7 @@ describe("Platform Treasury Contract - Content", function () {
 
     await contractPlatformTreasury
       .connect(contentBuyer)
-      .buyContent(0, false, [1, 2], validator1.address);
+      .buyContent([0], [false], [[1, 2]], [validator1.address]);
     const result = await contractPlatformTreasury
       .connect(contentBuyer)
       .getOwnedContent(validator1.address);
@@ -1425,7 +1425,7 @@ describe("Platform Treasury Contract - Content", function () {
     await expect(
       contractPlatformTreasury
         .connect(contentBuyer)
-        .buyContent(0, true, [1], validator1.address)
+        .buyContent([0], [true], [[1]], [validator1.address])
     ).to.revertedWith("Gift receiver is not KYCed");
   });
 
@@ -1491,7 +1491,7 @@ describe("Platform Treasury Contract - Content", function () {
     await expect(
       contractPlatformTreasury
         .connect(contentBuyer)
-        .buyContent(0, true, [1], validator1.address)
+        .buyContent([0], [true], [[1]], [validator1.address])
     ).to.revertedWith("Gift receiver is banned");
   });
 
