@@ -97,11 +97,42 @@ abstract contract ContentManager is EIP712, BasePlatform {
 
     //IPriceGetter priceGetter;
 
-    constructor(
-       // address priceGetterAddress
-    ) EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION) {
+    constructor()
+        // address priceGetterAddress
+        EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION)
+    {
         //priceGetter = IPriceGetter(priceGetterAddress);
     }
+
+    /// @notice Allows multiple content purchases using buyContent
+    /// @param tokenIds ids of the content
+    /// @param fullContentPurchases is full content purchased
+    /// @param purchasedParts parts of the content purchased
+    /// @param giftReceivers address of the gift receiver if purchase is a gift
+    function buyCart(
+        uint256[] calldata tokenIds,
+        bool[] calldata fullContentPurchases,
+        uint256[][] calldata purchasedParts,
+        address[] calldata giftReceivers
+    ) external whenNotPaused {
+        uint256 tokenIdsLength = tokenIds.length;
+        require(
+            tokenIdsLength == fullContentPurchases.length &&
+                tokenIdsLength == purchasedParts.length &&
+                tokenIdsLength == giftReceivers.length,
+            "Array lengths are not equal!"
+        );
+        for (uint256 i; i < tokenIdsLength; i++) {
+            buyContent(
+                tokenIds[i],
+                fullContentPurchases[i],
+                purchasedParts[i],
+                giftReceivers[i]
+            );
+        }
+    }
+    
+
 
     /// @notice allows users to purchase a content
     /// @param tokenId id of the content
@@ -113,7 +144,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
         bool fullContentPurchase,
         uint256[] calldata purchasedParts,
         address giftReceiver
-    ) external whenNotPaused {
+    ) public whenNotPaused {
         uint256 partIdLength = purchasedParts.length;
         uint256 priceToPayUdao;
         uint256 priceToPay;
@@ -318,7 +349,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
             "Coaching is not enabled for this content"
         );
         require(
-            ISupVis.getIsValidated(tokenId),
+            ISupVis.getIsValidated(tokenId) == 1,
             "Content is not validated yet"
         );
         (uint priceToPay, bytes32 sellingCurrency) = udaoc

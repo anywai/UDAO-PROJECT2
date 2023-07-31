@@ -16,7 +16,168 @@ const {
 
 // Enable and inject BN dependency
 chai.use(require("chai-bn")(BN));
+/// HELPERS---------------------------------------------------------------------
+/// @dev Deploy contracts and assign them
+async function reDeploy(reApplyRolesViaVoucher = true, isDexRequired = false) {
+  const replace = await deploy(isDexRequired);
+  backend = replace.backend;
+  contentCreator = replace.contentCreator;
+  contentBuyer = replace.contentBuyer;
+  contentBuyer1 = replace.contentBuyer1;
+  contentBuyer2 = replace.contentBuyer2;
+  contentBuyer3 = replace.contentBuyer3;
+  validatorCandidate = replace.validatorCandidate;
+  validator = replace.validator;
+  validator1 = replace.validator1;
+  validator2 = replace.validator2;
+  validator3 = replace.validator3;
+  validator4 = replace.validator4;
+  validator5 = replace.validator5;
+  superValidatorCandidate = replace.superValidatorCandidate;
+  superValidator = replace.superValidator;
+  foundation = replace.foundation;
+  governanceCandidate = replace.governanceCandidate;
+  governanceMember = replace.governanceMember;
+  jurorCandidate = replace.jurorCandidate;
+  jurorMember = replace.jurorMember;
+  jurorMember1 = replace.jurorMember1;
+  jurorMember2 = replace.jurorMember2;
+  jurorMember3 = replace.jurorMember3;
+  jurorMember4 = replace.jurorMember4;
+  corporation = replace.corporation;
+  contractUDAO = replace.contractUDAO;
+  contractRoleManager = replace.contractRoleManager;
+  contractUDAOCertificate = replace.contractUDAOCertificate;
+  contractUDAOContent = replace.contractUDAOContent;
+  contractSupervision = replace.contractSupervision;
+  contractSupervision = replace.contractSupervision;
+  contractPlatformTreasury = replace.contractPlatformTreasury;
+  contractUDAOVp = replace.contractUDAOVp;
+  contractUDAOStaker = replace.contractUDAOStaker;
+  contractUDAOTimelockController = replace.contractUDAOTimelockController;
+  contractUDAOGovernor = replace.contractUDAOGovernor;
+  contractSupervision = replace.contractSupervision;
+  GOVERNANCE_ROLE = replace.GOVERNANCE_ROLE;
+  BACKEND_ROLE = replace.BACKEND_ROLE;
+  contractContractManager = replace.contractContractManager;
+  account1 = replace.account1;
+  account2 = replace.account2;
+  account3 = replace.account3;
+  contractPriceGetter = replace.contractPriceGetter;
+  const reApplyValidatorRoles = [validator, validator1, validator2, validator3, validator4, validator5];
+  const reApplyJurorRoles = [jurorMember, jurorMember1, jurorMember2, jurorMember3, jurorMember4];
+  const VALIDATOR_ROLE = ethers.utils.keccak256(
+    ethers.utils.toUtf8Bytes("VALIDATOR_ROLE")
+  );
+  const JUROR_ROLE = ethers.utils.keccak256(
+    ethers.utils.toUtf8Bytes("JUROR_ROLE")
+  );
+  if (reApplyRolesViaVoucher) {
+    for (let i = 0; i < reApplyValidatorRoles.length; i++) {
+      await contractRoleManager.revokeRole(
+        VALIDATOR_ROLE,
+        reApplyValidatorRoles[i].address
+      );
+    }
+    for (let i = 0; i < reApplyJurorRoles.length; i++) {
+      await contractRoleManager.revokeRole(
+        JUROR_ROLE,
+        reApplyJurorRoles[i].address
+      );
+    }
+    for (let i = 0; i < reApplyValidatorRoles.length; i++) {
+      await grantValidatorRole(
+        reApplyValidatorRoles[i],
+        contractRoleManager,
+        contractUDAO,
+        contractUDAOStaker,
+        backend
+      );
+    }
+    for (let i = 0; i < reApplyJurorRoles.length; i++) {
+      await grantJurorRole(
+        reApplyJurorRoles[i],
+        contractRoleManager,
+        contractUDAO,
+        contractUDAOStaker,
+        backend
+      );
+    }
+  }
+}
+async function grantValidatorRole(
+  account,
+  contractRoleManager,
+  contractUDAO,
+  contractUDAOStaker,
+  backend
+) {
+  await contractRoleManager.setKYC(account.address, true);
+  await contractUDAO.transfer(
+    account.address,
+    ethers.utils.parseEther("100.0")
+  );
+  await contractUDAO
+    .connect(account)
+    .approve(
+      contractUDAOStaker.address,
+      ethers.utils.parseEther("999999999999.0")
+    );
 
+  // Staking
+  await contractUDAOStaker
+    .connect(account)
+    .stakeForGovernance(ethers.utils.parseEther("10"), 30);
+  await contractUDAOStaker.connect(account).applyForValidator();
+  const lazyRole = new LazyRole({
+    contract: contractUDAOStaker,
+    signer: backend,
+  });
+  const role_voucher = await lazyRole.createVoucher(
+    account.address,
+    Date.now() + 999999999,
+    0
+  );
+  await contractUDAOStaker.connect(account).getApproved(role_voucher);
+}
+
+async function grantJurorRole(
+  account,
+  contractRoleManager,
+  contractUDAO,
+  contractUDAOStaker,
+  backend
+) {
+  await contractRoleManager.setKYC(account.address, true);
+  await contractUDAO.transfer(
+    account.address,
+    ethers.utils.parseEther("100.0")
+  );
+
+  await contractUDAO
+    .connect(account)
+    .approve(
+      contractUDAOStaker.address,
+      ethers.utils.parseEther("999999999999.0")
+    );
+
+  // Staking
+
+  await contractUDAOStaker
+    .connect(account)
+    .stakeForGovernance(ethers.utils.parseEther("10"), 30);
+  await contractUDAOStaker.connect(account).applyForJuror();
+  const lazyRole = new LazyRole({
+    contract: contractUDAOStaker,
+    signer: backend,
+  });
+  const role_voucher = await lazyRole.createVoucher(
+    account.address,
+    Date.now() + 999999999,
+    1
+  );
+  await contractUDAOStaker.connect(account).getApproved(role_voucher);
+}
 async function setupGovernanceMember(
   contractRoleManager,
   contractUDAO,
@@ -52,50 +213,7 @@ async function setupGovernanceMember(
 
 describe("UDAOStaker Contract", function () {
   it("Should deploy", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
   });
 
   it("Should update addresses", async function () {
@@ -105,50 +223,7 @@ describe("UDAOStaker Contract", function () {
   });
 
   it("Should set validator lock amount", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     // set validator lock amount to 100
     await expect(
       contractUDAOStaker.connect(foundation).setValidatorLockAmount("100")
@@ -162,50 +237,7 @@ describe("UDAOStaker Contract", function () {
   });
 
   it("Should fail to set validator lock amount as unauthorized user", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     // set validator lock amount with-out admin role
     await expect(
       contractUDAOStaker.connect(validator).setValidatorLockAmount("100")
@@ -217,50 +249,7 @@ describe("UDAOStaker Contract", function () {
   });
 
   it("Should set juror lock amount", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     // set juror lock amount to 100
     await expect(
       contractUDAOStaker.connect(foundation).setJurorLockAmount("100")
@@ -274,50 +263,7 @@ describe("UDAOStaker Contract", function () {
   });
 
   it("Should fail to set juror lock amount as unauthorized user", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     // set juror lock amount with-out admin role
     await expect(
       contractUDAOStaker.connect(validator).setJurorLockAmount("100")
@@ -329,50 +275,7 @@ describe("UDAOStaker Contract", function () {
   });
 
   it("Should set validator lock time", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     // 1 day equal to 86400 seconds in Unix time
     const unixOneDay = 86400;
     // set validator lock time to 13 day
@@ -388,50 +291,7 @@ describe("UDAOStaker Contract", function () {
   });
 
   it("Should fail to set validator lock time as unauthorized user", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     // set validator lock time with-out admin role
     await expect(
       contractUDAOStaker.connect(validator).setValidatorLockTime("13")
@@ -443,50 +303,7 @@ describe("UDAOStaker Contract", function () {
   });
 
   it("Should set juror lock time", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     // 1 day equal to 86400 seconds in Unix time
     const unixOneDay = 86400;
     // set juror lock time to 13 day
@@ -500,50 +317,7 @@ describe("UDAOStaker Contract", function () {
   });
 
   it("Should fail to set juror lock time as unauthorized user", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     // set juror lock time with-out admin role
     await expect(
       contractUDAOStaker.connect(validator).setJurorLockTime("13")
@@ -555,50 +329,7 @@ describe("UDAOStaker Contract", function () {
   });
 
   it("Should set application lock time", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     // 1 day equal to 86400 seconds in Unix time
     const unixOneDay = 86400;
     // set application lock time to 13 day
@@ -614,50 +345,7 @@ describe("UDAOStaker Contract", function () {
   });
 
   it("Should fail to set application lock time as unauthorized user", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     // set application lock time with-out admin role
     await expect(
       contractUDAOStaker.connect(validator).setApplicationLockTime("13")
@@ -669,50 +357,7 @@ describe("UDAOStaker Contract", function () {
   });
 
   it("Should set maximum lock days", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     // 1 day equal to 86400 seconds in Unix time
     const unixOneDay = 86400;
     // set maximum lock days to 1000 days
@@ -728,50 +373,7 @@ describe("UDAOStaker Contract", function () {
   });
 
   it("Should set minimum lock days", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     // 1 day equal to 86400 seconds in Unix time
     const unixOneDay = 86400;
     // set minimum lock days to 1 day
@@ -787,50 +389,7 @@ describe("UDAOStaker Contract", function () {
   });
 
   it("Should fail to set maximum lock days if less than minimum days", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     // set maximum lock days to 1 days while minimum lock days is [7] day
     await expect(
       contractUDAOStaker.connect(foundation).setMaximumStakeDays("1")
@@ -838,50 +397,7 @@ describe("UDAOStaker Contract", function () {
   });
 
   it("Should fail to set minimum lock days if more than maximum days", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     // set minimum lock days to 3000 days while minimum lock days is [1460] day
     await expect(
       contractUDAOStaker.connect(foundation).setMinimumStakeDays("3000")
@@ -889,50 +405,7 @@ describe("UDAOStaker Contract", function () {
   });
 
   it("Should set super vote reward amount", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     // set vote reward amount to 100
     await expect(contractUDAOStaker.connect(foundation).setVoteReward("100"))
       .to.emit(contractUDAOStaker, "SetVoteReward") // transfer from null address to minter
@@ -940,50 +413,7 @@ describe("UDAOStaker Contract", function () {
   });
 
   it("Should fail to set super vote reward amount as unauthorized user", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     // set vote reward amount with-out admin role
     await expect(
       contractUDAOStaker.connect(validator).setVoteReward("100")
@@ -995,50 +425,7 @@ describe("UDAOStaker Contract", function () {
   });
 
   it("Should set a new platform treasury address", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
 
     await expect(
       contractUDAOStaker
@@ -1050,50 +437,7 @@ describe("UDAOStaker Contract", function () {
   });
 
   it("Should fail to set a new platform treasury address as unauthorized user", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
 
     await expect(
       contractUDAOStaker
@@ -1107,50 +451,7 @@ describe("UDAOStaker Contract", function () {
   });
 
   it("Should stake to be a governance member", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     /// set KYC for governanceCandidate
     await contractRoleManager.setKYC(governanceCandidate.address, true);
     /// transfer UDAO to governanceCandidate
@@ -1180,50 +481,7 @@ describe("UDAOStaker Contract", function () {
   });
 
   it("Should fail to stake to be a governance member if more than maximum days", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     /// set KYC for governanceCandidate
     await contractRoleManager.setKYC(governanceCandidate.address, true);
     /// transfer UDAO to governanceCandidate
@@ -1247,50 +505,7 @@ describe("UDAOStaker Contract", function () {
   });
 
   it("Should fail to stake to be a governance member if less than maximum days", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     /// set KYC for governanceCandidate
     await contractRoleManager.setKYC(governanceCandidate.address, true);
     /// transfer UDAO to governanceCandidate
@@ -1314,50 +529,7 @@ describe("UDAOStaker Contract", function () {
   });
 
   it("Should apply for validator", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     /// set KYC for validatorCandidate
     await contractRoleManager.setKYC(validatorCandidate.address, true);
     /// transfer UDAO to validatorCandidate
@@ -1395,50 +567,7 @@ describe("UDAOStaker Contract", function () {
   });
 
   it("Should fail to apply for validator when paused", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     /// set KYC for validatorCandidate
     await contractRoleManager.setKYC(validatorCandidate.address, true);
     /// transfer UDAO to validatorCandidate
@@ -1474,50 +603,7 @@ describe("UDAOStaker Contract", function () {
   });
 
   it("Should approve for validator", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     /// set KYC for validatorCandidate
     await contractRoleManager.setKYC(validatorCandidate.address, true);
     /// transfer UDAO to validatorCandidate
@@ -1571,50 +657,7 @@ describe("UDAOStaker Contract", function () {
   });
 
   it("Should fail to apply for validator if not governance member", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     /// set KYC for validatorCandidate
     await contractRoleManager.setKYC(validatorCandidate.address, true);
     /// transfer UDAO to validatorCandidate
@@ -1636,50 +679,7 @@ describe("UDAOStaker Contract", function () {
   });
 
   it("Should fail to apply for validator if already validator", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     /// set KYC for validatorCandidate
     await contractRoleManager.setKYC(validatorCandidate.address, true);
     /// transfer UDAO to validatorCandidate
@@ -1737,50 +737,7 @@ describe("UDAOStaker Contract", function () {
   });
 
   it("Should apply for juror", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     /// set KYC for jurorCandidate
     await contractRoleManager.setKYC(jurorCandidate.address, true);
     /// transfer UDAO to jurorCandidate
@@ -1816,50 +773,7 @@ describe("UDAOStaker Contract", function () {
   });
 
   it("Should approve for juror", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     /// set KYC for jurorCandidate
     await contractRoleManager.setKYC(jurorCandidate.address, true);
     /// transfer UDAO to jurorCandidate
@@ -1911,50 +825,7 @@ describe("UDAOStaker Contract", function () {
   });
 
   it("Should fail to approve if role id is undefined", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     /// set KYC for jurorCandidate
     await contractRoleManager.setKYC(jurorCandidate.address, true);
     /// transfer UDAO to jurorCandidate
@@ -2004,50 +875,7 @@ describe("UDAOStaker Contract", function () {
   });
 
   it("Should reject for validator", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     /// set KYC for validatorCandidate
     await contractRoleManager.setKYC(validatorCandidate.address, true);
     /// transfer UDAO to validatorCandidate
@@ -2092,50 +920,7 @@ describe("UDAOStaker Contract", function () {
   });
 
   it("Should reject for juror", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     /// set KYC for jurorCandidate
     await contractRoleManager.setKYC(jurorCandidate.address, true);
     /// transfer UDAO to jurorCandidate
@@ -2178,50 +963,7 @@ describe("UDAOStaker Contract", function () {
   });
 
   it("Should fail rejecting if role id does not exist", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     /// set KYC for jurorCandidate
     await contractRoleManager.setKYC(jurorCandidate.address, true);
     /// transfer UDAO to jurorCandidate
@@ -2262,50 +1004,7 @@ describe("UDAOStaker Contract", function () {
   });
 
   it("Should fail rejecting if sender is not backend", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     /// set KYC for jurorCandidate
     await contractRoleManager.setKYC(jurorCandidate.address, true);
     /// transfer UDAO to jurorCandidate
@@ -2348,50 +1047,7 @@ describe("UDAOStaker Contract", function () {
   });
 
   it("Should withdraw validator stake when approved", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     /// set KYC for validatorCandidate
     await contractRoleManager.setKYC(validatorCandidate.address, true);
     /// transfer UDAO to validatorCandidate
@@ -2452,50 +1108,7 @@ describe("UDAOStaker Contract", function () {
   });
 
   it("Should withdraw validator stake when approved and banned", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     /// set KYC for validatorCandidate
     await contractRoleManager.setKYC(validatorCandidate.address, true);
     /// transfer UDAO to validatorCandidate
@@ -2558,50 +1171,7 @@ describe("UDAOStaker Contract", function () {
   });
 
   it("Should withdraw validator stake when rejected", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     /// set KYC for validatorCandidate
     await contractRoleManager.setKYC(validatorCandidate.address, true);
     /// transfer UDAO to validatorCandidate
@@ -2651,50 +1221,7 @@ describe("UDAOStaker Contract", function () {
   });
 
   it("Should withdraw validator stake when rejected and banned", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     /// set KYC for validatorCandidate
     await contractRoleManager.setKYC(validatorCandidate.address, true);
     /// transfer UDAO to validatorCandidate
@@ -2746,50 +1273,7 @@ describe("UDAOStaker Contract", function () {
   });
 
   it("Should withdraw juror stake when approved", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     /// set KYC for jurorCandidate
     await contractRoleManager.setKYC(jurorCandidate.address, true);
     /// transfer UDAO to jurorCandidate
@@ -2848,50 +1332,7 @@ describe("UDAOStaker Contract", function () {
   });
 
   it("Should withdraw juror stake when approved and banned", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     /// set KYC for jurorCandidate
     await contractRoleManager.setKYC(jurorCandidate.address, true);
     /// transfer UDAO to jurorCandidate
@@ -2952,50 +1393,7 @@ describe("UDAOStaker Contract", function () {
   });
 
   it("Should withdraw juror stake when rejected", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     /// set KYC for jurorCandidate
     await contractRoleManager.setKYC(jurorCandidate.address, true);
     /// transfer UDAO to jurorCandidate
@@ -3044,50 +1442,7 @@ describe("UDAOStaker Contract", function () {
   });
 
   it("Should withdraw juror stake when rejected and banned", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     /// set KYC for jurorCandidate
     await contractRoleManager.setKYC(jurorCandidate.address, true);
     /// transfer UDAO to jurorCandidate
@@ -3137,50 +1492,7 @@ describe("UDAOStaker Contract", function () {
   });
 
   it("Should return withdrawable validator stake when approved", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     /// set KYC for validatorCandidate
     await contractRoleManager.setKYC(validatorCandidate.address, true);
     /// transfer UDAO to validatorCandidate
@@ -3241,50 +1553,7 @@ describe("UDAOStaker Contract", function () {
   });
 
   it("Should return withdrawable validator stake when rejected", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     /// set KYC for validatorCandidate
     await contractRoleManager.setKYC(validatorCandidate.address, true);
     /// transfer UDAO to validatorCandidate
@@ -3334,50 +1603,7 @@ describe("UDAOStaker Contract", function () {
   });
 
   it("Should unstake to stop being a governance member (full withdraw)", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     /// set KYC for governanceCandidate
     await contractRoleManager.setKYC(governanceCandidate.address, true);
     /// transfer UDAO to governanceCandidate
@@ -3419,50 +1645,7 @@ describe("UDAOStaker Contract", function () {
   });
 
   it("Should unstake to stop being a governance member (full withdraw) when banned", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     /// set KYC for governanceCandidate
     await contractRoleManager.setKYC(governanceCandidate.address, true);
     /// transfer UDAO to governanceCandidate
@@ -3506,50 +1689,7 @@ describe("UDAOStaker Contract", function () {
   });
 
   it("Should unstake to stop being a governance member (partial withdraw)", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     /// set KYC for governanceCandidate
     await contractRoleManager.setKYC(governanceCandidate.address, true);
     /// transfer UDAO to governanceCandidate
@@ -3591,50 +1731,7 @@ describe("UDAOStaker Contract", function () {
   });
 
   it("Should unstake to stop being a governance member (partial withdraw) when banned", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     /// set KYC for governanceCandidate
     await contractRoleManager.setKYC(governanceCandidate.address, true);
     /// transfer UDAO to governanceCandidate
@@ -3678,50 +1775,7 @@ describe("UDAOStaker Contract", function () {
   });
 
   it("Should withdraw rewards from voting", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy(reApplyRolesViaVoucher= false);
     /// transfer UDAO to contractPlatformTreasury
     await contractUDAO.transfer(
       contractPlatformTreasury.address,
@@ -3822,64 +1876,30 @@ describe("UDAOStaker Contract", function () {
     /// @dev Check if the vote was casted
     const proposalState = await contractUDAOGovernor.state(proposalId);
     await expect(proposalState).to.equal(1);
-
+    /// @dev Caluclate the reward
+    // Get the voteReward from UDAOStaker
+    const voteReward = await contractUDAOStaker.voteReward();
+    // Get the voting power ratio of the superValidator
+    //votingPowerRatio = (udaovp.balanceOf(voter) * 10000) / totalVotingPower;
+    // totalVotingPower = staked amount * days staked (10 ether * 30 days), 2 stakers
+    // votingPowerRatio = (300 * 10000) / (10 * 30 * 2) = 5000
+    //rewardBalanceOf[voter] += (votingPowerRatio * voteReward) / 10000;
+    const totalVotingPower = (ethers.utils.parseEther("10") * 30 * 2);
+    //console.log(totalVotingPower.toString());
+    const vpBalanceOfSuperValidator = await contractUDAOVp.balanceOf(superValidator.address);
+    //console.log(vpBalanceOfSuperValidator);
+    const votingPowerRatio = (vpBalanceOfSuperValidator * 10000) / (totalVotingPower);
+    //console.log(votingPowerRatio.toString());
+    const reward = (votingPowerRatio * voteReward) / 10000;
     //const superValidatorAfter = await contractUDAO.balanceOf(superValidator.address);
     //console.log("superValidatorAfter", superValidatorAfter.toString());
     await expect(contractUDAOStaker.connect(superValidator).withdrawRewards())
       .to.emit(contractUDAOStaker, "VoteRewardsWithdrawn")
-      //.withArgs(superValidator.address, ethers.utils.parseEther("0.00005"));
-      // TODO: WHAT IS THIS VALUE? I change it according to result of test but it is not correct
-      .withArgs(superValidator.address, ethers.utils.parseEther("0.00000833"));
-    //300000000000000000000
-    //50000000000000
-    //8330000000000
+      .withArgs(superValidator.address, ethers.utils.parseEther(ethers.utils.formatEther(reward)));
   });
 
   it("Should withdraw rewards from voting when banned", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy(reApplyRolesViaVoucher = false);
     /// transfer UDAO to contractPlatformTreasury
     await contractUDAO.transfer(
       contractPlatformTreasury.address,
@@ -3976,58 +1996,28 @@ describe("UDAOStaker Contract", function () {
 
     //Ban the governance member
     await contractRoleManager.setBan(superValidator.address, true);
+    /// @dev Caluclate the reward
+    // Get the voteReward from UDAOStaker
+    const voteReward = await contractUDAOStaker.voteReward();
+    // Get the voting power ratio of the superValidator
+    //votingPowerRatio = (udaovp.balanceOf(voter) * 10000) / totalVotingPower;
+    // totalVotingPower = staked amount * days staked (10 ether * 30 days), 2 stakers
+    // votingPowerRatio = (300 * 10000) / (10 * 30 * 2) = 5000
+    //rewardBalanceOf[voter] += (votingPowerRatio * voteReward) / 10000;
+    const totalVotingPower = (ethers.utils.parseEther("10") * 30 * 2);
+    //console.log(totalVotingPower.toString());
+    const vpBalanceOfSuperValidator = await contractUDAOVp.balanceOf(superValidator.address);
+    //console.log(vpBalanceOfSuperValidator);
+    const votingPowerRatio = (vpBalanceOfSuperValidator * 10000) / (totalVotingPower);
+    //console.log(votingPowerRatio.toString());
+    const reward = (votingPowerRatio * voteReward) / 10000;
     await expect(contractUDAOStaker.connect(superValidator).withdrawRewards())
       .to.emit(contractUDAOStaker, "VoteRewardsWithdrawn")
-      //.withArgs(superValidator.address, ethers.utils.parseEther("0.00005"));
-      // TODO: WHAT IS THIS VALUE? I change it according to result of test but it is not correct
-      .withArgs(superValidator.address, ethers.utils.parseEther("0.00000833"));
+      .withArgs(superValidator.address, ethers.utils.parseEther(ethers.utils.formatEther(reward)));
   });
 
   it("Should fail to unstake to stop being a governance member when amount is higher than staked", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     /// set KYC for governanceCandidate
     await contractRoleManager.setKYC(governanceCandidate.address, true);
     /// transfer UDAO to governanceCandidate
@@ -4063,50 +2053,7 @@ describe("UDAOStaker Contract", function () {
   });
 
   it("Should approve for corporation account", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     /// set KYC for corporation
     await contractRoleManager.setKYC(corporation.address, true);
     /// transfer UDAO to corporation
@@ -4137,50 +2084,7 @@ describe("UDAOStaker Contract", function () {
   });
 
   it("Should register job listing", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     /// set KYC for corporation
     await contractRoleManager.setKYC(corporation.address, true);
     /// transfer UDAO to corporation
@@ -4220,50 +2124,7 @@ describe("UDAOStaker Contract", function () {
   });
 
   it("Should fail to register job listing if sender is not kyced", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     /// set KYC for corporation
     await contractRoleManager.setKYC(corporation.address, true);
     /// transfer UDAO to corporation
@@ -4302,50 +2163,7 @@ describe("UDAOStaker Contract", function () {
   });
 
   it("Should fail to register job listing if sender is banned", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     /// set KYC for corporation
     await contractRoleManager.setKYC(corporation.address, true);
     /// transfer UDAO to corporation
@@ -4384,50 +2202,7 @@ describe("UDAOStaker Contract", function () {
   });
 
   it("Should fail to register job listing if sender doesn't have corporate role", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     /// set KYC for jurorMember
     await contractRoleManager.setKYC(jurorMember.address, true);
     const CORPORATE_ROLE = ethers.utils.keccak256(
@@ -4441,50 +2216,7 @@ describe("UDAOStaker Contract", function () {
   });
 
   it("Should fail to register job listing if zero amount is sent", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     /// set KYC for corporation
     await contractRoleManager.setKYC(corporation.address, true);
     /// transfer UDAO to corporation
@@ -4521,50 +2253,7 @@ describe("UDAOStaker Contract", function () {
   });
 
   it("Should unregister job listing (single)", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     /// set KYC for corporation
     await contractRoleManager.setKYC(corporation.address, true);
     /// transfer UDAO to corporation
@@ -4609,50 +2298,7 @@ describe("UDAOStaker Contract", function () {
   });
 
   it("Should fail to unregister job listing if sender doesn't have corporate role", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     /// set KYC for jurorMember
     await contractRoleManager.setKYC(jurorMember.address, true);
     const CORPORATE_ROLE = ethers.utils.keccak256(
@@ -4666,50 +2312,7 @@ describe("UDAOStaker Contract", function () {
   });
 
   it("Should fail to unregister job listing if there is nothing to unstake", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     /// set KYC for corporation
     await contractRoleManager.setKYC(corporation.address, true);
     /// transfer UDAO to corporation
@@ -4757,50 +2360,7 @@ describe("UDAOStaker Contract", function () {
   });
 
   it("Should unregister job listing (multiple)", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     /// set KYC for corporation
     await contractRoleManager.setKYC(corporation.address, true);
     /// transfer UDAO to corporation
@@ -4851,50 +2411,7 @@ describe("UDAOStaker Contract", function () {
   });
 
   it("Should fail to apply for validator when the user hasn't kyced", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     /// set KYC for validatorCandidate
     await contractRoleManager.setKYC(validatorCandidate.address, true);
     /// transfer UDAO to validatorCandidate
@@ -4930,50 +2447,7 @@ describe("UDAOStaker Contract", function () {
   });
 
   it("Should fail to apply for validator if the user banned", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     /// set KYC for validatorCandidate
     await contractRoleManager.setKYC(validatorCandidate.address, true);
     /// transfer UDAO to validatorCandidate
@@ -5009,50 +2483,7 @@ describe("UDAOStaker Contract", function () {
   });
 
   it("Should fail to apply for juror when juror hasn't kyced", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     /// set KYC for jurorCandidate
     await contractRoleManager.setKYC(jurorCandidate.address, true);
     /// transfer UDAO to jurorCandidate
@@ -5088,50 +2519,7 @@ describe("UDAOStaker Contract", function () {
   });
 
   it("Should fail to apply for juror when juror banned", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     /// set KYC for jurorCandidate
     await contractRoleManager.setKYC(jurorCandidate.address, true);
     /// transfer UDAO to jurorCandidate
@@ -5167,50 +2555,7 @@ describe("UDAOStaker Contract", function () {
   });
 
   it("Should fail to approve for validator when validator hasn't kyced", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     /// set KYC for validatorCandidate
     await contractRoleManager.setKYC(validatorCandidate.address, true);
     /// transfer UDAO to validatorCandidate
@@ -5265,50 +2610,7 @@ describe("UDAOStaker Contract", function () {
   });
 
   it("Should fail to approve for validator when validator banned", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     /// set KYC for validatorCandidate
     await contractRoleManager.setKYC(validatorCandidate.address, true);
     /// transfer UDAO to validatorCandidate
@@ -5363,50 +2665,7 @@ describe("UDAOStaker Contract", function () {
   });
 
   it("Should fail to register job listing when user hasn't kyced", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     /// set KYC for corporation
     await contractRoleManager.setKYC(corporation.address, true);
     /// transfer UDAO to corporation
@@ -5447,50 +2706,7 @@ describe("UDAOStaker Contract", function () {
   });
 
   it("Should fail to register job listing when user banned", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     /// set KYC for corporation
     await contractRoleManager.setKYC(corporation.address, true);
     /// transfer UDAO to corporation

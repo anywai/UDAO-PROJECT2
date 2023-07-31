@@ -1,8 +1,9 @@
 const { expect } = require("chai");
 const hardhat = require("hardhat");
-const { ethers, waffle } = hardhat;
+const { ethers } = hardhat;
 const chai = require("chai");
 const BN = require("bn.js");
+const { LazyRole } = require("../lib/LazyRole");
 const helpers = require("@nomicfoundation/hardhat-network-helpers");
 const { deploy } = require("../lib/deployments");
 
@@ -34,6 +35,168 @@ States starts from 0
         Executed
     }
 */
+/// HELPERS---------------------------------------------------------------------
+/// @dev Deploy contracts and assign them
+async function reDeploy(reApplyRolesViaVoucher = true, isDexRequired = false) {
+  const replace = await deploy(isDexRequired);
+  backend = replace.backend;
+  contentCreator = replace.contentCreator;
+  contentBuyer = replace.contentBuyer;
+  contentBuyer1 = replace.contentBuyer1;
+  contentBuyer2 = replace.contentBuyer2;
+  contentBuyer3 = replace.contentBuyer3;
+  validatorCandidate = replace.validatorCandidate;
+  validator = replace.validator;
+  validator1 = replace.validator1;
+  validator2 = replace.validator2;
+  validator3 = replace.validator3;
+  validator4 = replace.validator4;
+  validator5 = replace.validator5;
+  superValidatorCandidate = replace.superValidatorCandidate;
+  superValidator = replace.superValidator;
+  foundation = replace.foundation;
+  governanceCandidate = replace.governanceCandidate;
+  governanceMember = replace.governanceMember;
+  jurorCandidate = replace.jurorCandidate;
+  jurorMember = replace.jurorMember;
+  jurorMember1 = replace.jurorMember1;
+  jurorMember2 = replace.jurorMember2;
+  jurorMember3 = replace.jurorMember3;
+  jurorMember4 = replace.jurorMember4;
+  corporation = replace.corporation;
+  contractUDAO = replace.contractUDAO;
+  contractRoleManager = replace.contractRoleManager;
+  contractUDAOCertificate = replace.contractUDAOCertificate;
+  contractUDAOContent = replace.contractUDAOContent;
+  contractSupervision = replace.contractSupervision;
+  contractSupervision = replace.contractSupervision;
+  contractPlatformTreasury = replace.contractPlatformTreasury;
+  contractUDAOVp = replace.contractUDAOVp;
+  contractUDAOStaker = replace.contractUDAOStaker;
+  contractUDAOTimelockController = replace.contractUDAOTimelockController;
+  contractUDAOGovernor = replace.contractUDAOGovernor;
+  contractSupervision = replace.contractSupervision;
+  GOVERNANCE_ROLE = replace.GOVERNANCE_ROLE;
+  BACKEND_ROLE = replace.BACKEND_ROLE;
+  contractContractManager = replace.contractContractManager;
+  account1 = replace.account1;
+  account2 = replace.account2;
+  account3 = replace.account3;
+  contractPriceGetter = replace.contractPriceGetter;
+  const reApplyValidatorRoles = [validator, validator1, validator2, validator3, validator4, validator5];
+  const reApplyJurorRoles = [jurorMember, jurorMember1, jurorMember2, jurorMember3, jurorMember4];
+  const VALIDATOR_ROLE = ethers.utils.keccak256(
+    ethers.utils.toUtf8Bytes("VALIDATOR_ROLE")
+  );
+  const JUROR_ROLE = ethers.utils.keccak256(
+    ethers.utils.toUtf8Bytes("JUROR_ROLE")
+  );
+  if (reApplyRolesViaVoucher) {
+    for (let i = 0; i < reApplyValidatorRoles.length; i++) {
+      await contractRoleManager.revokeRole(
+        VALIDATOR_ROLE,
+        reApplyValidatorRoles[i].address
+      );
+    }
+    for (let i = 0; i < reApplyJurorRoles.length; i++) {
+      await contractRoleManager.revokeRole(
+        JUROR_ROLE,
+        reApplyJurorRoles[i].address
+      );
+    }
+    for (let i = 0; i < reApplyValidatorRoles.length; i++) {
+      await grantValidatorRole(
+        reApplyValidatorRoles[i],
+        contractRoleManager,
+        contractUDAO,
+        contractUDAOStaker,
+        backend
+      );
+    }
+    for (let i = 0; i < reApplyJurorRoles.length; i++) {
+      await grantJurorRole(
+        reApplyJurorRoles[i],
+        contractRoleManager,
+        contractUDAO,
+        contractUDAOStaker,
+        backend
+      );
+    }
+  }
+}
+async function grantValidatorRole(
+  account,
+  contractRoleManager,
+  contractUDAO,
+  contractUDAOStaker,
+  backend
+) {
+  await contractRoleManager.setKYC(account.address, true);
+  await contractUDAO.transfer(
+    account.address,
+    ethers.utils.parseEther("100.0")
+  );
+  await contractUDAO
+    .connect(account)
+    .approve(
+      contractUDAOStaker.address,
+      ethers.utils.parseEther("999999999999.0")
+    );
+
+  // Staking
+  await contractUDAOStaker
+    .connect(account)
+    .stakeForGovernance(ethers.utils.parseEther("10"), 30);
+  await contractUDAOStaker.connect(account).applyForValidator();
+  const lazyRole = new LazyRole({
+    contract: contractUDAOStaker,
+    signer: backend,
+  });
+  const role_voucher = await lazyRole.createVoucher(
+    account.address,
+    Date.now() + 999999999,
+    0
+  );
+  await contractUDAOStaker.connect(account).getApproved(role_voucher);
+}
+
+async function grantJurorRole(
+  account,
+  contractRoleManager,
+  contractUDAO,
+  contractUDAOStaker,
+  backend
+) {
+  await contractRoleManager.setKYC(account.address, true);
+  await contractUDAO.transfer(
+    account.address,
+    ethers.utils.parseEther("100.0")
+  );
+
+  await contractUDAO
+    .connect(account)
+    .approve(
+      contractUDAOStaker.address,
+      ethers.utils.parseEther("999999999999.0")
+    );
+
+  // Staking
+
+  await contractUDAOStaker
+    .connect(account)
+    .stakeForGovernance(ethers.utils.parseEther("10"), 30);
+  await contractUDAOStaker.connect(account).applyForJuror();
+  const lazyRole = new LazyRole({
+    contract: contractUDAOStaker,
+    signer: backend,
+  });
+  const role_voucher = await lazyRole.createVoucher(
+    account.address,
+    Date.now() + 999999999,
+    1
+  );
+  await contractUDAOStaker.connect(account).getApproved(role_voucher);
+}
 async function checkAccountUDAOVpBalanceAndDelegate(contractUDAOVp, account) {
   const accountBalance = await contractUDAOVp.balanceOf(account.address);
   await expect(accountBalance).to.equal(ethers.utils.parseEther("300"));
@@ -74,97 +237,11 @@ async function setupGovernanceMember(
 
 describe("Governance Contract", function () {
   it("Should deploy", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
   });
 
   it("Timelock should set coaching foundation cut to 10%", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
 
     // send some eth to the contractPlatformTreasury and impersonate it
     await helpers.setBalance(
@@ -185,50 +262,7 @@ describe("Governance Contract", function () {
   });
 
   it("TimeLock should fail to set coaching foundation cut to more than 100%", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     // send some eth to the contractPlatformTreasury and impersonate it
     await helpers.setBalance(
       contractUDAOTimelockController.address,
@@ -246,50 +280,7 @@ describe("Governance Contract", function () {
   });
 
   it("Should allow governance members to create a proposal", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     /// @dev Setup governance member
     await setupGovernanceMember(
       contractRoleManager,
@@ -351,50 +342,7 @@ describe("Governance Contract", function () {
   });
 
   it("Should allow governance members to vote on created proposal", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     /// @dev Setup governance member
     await setupGovernanceMember(
       contractRoleManager,
@@ -485,50 +433,7 @@ describe("Governance Contract", function () {
   });
 
   it("Should allow anyone to execute a successful proposal (setRequiredValidators)", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     /// @dev Setup governance member
     await setupGovernanceMember(
       contractRoleManager,
@@ -554,12 +459,7 @@ describe("Governance Contract", function () {
       contractUDAOStaker,
       validatorCandidate
     );
-    await setupGovernanceMember(
-      contractRoleManager,
-      contractUDAO,
-      contractUDAOStaker,
-      validator
-    );
+    
 
     /// @dev Check account UDAO-vp balance and delegate to themselves
     await checkAccountUDAOVpBalanceAndDelegate(
@@ -681,50 +581,7 @@ describe("Governance Contract", function () {
   });
 
   it("Should set required jurors to 10", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     /// @dev Setup governance member
     await setupGovernanceMember(
       contractRoleManager,
@@ -750,12 +607,7 @@ describe("Governance Contract", function () {
       contractUDAOStaker,
       validatorCandidate
     );
-    await setupGovernanceMember(
-      contractRoleManager,
-      contractUDAO,
-      contractUDAOStaker,
-      validator
-    );
+    
 
     /// @dev Check account UDAO-vp balance and delegate to themselves
     await checkAccountUDAOVpBalanceAndDelegate(
@@ -872,50 +724,7 @@ describe("Governance Contract", function () {
   });
 
   it("Should setCoachingFoundationCut to 1% with proposal execution", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     /// @dev Setup governance member
     await setupGovernanceMember(
       contractRoleManager,
@@ -941,12 +750,7 @@ describe("Governance Contract", function () {
       contractUDAOStaker,
       validatorCandidate
     );
-    await setupGovernanceMember(
-      contractRoleManager,
-      contractUDAO,
-      contractUDAOStaker,
-      validator
-    );
+    
     /// @dev Check account UDAO-vp balance and delegate to themselves
     await checkAccountUDAOVpBalanceAndDelegate(
       contractUDAOVp,
@@ -1064,50 +868,7 @@ describe("Governance Contract", function () {
     await expect(_newCut).to.equal(1000);
   });
   it("Should setCoachingGovernanceCut to 1% with proposal execution", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     /// @dev Setup governance member
     await setupGovernanceMember(
       contractRoleManager,
@@ -1133,12 +894,7 @@ describe("Governance Contract", function () {
       contractUDAOStaker,
       validatorCandidate
     );
-    await setupGovernanceMember(
-      contractRoleManager,
-      contractUDAO,
-      contractUDAOStaker,
-      validator
-    );
+    
     /// @dev Check account UDAO-vp balance and delegate to themselves
     await checkAccountUDAOVpBalanceAndDelegate(
       contractUDAOVp,
@@ -1253,50 +1009,7 @@ describe("Governance Contract", function () {
   });
 
   it("Should setContentFoundationCut to 1% with proposal execution", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     /// @dev Setup governance member
     await setupGovernanceMember(
       contractRoleManager,
@@ -1322,12 +1035,7 @@ describe("Governance Contract", function () {
       contractUDAOStaker,
       validatorCandidate
     );
-    await setupGovernanceMember(
-      contractRoleManager,
-      contractUDAO,
-      contractUDAOStaker,
-      validator
-    );
+    
     /// @dev Check account UDAO-vp balance and delegate to themselves
     await checkAccountUDAOVpBalanceAndDelegate(
       contractUDAOVp,
@@ -1442,50 +1150,7 @@ describe("Governance Contract", function () {
   });
 
   it("Should setContentGovernanceCut to 1% with proposal execution", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     /// @dev Setup governance member
     await setupGovernanceMember(
       contractRoleManager,
@@ -1511,12 +1176,7 @@ describe("Governance Contract", function () {
       contractUDAOStaker,
       validatorCandidate
     );
-    await setupGovernanceMember(
-      contractRoleManager,
-      contractUDAO,
-      contractUDAOStaker,
-      validator
-    );
+    
     /// @dev Check account UDAO-vp balance and delegate to themselves
     await checkAccountUDAOVpBalanceAndDelegate(
       contractUDAOVp,
@@ -1631,50 +1291,7 @@ describe("Governance Contract", function () {
   });
 
   it("Should setContentJurorCut to 1% with proposal execution", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     /// @dev Setup governance member
     await setupGovernanceMember(
       contractRoleManager,
@@ -1700,12 +1317,7 @@ describe("Governance Contract", function () {
       contractUDAOStaker,
       validatorCandidate
     );
-    await setupGovernanceMember(
-      contractRoleManager,
-      contractUDAO,
-      contractUDAOStaker,
-      validator
-    );
+    
     /// @dev Check account UDAO-vp balance and delegate to themselves
     await checkAccountUDAOVpBalanceAndDelegate(
       contractUDAOVp,
@@ -1820,50 +1432,7 @@ describe("Governance Contract", function () {
   });
 
   it("Should setContentValidatorCut to 1% with proposal execution", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     /// @dev Setup governance member
     await setupGovernanceMember(
       contractRoleManager,
@@ -1889,12 +1458,7 @@ describe("Governance Contract", function () {
       contractUDAOStaker,
       validatorCandidate
     );
-    await setupGovernanceMember(
-      contractRoleManager,
-      contractUDAO,
-      contractUDAOStaker,
-      validator
-    );
+    
     /// @dev Check account UDAO-vp balance and delegate to themselves
     await checkAccountUDAOVpBalanceAndDelegate(
       contractUDAOVp,
@@ -2008,50 +1572,7 @@ describe("Governance Contract", function () {
     await expect(_newCut).to.equal(1000);
   });
   it("Should allow foundation to cancel a proposal during it is at pending state", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     /// @dev Setup governance member
     await setupGovernanceMember(
       contractRoleManager,
@@ -2077,12 +1598,7 @@ describe("Governance Contract", function () {
       contractUDAOStaker,
       validatorCandidate
     );
-    await setupGovernanceMember(
-      contractRoleManager,
-      contractUDAO,
-      contractUDAOStaker,
-      validator
-    );
+    
     /// @dev Check account UDAO-vp balance and delegate to themselves
     await checkAccountUDAOVpBalanceAndDelegate(
       contractUDAOVp,
@@ -2188,50 +1704,7 @@ describe("Governance Contract", function () {
     await expect(cancelState).to.equal(2);
   });
   it("Should allow change of quorum with a proposal", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     /// @dev Setup governance member
     await setupGovernanceMember(
       contractRoleManager,
@@ -2257,12 +1730,7 @@ describe("Governance Contract", function () {
       contractUDAOStaker,
       validatorCandidate
     );
-    await setupGovernanceMember(
-      contractRoleManager,
-      contractUDAO,
-      contractUDAOStaker,
-      validator
-    );
+    
     /// @dev Check account UDAO-vp balance and delegate to themselves
     await checkAccountUDAOVpBalanceAndDelegate(
       contractUDAOVp,
@@ -2383,50 +1851,7 @@ describe("Governance Contract", function () {
   });
 
   it("Should fail to execute if quorum is not met", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     /// @dev Current quorum is 4%. Increase this in order to easy testing
     /// @dev Setup governance member
     await setupGovernanceMember(
@@ -2453,12 +1878,7 @@ describe("Governance Contract", function () {
       contractUDAOStaker,
       validatorCandidate
     );
-    await setupGovernanceMember(
-      contractRoleManager,
-      contractUDAO,
-      contractUDAOStaker,
-      validator
-    );
+    
     /// @dev Check account UDAO-vp balance and delegate to themselves
     await checkAccountUDAOVpBalanceAndDelegate(
       contractUDAOVp,
@@ -2610,50 +2030,7 @@ describe("Governance Contract", function () {
     await expect(proposalStateAtStart2).to.equal(3);
   });
   it("Should successfully to execute if quorum is met", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     /// @dev Current quorum is 4%. Increase this in order to easy testing
     /// @dev Setup governance member
     await setupGovernanceMember(
@@ -2680,12 +2057,7 @@ describe("Governance Contract", function () {
       contractUDAOStaker,
       validatorCandidate
     );
-    await setupGovernanceMember(
-      contractRoleManager,
-      contractUDAO,
-      contractUDAOStaker,
-      validator
-    );
+    
     /// @dev Check account UDAO-vp balance and delegate to themselves
     await checkAccountUDAOVpBalanceAndDelegate(
       contractUDAOVp,
@@ -2851,50 +2223,7 @@ describe("Governance Contract", function () {
   });
 
   it("TimeLock transfer token to another address", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     /// @dev Setup governance member
     await setupGovernanceMember(
       contractRoleManager,
@@ -2920,12 +2249,7 @@ describe("Governance Contract", function () {
       contractUDAOStaker,
       validatorCandidate
     );
-    await setupGovernanceMember(
-      contractRoleManager,
-      contractUDAO,
-      contractUDAOStaker,
-      validator
-    );
+    
     /// @dev Check account UDAO-vp balance and delegate to themselves
     await checkAccountUDAOVpBalanceAndDelegate(
       contractUDAOVp,
@@ -3056,50 +2380,7 @@ describe("Governance Contract", function () {
   });
 
   it("TimeLock transfer ether to another address", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     /// @dev Setup governance member
     await setupGovernanceMember(
       contractRoleManager,
@@ -3125,12 +2406,7 @@ describe("Governance Contract", function () {
       contractUDAOStaker,
       validatorCandidate
     );
-    await setupGovernanceMember(
-      contractRoleManager,
-      contractUDAO,
-      contractUDAOStaker,
-      validator
-    );
+    
     /// @dev Check account UDAO-vp balance and delegate to themselves
     await checkAccountUDAOVpBalanceAndDelegate(
       contractUDAOVp,

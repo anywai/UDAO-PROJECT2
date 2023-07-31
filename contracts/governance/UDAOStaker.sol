@@ -101,7 +101,7 @@ contract UDAOStaker is RoleController, EIP712 {
     mapping(address => GovernanceLock[]) governanceStakes;
     mapping(address => uint256) rewardBalanceOf;
     mapping(address => uint256) lastRewardBlock;
-    uint256 voteReward = 0.0001 ether; // SHOULD BE UPDATED
+    uint256 public voteReward = 0.0001 ether; // TODO SHOULD BE UPDATED
 
     struct ValidationApplication {
         address applicant;

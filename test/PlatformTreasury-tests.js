@@ -3,7 +3,9 @@ const hardhat = require("hardhat");
 const { ethers } = hardhat;
 const chai = require("chai");
 const BN = require("bn.js");
+const { LazyRole } = require("../lib/LazyRole");
 const helpers = require("@nomicfoundation/hardhat-network-helpers");
+const { Redeem } = require("../lib/Redeem");
 const { deploy } = require("../lib/deployments");
 const { anyValue } = require("@nomicfoundation/hardhat-chai-matchers/withArgs");
 
@@ -30,6 +32,168 @@ chai.use(require("chai-bn")(BN));
         Executed
     }
 */
+/// HELPERS---------------------------------------------------------------------
+/// @dev Deploy contracts and assign them
+async function reDeploy(reApplyRolesViaVoucher = true, isDexRequired = false) {
+  const replace = await deploy(isDexRequired);
+  backend = replace.backend;
+  contentCreator = replace.contentCreator;
+  contentBuyer = replace.contentBuyer;
+  contentBuyer1 = replace.contentBuyer1;
+  contentBuyer2 = replace.contentBuyer2;
+  contentBuyer3 = replace.contentBuyer3;
+  validatorCandidate = replace.validatorCandidate;
+  validator = replace.validator;
+  validator1 = replace.validator1;
+  validator2 = replace.validator2;
+  validator3 = replace.validator3;
+  validator4 = replace.validator4;
+  validator5 = replace.validator5;
+  superValidatorCandidate = replace.superValidatorCandidate;
+  superValidator = replace.superValidator;
+  foundation = replace.foundation;
+  governanceCandidate = replace.governanceCandidate;
+  governanceMember = replace.governanceMember;
+  jurorCandidate = replace.jurorCandidate;
+  jurorMember = replace.jurorMember;
+  jurorMember1 = replace.jurorMember1;
+  jurorMember2 = replace.jurorMember2;
+  jurorMember3 = replace.jurorMember3;
+  jurorMember4 = replace.jurorMember4;
+  corporation = replace.corporation;
+  contractUDAO = replace.contractUDAO;
+  contractRoleManager = replace.contractRoleManager;
+  contractUDAOCertificate = replace.contractUDAOCertificate;
+  contractUDAOContent = replace.contractUDAOContent;
+  contractSupervision = replace.contractSupervision;
+  contractSupervision = replace.contractSupervision;
+  contractPlatformTreasury = replace.contractPlatformTreasury;
+  contractUDAOVp = replace.contractUDAOVp;
+  contractUDAOStaker = replace.contractUDAOStaker;
+  contractUDAOTimelockController = replace.contractUDAOTimelockController;
+  contractUDAOGovernor = replace.contractUDAOGovernor;
+  contractSupervision = replace.contractSupervision;
+  GOVERNANCE_ROLE = replace.GOVERNANCE_ROLE;
+  BACKEND_ROLE = replace.BACKEND_ROLE;
+  contractContractManager = replace.contractContractManager;
+  account1 = replace.account1;
+  account2 = replace.account2;
+  account3 = replace.account3;
+  contractPriceGetter = replace.contractPriceGetter;
+  const reApplyValidatorRoles = [validator, validator1, validator2, validator3, validator4, validator5];
+  const reApplyJurorRoles = [jurorMember, jurorMember1, jurorMember2, jurorMember3, jurorMember4];
+  const VALIDATOR_ROLE = ethers.utils.keccak256(
+    ethers.utils.toUtf8Bytes("VALIDATOR_ROLE")
+  );
+  const JUROR_ROLE = ethers.utils.keccak256(
+    ethers.utils.toUtf8Bytes("JUROR_ROLE")
+  );
+  if (reApplyRolesViaVoucher) {
+    for (let i = 0; i < reApplyValidatorRoles.length; i++) {
+      await contractRoleManager.revokeRole(
+        VALIDATOR_ROLE,
+        reApplyValidatorRoles[i].address
+      );
+    }
+    for (let i = 0; i < reApplyJurorRoles.length; i++) {
+      await contractRoleManager.revokeRole(
+        JUROR_ROLE,
+        reApplyJurorRoles[i].address
+      );
+    }
+    for (let i = 0; i < reApplyValidatorRoles.length; i++) {
+      await grantValidatorRole(
+        reApplyValidatorRoles[i],
+        contractRoleManager,
+        contractUDAO,
+        contractUDAOStaker,
+        backend
+      );
+    }
+    for (let i = 0; i < reApplyJurorRoles.length; i++) {
+      await grantJurorRole(
+        reApplyJurorRoles[i],
+        contractRoleManager,
+        contractUDAO,
+        contractUDAOStaker,
+        backend
+      );
+    }
+  }
+}
+async function grantValidatorRole(
+  account,
+  contractRoleManager,
+  contractUDAO,
+  contractUDAOStaker,
+  backend
+) {
+  await contractRoleManager.setKYC(account.address, true);
+  await contractUDAO.transfer(
+    account.address,
+    ethers.utils.parseEther("100.0")
+  );
+  await contractUDAO
+    .connect(account)
+    .approve(
+      contractUDAOStaker.address,
+      ethers.utils.parseEther("999999999999.0")
+    );
+
+  // Staking
+  await contractUDAOStaker
+    .connect(account)
+    .stakeForGovernance(ethers.utils.parseEther("10"), 30);
+  await contractUDAOStaker.connect(account).applyForValidator();
+  const lazyRole = new LazyRole({
+    contract: contractUDAOStaker,
+    signer: backend,
+  });
+  const role_voucher = await lazyRole.createVoucher(
+    account.address,
+    Date.now() + 999999999,
+    0
+  );
+  await contractUDAOStaker.connect(account).getApproved(role_voucher);
+}
+
+async function grantJurorRole(
+  account,
+  contractRoleManager,
+  contractUDAO,
+  contractUDAOStaker,
+  backend
+) {
+  await contractRoleManager.setKYC(account.address, true);
+  await contractUDAO.transfer(
+    account.address,
+    ethers.utils.parseEther("100.0")
+  );
+
+  await contractUDAO
+    .connect(account)
+    .approve(
+      contractUDAOStaker.address,
+      ethers.utils.parseEther("999999999999.0")
+    );
+
+  // Staking
+
+  await contractUDAOStaker
+    .connect(account)
+    .stakeForGovernance(ethers.utils.parseEther("10"), 30);
+  await contractUDAOStaker.connect(account).applyForJuror();
+  const lazyRole = new LazyRole({
+    contract: contractUDAOStaker,
+    signer: backend,
+  });
+  const role_voucher = await lazyRole.createVoucher(
+    account.address,
+    Date.now() + 999999999,
+    1
+  );
+  await contractUDAOStaker.connect(account).getApproved(role_voucher);
+}
 async function checkAccountUDAOVpBalanceAndDelegate(contractUDAOVp, account) {
   const accountBalance = await contractUDAOVp.balanceOf(account.address);
   await expect(accountBalance).to.equal(ethers.utils.parseEther("300"));
@@ -48,11 +212,6 @@ async function runValidation(
   validator5,
   contentCreator
 ) {
-  await expect(
-    contractSupervision.connect(contentCreator).createValidation(0, 50)
-  )
-    .to.emit(contractSupervision, "ValidationCreated")
-    .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1));
   await expect(contractSupervision.connect(validator1).assignValidation(1))
     .to.emit(contractSupervision, "ValidationAssigned")
     .withArgs(
@@ -165,10 +324,9 @@ async function setupGovernanceMember(
       ethers.utils.parseEther("300")
     );
 }
-async function createContent(
+async function _createContent(
   contractRoleManager,
   contractUDAOContent,
-  contentCreator,
   contractSupervision,
   backend,
   validator1,
@@ -176,24 +334,32 @@ async function createContent(
   validator3,
   validator4,
   validator5,
-  contentCreator
+  contentCreator,
+  validationScore = 0
 ) {
   /// Set KYC
   await contractRoleManager.setKYC(contentCreator.address, true);
+
+  /// part prices must be determined before creating content
+  const partPricesArray = [
+    ethers.utils.parseEther("1"),
+    ethers.utils.parseEther("1"),
+  ];
+
+  /// Create Voucher from redeem.js and use it for creating content
+  const createContentVoucherSample = await createContentVoucher(
+    contractUDAOContent,
+    backend,
+    contentCreator,
+    partPricesArray,
+    validationScore
+  );
+
   /// Redeem content
   await expect(
     contractUDAOContent
       .connect(contentCreator)
-      .redeem(
-        [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
-        "udao",
-        "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
-        contentCreator.address,
-        ethers.utils.parseEther("2"),
-        "udao",
-        true,
-        true
-      )
+      .createContent(createContentVoucherSample)
   )
     .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
     .withArgs(
@@ -283,52 +449,42 @@ async function makeCoachingPurchase(
   return coachingId;
 }
 
+async function createContentVoucher(
+  contractUDAOContent,
+  backend,
+  contentCreator,
+  partPrices,
+  validationScore = 0
+) {
+  // Get the current block timestamp
+  const block = await ethers.provider.getBlock("latest");
+  // add some minutes to it and convert it to a BigNumber
+  const futureBlock = block.timestamp + 1000;
+  // convert it to a BigNumber
+  const futureBlockBigNumber = ethers.BigNumber.from(futureBlock);
+
+  return await new Redeem({
+    contract: contractUDAOContent,
+    signer: backend,
+  }).createVoucher(
+    futureBlockBigNumber,
+    partPrices,
+    0,
+    "udao",
+    "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
+    contentCreator.address,
+    ethers.utils.parseEther("1"),
+    "udao",
+    true,
+    true,
+    1,
+    validationScore
+  );
+}
+
 describe("Platform Treasury General", function () {
   it("Should allow backend to set new governance treasury address", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     const newGovernanceTreasury = contractUDAOTimelockController;
 
     // set new governance treasury address
@@ -342,50 +498,7 @@ describe("Platform Treasury General", function () {
   });
 
   it("Should allow backend to set new foundation wallet address", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
 
     // new dummy foundation address
     const newFoundation = await ethers.Wallet.createRandom();
@@ -400,50 +513,7 @@ describe("Platform Treasury General", function () {
   });
 
   it("Should allow governance to withdraw funds from the treasury after a content purchase", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     /// @dev Setup governance member
     await setupGovernanceMember(
       contractRoleManager,
@@ -489,10 +559,9 @@ describe("Platform Treasury General", function () {
     );
     await checkAccountUDAOVpBalanceAndDelegate(contractUDAOVp, jurorCandidate);
     // Create content
-    await createContent(
+    await _createContent(
       contractRoleManager,
       contractUDAOContent,
-      contentCreator,
       contractSupervision,
       backend,
       validator1,
@@ -675,50 +744,7 @@ describe("Platform Treasury General", function () {
   });
 
   it("Should allow governance to withdraw funds from the treasury after multiple content purchases", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     /// @dev Setup governance member
     await setupGovernanceMember(
       contractRoleManager,
@@ -763,10 +789,9 @@ describe("Platform Treasury General", function () {
     );
     await checkAccountUDAOVpBalanceAndDelegate(contractUDAOVp, jurorCandidate);
     // Create content
-    await createContent(
+    await _createContent(
       contractRoleManager,
       contractUDAOContent,
-      contentCreator,
       contractSupervision,
       backend,
       validator1,
@@ -962,55 +987,11 @@ describe("Platform Treasury General", function () {
   });
 
   it("Should allow foundation to withdraw funds from the treasury after a content purchase", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     // Create content
-    await createContent(
+    await _createContent(
       contractRoleManager,
       contractUDAOContent,
-      contentCreator,
       contractSupervision,
       backend,
       validator1,
@@ -1061,55 +1042,11 @@ describe("Platform Treasury General", function () {
   });
 
   it("Should allow foundation to withdraw funds from the treasury after multiple content purchases", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     // Create content
-    await createContent(
+    await _createContent(
       contractRoleManager,
       contractUDAOContent,
-      contentCreator,
       contractSupervision,
       backend,
       validator1,
@@ -1174,55 +1111,11 @@ describe("Platform Treasury General", function () {
   });
 
   it("Should allow validator to withdraw funds from the treasury after a content purchase", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     // Create content
-    await createContent(
+    await _createContent(
       contractRoleManager,
       contractUDAOContent,
-      contentCreator,
       contractSupervision,
       backend,
       validator1,
@@ -1230,7 +1123,8 @@ describe("Platform Treasury General", function () {
       validator3,
       validator4,
       validator5,
-      contentCreator
+      contentCreator,
+      500
     );
     // Make a content purchase to gather funds for governance
     await makeContentPurchase(
@@ -1367,55 +1261,11 @@ describe("Platform Treasury General", function () {
   });
 
   it("Should allow validator to withdraw funds from the treasury after multiple content purchases", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     // Create content
-    await createContent(
+    await _createContent(
       contractRoleManager,
       contractUDAOContent,
-      contentCreator,
       contractSupervision,
       backend,
       validator1,
@@ -1423,7 +1273,8 @@ describe("Platform Treasury General", function () {
       validator3,
       validator4,
       validator5,
-      contentCreator
+      contentCreator,
+      500
     );
     // Make a content purchase to gather funds for governance
     await makeContentPurchase(
@@ -1574,50 +1425,7 @@ describe("Platform Treasury General", function () {
   });
 
   it("Should allow jurors to withdraw funds from the treasury after a dispute is resolved", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     /// Set KYC
     await contractRoleManager.setKYC(jurorMember1.address, true);
     await contractRoleManager.setKYC(jurorMember2.address, true);
@@ -1630,10 +1438,9 @@ describe("Platform Treasury General", function () {
     const _data = "0x";
     const _targetContract = ethers.constants.AddressZero;
     // Create content
-    await createContent(
+    await _createContent(
       contractRoleManager,
       contractUDAOContent,
-      contentCreator,
       contractSupervision,
       backend,
       validator1,
@@ -1785,55 +1592,11 @@ describe("Platform Treasury General", function () {
   it("Should distribute rewards to jurors when there are multiple disputes", async function () {});
 
   it("Should allow instructers to withdraw their rewards", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     // Create content
-    await createContent(
+    await _createContent(
       contractRoleManager,
       contractUDAOContent,
-      contentCreator,
       contractSupervision,
       backend,
       validator1,
@@ -1900,56 +1663,12 @@ describe("Platform Treasury General", function () {
   });
 
   it("Should allow instructers to withdraw their rewards after coaching is done", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
 
     /// Create content
-    await createContent(
+    await _createContent(
       contractRoleManager,
       contractUDAOContent,
-      contentCreator,
       contractSupervision,
       backend,
       validator1,
@@ -2018,55 +1737,11 @@ describe("Platform Treasury General", function () {
   });
 
   it("Should allow instructers to withdraw their rewards after multiple coachings are done", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     /// Create content
-    await createContent(
+    await _createContent(
       contractRoleManager,
       contractUDAOContent,
-      contentCreator,
       contractSupervision,
       backend,
       validator1,
@@ -2128,55 +1803,11 @@ describe("Platform Treasury General", function () {
   });
 
   it("Should allow foundation to force refund the coaching", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     /// Create content
-    await createContent(
+    await _createContent(
       contractRoleManager,
       contractUDAOContent,
-      contentCreator,
       contractSupervision,
       backend,
       validator1,
@@ -2217,55 +1848,11 @@ describe("Platform Treasury General", function () {
   });
 
   it("Should return InstructorWithdrawnWithDebt event when instructer withdraws rewards with debt", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     /// Create content
-    await createContent(
+    await _createContent(
       contractRoleManager,
       contractUDAOContent,
-      contentCreator,
       contractSupervision,
       backend,
       validator1,
@@ -2343,55 +1930,11 @@ describe("Platform Treasury General", function () {
   });
 
   it("Should allow jurors to force refund the coaching", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     /// Create content
-    await createContent(
+    await _createContent(
       contractRoleManager,
       contractUDAOContent,
-      contentCreator,
       contractSupervision,
       backend,
       validator1,
@@ -2440,55 +1983,11 @@ describe("Platform Treasury General", function () {
   });
 
   it("Should fail if caller is not the SUPERVISION CONTRACT when force refund coaching", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     /// Create content
-    await createContent(
+    await _createContent(
       contractRoleManager,
       contractUDAOContent,
-      contentCreator,
       contractSupervision,
       backend,
       validator1,
@@ -2523,50 +2022,7 @@ describe("Platform Treasury General", function () {
   });
 
   it("Should allow Banned-jurors to withdraw funds from the treasury after a dispute is resolved", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     /// Set KYC
     await contractRoleManager.setKYC(jurorMember1.address, true);
     await contractRoleManager.setKYC(jurorMember2.address, true);
@@ -2581,10 +2037,9 @@ describe("Platform Treasury General", function () {
     const _data = "0x";
     const _targetContract = ethers.constants.AddressZero;
     // Create content
-    await createContent(
+    await _createContent(
       contractRoleManager,
       contractUDAOContent,
-      contentCreator,
       contractSupervision,
       backend,
       validator1,
@@ -2739,55 +2194,11 @@ describe("Platform Treasury General", function () {
   });
 
   it("Should allow Banned-validator to withdraw funds from the treasury after a content purchase", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     // Create content
-    await createContent(
+    await _createContent(
       contractRoleManager,
       contractUDAOContent,
-      contentCreator,
       contractSupervision,
       backend,
       validator1,
@@ -2795,7 +2206,8 @@ describe("Platform Treasury General", function () {
       validator3,
       validator4,
       validator5,
-      contentCreator
+      contentCreator,
+      500
     );
     // Make a content purchase to gather funds for governance
     await makeContentPurchase(
@@ -2939,55 +2351,11 @@ describe("Platform Treasury General", function () {
   });
 
   it("Should allow Banned-validator to withdraw funds from the treasury after multiple content purchases", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     // Create content
-    await createContent(
+    await _createContent(
       contractRoleManager,
       contractUDAOContent,
-      contentCreator,
       contractSupervision,
       backend,
       validator1,
@@ -2995,7 +2363,8 @@ describe("Platform Treasury General", function () {
       validator3,
       validator4,
       validator5,
-      contentCreator
+      contentCreator,
+      500
     );
     // Make a content purchase to gather funds for governance
     await makeContentPurchase(
@@ -3153,50 +2522,7 @@ describe("Platform Treasury General", function () {
   });
 
   it("Should allow governance to withdraw funds from the treasury after a content purchase while governance member banned", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     /// @dev Setup governance member
     await setupGovernanceMember(
       contractRoleManager,
@@ -3241,10 +2567,9 @@ describe("Platform Treasury General", function () {
     );
     await checkAccountUDAOVpBalanceAndDelegate(contractUDAOVp, jurorCandidate);
     // Create content
-    await createContent(
+    await _createContent(
       contractRoleManager,
       contractUDAOContent,
-      contentCreator,
       contractSupervision,
       backend,
       validator1,
@@ -3431,50 +2756,7 @@ describe("Platform Treasury General", function () {
   });
 
   it("Should allow governance to withdraw funds from the treasury after multiple content purchases while governance member banned", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     /// @dev Setup governance member
     await setupGovernanceMember(
       contractRoleManager,
@@ -3520,10 +2802,9 @@ describe("Platform Treasury General", function () {
     await checkAccountUDAOVpBalanceAndDelegate(contractUDAOVp, jurorCandidate);
 
     // Create content
-    await createContent(
+    await _createContent(
       contractRoleManager,
       contractUDAOContent,
-      contentCreator,
       contractSupervision,
       backend,
       validator1,
@@ -3723,55 +3004,11 @@ describe("Platform Treasury General", function () {
   });
 
   it("Should allow Banned-instructers to withdraw their rewards", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     // Create content
-    await createContent(
+    await _createContent(
       contractRoleManager,
       contractUDAOContent,
-      contentCreator,
       contractSupervision,
       backend,
       validator1,
@@ -3842,56 +3079,12 @@ describe("Platform Treasury General", function () {
   });
 
   it("Should allow Banned-instructers to withdraw their rewards after coaching is done", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
 
     /// Create content
-    await createContent(
+    await _createContent(
       contractRoleManager,
       contractUDAOContent,
-      contentCreator,
       contractSupervision,
       backend,
       validator1,
@@ -3964,55 +3157,11 @@ describe("Platform Treasury General", function () {
   });
 
   it("Should allow Banned-instructers to withdraw their rewards after multiple coachings are done", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     /// Create content
-    await createContent(
+    await _createContent(
       contractRoleManager,
       contractUDAOContent,
-      contentCreator,
       contractSupervision,
       backend,
       validator1,
@@ -4078,55 +3227,11 @@ describe("Platform Treasury General", function () {
   });
 
   it("Should return InstructorWithdrawnWithDebt event when instructer withdraws rewards with debt while instructer banned", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy();
+    await reDeploy();
     /// Create content
-    await createContent(
+    await _createContent(
       contractRoleManager,
       contractUDAOContent,
-      contentCreator,
       contractSupervision,
       backend,
       validator1,
