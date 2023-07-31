@@ -109,10 +109,10 @@ abstract contract ContentManager is EIP712, BasePlatform {
     /// @param fullContentPurchases is full content purchased
     /// @param purchasedParts parts of the content purchased
     /// @param giftReceivers address of the gift receiver if purchase is a gift
-    function buyCart(
-        uint256[] calldata tokenIds,
+    function buyContent(
+        uint256[] calldata tokenIds, 
         bool[] calldata fullContentPurchases,
-        uint256[][] calldata purchasedParts,
+        uint256[][] calldata purchasedParts, 
         address[] calldata giftReceivers
     ) external whenNotPaused {
         uint256 tokenIdsLength = tokenIds.length;
@@ -123,7 +123,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
             "Array lengths are not equal!"
         );
         for (uint256 i; i < tokenIdsLength; i++) {
-            buyContent(
+            _buyContent(
                 tokenIds[i],
                 fullContentPurchases[i],
                 purchasedParts[i],
@@ -132,19 +132,17 @@ abstract contract ContentManager is EIP712, BasePlatform {
         }
     }
     
-
-
     /// @notice allows users to purchase a content
     /// @param tokenId id of the content
     /// @param fullContentPurchase is full content purchased
     /// @param purchasedParts parts of the content purchased
     /// @param giftReceiver address of the gift receiver if purchase is a gift
-    function buyContent(
+    function _buyContent(
         uint256 tokenId,
         bool fullContentPurchase,
         uint256[] calldata purchasedParts,
         address giftReceiver
-    ) public whenNotPaused {
+    ) internal whenNotPaused {
         uint256 partIdLength = purchasedParts.length;
         uint256 priceToPayUdao;
         uint256 priceToPay;
