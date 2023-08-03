@@ -643,7 +643,6 @@ contract Supervision is RoleController {
     /// @notice allows validators to dismiss a validation assignment
     /// @param demissionAddress id of the content that will be dismissed
     function dismissDispute(address demissionAddress) external {
-        uint caseId = activeDispute[demissionAddress];
         if (msg.sender == demissionAddress) {
             removeJurorFromDispute(demissionAddress);
         } else {
