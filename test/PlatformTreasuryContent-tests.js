@@ -1245,7 +1245,6 @@ describe("Platform Treasury Contract - Content", function () {
     /// Set KYC
     await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer.address, true);
-    await contractRoleManager.setBan(validator1.address, true);
 
     /// part prices must be determined before creating content
     const partPricesArray = [
@@ -1284,7 +1283,7 @@ describe("Platform Treasury Contract - Content", function () {
       validator5,
       contentCreator
     );
-
+    console.log("S3");
     /// Send UDAO to the buyer's wallet
     await contractUDAO.transfer(
       contentBuyer.address,
@@ -1297,7 +1296,9 @@ describe("Platform Treasury Contract - Content", function () {
         contractPlatformTreasury.address,
         ethers.utils.parseEther("999999999999.0")
       );
-
+    // Set Ban the gift receiver
+    await contractRoleManager.setBan(validator1.address, true);
+    // Buy Content
     await expect(
       contractPlatformTreasury
         .connect(contentBuyer)

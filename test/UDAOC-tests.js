@@ -62,8 +62,21 @@ async function reDeploy(reApplyRolesViaVoucher = true, isDexRequired = false) {
   account2 = replace.account2;
   account3 = replace.account3;
   contractPriceGetter = replace.contractPriceGetter;
-  const reApplyValidatorRoles = [validator, validator1, validator2, validator3, validator4, validator5];
-  const reApplyJurorRoles = [jurorMember, jurorMember1, jurorMember2, jurorMember3, jurorMember4];
+  const reApplyValidatorRoles = [
+    validator,
+    validator1,
+    validator2,
+    validator3,
+    validator4,
+    validator5,
+  ];
+  const reApplyJurorRoles = [
+    jurorMember,
+    jurorMember1,
+    jurorMember2,
+    jurorMember3,
+    jurorMember4,
+  ];
   const VALIDATOR_ROLE = ethers.utils.keccak256(
     ethers.utils.toUtf8Bytes("VALIDATOR_ROLE")
   );
@@ -1397,6 +1410,12 @@ describe("UDAOC Contract", function () {
 
     // UnKYC content creator
     await contractRoleManager.setKYC(contentCreator.address, false);
+    // Add KYC requirement for createContent
+    await expect(
+      contractUDAOContent
+        .connect(foundation)
+        .setKYCRequirementForCreateContent(true)
+    );
     // new part information
     const tokenId = 0;
     const newPartId = 1;
