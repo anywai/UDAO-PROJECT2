@@ -110,9 +110,9 @@ abstract contract ContentManager is EIP712, BasePlatform {
     /// @param purchasedParts parts of the content purchased
     /// @param giftReceivers address of the gift receiver if purchase is a gift
     function buyContent(
-        uint256[] calldata tokenIds, 
+        uint256[] calldata tokenIds,
         bool[] calldata fullContentPurchases,
-        uint256[][] calldata purchasedParts, 
+        uint256[][] calldata purchasedParts,
         address[] calldata giftReceivers
     ) external whenNotPaused {
         uint256 tokenIdsLength = tokenIds.length;
@@ -131,7 +131,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
             );
         }
     }
-    
+
     /// @notice allows users to purchase a content
     /// @param tokenId id of the content
     /// @param fullContentPurchase is full content purchased
@@ -154,12 +154,9 @@ abstract contract ContentManager is EIP712, BasePlatform {
         if (giftReceiver != address(0)) {
             contentReceiver = giftReceiver;
             require(!IRM.isBanned(contentReceiver), "Gift receiver is banned");
-            require(IRM.isKYCed(contentReceiver), "Gift receiver is not KYCed");
         }
         require(!IRM.isBanned(msg.sender), "You are banned");
-        require(IRM.isKYCed(msg.sender), "You are not KYCed");
         address instructor = udaoc.ownerOf(tokenId);
-        require(IRM.isKYCed(instructor), "Instructor is not KYCed");
         require(!IRM.isBanned(instructor), "Instructor is banned");
         require(
             isTokenBought[msg.sender][tokenId][0] == false,
@@ -231,7 +228,6 @@ abstract contract ContentManager is EIP712, BasePlatform {
         require(voucher.validUntil >= block.timestamp, "Voucher has expired.");
         require(msg.sender == voucher.redeemer, "You are not redeemer.");
         require(!IRM.isBanned(msg.sender), "You are banned");
-        require(IRM.isKYCed(msg.sender), "You are not KYCed");
 
         uint256 tokenId = voucher.tokenId;
         uint256 partIdLength = voucher.purchasedParts.length;
@@ -241,10 +237,8 @@ abstract contract ContentManager is EIP712, BasePlatform {
         if (voucher.giftReceiver != address(0)) {
             contentReceiver = voucher.giftReceiver;
             require(!IRM.isBanned(contentReceiver), "Gift receiver is banned");
-            require(IRM.isKYCed(contentReceiver), "Gift receiver is not KYCed");
         }
         address instructor = udaoc.ownerOf(tokenId);
-        require(IRM.isKYCed(instructor), "Instructor is not KYCed");
         require(!IRM.isBanned(instructor), "Instructor is banned");
         require(
             isTokenBought[contentReceiver][tokenId][0] == false,
@@ -338,10 +332,8 @@ abstract contract ContentManager is EIP712, BasePlatform {
     function buyCoaching(uint tokenId) external whenNotPaused {
         require(udaoc.exists(tokenId), "Content does not exist!");
         require(!IRM.isBanned(msg.sender), "You are banned");
-        require(IRM.isKYCed(msg.sender), "You are not KYCed");
         address instructor = udaoc.ownerOf(tokenId);
         require(!IRM.isBanned(instructor), "Instructor is banned");
-        require(IRM.isKYCed(instructor), "Instructor is not KYCed");
         require(
             udaoc.coachingEnabled(tokenId),
             "Coaching is not enabled for this content"
