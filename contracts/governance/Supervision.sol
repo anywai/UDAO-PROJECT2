@@ -696,8 +696,7 @@ contract Supervision is RoleController {
         //);
 
         address tokenOwner = udaoc.ownerOf(tokenId);
-        //make sure token owner is kyced and not banned
-        require(IRM.isKYCed(tokenOwner), "Token owner is not KYCed");
+        //make sure token owner is not banned
         require(!IRM.isBanned(tokenOwner), "Token owner is banned");
 
         // Change status to in validation
@@ -724,8 +723,7 @@ contract Supervision is RoleController {
             tokenOwner == msg.sender,
             "Only token owner can re-create validation"
         );
-        //make sure token owner is kyced and not banned
-        require(IRM.isKYCed(tokenOwner), "Token owner is not KYCed");
+        //make sure token owner is not banned
         require(!IRM.isBanned(tokenOwner), "Token owner is banned");
         // Get the latest validation for this token
         uint256 validationId = latestValidationOfToken[tokenId];
@@ -746,6 +744,8 @@ contract Supervision is RoleController {
     function assignValidation(
         uint256 validationId
     ) external onlyRole(VALIDATOR_ROLE) {
+        require(IRM.isKYCed(msg.sender), "You are not KYCed");
+        require(!IRM.isBanned(msg.sender), "You were banned");
         require(
             staker.checkExpireDateValidator(msg.sender) > block.timestamp,
             "Validation is expired"
