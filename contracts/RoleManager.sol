@@ -4,8 +4,14 @@ pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "./interfaces/IRoleManager.sol";
+import "./ContractManager.sol";
+
+import "./interfaces/ISupervision.sol";
 
 contract RoleManager is AccessControl, IRoleManager {
+    ContractManager public contractManager;
+    ISupervision ISupVis;
+
     bytes32 public constant VALIDATOR_ROLE = keccak256("VALIDATOR_ROLE");
     bytes32 public constant BACKEND_ROLE = keccak256("BACKEND_ROLE");
     bytes32 public constant FOUNDATION_ROLE = keccak256("FOUNDATION_ROLE");
@@ -19,6 +25,8 @@ contract RoleManager is AccessControl, IRoleManager {
         keccak256("SUPERVISION_CONTRACT");
     bytes32 public constant TREASURY_CONTRACT = keccak256("TREASURY_CONTRACT");
     bytes32 public constant CORPORATE_ROLE = keccak256("CORPORATE_ROLE");
+    bytes32 public constant ROLEMANAGER_CONTRACT =
+        keccak256("ROLEMANAGER_CONTRACT");
 
     mapping(address => bool) KYCList;
     mapping(address => bool) BanList;
@@ -30,6 +38,20 @@ contract RoleManager is AccessControl, IRoleManager {
     /// @notice Deployer gets the admin role.
     constructor() {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _grantRole(ROLEMANAGER_CONTRACT, address(this));
+    }
+
+    function setContractManager(
+        address _contractManager
+    ) external onlyRole(BACKEND_ROLE) {
+        contractManager = ContractManager(_contractManager);
+    }
+
+    /// @notice Get the updated addresses from contract manager
+    function updateAddresses() external onlyRole(BACKEND_ROLE) {
+        ISupVis = ISupervision(contractManager.ISupVisAddress());
+
+        //emit AddressesUpdated(contractManager.ISupVisAddress());
     }
 
     /// @notice Used for checking if the given account has the asked role
@@ -98,6 +120,11 @@ contract RoleManager is AccessControl, IRoleManager {
 
         BanList[_address] = _isBanned;
         emit SetBan(_address, _isBanned);
+
+        if (_isBanned) {
+            ISupVis.dismissValidation(_address);
+            ISupVis.dismissDispute(_address);
+        }
     }
 
     /// @notice gets KYC result of the address

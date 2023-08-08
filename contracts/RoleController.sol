@@ -20,6 +20,8 @@ abstract contract RoleController is Context, Pausable {
         keccak256("SUPERVISION_CONTRACT");
     bytes32 public constant TREASURY_CONTRACT = keccak256("TREASURY_CONTRACT");
     bytes32 public constant CORPORATE_ROLE = keccak256("CORPORATE_ROLE");
+    bytes32 public constant ROLEMANAGER_CONTRACT =
+        keccak256("ROLEMANAGER_CONTRACT");
 
     /// Role group for administrator roles
     bytes32[] administrator_roles;

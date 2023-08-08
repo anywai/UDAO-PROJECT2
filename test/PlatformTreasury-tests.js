@@ -403,7 +403,7 @@ async function makeContentPurchase(
 
   await contractPlatformTreasury
     .connect(contentBuyer)
-    .buyContent(0, true, [1], ethers.constants.AddressZero);
+    .buyContent([0], [true], [[1]], [ethers.constants.AddressZero]);
   const result = await contractPlatformTreasury
     .connect(contentBuyer)
     .getOwnedContent(contentBuyer.address);
@@ -510,6 +510,51 @@ describe("Platform Treasury General", function () {
     )
       .to.emit(contractPlatformTreasury, "FoundationWalletUpdated")
       .withArgs(newFoundation.address);
+  });
+
+  it("Should allow treasury contract to switch to the next round", async function () {
+    await reDeploy();
+    // send some eth to the contractPlatformTreasury and impersonate it
+    await helpers.setBalance(
+      contractPlatformTreasury.address,
+      hre.ethers.utils.parseEther("1")
+    );
+    const signerTreasuryContract = await ethers.getImpersonatedSigner(
+      contractPlatformTreasury.address
+    );
+    // get the current distribution round
+    const currentDistributionRound =
+      await contractSupervision.distributionRound();
+    expect(currentDistributionRound).to.equal(0);
+    // call the next round from contractSupervision
+    const nextDistributionRound = currentDistributionRound + 1;
+    await expect(
+      contractSupervision.connect(signerTreasuryContract).nextRound()
+    )
+      .to.emit(contractSupervision, "NextRound")
+      .withArgs(nextDistributionRound);
+  });
+
+  it("Should treasury contract fail to switch to the next round when paused", async function () {
+    await reDeploy();
+    // send some eth to the contractPlatformTreasury and impersonate it
+    await helpers.setBalance(
+      contractPlatformTreasury.address,
+      hre.ethers.utils.parseEther("1")
+    );
+    const signerTreasuryContract = await ethers.getImpersonatedSigner(
+      contractPlatformTreasury.address
+    );
+    // get the current distribution round
+    const currentDistributionRound =
+      await contractSupervision.distributionRound();
+    expect(currentDistributionRound).to.equal(0);
+    // call the next round from contractSupervision
+    const nextDistributionRound = currentDistributionRound + 1;
+    await expect(contractSupervision.pause());
+    await expect(
+      contractSupervision.connect(signerTreasuryContract).nextRound()
+    ).to.revertedWith("Pausable: paused");
   });
 
   it("Should allow governance to withdraw funds from the treasury after a content purchase", async function () {

@@ -67,8 +67,21 @@ async function reDeploy(reApplyRolesViaVoucher = true, isDexRequired = false) {
   account2 = replace.account2;
   account3 = replace.account3;
   contractPriceGetter = replace.contractPriceGetter;
-  const reApplyValidatorRoles = [validator, validator1, validator2, validator3, validator4, validator5];
-  const reApplyJurorRoles = [jurorMember, jurorMember1, jurorMember2, jurorMember3, jurorMember4];
+  const reApplyValidatorRoles = [
+    validator,
+    validator1,
+    validator2,
+    validator3,
+    validator4,
+    validator5,
+  ];
+  const reApplyJurorRoles = [
+    jurorMember,
+    jurorMember1,
+    jurorMember2,
+    jurorMember3,
+    jurorMember4,
+  ];
   const VALIDATOR_ROLE = ethers.utils.keccak256(
     ethers.utils.toUtf8Bytes("VALIDATOR_ROLE")
   );
@@ -308,7 +321,7 @@ async function createContentVoucher(
 
 describe("Platform Treasury Contract - Content", function () {
   it("Should get updated address of the validation manager", async function () {
-   await reDeploy();
+    await reDeploy();
     await contractContractManager
       .connect(backend)
       .setAddressISupVisAddress("0x5B38Da6a701c568545dCfcB03FcB875f56beddC4");
@@ -331,7 +344,7 @@ describe("Platform Treasury Contract - Content", function () {
   });
 
   it("Should fail to set validation manager if not FOUNDATION", async function () {
-   await reDeploy();
+    await reDeploy();
 
     await expect(
       contractPlatformTreasury.connect(foundation).updateAddresses()
@@ -343,7 +356,7 @@ describe("Platform Treasury Contract - Content", function () {
   });
   //!!Bu dünkü test
   it("Should a user able to buy the full content", async function () {
-   await reDeploy();
+    await reDeploy();
 
     /// Set KYC
     await contractRoleManager.setKYC(contentCreator.address, true);
@@ -403,7 +416,7 @@ describe("Platform Treasury Contract - Content", function () {
 
     await contractPlatformTreasury
       .connect(contentBuyer)
-      .buyContent(0, true, [1], ethers.constants.AddressZero);
+      .buyContent([0], [true], [[1]], [ethers.constants.AddressZero]);
     const result = await contractPlatformTreasury
       .connect(contentBuyer)
       .getOwnedContent(contentBuyer.address);
@@ -413,7 +426,7 @@ describe("Platform Treasury Contract - Content", function () {
   });
 
   it("Should a user able to buy parts of a content", async function () {
-   await reDeploy();
+    await reDeploy();
 
     /// Set KYC
     await contractRoleManager.setKYC(contentCreator.address, true);
@@ -474,7 +487,7 @@ describe("Platform Treasury Contract - Content", function () {
 
     await contractPlatformTreasury
       .connect(contentBuyer)
-      .buyContent(0, false, [1, 2, 3], contentBuyer.address);
+      .buyContent([0], [false], [[1, 2, 3]], [contentBuyer.address]);
     const result = await contractPlatformTreasury
       .connect(contentBuyer)
       .getOwnedContent(contentBuyer.address);
@@ -487,7 +500,7 @@ describe("Platform Treasury Contract - Content", function () {
   });
   //İkinci
   it("Should fail to buy a content part if content part already purchased", async function () {
-   await reDeploy();
+    await reDeploy();
 
     /// Set KYC
     await contractRoleManager.setKYC(contentCreator.address, true);
@@ -548,17 +561,17 @@ describe("Platform Treasury Contract - Content", function () {
 
     await contractPlatformTreasury
       .connect(contentBuyer)
-      .buyContent(0, false, [2], contentBuyer.address);
+      .buyContent([0], [false], [[2]], [contentBuyer.address]);
 
     await expect(
       contractPlatformTreasury
         .connect(contentBuyer)
-        .buyContent(0, false, [2], contentBuyer.address)
+        .buyContent([0], [false], [[2]], [contentBuyer.address])
     ).to.revertedWith("Content part is already bought");
   });
 
   it("Should fail to buy a content if content does not exists", async function () {
-   await reDeploy();
+    await reDeploy();
 
     /// Set KYC
     await contractRoleManager.setKYC(contentCreator.address, true);
@@ -575,12 +588,12 @@ describe("Platform Treasury Contract - Content", function () {
     await expect(
       contractPlatformTreasury
         .connect(contentBuyer)
-        .buyContent(0, true, [1], ethers.constants.AddressZero)
+        .buyContent([0], [true], [[1]], [ethers.constants.AddressZero])
     ).to.revertedWith("Content does not exist!");
   });
 
   it("Should fail to buy content if buyer is banned", async function () {
-   await reDeploy();
+    await reDeploy();
 
     /// Set KYC
     await contractRoleManager.setKYC(contentCreator.address, true);
@@ -643,12 +656,12 @@ describe("Platform Treasury Contract - Content", function () {
     await expect(
       contractPlatformTreasury
         .connect(contentBuyer)
-        .buyContent(0, true, [1], ethers.constants.AddressZero)
+        .buyContent([0], [true], [[1]], [ethers.constants.AddressZero])
     ).to.revertedWith("You are banned");
   });
 
   it("Should fail to buy content if instructer is banned", async function () {
-   await reDeploy();
+    await reDeploy();
 
     /// Set KYC
     await contractRoleManager.setKYC(contentCreator.address, true);
@@ -711,147 +724,12 @@ describe("Platform Treasury Contract - Content", function () {
     await expect(
       contractPlatformTreasury
         .connect(contentBuyer)
-        .buyContent(0, true, [1], ethers.constants.AddressZero)
+        .buyContent([0], [true], [[1]], [ethers.constants.AddressZero])
     ).to.revertedWith("Instructor is banned");
   });
 
-  it("Should fail to buy content if instructer is not KYCed", async function () {
-   await reDeploy();
-
-    /// Set KYC
-    await contractRoleManager.setKYC(contentCreator.address, true);
-    await contractRoleManager.setKYC(contentBuyer.address, true);
-
-    /// part prices must be determined before creating content
-    const partPricesArray = [
-      ethers.utils.parseEther("1"),
-      ethers.utils.parseEther("1"),
-    ];
-
-    ///Create Voucher from redeem.js and use it for creating content
-    const createContentVoucherSample = await createContentVoucher(
-      contractUDAOContent,
-      backend,
-      contentCreator,
-      partPricesArray
-    );
-
-    /// Create content
-    await expect(
-      contractUDAOContent
-        .connect(contentCreator)
-        .createContent(createContentVoucherSample)
-    )
-      .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
-      .withArgs(
-        "0x0000000000000000000000000000000000000000",
-        contentCreator.address,
-        0
-      );
-    /// Start validation and finalize it
-    await runValidation(
-      contractSupervision,
-      backend,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      contentCreator
-    );
-
-    /// Send UDAO to the buyer's wallet
-    await contractUDAO.transfer(
-      contentBuyer.address,
-      ethers.utils.parseEther("100.0")
-    );
-    /// Content buyer needs to give approval to the platformtreasury
-    await contractUDAO
-      .connect(contentBuyer)
-      .approve(
-        contractPlatformTreasury.address,
-        ethers.utils.parseEther("999999999999.0")
-      );
-
-    /// Set KYC to false
-    await contractRoleManager.setKYC(contentCreator.address, false);
-
-    await expect(
-      contractPlatformTreasury
-        .connect(contentBuyer)
-        .buyContent(0, true, [1], ethers.constants.AddressZero)
-    ).to.revertedWith("Instructor is not KYCed");
-  });
-
-  it("Should fail to buy content if buyer is not KYCed", async function () {
-   await reDeploy();
-
-    /// Set KYC
-    await contractRoleManager.setKYC(contentCreator.address, true);
-    await contractRoleManager.setKYC(contentBuyer.address, true);
-
-    /// part prices must be determined before creating content
-    const partPricesArray = [
-      ethers.utils.parseEther("1"),
-      ethers.utils.parseEther("1"),
-    ];
-
-    ///Create Voucher from redeem.js and use it for creating content
-    const createContentVoucherSample = await createContentVoucher(
-      contractUDAOContent,
-      backend,
-      contentCreator,
-      partPricesArray
-    );
-
-    /// Create content
-    await expect(
-      contractUDAOContent
-        .connect(contentCreator)
-        .createContent(createContentVoucherSample)
-    )
-      .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
-      .withArgs(
-        "0x0000000000000000000000000000000000000000",
-        contentCreator.address,
-        0
-      );
-    /// Start validation and finalize it
-    await runValidation(
-      contractSupervision,
-      backend,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      contentCreator
-    );
-
-    /// Send UDAO to the buyer's wallet
-    await contractUDAO.transfer(
-      contentBuyer.address,
-      ethers.utils.parseEther("100.0")
-    );
-    /// Content buyer needs to give approval to the platformtreasury
-    await contractUDAO
-      .connect(contentBuyer)
-      .approve(
-        contractPlatformTreasury.address,
-        ethers.utils.parseEther("999999999999.0")
-      );
-
-    await contractRoleManager.setKYC(contentBuyer.address, false);
-
-    await expect(
-      contractPlatformTreasury
-        .connect(contentBuyer)
-        .buyContent(0, true, [1], ethers.constants.AddressZero)
-    ).to.revertedWith("You are not KYCed");
-  });
-
   it("Should fail to buy a content part if full content is already purchased", async function () {
-   await reDeploy();
+    await reDeploy();
 
     /// Set KYC
     await contractRoleManager.setKYC(contentCreator.address, true);
@@ -912,17 +790,17 @@ describe("Platform Treasury Contract - Content", function () {
 
     await contractPlatformTreasury
       .connect(contentBuyer)
-      .buyContent(0, true, [1], ethers.constants.AddressZero);
+      .buyContent([0], [true], [[1]], [ethers.constants.AddressZero]);
 
     await expect(
       contractPlatformTreasury
         .connect(contentBuyer)
-        .buyContent(0, false, [3], contentBuyer.address)
+        .buyContent([0], [false], [[3]], [contentBuyer.address])
     ).to.revertedWith("Full content is already bought");
   });
 
   it("Should fail to buy a full content if fullContentPurchase is false", async function () {
-   await reDeploy();
+    await reDeploy();
 
     /// Set KYC
     await contractRoleManager.setKYC(contentCreator.address, true);
@@ -1064,14 +942,14 @@ describe("Platform Treasury Contract - Content", function () {
     await expect(
       contractPlatformTreasury
         .connect(contentBuyer)
-        .buyContent(0, false, [0], ethers.constants.AddressZero)
+        .buyContent([0], [false], [[0]], [ethers.constants.AddressZero])
     ).to.revertedWith(
       "Purchased parts says 0, but fullContentPurchase is false!"
     );
   });
 
   it("Should fail to buy a content part if the part does not exist", async function () {
-   await reDeploy();
+    await reDeploy();
 
     /// Set KYC
     await contractRoleManager.setKYC(contentCreator.address, true);
@@ -1213,12 +1091,12 @@ describe("Platform Treasury Contract - Content", function () {
     await expect(
       contractPlatformTreasury
         .connect(contentBuyer)
-        .buyContent(0, false, [20], ethers.constants.AddressZero)
+        .buyContent([0], [false], [[20]], [ethers.constants.AddressZero])
     ).to.revertedWith("Part does not exist!");
   });
 
   it("Should buy the full content for someone else", async function () {
-   await reDeploy();
+    await reDeploy();
 
     /// Set KYC
     await contractRoleManager.setKYC(contentCreator.address, true);
@@ -1278,7 +1156,7 @@ describe("Platform Treasury Contract - Content", function () {
 
     await contractPlatformTreasury
       .connect(contentBuyer)
-      .buyContent(0, true, [1], validator1.address);
+      .buyContent([0], [true], [[1]], [validator1.address]);
     const result = await contractPlatformTreasury
       .connect(contentBuyer)
       .getOwnedContent(validator1.address);
@@ -1288,7 +1166,7 @@ describe("Platform Treasury Contract - Content", function () {
   });
 
   it("Should buy the part of the content for someone else", async function () {
-   await reDeploy();
+    await reDeploy();
 
     /// Set KYC
     await contractRoleManager.setKYC(contentCreator.address, true);
@@ -1349,7 +1227,7 @@ describe("Platform Treasury Contract - Content", function () {
 
     await contractPlatformTreasury
       .connect(contentBuyer)
-      .buyContent(0, false, [1, 2], validator1.address);
+      .buyContent([0], [false], [[1, 2]], [validator1.address]);
     const result = await contractPlatformTreasury
       .connect(contentBuyer)
       .getOwnedContent(validator1.address);
@@ -1361,81 +1239,12 @@ describe("Platform Treasury Contract - Content", function () {
     ]);
   });
 
-  it("Should fail to buy the full content for someone else if other account is not KYCed", async function () {
-   await reDeploy();
-
-    /// Set KYC
-    await contractRoleManager.setKYC(contentCreator.address, true);
-    await contractRoleManager.setKYC(contentBuyer.address, true);
-
-    /// part prices must be determined before creating content
-    const partPricesArray = [
-      ethers.utils.parseEther("1"),
-      ethers.utils.parseEther("1"),
-    ];
-
-    ///Create Voucher from redeem.js and use it for creating content
-    const createContentVoucherSample = await createContentVoucher(
-      contractUDAOContent,
-      backend,
-      contentCreator,
-      partPricesArray
-    );
-
-    /// Create content
-    await expect(
-      contractUDAOContent
-        .connect(contentCreator)
-        .createContent(createContentVoucherSample)
-    )
-      .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
-      .withArgs(
-        "0x0000000000000000000000000000000000000000",
-        contentCreator.address,
-        0
-      );
-    /// Start validation and finalize it
-    await runValidation(
-      contractSupervision,
-      backend,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      contentCreator
-    );
-
-    /// Send UDAO to the buyer's wallet
-    await contractUDAO.transfer(
-      contentBuyer.address,
-      ethers.utils.parseEther("100.0")
-    );
-    /// Content buyer needs to give approval to the platformtreasury
-    await contractUDAO
-      .connect(contentBuyer)
-      .approve(
-        contractPlatformTreasury.address,
-        ethers.utils.parseEther("999999999999.0")
-      );
-
-    // Set kyc of validator1
-    await contractRoleManager.setKYC(validator1.address, false);
-
-    await expect(
-      contractPlatformTreasury
-        .connect(contentBuyer)
-        .buyContent(0, true, [1], validator1.address)
-    ).to.revertedWith("Gift receiver is not KYCed");
-  });
-
   it("Should fail to buy the full content for someone else if other account is banned", async function () {
-   await reDeploy();
+    await reDeploy();
 
     /// Set KYC
     await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer.address, true);
-    await contractRoleManager.setBan(validator1.address, true);
 
     /// part prices must be determined before creating content
     const partPricesArray = [
@@ -1474,7 +1283,7 @@ describe("Platform Treasury Contract - Content", function () {
       validator5,
       contentCreator
     );
-
+    console.log("S3");
     /// Send UDAO to the buyer's wallet
     await contractUDAO.transfer(
       contentBuyer.address,
@@ -1487,16 +1296,18 @@ describe("Platform Treasury Contract - Content", function () {
         contractPlatformTreasury.address,
         ethers.utils.parseEther("999999999999.0")
       );
-
+    // Set Ban the gift receiver
+    await contractRoleManager.setBan(validator1.address, true);
+    // Buy Content
     await expect(
       contractPlatformTreasury
         .connect(contentBuyer)
-        .buyContent(0, true, [1], validator1.address)
+        .buyContent([0], [true], [[1]], [validator1.address])
     ).to.revertedWith("Gift receiver is banned");
   });
 
   it("Should a user able to buy the full content with discount", async function () {
-   await reDeploy();
+    await reDeploy();
 
     /// Set KYC
     await contractRoleManager.setKYC(contentCreator.address, true);

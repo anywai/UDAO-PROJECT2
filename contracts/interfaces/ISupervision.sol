@@ -32,4 +32,10 @@ interface ISupervision {
     function createValidation(uint256 tokenId, uint256 score) external;
 
     function nextRound() external;
+
+    function testFunction() external;
+
+    function dismissValidation(address demissionAdress) external;
+
+    function dismissDispute(address demissionAdress) external;
 }

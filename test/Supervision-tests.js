@@ -1614,29 +1614,6 @@ describe("Supervision Contract", function () {
       .withArgs(disputeId, jurorMember3.address);
   });
 
-  it("Should allow treasury contract to switch to the next round", async function () {
-    await reDeploy();
-    // send some eth to the contractPlatformTreasury and impersonate it
-    await helpers.setBalance(
-      contractPlatformTreasury.address,
-      hre.ethers.utils.parseEther("1")
-    );
-    const signerTreasuryContract = await ethers.getImpersonatedSigner(
-      contractPlatformTreasury.address
-    );
-    // get the current distribution round
-    const currentDistributionRound =
-      await contractSupervision.distributionRound();
-    expect(currentDistributionRound).to.equal(0);
-    // call the next round from contractSupervision
-    const nextDistributionRound = currentDistributionRound + 1;
-    await expect(
-      contractSupervision.connect(signerTreasuryContract).nextRound()
-    )
-      .to.emit(contractSupervision, "NextRound")
-      .withArgs(nextDistributionRound);
-  });
-
   it("Should return successful and unsuccessful dispute results of jurors correctly", async function () {
     await reDeploy();
     /// Set KYC
@@ -2299,9 +2276,6 @@ describe("Supervision Contract", function () {
       contractPlatformTreasury.address,
       hre.ethers.utils.parseEther("1")
     );
-    const signerTreasuryContract = await ethers.getImpersonatedSigner(
-      contractPlatformTreasury.address
-    );
     const hashedTREASURY_CONTRACT =
       "0xa34ea2ceed6e9b6dd50292aa3f34b931d342b9667303c6f313c588454bca7e8a";
     // get the current distribution round
@@ -2357,28 +2331,6 @@ describe("Supervision Contract", function () {
     await expect(
       contractSupervision.connect(jurorMember1).assignDispute(disputeId)
     ).to.revertedWith("You are the instructor of this course.");
-  });
-
-  it("Should fail when paused, allow treasury contract to switch to the next round", async function () {
-    await reDeploy();
-    // send some eth to the contractPlatformTreasury and impersonate it
-    await helpers.setBalance(
-      contractPlatformTreasury.address,
-      hre.ethers.utils.parseEther("1")
-    );
-    const signerTreasuryContract = await ethers.getImpersonatedSigner(
-      contractPlatformTreasury.address
-    );
-    // get the current distribution round
-    const currentDistributionRound =
-      await contractSupervision.distributionRound();
-    expect(currentDistributionRound).to.equal(0);
-    // call the next round from contractSupervision
-    const nextDistributionRound = currentDistributionRound + 1;
-    await expect(contractSupervision.pause());
-    await expect(
-      contractSupervision.connect(signerTreasuryContract).nextRound()
-    ).to.revertedWith("Pausable: paused");
   });
 
   it("Should create new dispute that is not token related", async function () {

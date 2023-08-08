@@ -7,6 +7,7 @@ import "../ContractManager.sol";
 import "../RoleController.sol";
 import "../interfaces/IUDAOC.sol";
 import "../interfaces/IPlatformTreasury.sol";
+import "hardhat/console.sol";
 
 interface IStakingContract {
     function checkExpireDateValidator(
@@ -48,26 +49,38 @@ contract Supervision is RoleController {
         address validator,
         bool result
     );
+    event ValidatorRemovedFromValidation(
+        uint256 tokenId,
+        address validator,
+        uint256 validationId
+    );
+
+    event JurorRemovedFromDispute(
+        uint256 caseId,
+        address juror,
+        uint256 disputeId
+    );
+
     event ValidationEnded(uint256 tokenId, uint256 validationId, bool result);
 
-    /// @dev Mappings
-    // Juror mappings
-    // juror => round => score
+    /// @dev MAPPINGS
+    // JUROR MAPPINGS
+    // juror => (round => score)
     mapping(address => mapping(uint256 => uint256)) public jurorScorePerRound;
     // juror => caseId
     mapping(address => uint256) activeDispute;
     mapping(address => uint) public successfulDispute;
     mapping(address => uint) public unsuccessfulDispute;
-    // Validation mappings
-    // tokenId => is validation done
-    // mapping(uint256 => bool) public isValidated;
-    mapping(uint256 => uint256) public isValidated; // 0: rejected, 1: validated, 2: in validation
+    // VALIDATION MAPPINGS
+    // tokenId => validation status (0: rejected, 1: validated, 2: in validation)
+    mapping(uint256 => uint256) public isValidated;
     // tokenId => validationId
     mapping(uint256 => uint256) public latestValidationOfToken;
-    // validator => round => score
+    // validator => (round => score)
     mapping(address => mapping(uint256 => uint256))
         public validatorScorePerRound;
     mapping(address => uint) public validationCount;
+    // validator => validationId
     mapping(address => uint) public activeValidation;
     mapping(address => bool) public isInDispute;
     mapping(address => uint) public successfulValidation;
@@ -583,23 +596,86 @@ contract Supervision is RoleController {
         );
     }
 
-    function dismissValidation(
-        uint validationId
-    ) external onlyRole(VALIDATOR_ROLE) {
-        /// @notice allows validators to dismiss a validation assignment
-        /// @param validationId id of the content that will be dismissed
-        require(
-            activeValidation[msg.sender] == validationId,
-            "This content is not assigned to this wallet"
-        );
-        activeValidation[msg.sender] = 0;
+    /// @notice allows validators to be fired or resigned
+    /// @param demissionAddress is the address that will be revoked from validator role
+    function dismissValidation(address demissionAddress) external {
+        if (msg.sender == demissionAddress) {
+            removeValidatorFromValidation(demissionAddress);
+        } else {
+            require(
+                IRM.hasRole(BACKEND_ROLE, msg.sender) ||
+                    IRM.hasRole(ROLEMANAGER_CONTRACT, msg.sender),
+                "Only backend or role manager contract can set ban"
+            );
+            if (activeValidation[demissionAddress] != 0) {
+                removeValidatorFromValidation(demissionAddress);
+            }
+        }
+    }
+
+    /// @notice allows validators to dismiss a validation assignment
+    /// @param demissionAddress id of the content that will be dismissed
+    function removeValidatorFromValidation(address demissionAddress) internal {
+        uint validationId = activeValidation[demissionAddress];
+        //uint[] person = validations[validationId].validators;
+        activeValidation[demissionAddress] = 0;
         for (uint i; i < validations[validationId].validators.length; i++) {
             if (msg.sender == validations[validationId].validators[i]) {
-                validations[validationId].validators[i] = validations[
-                    validationId
-                ].validators[validations[validationId].validators.length - 1];
-                validations[validationId].validators.pop();
+                if (
+                    demissionAddress == validations[validationId].validators[i]
+                ) {
+                    validations[validationId].validators[i] = validations[
+                        validationId
+                    ].validators[
+                            validations[validationId].validators.length - 1
+                        ];
+                    validations[validationId].validators.pop();
+                }
             }
+            emit ValidatorRemovedFromValidation(
+                validations[validationId].tokenId,
+                demissionAddress,
+                validationId
+            );
+        }
+    }
+
+    /// @notice allows validators to dismiss a validation assignment
+    /// @param demissionAddress id of the content that will be dismissed
+    function dismissDispute(address demissionAddress) external {
+        if (msg.sender == demissionAddress) {
+            removeJurorFromDispute(demissionAddress);
+        } else {
+            require(
+                IRM.hasRole(BACKEND_ROLE, msg.sender) ||
+                    IRM.hasRole(ROLEMANAGER_CONTRACT, msg.sender),
+                "Only backend or role manager contract can set ban"
+            );
+            if (activeValidation[demissionAddress] != 0) {
+                removeJurorFromDispute(demissionAddress);
+            }
+        }
+    }
+
+    /// @notice allows validators to dismiss a validation assignment
+    /// @param demissionAddress id of the content that will be dismissed
+    function removeJurorFromDispute(address demissionAddress) internal {
+        uint caseId = activeDispute[demissionAddress];
+        activeDispute[demissionAddress] = 0;
+        for (uint i; i < disputes[caseId].jurors.length; i++) {
+            if (msg.sender == disputes[caseId].jurors[i]) {
+                if (demissionAddress == disputes[caseId].jurors[i]) {
+                    disputes[caseId].jurors[i] = disputes[caseId].jurors[
+                        disputes[caseId].jurors.length - 1
+                    ];
+                    disputes[caseId].jurors.pop();
+                }
+            }
+            emit JurorRemovedFromDispute(
+                disputes[caseId].tokenId,
+                demissionAddress,
+                caseId
+            );
         }
     }
 
@@ -620,8 +696,7 @@ contract Supervision is RoleController {
         //);
 
         address tokenOwner = udaoc.ownerOf(tokenId);
-        //make sure token owner is kyced and not banned
-        require(IRM.isKYCed(tokenOwner), "Token owner is not KYCed");
+        //make sure token owner is not banned
         require(!IRM.isBanned(tokenOwner), "Token owner is banned");
 
         // Change status to in validation
@@ -648,8 +723,7 @@ contract Supervision is RoleController {
             tokenOwner == msg.sender,
             "Only token owner can re-create validation"
         );
-        //make sure token owner is kyced and not banned
-        require(IRM.isKYCed(tokenOwner), "Token owner is not KYCed");
+        //make sure token owner is not banned
         require(!IRM.isBanned(tokenOwner), "Token owner is banned");
         // Get the latest validation for this token
         uint256 validationId = latestValidationOfToken[tokenId];
@@ -670,6 +744,8 @@ contract Supervision is RoleController {
     function assignValidation(
         uint256 validationId
     ) external onlyRole(VALIDATOR_ROLE) {
+        require(IRM.isKYCed(msg.sender), "You are not KYCed");
+        require(!IRM.isBanned(msg.sender), "You were banned");
         require(
             staker.checkExpireDateValidator(msg.sender) > block.timestamp,
             "Validation is expired"
@@ -692,10 +768,15 @@ contract Supervision is RoleController {
         );
         activeValidation[msg.sender] = validationId;
         validations[validationId].validators.push(msg.sender);
+        /// TODO Return if validation is full
+        ///if(validations[validationId].validators.length == requiredValidators) {
+        ///    isFull= true;
+        ///}
         emit ValidationAssigned(
             validations[validationId].tokenId,
             validationId,
             msg.sender
+            /// isFull
         );
     }
 

@@ -57,6 +57,8 @@ contract UDAOContent is
     // tokenId => is coaching refundable
     mapping(uint => bool) public coachingRefundable;
 
+    bool isKYCRequiredToCreateContent = false;
+
     event newPartAdded(uint tokenId, uint newPartId, uint newPartPrice);
     /// @notice This event is triggered if the contract manager updates the addresses.
     event AddressesUpdated(address isupvis);
@@ -104,6 +106,12 @@ contract UDAOContent is
         emit AddressesUpdated(contractManager.ISupVisAddress());
     }
 
+    function setKYCRequirementForCreateContent(
+        bool _status
+    ) external onlyRoles(administrator_roles) {
+        isKYCRequiredToCreateContent = _status;
+    }
+
     // TODO No name or description for individual NFT. Is this a problem?
     /// @notice Redeems a RedeemVoucher for an actual NFT, creating it in the process.
     function createContent(
@@ -120,8 +128,11 @@ contract UDAOContent is
         uint tokenId = _tokenIds.current();
         // make sure redeemer is redeeming
         require(voucher._redeemer == msg.sender, "You are not the redeemer");
-        //make sure redeemer is kyced
-        require(IRM.isKYCed(msg.sender), "You are not KYCed");
+        // KYC requirement is predetermined by admin roles.
+        if (isKYCRequiredToCreateContent) {
+            //make sure redeemer is kyced
+            require(IRM.isKYCed(msg.sender), "You are not KYCed");
+        }
         //make sure redeemer is not banned
         require(!IRM.isBanned(msg.sender), "Redeemer is banned!");
         //require(voucher.validationScore != 0, "Validation score cannot be 0");
@@ -197,8 +208,11 @@ contract UDAOContent is
             ownerOf(voucher.tokenId) == msg.sender,
             "You are not the owner of token"
         );
-        //make sure caller is kyced
-        require(IRM.isKYCed(msg.sender), "You are not KYCed");
+        // KYC requirement is predetermined by admin roles.
+        if (isKYCRequiredToCreateContent) {
+            //make sure redeemer is kyced
+            require(IRM.isKYCed(msg.sender), "You are not KYCed");
+        }
         //make sure caller is not banned
         require(!IRM.isBanned(msg.sender), "You are banned");
 
@@ -242,8 +256,11 @@ contract UDAOContent is
             ownerOf(tokenId) == msg.sender,
             "You are not the owner of token"
         );
-        //make sure caller is kyced
-        require(IRM.isKYCed(msg.sender), "You are not KYCed");
+        // KYC requirement is predetermined by admin roles.
+        if (isKYCRequiredToCreateContent) {
+            //make sure redeemer is kyced
+            require(IRM.isKYCed(msg.sender), "You are not KYCed");
+        }
         //make sure caller is not banned
         require(!IRM.isBanned(msg.sender), "You are banned");
         // make sure currency name is the same

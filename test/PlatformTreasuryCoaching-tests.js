@@ -66,8 +66,21 @@ async function reDeploy(reApplyRolesViaVoucher = true, isDexRequired = false) {
   account2 = replace.account2;
   account3 = replace.account3;
   contractPriceGetter = replace.contractPriceGetter;
-  const reApplyValidatorRoles = [validator, validator1, validator2, validator3, validator4, validator5];
-  const reApplyJurorRoles = [jurorMember, jurorMember1, jurorMember2, jurorMember3, jurorMember4];
+  const reApplyValidatorRoles = [
+    validator,
+    validator1,
+    validator2,
+    validator3,
+    validator4,
+    validator5,
+  ];
+  const reApplyJurorRoles = [
+    jurorMember,
+    jurorMember1,
+    jurorMember2,
+    jurorMember3,
+    jurorMember4,
+  ];
   const VALIDATOR_ROLE = ethers.utils.keccak256(
     ethers.utils.toUtf8Bytes("VALIDATOR_ROLE")
   );
@@ -707,131 +720,6 @@ describe("Platform Treasury Contract - Coaching", function () {
     await expect(
       contractPlatformTreasury.connect(contentBuyer).buyCoaching(0)
     ).to.revertedWith("Instructor is banned");
-  });
-
-  it("Should fail to buy coaching if instructer is not KYCed", async function () {
-    await reDeploy();
-
-    /// Set KYC
-    await contractRoleManager.setKYC(contentCreator.address, true);
-    await contractRoleManager.setKYC(contentBuyer.address, true);
-
-    /// part prices must be determined before creating content
-    const partPricesArray = [ethers.utils.parseEther("1")];
-
-    /// Create Voucher from redeem.js and use it for creating content
-    const createContentVoucherSample = await createContentVoucher(
-      contractUDAOContent,
-      backend,
-      contentCreator,
-      partPricesArray
-    );
-
-    /// Create content
-    await expect(
-      contractUDAOContent
-        .connect(contentCreator)
-        .createContent(createContentVoucherSample)
-    )
-      .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
-      .withArgs(
-        "0x0000000000000000000000000000000000000000",
-        contentCreator.address,
-        0
-      );
-    /// Start validation and finalize it
-    await runValidation(
-      contractSupervision,
-      backend,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      contentCreator
-    );
-
-    /// Send UDAO to the buyer's wallet
-    await contractUDAO.transfer(
-      contentBuyer.address,
-      ethers.utils.parseEther("100.0")
-    );
-    /// Content buyer needs to give approval to the platformtreasury
-    await contractUDAO
-      .connect(contentBuyer)
-      .approve(
-        contractPlatformTreasury.address,
-        ethers.utils.parseEther("999999999999.0")
-      );
-
-    /// Set KYC to false
-    await contractRoleManager.setKYC(contentCreator.address, false);
-
-    await expect(
-      contractPlatformTreasury.connect(contentBuyer).buyCoaching(0)
-    ).to.revertedWith("Instructor is not KYCed");
-  });
-
-  it("Should fail to buy coaching if buyer is not KYCed", async function () {
-    await reDeploy();
-
-    /// Set KYC
-    await contractRoleManager.setKYC(contentCreator.address, true);
-    await contractRoleManager.setKYC(contentBuyer.address, true);
-
-    /// part prices must be determined before creating content
-    const partPricesArray = [ethers.utils.parseEther("1")];
-
-    /// Create Voucher from redeem.js and use it for creating content
-    const createContentVoucherSample = await createContentVoucher(
-      contractUDAOContent,
-      backend,
-      contentCreator,
-      partPricesArray
-    );
-
-    /// Create content
-    await expect(
-      contractUDAOContent
-        .connect(contentCreator)
-        .createContent(createContentVoucherSample)
-    )
-      .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
-      .withArgs(
-        "0x0000000000000000000000000000000000000000",
-        contentCreator.address,
-        0
-      );
-    /// Start validation and finalize it
-    await runValidation(
-      contractSupervision,
-      backend,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      contentCreator
-    );
-
-    /// Send UDAO to the buyer's wallet
-    await contractUDAO.transfer(
-      contentBuyer.address,
-      ethers.utils.parseEther("100.0")
-    );
-    /// Content buyer needs to give approval to the platformtreasury
-    await contractUDAO
-      .connect(contentBuyer)
-      .approve(
-        contractPlatformTreasury.address,
-        ethers.utils.parseEther("999999999999.0")
-      );
-
-    await contractRoleManager.setKYC(contentBuyer.address, false);
-
-    await expect(
-      contractPlatformTreasury.connect(contentBuyer).buyCoaching(0)
-    ).to.revertedWith("You are not KYCed");
   });
 
   it("Should finalize coaching as learner", async function () {
