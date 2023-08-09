@@ -202,89 +202,115 @@ async function runValidation(
   validator3,
   validator4,
   validator5,
-  contentCreator
+  contentCreator,
+  tokenId = 0,
+  validationId = 1
 ) {
-  await expect(contractSupervision.connect(validator1).assignValidation(1))
+  await expect(
+    contractSupervision.connect(validator1).assignValidation(validationId)
+  )
     .to.emit(contractSupervision, "ValidationAssigned")
     .withArgs(
-      ethers.BigNumber.from(0),
-      ethers.BigNumber.from(1),
+      ethers.BigNumber.from(tokenId),
+      ethers.BigNumber.from(validationId),
       validator1.address
     );
-  await expect(contractSupervision.connect(validator2).assignValidation(1))
+  await expect(
+    contractSupervision.connect(validator2).assignValidation(validationId)
+  )
     .to.emit(contractSupervision, "ValidationAssigned")
     .withArgs(
-      ethers.BigNumber.from(0),
-      ethers.BigNumber.from(1),
+      ethers.BigNumber.from(tokenId),
+      ethers.BigNumber.from(validationId),
       validator2.address
     );
-  await expect(contractSupervision.connect(validator3).assignValidation(1))
+  await expect(
+    contractSupervision.connect(validator3).assignValidation(validationId)
+  )
     .to.emit(contractSupervision, "ValidationAssigned")
     .withArgs(
-      ethers.BigNumber.from(0),
-      ethers.BigNumber.from(1),
+      ethers.BigNumber.from(tokenId),
+      ethers.BigNumber.from(validationId),
       validator3.address
     );
-  await expect(contractSupervision.connect(validator4).assignValidation(1))
+  await expect(
+    contractSupervision.connect(validator4).assignValidation(validationId)
+  )
     .to.emit(contractSupervision, "ValidationAssigned")
     .withArgs(
-      ethers.BigNumber.from(0),
-      ethers.BigNumber.from(1),
+      ethers.BigNumber.from(tokenId),
+      ethers.BigNumber.from(validationId),
       validator4.address
     );
-  await expect(contractSupervision.connect(validator5).assignValidation(1))
+  await expect(
+    contractSupervision.connect(validator5).assignValidation(validationId)
+  )
     .to.emit(contractSupervision, "ValidationAssigned")
     .withArgs(
-      ethers.BigNumber.from(0),
-      ethers.BigNumber.from(1),
+      ethers.BigNumber.from(tokenId),
+      ethers.BigNumber.from(validationId),
       validator5.address
     );
 
-  await expect(contractSupervision.connect(validator1).sendValidation(1, true))
+  await expect(
+    contractSupervision.connect(validator1).sendValidation(validationId, true)
+  )
     .to.emit(contractSupervision, "ValidationResultSent")
     .withArgs(
-      ethers.BigNumber.from(0),
-      ethers.BigNumber.from(1),
+      ethers.BigNumber.from(tokenId),
+      ethers.BigNumber.from(validationId),
       validator1.address,
       true
     );
-  await expect(contractSupervision.connect(validator2).sendValidation(1, true))
+  await expect(
+    contractSupervision.connect(validator2).sendValidation(validationId, true)
+  )
     .to.emit(contractSupervision, "ValidationResultSent")
     .withArgs(
-      ethers.BigNumber.from(0),
-      ethers.BigNumber.from(1),
+      ethers.BigNumber.from(tokenId),
+      ethers.BigNumber.from(validationId),
       validator2.address,
       true
     );
-  await expect(contractSupervision.connect(validator3).sendValidation(1, true))
+  await expect(
+    contractSupervision.connect(validator3).sendValidation(validationId, true)
+  )
     .to.emit(contractSupervision, "ValidationResultSent")
     .withArgs(
-      ethers.BigNumber.from(0),
-      ethers.BigNumber.from(1),
+      ethers.BigNumber.from(tokenId),
+      ethers.BigNumber.from(validationId),
       validator3.address,
       true
     );
-  await expect(contractSupervision.connect(validator4).sendValidation(1, true))
+  await expect(
+    contractSupervision.connect(validator4).sendValidation(validationId, true)
+  )
     .to.emit(contractSupervision, "ValidationResultSent")
     .withArgs(
-      ethers.BigNumber.from(0),
-      ethers.BigNumber.from(1),
+      ethers.BigNumber.from(tokenId),
+      ethers.BigNumber.from(validationId),
       validator4.address,
       true
     );
-  await expect(contractSupervision.connect(validator5).sendValidation(1, false))
+  await expect(
+    contractSupervision.connect(validator5).sendValidation(validationId, false)
+  )
     .to.emit(contractSupervision, "ValidationResultSent")
     .withArgs(
-      ethers.BigNumber.from(0),
-      ethers.BigNumber.from(1),
+      ethers.BigNumber.from(tokenId),
+      ethers.BigNumber.from(validationId),
       validator5.address,
       false
     );
   await expect(
-    contractSupervision.connect(contentCreator).finalizeValidation(1)
+    contractSupervision.connect(contentCreator).finalizeValidation(validationId)
   )
     .to.emit(contractSupervision, "ValidationEnded")
-    .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), true);
+    .withArgs(
+      ethers.BigNumber.from(tokenId),
+      ethers.BigNumber.from(validationId),
+      true
+    );
 }
 
 async function createContentVoucher(
@@ -1283,7 +1309,6 @@ describe("Platform Treasury Contract - Content", function () {
       validator5,
       contentCreator
     );
-    console.log("S3");
     /// Send UDAO to the buyer's wallet
     await contractUDAO.transfer(
       contentBuyer.address,
@@ -1387,5 +1412,173 @@ describe("Platform Treasury Contract - Content", function () {
 
     const numArray = result.map((x) => x.map((y) => y.toNumber()));
     expect(numArray).to.eql([[0, 0]]);
+  });
+
+  it("Should a user able to buy multiple content", async function () {
+    await reDeploy();
+
+    /// Set KYC
+    await contractRoleManager.setKYC(contentCreator.address, true);
+    await contractRoleManager.setKYC(contentBuyer.address, true);
+
+    /// part prices must be determined before creating content
+    const partPricesArray1stContent = [
+      ethers.utils.parseEther("2"),
+      ethers.utils.parseEther("1"),
+      ethers.utils.parseEther("1"),
+    ];
+    const partPricesArray2ndContent = [
+      ethers.utils.parseEther("3"),
+      ethers.utils.parseEther("2"),
+    ];
+    const partPricesArray3rdContent = [
+      ethers.utils.parseEther("5"),
+      ethers.utils.parseEther("1"),
+      ethers.utils.parseEther("3"),
+    ];
+
+    /// Create Voucher from redeem.js and use it for creating content
+    const createContentVoucherSample1stContent = await createContentVoucher(
+      contractUDAOContent,
+      backend,
+      contentCreator,
+      partPricesArray1stContent
+    );
+    const createContentVoucherSample2ndContent = await createContentVoucher(
+      contractUDAOContent,
+      backend,
+      contentCreator,
+      partPricesArray2ndContent
+    );
+    const createContentVoucherSample3rdContent = await createContentVoucher(
+      contractUDAOContent,
+      backend,
+      contentCreator,
+      partPricesArray3rdContent
+    );
+
+    /// Create content
+    //1st content
+    await expect(
+      contractUDAOContent
+        .connect(contentCreator)
+        .createContent(createContentVoucherSample1stContent)
+    )
+      .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
+      .withArgs(
+        "0x0000000000000000000000000000000000000000",
+        contentCreator.address,
+        0
+      );
+    //2nd content
+    await expect(
+      contractUDAOContent
+        .connect(contentCreator)
+        .createContent(createContentVoucherSample2ndContent)
+    )
+      .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
+      .withArgs(
+        "0x0000000000000000000000000000000000000000",
+        contentCreator.address,
+        1
+      );
+    //3rd content
+    await expect(
+      contractUDAOContent
+        .connect(contentCreator)
+        .createContent(createContentVoucherSample3rdContent)
+    )
+      .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
+      .withArgs(
+        "0x0000000000000000000000000000000000000000",
+        contentCreator.address,
+        2
+      );
+
+    /// Start validation and finalize it for 1st content
+    await runValidation(
+      contractSupervision,
+      backend,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
+      contentCreator
+    );
+    /// Start validation and finalize it for 2nd content
+    await runValidation(
+      contractSupervision,
+      backend,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
+      contentCreator,
+      (tokenId = 1),
+      (validationId = 2)
+    );
+    /// Start validation and finalize it for 2nd content
+    await runValidation(
+      contractSupervision,
+      backend,
+      validator1,
+      validator2,
+      validator3,
+      validator4,
+      validator5,
+      contentCreator,
+      (tokenId = 2),
+      (validationId = 3)
+    );
+
+    /// Send UDAO to the buyer's wallet
+    await contractUDAO.transfer(
+      contentBuyer.address,
+      ethers.utils.parseEther("100.0")
+    );
+    /// Content buyer needs to give approval to the platformtreasury
+    await contractUDAO
+      .connect(contentBuyer)
+      .approve(
+        contractPlatformTreasury.address,
+        ethers.utils.parseEther("999999999999.0")
+      );
+
+    await contractPlatformTreasury
+      .connect(contentBuyer)
+      .buyContent(
+        [0, 1, 2],
+        [true, true, false],
+        [[1], [1], [1, 2]],
+        [
+          ethers.constants.AddressZero,
+          validator1.address,
+          ethers.constants.AddressZero,
+        ]
+      );
+    const resultForBuyer = await contractPlatformTreasury
+      .connect(contentBuyer)
+      .getOwnedContent(contentBuyer.address);
+
+    const numArrayForBuyer = resultForBuyer.map((x) =>
+      x.map((y) => y.toNumber())
+    );
+    expect(numArrayForBuyer).to.eql([
+      [0, 0], // 1st content, part 0 (Full Content)
+      //[1, 0], // 2nd content, part 0 (Full Content) but it is a gift
+      [2, 1], // 3rd content, part 1 (Partial Content)
+      [2, 2], // 3rd content, part 2 (Partial Content)
+    ]);
+
+    const resultForGiftReceiver = await contractPlatformTreasury
+      .connect(contentBuyer)
+      .getOwnedContent(validator1.address);
+
+    const numArrayForGiftReceiver = resultForGiftReceiver.map((x) =>
+      x.map((y) => y.toNumber())
+    );
+    expect(numArrayForGiftReceiver).to.eql([[1, 0]]);
   });
 });
