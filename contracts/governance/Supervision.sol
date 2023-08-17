@@ -407,10 +407,13 @@ contract Supervision is RoleController {
         uint256 caseId,
         bool result
     ) external onlyRole(JUROR_ROLE) {
+        /// @dev Below two requires are protecting against reentrancy
         require(
             activeDispute[msg.sender] == caseId,
             "This dispute is not assigned to this wallet"
         );
+        require(activeDispute[msg.sender] != 0, "You are not assigned to any dispute");
+
         activeDispute[msg.sender] = 0;
         if (result) {
             disputes[caseId].acceptVoteCount++;
@@ -526,12 +529,15 @@ contract Supervision is RoleController {
         uint validationId,
         bool result
     ) external onlyRole(VALIDATOR_ROLE) {
+        /// @dev Below two requires are protecting against reentrancy
         require(
             activeValidation[msg.sender] == validationId,
             "This content is not assigned to this wallet"
         );
-        validationCount[msg.sender]++;
+        require(activeValidation[msg.sender] != 0, "You are not assigned to any validation");
         activeValidation[msg.sender] = 0;
+        validationCount[msg.sender]++;
+        
         if (result) {
             validations[validationId].acceptVoteCount++;
         }
