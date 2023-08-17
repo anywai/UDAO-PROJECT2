@@ -517,11 +517,11 @@ contract Supervision is RoleController {
         );
         require(activeValidation[msg.sender] != 0, "You are not assigned to any validation");
         activeValidation[msg.sender] = 0;
-        validationCount[msg.sender]++;
+        validationCount[msg.sender]++; //?
         
         if (result) {
             validations[validationId].acceptVoteCount++;
-        }
+        } //else??
         validations[validationId].isVoted[msg.sender] = true;
         validations[validationId].vote[msg.sender] = result;
         validations[validationId].validationCount++;
@@ -724,7 +724,7 @@ contract Supervision is RoleController {
         //make sure token owner is not banned
         require(!IRM.isBanned(tokenOwner), "Token owner is banned");
 
-        // Change status to in validation
+        // Change status to 2 = in validation
         isValidated[tokenId] = 2;
         Validation storage validation = validations.push();
         validation.id = validations.length - 1;
@@ -794,9 +794,9 @@ contract Supervision is RoleController {
         activeValidation[msg.sender] = validationId;
         validations[validationId].validators.push(msg.sender);
         /// TODO Return if validation is full
-        ///if(validations[validationId].validators.length == requiredValidators) {
-        ///    isFull= true;
-        ///}
+        /// if(validations[validationId].validators.length == requiredValidators) {
+        ///     isFull= true;
+        /// }
         emit ValidationAssigned(
             validations[validationId].tokenId,
             validationId,
