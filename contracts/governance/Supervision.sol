@@ -502,22 +502,6 @@ contract Supervision is RoleController {
         emit LateJurorScoreRecorded(caseId, juror);
     }
 
-    /* TODO
-    function replaceBannedJurors(address bannedJuror, uint256 caseId) external {
-        
-         for (uint256 i = 0; i < disputes[caseId].jurors.length; i++) {
-            if (disputes[caseId].jurors[i] == bannedJuror) {
-                // Move the last element to the current position
-                disputes[caseId].jurors[i] = disputes[caseId].jurors[disputes[caseId].jurors.length - 1];
-                // Reduce the array size by one
-                disputes[caseId].jurors.pop();
-                // Exit the loop since we found and removed the address
-                break;
-            }
-        }
-    }
-    */
-
     // Validation functions
     /// Sends validation result of validator to blockchain
     /// @param validationId id of validation
@@ -610,6 +594,7 @@ contract Supervision is RoleController {
     /// @param demissionAddress is the address that will be revoked from validator role
     function dismissValidation(address demissionAddress) external {
         if (msg.sender == demissionAddress) {
+            //why  we dont check is, activeValidation[demissionAddress] != 0 ?
             removeValidatorFromValidation(demissionAddress);
         } else {
             require(
@@ -622,6 +607,36 @@ contract Supervision is RoleController {
             }
         }
     }
+    
+    /* SIKINTI TODO
+    1 = true;
+    2 = true;
+    validations[validationId].validationCount = 2
+        2 banladık.
+        ---2 nin yerine 4. kişi geldi.---
+    3 = true;
+        validations[validationId].validationCount = 3
+    finalizeValidation() çalıştı.
+    4. kişi henüz oy kullanmadı?!?!?!?!
+    */
+    
+    /* Muhtemel Çözüm TODO
+    1 = true;
+    2 = true;
+    validations[validationId].validationCount = 2
+    2 banladık.
+    validations[validationId].validationCount--;
+    eğer banlanan true dediyse:
+     validations[validationId].acceptVoteCount--;
+     else:
+     validations[validationId].rejectVoteCount--;
+    2 nin yerine 4. kişi geldi.
+    3 = true;
+    validations[validationId].validationCount = 2
+    finalizeValidation() çalışmaz.
+    4 == false;
+    finalizeValidaiton() çalışır.
+    */
 
     /// @notice allows validators to dismiss a validation assignment
     /// @param demissionAddress id of the content that will be dismissed
