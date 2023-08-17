@@ -168,6 +168,9 @@ contract Supervision is RoleController {
         RoleController(rmAddress)
     {
         udaoc = IUDAOC(udaocAddress);
+        /* @dev disputes start from 1, meaning that the first dispute will have id 1.
+        This is because we are assigning 0 if juror is not assigned to any dispute.
+        */
         disputes.push();
         validations.push();
     }
