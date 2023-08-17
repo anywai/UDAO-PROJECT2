@@ -141,6 +141,7 @@ contract Supervision is RoleController {
         uint resultDate;
         uint validationScore;
         uint validatorScore; // successfulValidation * validationScore
+        bool isFinalized;
     }
     Validation[] validations;
 
@@ -354,10 +355,6 @@ contract Supervision is RoleController {
             _wasntTheValidator(caseId, msg.sender),
             "You can't assign content you validated!"
         );
-        require(
-            _wasntTheOwner(caseId, msg.sender),
-            "You can't assign content that you own!"
-        );
 
         activeDispute[msg.sender] = caseId;
         disputes[caseId].jurors.push(msg.sender);
@@ -559,6 +556,8 @@ contract Supervision is RoleController {
             validations[validationId].validationCount >= requiredValidators,
             "Not enough validation"
         );
+        require(validations[validationId].isFinalized == false, "Validation is already finalized");
+        validations[validationId].isFinalized = true;
         if (
             validations[validationId].acceptVoteCount >= minAcceptVoteValidation
         ) {
