@@ -424,6 +424,7 @@ contract Supervision is RoleController {
         /// TODO replaceBannedJurors(); //add this function to contract and after that there will be no use of finalizeDispute();
         if (disputes[caseId].isFinalized == false) {
             if (
+                /// @dev Dispute can be finalized if majority of jurors voted in favor or against
                 disputes[caseId].voteCount >= requiredJurors ||
                 disputes[caseId].acceptVoteCount >= minMajortyVote ||
                 disputes[caseId].rejectVoteCount >= minMajortyVote
@@ -431,6 +432,7 @@ contract Supervision is RoleController {
                 _finalizeDispute(caseId);
             }
         } else {
+            /// @dev Records the score of a juror if dispute is already finalized
             _recordLateJurorScore(caseId, msg.sender);
         }
     }
