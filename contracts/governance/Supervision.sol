@@ -200,7 +200,7 @@ contract Supervision is RoleController {
     }
 
     // Validation setters
-    function setUDAOC(address udaocAddress) external onlyRole(FOUNDATION_ROLE) {
+    function setUDAOC(address udaocAddress) external onlyRole(BACKEND_ROLE) {
         udaoc = IUDAOC(udaocAddress);
     }
 
