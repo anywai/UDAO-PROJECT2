@@ -93,6 +93,9 @@ contract UDAOContent is
         bytes signature;
     }
 
+    /// @notice Allows backend to set the contract manager address
+    /// @dev This function is needed because the contract manager address is not known at compile time.
+    /// @param _contractManager The address of the contract manager
     function setContractManager(
         address _contractManager
     ) external onlyRole(BACKEND_ROLE) {
@@ -106,6 +109,8 @@ contract UDAOContent is
         emit AddressesUpdated(contractManager.ISupVisAddress());
     }
 
+    /// @notice Allows backend to set the KYC requirement for creating content
+    /// @param _status The status of the KYC requirement
     function setKYCRequirementForCreateContent(
         bool _status
     ) external onlyRoles(administrator_roles) {
@@ -114,6 +119,7 @@ contract UDAOContent is
 
     // TODO No name or description for individual NFT. Is this a problem?
     /// @notice Redeems a RedeemVoucher for an actual NFT, creating it in the process.
+    /// @param voucher A RedeemVoucher describing an unminted NFT.
     function createContent(
         RedeemVoucher calldata voucher
     ) public whenNotPaused {
@@ -135,28 +141,26 @@ contract UDAOContent is
         }
         //make sure redeemer is not banned
         require(!IRM.isBanned(msg.sender), "Redeemer is banned!");
-        //require(voucher.validationScore != 0, "Validation score cannot be 0");
+        require(voucher.validationScore != 0, "Validation score cannot be 0");
         // make sure the content price is not 0
         require(voucher._contentPrice[0] != 0, "Content price cannot be 0");
-        // make sure the content price is not 0
+        // make sure the coaching price is not 0
         require(voucher._coachingPrice != 0, "Coaching price cannot be 0");
-        /*
-        // make sure the content price is not 0
+        
         require(
-            voucher._coachingCurrencyName != "",
+            !isCalldataStringEmpty(voucher._coachingCurrencyName),
             "Coaching currency cannot be empty"
         );
-        // make sure the content price is not 0
         require(
-            voucher._currencyName != "",
+            !isCalldataStringEmpty(voucher._currencyName),
             "Content currency cannot be empty"
         );
-        // make sure the content price is not 0
+       
         require(
-            voucher._uri != "",
+            !isCalldataStringEmpty(voucher._uri),
             "Content URI cannot be empty"
         );
-        */
+        
         coachingEnabled[tokenId] = voucher._isCoachingEnabled;
         coachingRefundable[tokenId] = voucher._isCoachingRefundable;
 
@@ -183,6 +187,12 @@ contract UDAOContent is
         _tokenIds.increment();
 
         ISupVis.createValidation(tokenId, voucher.validationScore);
+    }
+
+    /// @notice Checks if a string is empty
+    /// @param input The string to check
+    function isCalldataStringEmpty(string calldata input) internal pure returns (bool) {
+        return keccak256(abi.encodePacked(input)) == keccak256(abi.encodePacked(""));
     }
 
     /// Allows token owners to burn the token
