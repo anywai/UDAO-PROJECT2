@@ -121,6 +121,8 @@ async function reDeploy(reApplyRolesViaVoucher = true, isDexRequired = false) {
     }
   }
 }
+
+
 async function grantValidatorRole(
   account,
   contractRoleManager,
@@ -324,6 +326,42 @@ async function setupGovernanceMember(
       ethers.utils.parseEther("300")
     );
 }
+async function createContentVoucher(
+  contractUDAOContent,
+  backend,
+  contentCreator,
+  partPrices,
+  coachingEnabled = true,
+  coachingRefundable = true,
+  redeemType = 1,
+  validationScore = 1
+) {
+  // Get the current block timestamp
+  const block = await ethers.provider.getBlock("latest");
+  // add some minutes to it and convert it to a BigNumber
+  const futureBlock = block.timestamp + 1000;
+  // convert it to a BigNumber
+  const futureBlockBigNumber = ethers.BigNumber.from(futureBlock);
+  
+  return await new Redeem({
+    contract: contractUDAOContent,
+    signer: backend,
+  }).createVoucher(
+    futureBlockBigNumber,
+    partPrices,
+    0,
+    "udao",
+    "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
+    contentCreator.address,
+    ethers.utils.parseEther("1"),
+    "udao",
+    coachingEnabled,
+    coachingRefundable,
+    redeemType,
+    validationScore
+  );
+}
+
 async function _createContent(
   contractRoleManager,
   contractUDAOContent,
@@ -335,7 +373,10 @@ async function _createContent(
   validator4,
   validator5,
   contentCreator,
-  validationScore = 0
+  coachingEnabled = true,
+  coachingRefundable = true,
+  redeemType = 1,
+  validationScore = 1
 ) {
   /// Set KYC
   await contractRoleManager.setKYC(contentCreator.address, true);
@@ -352,6 +393,9 @@ async function _createContent(
     backend,
     contentCreator,
     partPricesArray,
+    coachingEnabled,
+    coachingRefundable,
+    redeemType,
     validationScore
   );
 
@@ -449,38 +493,7 @@ async function makeCoachingPurchase(
   return coachingId;
 }
 
-async function createContentVoucher(
-  contractUDAOContent,
-  backend,
-  contentCreator,
-  partPrices,
-  validationScore = 0
-) {
-  // Get the current block timestamp
-  const block = await ethers.provider.getBlock("latest");
-  // add some minutes to it and convert it to a BigNumber
-  const futureBlock = block.timestamp + 1000;
-  // convert it to a BigNumber
-  const futureBlockBigNumber = ethers.BigNumber.from(futureBlock);
 
-  return await new Redeem({
-    contract: contractUDAOContent,
-    signer: backend,
-  }).createVoucher(
-    futureBlockBigNumber,
-    partPrices,
-    0,
-    "udao",
-    "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
-    contentCreator.address,
-    ethers.utils.parseEther("1"),
-    "udao",
-    true,
-    true,
-    1,
-    validationScore
-  );
-}
 
 describe("Platform Treasury General", function () {
   it("Should allow backend to set new governance treasury address", async function () {
@@ -559,6 +572,10 @@ describe("Platform Treasury General", function () {
 
   it("Should allow governance to withdraw funds from the treasury after a content purchase", async function () {
     await reDeploy();
+
+    await contractRoleManager.setKYC(contentCreator.address, true);
+    await contractRoleManager.setKYC(contentBuyer1.address, true);
+
     /// @dev Setup governance member
     await setupGovernanceMember(
       contractRoleManager,
@@ -604,18 +621,30 @@ describe("Platform Treasury General", function () {
     );
     await checkAccountUDAOVpBalanceAndDelegate(contractUDAOVp, jurorCandidate);
     // Create content
-    await _createContent(
-      contractRoleManager,
+    /// part prices must be determined before creating content
+    const partPricesArray = [
+      ethers.utils.parseEther("1"),
+      ethers.utils.parseEther("1"),
+    ];
+    /// Create Voucher from redeem.js and use it for creating content
+    const createContentVoucherSample = await createContentVoucher(
       contractUDAOContent,
-      contractSupervision,
       backend,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      contentCreator
+      contentCreator,
+      partPricesArray
     );
+    /// Create content
+    await expect(
+      contractUDAOContent
+        .connect(contentCreator)
+        .createContent(createContentVoucherSample)
+    )
+      .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
+      .withArgs(
+        "0x0000000000000000000000000000000000000000",
+        contentCreator.address,
+        0
+      );
     // Make a content purchase to gather funds for governance
     await makeContentPurchase(
       contractPlatformTreasury,

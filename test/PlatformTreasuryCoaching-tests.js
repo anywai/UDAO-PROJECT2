@@ -290,7 +290,11 @@ async function createContentVoucher(
   contractUDAOContent,
   backend,
   contentCreator,
-  partPrices
+  partPrices,
+  coachingEnabled = true,
+  coachingRefundable = true,
+  redeemType = 1,
+  validationScore = 1
 ) {
   // Get the current block timestamp
   const block = await ethers.provider.getBlock("latest");
@@ -311,10 +315,10 @@ async function createContentVoucher(
     contentCreator.address,
     ethers.utils.parseEther("1"),
     "udao",
-    true,
-    true,
-    1,
-    0
+    coachingEnabled,
+    coachingRefundable,
+    redeemType,
+    validationScore
   );
 }
 
@@ -493,7 +497,7 @@ describe("Platform Treasury Contract - Coaching", function () {
       false,
       false,
       1,
-      0
+      1
     );
 
     /// Create content
@@ -754,7 +758,7 @@ describe("Platform Treasury Contract - Coaching", function () {
       true,
       true,
       1,
-      0
+      1
     );
 
     /// Create content
@@ -850,7 +854,7 @@ describe("Platform Treasury Contract - Coaching", function () {
       true,
       true,
       1,
-      0
+      1
     );
 
     /// Create content
@@ -1657,7 +1661,7 @@ describe("Platform Treasury Contract - Coaching", function () {
       true,
       true,
       1,
-      0
+      1
     );
 
     /// Create content
@@ -1828,7 +1832,7 @@ describe("Platform Treasury Contract - Coaching", function () {
       true,
       true,
       1,
-      0
+      1
     );
 
     /// Create content
@@ -2005,7 +2009,7 @@ describe("Platform Treasury Contract - Coaching", function () {
       true,
       false,
       1,
-      0
+      1
     );
     /// Create content
     await expect(

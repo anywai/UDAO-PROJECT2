@@ -196,7 +196,8 @@ async function createContentVoucher(
   partPrices,
   coachingEnabled = true,
   coachingRefundable = true,
-  redeemType = 1
+  redeemType = 1,
+  validationScore = 1
 ) {
   // Get the current block timestamp
   const block = await ethers.provider.getBlock("latest");
@@ -220,7 +221,7 @@ async function createContentVoucher(
     coachingEnabled,
     coachingRefundable,
     redeemType,
-    0
+    validationScore
   );
 }
 

@@ -322,7 +322,11 @@ async function createContent(
     contractUDAOContent,
     backend,
     contentCreator,
-    partPricesArray
+    partPricesArray,
+    coachingEnabled = true,
+    coachingRefundable = true,
+    redeemType = 1,
+    validationScore = 1
   );
   await expect(
     contractUDAOContent
@@ -353,7 +357,10 @@ async function createContentVoucher(
   backend,
   contentCreator,
   partPrices,
-  score = 0
+  coachingEnabled = true,
+  coachingRefundable = true,
+  redeemType = 1,
+  validationScore = 1
 ) {
   // Get the current block timestamp
   const block = await ethers.provider.getBlock("latest");
@@ -374,10 +381,10 @@ async function createContentVoucher(
     contentCreator.address,
     ethers.utils.parseEther("1"),
     "udao",
-    true,
-    true,
-    1,
-    score
+    coachingEnabled,
+    coachingRefundable,
+    redeemType,
+    validationScore
   );
 }
 /// TESTS-----------------------------------------------------------------------
@@ -706,7 +713,10 @@ describe("Supervision Contract", function () {
       backend,
       contentCreator,
       partPricesArray,
-      50
+      coachingEnabled = true,
+      coachingRefundable = true,
+      redeemType = 1,
+      validationScore = 50
     );
     /// set kyc for content creator
     await contractRoleManager.setKYC(contentCreator.address, true);
@@ -840,7 +850,10 @@ describe("Supervision Contract", function () {
       backend,
       contentCreator,
       partPricesArray,
-      50
+      coachingEnabled = true,
+      coachingRefundable = true,
+      redeemType = 1,
+      validationScore = 50
     );
     /// set kyc for content creator
     await contractRoleManager.setKYC(contentCreator.address, true);

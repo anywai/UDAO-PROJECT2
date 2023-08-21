@@ -334,10 +334,10 @@ describe("Uniswap DEX Tests", function () {
       contentCreator.address,
       ethers.utils.parseEther("2"),
       "udao",
-      true,
-      true,
-      1,
-      0
+      coachingEnabled = true,
+      coachingRefundable = true,
+      redeemType = 1,
+      validationScore = 1
     );
 
     /// Create content
@@ -447,10 +447,10 @@ describe("Uniswap DEX Tests", function () {
       contentCreator.address,
       [10],
       "usd",
-      true,
-      true,
-      1,
-      0
+      coachingEnabled = true,
+      coachingRefundable = true,
+      redeemType = 1,
+      validationScore = 1
     );
 
     /// Create content
