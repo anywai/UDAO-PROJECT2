@@ -141,6 +141,7 @@ contract Supervision is RoleController {
         uint resultDate;
         uint validationScore;
         uint validatorScore; // successfulValidation * validationScore
+        bool isFinalized;
     }
     Validation[] validations;
 
@@ -168,6 +169,9 @@ contract Supervision is RoleController {
         RoleController(rmAddress)
     {
         udaoc = IUDAOC(udaocAddress);
+        /* @dev disputes start from 1, meaning that the first dispute will have id 1.
+        This is because we are assigning 0 if juror is not assigned to any dispute.
+        */
         disputes.push();
         validations.push();
     }
@@ -200,7 +204,7 @@ contract Supervision is RoleController {
     }
 
     // Validation setters
-    function setUDAOC(address udaocAddress) external onlyRole(FOUNDATION_ROLE) {
+    function setUDAOC(address udaocAddress) external onlyRole(BACKEND_ROLE) {
         udaoc = IUDAOC(udaocAddress);
     }
 
@@ -351,10 +355,6 @@ contract Supervision is RoleController {
             _wasntTheValidator(caseId, msg.sender),
             "You can't assign content you validated!"
         );
-        require(
-            _wasntTheOwner(caseId, msg.sender),
-            "You can't assign content that you own!"
-        );
 
         activeDispute[msg.sender] = caseId;
         disputes[caseId].jurors.push(msg.sender);
@@ -404,10 +404,13 @@ contract Supervision is RoleController {
         uint256 caseId,
         bool result
     ) external onlyRole(JUROR_ROLE) {
+        /// @dev Below two requires are protecting against reentrancy
         require(
             activeDispute[msg.sender] == caseId,
             "This dispute is not assigned to this wallet"
         );
+        require(activeDispute[msg.sender] != 0, "You are not assigned to any dispute");
+
         activeDispute[msg.sender] = 0;
         if (result) {
             disputes[caseId].acceptVoteCount++;
@@ -421,6 +424,7 @@ contract Supervision is RoleController {
         /// TODO replaceBannedJurors(); //add this function to contract and after that there will be no use of finalizeDispute();
         if (disputes[caseId].isFinalized == false) {
             if (
+                /// @dev Dispute can be finalized if majority of jurors voted in favor or against
                 disputes[caseId].voteCount >= requiredJurors ||
                 disputes[caseId].acceptVoteCount >= minMajortyVote ||
                 disputes[caseId].rejectVoteCount >= minMajortyVote
@@ -428,6 +432,7 @@ contract Supervision is RoleController {
                 _finalizeDispute(caseId);
             }
         } else {
+            /// @dev Records the score of a juror if dispute is already finalized
             _recordLateJurorScore(caseId, msg.sender);
         }
     }
@@ -497,22 +502,6 @@ contract Supervision is RoleController {
         emit LateJurorScoreRecorded(caseId, juror);
     }
 
-    /* TODO
-    function replaceBannedJurors(address bannedJuror, uint256 caseId) external {
-        
-         for (uint256 i = 0; i < disputes[caseId].jurors.length; i++) {
-            if (disputes[caseId].jurors[i] == bannedJuror) {
-                // Move the last element to the current position
-                disputes[caseId].jurors[i] = disputes[caseId].jurors[disputes[caseId].jurors.length - 1];
-                // Reduce the array size by one
-                disputes[caseId].jurors.pop();
-                // Exit the loop since we found and removed the address
-                break;
-            }
-        }
-    }
-    */
-
     // Validation functions
     /// Sends validation result of validator to blockchain
     /// @param validationId id of validation
@@ -521,15 +510,18 @@ contract Supervision is RoleController {
         uint validationId,
         bool result
     ) external onlyRole(VALIDATOR_ROLE) {
+        /// @dev Below two requires are protecting against reentrancy
         require(
             activeValidation[msg.sender] == validationId,
             "This content is not assigned to this wallet"
         );
-        validationCount[msg.sender]++;
+        require(activeValidation[msg.sender] != 0, "You are not assigned to any validation");
         activeValidation[msg.sender] = 0;
+        validationCount[msg.sender]++; //?
+        
         if (result) {
             validations[validationId].acceptVoteCount++;
-        }
+        } //else??
         validations[validationId].isVoted[msg.sender] = true;
         validations[validationId].vote[msg.sender] = result;
         validations[validationId].validationCount++;
@@ -548,6 +540,8 @@ contract Supervision is RoleController {
             validations[validationId].validationCount >= requiredValidators,
             "Not enough validation"
         );
+        require(validations[validationId].isFinalized == false, "Validation is already finalized");
+        validations[validationId].isFinalized = true;
         if (
             validations[validationId].acceptVoteCount >= minAcceptVoteValidation
         ) {
@@ -600,6 +594,7 @@ contract Supervision is RoleController {
     /// @param demissionAddress is the address that will be revoked from validator role
     function dismissValidation(address demissionAddress) external {
         if (msg.sender == demissionAddress) {
+            //why  we dont check is, activeValidation[demissionAddress] != 0 ?
             removeValidatorFromValidation(demissionAddress);
         } else {
             require(
@@ -612,6 +607,36 @@ contract Supervision is RoleController {
             }
         }
     }
+    
+    /* SIKINTI TODO
+    1 = true;
+    2 = true;
+    validations[validationId].validationCount = 2
+        2 banladık.
+        ---2 nin yerine 4. kişi geldi.---
+    3 = true;
+        validations[validationId].validationCount = 3
+    finalizeValidation() çalıştı.
+    4. kişi henüz oy kullanmadı?!?!?!?!
+    */
+    
+    /* Muhtemel Çözüm TODO
+    1 = true;
+    2 = true;
+    validations[validationId].validationCount = 2
+    2 banladık.
+    validations[validationId].validationCount--;
+    eğer banlanan true dediyse:
+     validations[validationId].acceptVoteCount--;
+     else:
+     validations[validationId].rejectVoteCount--;
+    2 nin yerine 4. kişi geldi.
+    3 = true;
+    validations[validationId].validationCount = 2
+    finalizeValidation() çalışmaz.
+    4 == false;
+    finalizeValidaiton() çalışır.
+    */
 
     /// @notice allows validators to dismiss a validation assignment
     /// @param demissionAddress id of the content that will be dismissed
@@ -699,7 +724,7 @@ contract Supervision is RoleController {
         //make sure token owner is not banned
         require(!IRM.isBanned(tokenOwner), "Token owner is banned");
 
-        // Change status to in validation
+        // Change status to 2 = in validation
         isValidated[tokenId] = 2;
         Validation storage validation = validations.push();
         validation.id = validations.length - 1;
@@ -769,9 +794,9 @@ contract Supervision is RoleController {
         activeValidation[msg.sender] = validationId;
         validations[validationId].validators.push(msg.sender);
         /// TODO Return if validation is full
-        ///if(validations[validationId].validators.length == requiredValidators) {
-        ///    isFull= true;
-        ///}
+        /// if(validations[validationId].validators.length == requiredValidators) {
+        ///     isFull= true;
+        /// }
         emit ValidationAssigned(
             validations[validationId].tokenId,
             validationId,

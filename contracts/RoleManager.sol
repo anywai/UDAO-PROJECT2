@@ -101,6 +101,11 @@ contract RoleManager is AccessControl, IRoleManager {
     ) external onlyRole(BACKEND_ROLE) {
         KYCList[_address] = _isKYCed;
         emit SetKYC(_address, _isKYCed);
+
+        if (!_isKYCed) {
+            ISupVis.dismissValidation(_address);
+            ISupVis.dismissDispute(_address);
+        }
     }
 
     /// @notice set ban for an account address

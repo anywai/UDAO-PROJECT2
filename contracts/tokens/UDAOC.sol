@@ -338,8 +338,6 @@ contract UDAOContent is
             ownerOf(tokenId) == msg.sender,
             "You are not the owner of token"
         );
-        //make sure caller is kyced
-        require(IRM.isKYCed(msg.sender), "You are not KYCed");
         //make sure caller is not banned
         require(!IRM.isBanned(msg.sender), "You were banned!");
 
@@ -353,8 +351,6 @@ contract UDAOContent is
             ownerOf(tokenId) == msg.sender,
             "You are not the owner of token"
         );
-        //make sure caller is kyced
-        require(IRM.isKYCed(msg.sender), "You are not KYCed");
         //make sure caller is not banned
         require(!IRM.isBanned(msg.sender), "You were banned!");
         coachingEnabled[tokenId] = false;
@@ -410,8 +406,6 @@ contract UDAOContent is
     /// @param _contentPrice the price to set
     function setFullPriceContent(uint tokenId, uint _contentPrice) external {
         require(ownerOf(tokenId) == msg.sender, "You are not the owner");
-        //make sure caller is kyced
-        require(IRM.isKYCed(msg.sender), "You are not KYCed");
         //make sure caller is not banned
         require(!IRM.isBanned(msg.sender), "You were banned!");
 
@@ -435,8 +429,6 @@ contract UDAOContent is
             partId < _getPartNumberOfContent(tokenId),
             "Part does not exist!"
         );
-        //make sure caller is kyced
-        require(IRM.isKYCed(msg.sender), "You are not KYCed");
         //make sure caller is not banned
         require(!IRM.isBanned(msg.sender), "You were banned!");
         contentPrice[tokenId][partId] = _contentPrice;
@@ -451,8 +443,6 @@ contract UDAOContent is
         uint[] calldata _contentPrice
     ) external {
         require(ownerOf(tokenId) == msg.sender, "You are not the owner");
-        //make sure caller is kyced
-        require(IRM.isKYCed(msg.sender), "You are not KYCed");
         //make sure caller is not banned
         require(!IRM.isBanned(msg.sender), "You were banned!");
         uint partLength = partId.length;
@@ -478,8 +468,6 @@ contract UDAOContent is
         uint[] calldata _contentPrice
     ) external {
         require(ownerOf(tokenId) == msg.sender, "You are not the owner");
-        //make sure caller is kyced
-        require(IRM.isKYCed(msg.sender), "You are not KYCed");
         //make sure caller is not banned
         require(!IRM.isBanned(msg.sender), "You were banned!");
         uint partLength = partId.length;
