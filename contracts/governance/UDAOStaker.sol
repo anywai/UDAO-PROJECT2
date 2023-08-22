@@ -633,7 +633,6 @@ contract UDAOStaker is RoleController, EIP712 {
                 uint256(i)
             ];
             if (block.timestamp >= lock.expire) {
-                /// TODO initial withdrawableBalance is zero? Isn't it?
                 if ((_amount - withdrawableBalance) >= lock.amount) {
                     withdrawableBalance += lock.amount;
                     vpBalance += lock.vpamount;
