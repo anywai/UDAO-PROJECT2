@@ -60,6 +60,8 @@ contract UDAOContent is
     event newPartAdded(uint tokenId, uint newPartId, uint newPartPrice);
     /// @notice This event is triggered if the contract manager updates the addresses.
     event AddressesUpdated(address isupvis);
+    /// @notice Triggered when KYC requirement for content creating is changed
+    event KYCRequirementForCreateContentChanged(bool status);
 
     ///@notice A signed voucher can be redeemed for a real content NFT using the redeem function.
     struct RedeemVoucher {
@@ -113,6 +115,7 @@ contract UDAOContent is
         bool _status
     ) external onlyRole(BACKEND_ROLE) {
         isKYCRequiredToCreateContent = _status;
+        emit KYCRequirementForCreateContentChanged(_status);
     }
 
     /// @notice Redeems a RedeemVoucher for an actual NFT, creating it in the process.
