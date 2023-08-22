@@ -36,10 +36,7 @@ contract UDAOContent is
         ERC721("UDAO Content", "UDAOC")
         RoleController(irmAdress)
         EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION)
-    {
-        //contractManager = ContractManager(_contractManager);
-        //ISupVis = ISupervision(contractManager.ISupVisAddress());
-    }
+    {}
 
     // tokenId => (partId => price), first part is the full price
     mapping(uint => mapping(uint => uint)) public contentPrice;
@@ -56,9 +53,10 @@ contract UDAOContent is
     mapping(uint => bytes32) coachingCurrency;
     // tokenId => is coaching refundable
     mapping(uint => bool) public coachingRefundable;
-
+    // KYC requirement for creating and modifying content
     bool isKYCRequiredToCreateContent = false;
 
+    /// @notice This event is triggered when a new part is added to a content
     event newPartAdded(uint tokenId, uint newPartId, uint newPartPrice);
     /// @notice This event is triggered if the contract manager updates the addresses.
     event AddressesUpdated(address isupvis);
@@ -113,11 +111,10 @@ contract UDAOContent is
     /// @param _status The status of the KYC requirement
     function setKYCRequirementForCreateContent(
         bool _status
-    ) external onlyRoles(administrator_roles) {
+    ) external onlyRole(BACKEND_ROLE) {
         isKYCRequiredToCreateContent = _status;
     }
 
-    // TODO No name or description for individual NFT. Is this a problem?
     /// @notice Redeems a RedeemVoucher for an actual NFT, creating it in the process.
     /// @param voucher A RedeemVoucher describing an unminted NFT.
     function createContent(
@@ -130,6 +127,7 @@ contract UDAOContent is
             "Signature invalid or unauthorized"
         );
         require(voucher.validUntil >= block.timestamp, "Voucher has expired.");
+        /// @dev 1 is new content, 2 is modification
         require(voucher.redeemType == 1, "Redeem type is not new content");
         uint tokenId = _tokenIds.current();
         // make sure redeemer is redeeming
@@ -142,8 +140,8 @@ contract UDAOContent is
         //make sure redeemer is not banned
         require(!IRM.isBanned(msg.sender), "Redeemer is banned!");
         require(voucher.validationScore != 0, "Validation score cannot be 0");
-        // make sure the content price is not 0
-        require(voucher._contentPrice[0] != 0, "Content price cannot be 0");
+        // make sure the full content price is not 0
+        require(voucher._contentPrice[0] != 0, "Full content price cannot be 0");
         // make sure the coaching price is not 0
         require(voucher._coachingPrice != 0, "Coaching price cannot be 0");
         
@@ -161,6 +159,7 @@ contract UDAOContent is
             "Content URI cannot be empty"
         );
         
+        // TODO Below two lines will probably be removed
         coachingEnabled[tokenId] = voucher._isCoachingEnabled;
         coachingRefundable[tokenId] = voucher._isCoachingRefundable;
 
@@ -172,6 +171,7 @@ contract UDAOContent is
             abi.encodePacked(voucher._currencyName)
         );
 
+        // TODO Below two lines will probably be removed
         coachingPrice[tokenId] = voucher._coachingPrice;
         coachingCurrency[tokenId] = keccak256(
             abi.encodePacked(voucher._coachingCurrencyName)
@@ -195,17 +195,12 @@ contract UDAOContent is
         return keccak256(abi.encodePacked(input)) == keccak256(abi.encodePacked(""));
     }
 
-    /// Allows token owners to burn the token
+    /// @notice Redeems a RedeemVoucher for an actual NFT, modifying existing content in the process.
+    /// @param voucher A RedeemVoucher describing an unminted NFT.
     // TODO Content should be marked as not validated
     function modifyContent(
         RedeemVoucher calldata voucher
     ) external whenNotPaused {
-        // score bilgisini çek
-        // bool defaultu false
-        // score hesaplandı = SkorContractı.scoreHesaplandı(tokenId);
-        // require(score hesaplandı == true, "score henüz hesaplanmadı");
-        // uint score = SkorContractı.getScore(tokenId);
-        // if(score > 0){createValidation}; // score 0 dan büyükse validasyon oluştur,0 ise sadece order değişti
         // make sure signature is valid and get the address of the signer
         address signer = _verify(voucher);
         require(
@@ -213,6 +208,7 @@ contract UDAOContent is
             "Signature invalid or unauthorized"
         );
         require(voucher.validUntil >= block.timestamp, "Voucher has expired.");
+        /// @dev 1 is new content, 2 is modification
         require(voucher.redeemType == 2, "Redeem type is not modification");
         require(
             ownerOf(voucher.tokenId) == msg.sender,
@@ -223,17 +219,18 @@ contract UDAOContent is
             //make sure redeemer is kyced
             require(IRM.isKYCed(msg.sender), "You are not KYCed");
         }
-        //make sure caller is not banned
+        // make sure caller is not banned
         require(!IRM.isBanned(msg.sender), "You are banned");
-
+        // A content can be modified only if it is not in validation
         if (voucher.validationScore != 0) {
             require(
+                /// @dev 0: rejected, 1: validated, 2: in validation
                 ISupVis.getIsValidated(voucher.tokenId) != 2,
                 "Content is already in validation"
             );
         }
-        // Create the new token
-        // save the content price (it should test removing for partLength)
+        /// @dev Create the new token
+        // save the content price (it should test removing for partLength) batuhan ?
         uint partLength = voucher._contentPrice.length;
         partNumberOfContent[voucher.tokenId] = partLength;
 
@@ -247,7 +244,6 @@ contract UDAOContent is
         _setTokenURI(voucher.tokenId, voucher._uri);
 
         if (voucher.validationScore != 0) {
-            //ISupVis.setValidationStatus(voucher.tokenId, 0);
             ISupVis.createValidation(voucher.tokenId, voucher.validationScore);
         }
     }
@@ -418,6 +414,8 @@ contract UDAOContent is
         require(ownerOf(tokenId) == msg.sender, "You are not the owner");
         //make sure caller is not banned
         require(!IRM.isBanned(msg.sender), "You were banned!");
+        // make sure full content price is not zero
+        require(_contentPrice != 0, "Full content price cannot be 0");
 
         contentPrice[tokenId][0] = _contentPrice;
     }
