@@ -668,10 +668,9 @@ contract UDAOStaker is RoleController, EIP712 {
         revert("You don't have enough withdrawable balance");
     }
 
-    /**
-     * @notice add vote reward to voters reward count
-     * @param voter address of the voter
-     */
+    
+    /// @notice add vote reward to voters reward count
+    /// @param voter address of the voter
     function addVoteRewards(
         address voter
     ) external whenNotPaused onlyRole(GOVERNANCE_CONTRACT) {
@@ -683,9 +682,8 @@ contract UDAOStaker is RoleController, EIP712 {
         emit VoteRewardAdded(voter, (votingPowerRatio * voteReward) / 10000);
     }
 
-    /**
-     * @notice withdraws reward earned from voting
-     */
+    
+    /// @notice withdraws reward earned from voting
     function withdrawRewards() external whenNotPaused {
         require(
             rewardBalanceOf[msg.sender] > 0,
@@ -708,6 +706,8 @@ contract UDAOStaker is RoleController, EIP712 {
         corporateStakePerListing = _corporateStakePerListing;
     } 
 
+    /// @notice Allows corporate to register job listings
+    /// @param jobListingCount the number of job listings to register
     function registerJobListing(
         uint jobListingCount
     ) external onlyRole(CORPORATE_ROLE) {
