@@ -283,6 +283,29 @@ abstract contract ContentManager is EIP712, BasePlatform {
         );
     }
 
+    /*
+    function buyContent(
+        address instructor
+    ) external payable onlyRole(RELAY_ROLE) {
+        uint256 foundationCalc = (priceToPay * contentFoundationCut) / 100000;
+        uint256 governanceCalc = (priceToPay * contentGovernanceCut) / 100000;
+        uint256 validatorCalc = (priceToPay * contentValidatorCut) / 100000;
+        uint256 jurorCalc = (priceToPay * contentJurorCut) / 100000;
+
+        foundationBalance += foundationCalc;
+        governanceBalance += governanceCalc;
+        validatorBalanceForRound += validatorCalc;
+        jurorBalanceForRound += jurorCalc;
+
+        instructorBalance[instructor] +=
+            priceToPay -
+            (foundationCalc) -
+            (governanceCalc) -
+            (validatorCalc) -
+            (jurorCalc);
+    }
+    */
+
     /// @notice allows users to purchase a content
     /// @param priceToPay price to pay for the content
     /// @param instructor instructor of the content
