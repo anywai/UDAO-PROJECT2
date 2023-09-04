@@ -317,7 +317,11 @@ async function createContentVoucher(
   contractUDAOContent,
   backend,
   contentCreator,
-  partPrices
+  partPrices,
+  coachingEnabled = true,
+  coachingRefundable = true,
+  redeemType = 1,
+  validationScore = 1
 ) {
   // Get the current block timestamp
   const block = await ethers.provider.getBlock("latest");
@@ -338,10 +342,10 @@ async function createContentVoucher(
     contentCreator.address,
     ethers.utils.parseEther("1"),
     "udao",
-    true,
-    true,
-    1,
-    0
+    coachingEnabled,
+    coachingRefundable,
+    redeemType,
+    validationScore
   );
 }
 

@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+/// @title Staking contract for UDAO 
 pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -41,95 +42,130 @@ contract UDAOStaker is RoleController, EIP712 {
     /// @notice the maximum duration for governance stake
     uint256 public maximum_stake_days = 1460 days; // 4 YEARS
 
+    /// @notice Triggered when validator lock amount is updated
     event SetValidatorLockAmount(uint256 _newAmount);
+    /// @notice Triggered when juror lock amount is updated
     event SetJurorLockAmount(uint256 _newAmount);
+    /// @notice Triggered when validator lock time is updated
     event SetValidatorLockTime(uint256 _newLockTime);
+    /// @notice Triggered when juror lock time is updated
     event SetJurorLockTime(uint256 _newLockTime);
+    /// @notice Triggered when application lock time is updated
     event SetApplicationLockTime(uint256 _newLockTime);
+    /// @notice Triggered when vote reward is updated
     event SetVoteReward(uint256 _newAmount);
+    /// @notice Triggered when platform treasury address is updated
     event SetPlatformTreasuryAddress(address _newAddress);
-    event RoleApplied(uint256 _roleId, address _user, uint256 _jobAmount);
+    /// @notice Triggered when any role is applied, roleId: 0 validator, 1 juror
+    event RoleApplied(uint256 _roleId, address _user, uint256 _lockAmount);
+    /// @notice Triggered when any role is approved, roleId: 0 validator, 1 juror, 2 corporate
     event RoleApproved(uint256 _roleId, address _user);
+    /// @notice Triggered when any role is rejected, roleId: 0 validator, 1 juror
     event RoleRejected(uint256 _roleId, address _user);
-    event ValidationAdded(uint256 _amount);
-    event ValidationRegistered(address _validator, uint256 _validationId);
+    /// @notice Triggered when validator stake is withdrawn
     event ValidatorStakeWithdrawn(address _validator, uint256 _amount);
+    /// @notice Triggered when juror stake is withdrawn
+    event JurorStakeWithdrawn(address _juror, uint256 _amount);
+    /// @notice Triggered when a new job listing is registered
     event JobListingRegistered(address corporate, uint amountPerListing);
+    /// @notice Triggered when a job listing is unregistered
     event JobListingUnregistered(
         address corporate,
         uint[] listingId,
         uint amount
     );
-    event JurorStakeWithdrawn(address _juror, uint256 _amount);
-
+    /// @notice Triggered when governance stake is added
     event GovernanceStake(
         address _member,
         uint256 _stakeAmount,
         uint256 _vpAmount
     );
+    /// @notice Triggered when governance stake is withdrawn
     event GovernanceStakeWithdraw(
         address _member,
         uint256 _unstakeAmount,
         uint256 _vpAmount
     );
+    /// @notice Triggered when vote reward is added to voters reward balance
     event VoteRewardAdded(address _rewardee, uint256 _amount);
+    /// @notice Triggered when vote reward is withdrawn
     event VoteRewardsWithdrawn(address _rewardee, uint256 _amount);
-
+    /// @notice Triggered when governance maximum stake days is updated
     event SetMaximumStakeDays(uint256 _newAmount);
+    /// @notice Triggered when governance minimum stake days is updated
     event SetMinimumStakeDays(uint256 _newAmount);
 
-    mapping(address => uint256) validationBalanceOf;
+    /// @notice the balance of the validator
+    mapping(address => uint256) validatorBalanceOf;
+    /// @notice the balance of the juror
     mapping(address => uint256) jurorBalanceOf;
+    /* TODO These were 8 months old and never used, why?
     mapping(address => uint256) latestValidatorStakeId;
     mapping(address => uint256) latestJurorStakeId;
     mapping(address => uint256) latestValidationLockId;
+    */
 
+    /// @notice if user has an active application for validator role
     mapping(address => bool) public activeApplicationForValidator;
+    /// @notice if user has an active application for juror role
     mapping(address => bool) public activeApplicationForJuror;
-
-    uint256 public corporateStakePerListing = 500 ether; // TODO setter getter, decider=adminler
+    /// @notice Amount of UDAO staked by corporates for job listings
+    uint256 public corporateStakePerListing = 500 ether; 
+    /* TODO These were never used, why?
     mapping(address => uint) corporateStakedUDAO;
     mapping(address => uint) corporateLockedUDAO;
     mapping(address => uint) corporateActiveListingAmount;
-
+    */
+    /// @notice Job listing id for each corporate
+    mapping(address => mapping(uint => uint)) corporateListingId;
+    /// @notice Simple counter for job listing ids
+    mapping(address => uint) corporateLatestListingId;
+    /// @notice Governance lock struct for each governance member
     struct GovernanceLock {
         uint256 expire;
         uint256 amount;
         uint256 vpamount;
     }
-
+    /// @notice Governance lock array for each governance member
     mapping(address => GovernanceLock[]) governanceStakes;
+    /// @notice Reward balance of each governance member
     mapping(address => uint256) rewardBalanceOf;
-    mapping(address => uint256) lastRewardBlock;
-    uint256 public voteReward = 0.0001 ether; // TODO SHOULD BE UPDATED
-
-    struct ValidationApplication {
+    /// @notice Last reward block of each governance member TODO This is not used?? 
+    mapping(address => uint256) lastRewardBlock; 
+    /// @notice Reward given to each voter for each vote with respect to their voting power
+    uint256 public voteReward = 0.0001 ether;
+    /// @notice Validator application struct
+    struct ValidatiorApplication {
         address applicant;
         bool isFinished;
         uint256 expire;
     }
-
-    ValidationApplication[] public validatorApplications;
+    /// @notice Array of validator applications
+    ValidatiorApplication[] public validatorApplications;
+    /// @notice Validator application index, a simple counter
+    uint256 private validatiorApplicationIndex;
+    /// @notice Validator application id for each validator
     mapping(address => uint256) validatorApplicationId;
-    uint256 private validationApplicationIndex;
-
+    /// @notice Juror application struct
     struct JurorApplication {
         address applicant;
         bool isFinished;
         uint256 expire;
     }
-
+    /// @notice Array of juror applications
     JurorApplication[] public jurorApplications;
+    /// @notice Juror application id for each juror
     mapping(address => uint256) jurorApplicationId;
+    /// @notice Juror application index, a simple counter
     uint256 private caseApplicationIndex;
-
+    /// @notice The total voting power of all governance members
     uint256 totalVotingPower;
 
-    /**
-     * @param _platformTreasuryAddress address of the platform treasury contract
-     * @param rmAddress address of the role manager contract
-     * @param _contractManager address of the contract manager
-     */
+    
+    /// @param _platformTreasuryAddress address of the platform treasury contract
+    /// @param rmAddress address of the role manager contract
+    /// @param udaoVpAddress address of the udao voting power token contract
+    /// @param _contractManager address of the contract manager
     constructor(
         address _platformTreasuryAddress,
         address rmAddress,
@@ -149,10 +185,8 @@ contract UDAOStaker is RoleController, EIP712 {
         udaovp = IUDAOVP(contractManager.UdaoVpAddress());
     }
 
-    /**
-     * @notice set the required lock amount for validators
-     * @param _amount new amount that requried to be locked
-     */
+    /// @notice Allows admins to set validator lock amount
+    /// @param _amount new amount that requried to be locked
     function setValidatorLockAmount(
         uint256 _amount
     ) external onlyRoles(administrator_roles) {
@@ -160,10 +194,9 @@ contract UDAOStaker is RoleController, EIP712 {
         emit SetValidatorLockAmount(_amount);
     }
 
-    /**
-     * @notice set the required lock amount for jurors
-     * @param _amount new amount that requried to be locked
-     */
+    
+    /// @notice Allows admins to set juror lock amount
+    /// @param _amount new amount that requried to be locked
     function setJurorLockAmount(
         uint256 _amount
     ) external onlyRoles(administrator_roles) {
@@ -171,10 +204,9 @@ contract UDAOStaker is RoleController, EIP712 {
         emit SetJurorLockAmount(_amount);
     }
 
-    /**
-     * @notice set the required lock time for validators
-     * @param _lockTime is new lock time for validators
-     * */
+    
+    /// @notice Allows admins to set validator lock time
+    /// @param _lockTime is new lock time for validators
     function setValidatorLockTime(
         uint256 _lockTime
     ) external onlyRoles(administrator_roles) {
@@ -184,10 +216,9 @@ contract UDAOStaker is RoleController, EIP712 {
         emit SetValidatorLockTime(_lockTime);
     }
 
-    /**
-     * @notice set the required lock time for jurors
-     * @param _lockTime is new lock time for jurors
-     * */
+    
+    /// @notice Allows admins to set juror lock time
+    /// @param _lockTime is new lock time for jurors
     function setJurorLockTime(
         uint256 _lockTime
     ) external onlyRoles(administrator_roles) {
@@ -197,10 +228,9 @@ contract UDAOStaker is RoleController, EIP712 {
         emit SetJurorLockTime(_lockTime);
     }
 
-    /**
-     * @notice set the required application lock time for role apllications
-     * @param _lockTime is new lock time for role applications
-     * */
+    
+    /// @notice Allows admins to set application lock time for role applications
+    /// @param _lockTime is new lock time for role applications
     function setApplicationLockTime(
         uint256 _lockTime
     ) external onlyRoles(administrator_roles) {
@@ -210,10 +240,9 @@ contract UDAOStaker is RoleController, EIP712 {
         emit SetApplicationLockTime(_lockTime);
     }
 
-    /**
-     * @notice sets the vote reward given when governance member votes
-     * @param _reward new amount of reward
-     */
+    
+    /// @notice sets the vote reward given when governance member votes
+    /// @param _reward new amount of reward
     function setVoteReward(
         uint256 _reward
     ) external onlyRoles(administrator_roles) {
@@ -221,10 +250,9 @@ contract UDAOStaker is RoleController, EIP712 {
         emit SetVoteReward(_reward);
     }
 
-    /**
-     * @notice sets the platform treasury address
-     * @param _platformTreasuryAddress the address of the new platform treasury
-     */
+    
+    /// @notice sets the platform treasury address
+    /// @param _platformTreasuryAddress the address of the new platform treasury
     function setPlatformTreasuryAddress(
         address _platformTreasuryAddress
     ) external onlyRole(BACKEND_ROLE) {
@@ -232,10 +260,9 @@ contract UDAOStaker is RoleController, EIP712 {
         emit SetPlatformTreasuryAddress(_platformTreasuryAddress);
     }
 
-    /**
-     * @notice sets the maximum stake days for governance members
-     * @param _maximum_stake_days the new maximum stake days
-     */
+    
+    /// @notice sets the maximum stake days for governance members
+    /// @param _maximum_stake_days the new maximum stake days
     function setMaximumStakeDays(
         uint256 _maximum_stake_days
     ) external onlyRoles(administrator_roles) {
@@ -249,17 +276,15 @@ contract UDAOStaker is RoleController, EIP712 {
         emit SetMaximumStakeDays(_maximum_stake_days);
     }
 
-    /**
-     * @notice sets the minimum stake days for governance members
-     * @param _minimum_stake_days the new minimum stake days
-     */
+    /// @notice sets the minimum stake days for governance members
+    /// @param _minimum_stake_days the new minimum stake days
     function setMinimumStakeDays(
         uint256 _minimum_stake_days
     ) external onlyRoles(administrator_roles) {
         //convert it to unix timestamp
         _minimum_stake_days = _minimum_stake_days * (1 days);
         require(
-            _minimum_stake_days <= maximum_stake_days,
+            _minimum_stake_days < maximum_stake_days,
             "Minimum stake days must be less than maximum days"
         );
         minimum_stake_days = _minimum_stake_days;
@@ -295,15 +320,16 @@ contract UDAOStaker is RoleController, EIP712 {
             !activeApplicationForValidator[msg.sender],
             "You already have an active application"
         );
-        ValidationApplication
-            storage validationApplication = validatorApplications.push();
-        validationApplication.applicant = msg.sender;
-        validationApplication.expire = block.timestamp + applicationLockTime;
-        validatorApplicationId[msg.sender] = validationApplicationIndex;
-        validationApplicationIndex++;
-        validationBalanceOf[msg.sender] += validatorLockAmount;
-        activeApplicationForValidator[msg.sender] = true;
         udao.transferFrom(msg.sender, address(this), validatorLockAmount);
+        ValidatiorApplication
+            storage validatorApplication = validatorApplications.push();
+        validatorApplication.applicant = msg.sender;
+        validatorApplication.expire = block.timestamp + applicationLockTime;
+        validatorApplicationId[msg.sender] = validatiorApplicationIndex;
+        validatiorApplicationIndex++;
+        validatorBalanceOf[msg.sender] += validatorLockAmount;
+        activeApplicationForValidator[msg.sender] = true;
+        
         emit RoleApplied(0, msg.sender, validatorLockAmount);
     }
 
@@ -320,7 +346,11 @@ contract UDAOStaker is RoleController, EIP712 {
             !IRM.hasRole(JUROR_ROLE, msg.sender),
             "Address is already a Juror"
         );
-
+        require(
+            !activeApplicationForJuror[msg.sender],
+            "You already have an active application"
+        );
+        udao.transferFrom(msg.sender, address(this), jurorLockAmount);
         JurorApplication storage jurorApplication = jurorApplications.push();
         jurorApplication.applicant = msg.sender;
         jurorApplicationId[msg.sender] = caseApplicationIndex;
@@ -328,8 +358,7 @@ contract UDAOStaker is RoleController, EIP712 {
         caseApplicationIndex++;
         jurorBalanceOf[msg.sender] += jurorLockAmount;
         activeApplicationForJuror[msg.sender] = true;
-        udao.transferFrom(msg.sender, address(this), jurorLockAmount);
-
+    
         emit RoleApplied(1, msg.sender, jurorLockAmount);
     }
 
@@ -350,37 +379,36 @@ contract UDAOStaker is RoleController, EIP712 {
 
         uint256 roleId = voucher.roleId;
 
-        if (roleId == 0) {
-            ValidationApplication
-                storage validationApplication = validatorApplications[
+        if (roleId == 0) { /// @dev validator role application
+            ValidatiorApplication
+                storage validatorApplication = validatorApplications[
                     validatorApplicationId[voucher.redeemer]
                 ];
             require(
-                validationApplication.isFinished == false,
+                validatorApplication.isFinished == false,
                 "Application was already finished"
             );
+            
+            validatorApplication.isFinished = true;
+            validatorApplication.expire = block.timestamp + validatorLockTime;
             IRM.grantRoleStaker(VALIDATOR_ROLE, voucher.redeemer);
             activeApplicationForValidator[voucher.redeemer] = false;
-            validationApplication.isFinished = true;
-            validationApplication.expire = block.timestamp + validatorLockTime;
-        } else if (roleId == 1) {
+        } else if (roleId == 1) { /// @dev juror role application
             require(
                 udaovp.balanceOf(voucher.redeemer) > 0,
                 "You are not governance member"
             );
-
             JurorApplication storage jurorApplication = jurorApplications[
                 jurorApplicationId[voucher.redeemer]
             ];
-
             require(
                 jurorApplication.isFinished == false,
                 "Application was already finished"
             );
-            IRM.grantRoleStaker(JUROR_ROLE, voucher.redeemer);
-            activeApplicationForJuror[voucher.redeemer] = false;
             jurorApplication.isFinished = true;
             jurorApplication.expire = block.timestamp + jurorLockTime;
+            IRM.grantRoleStaker(JUROR_ROLE, voucher.redeemer);
+            activeApplicationForJuror[voucher.redeemer] = false;
         } else if (roleId == 2) {
             IRM.grantRoleStaker(CORPORATE_ROLE, voucher.redeemer);
         } else {
@@ -396,13 +424,13 @@ contract UDAOStaker is RoleController, EIP712 {
         address _applicant,
         uint256 roleId
     ) external onlyRole(BACKEND_ROLE) {
-        if (roleId == 0 || roleId == 3) {
-            ValidationApplication
-                storage validationApplication = validatorApplications[
+        if (roleId == 0){
+            ValidatiorApplication
+                storage validatorApplication = validatorApplications[
                     validatorApplicationId[_applicant]
                 ];
-            validationApplication.expire = 0;
-            validationApplication.isFinished = true;
+            validatorApplication.expire = 0;
+            validatorApplication.isFinished = true;
         } else if (roleId == 1) {
             JurorApplication storage jurorApplication = jurorApplications[
                 jurorApplicationId[_applicant]
@@ -435,36 +463,35 @@ contract UDAOStaker is RoleController, EIP712 {
         return expireDate;
     }
 
-    /**
-     * @notice allows validators to withdraw their staked tokens
-     */
+    
+    /// @notice allows validators to withdraw their staked tokens
     function withdrawValidatorStake() public whenNotPaused {
         uint256 withdrawableBalance;
-        ValidationApplication
-            storage validationApplication = validatorApplications[
+        ValidatiorApplication
+            storage validatorApplication = validatorApplications[
                 validatorApplicationId[msg.sender]
             ];
 
         if (IRM.hasRole(VALIDATOR_ROLE, msg.sender)) {
             if (
-                validationApplication.isFinished &&
-                validationApplication.expire < block.timestamp
+                validatorApplication.isFinished &&
+                validatorApplication.expire < block.timestamp
             ) {
                 IRM.revokeRoleStaker(VALIDATOR_ROLE, msg.sender);
-                withdrawableBalance = validationBalanceOf[msg.sender];
-                validationBalanceOf[msg.sender] = 0;
+                withdrawableBalance = validatorBalanceOf[msg.sender];
+                validatorBalanceOf[msg.sender] = 0;
             }
         } else {
             // If application not finalized in time or got rejected
             if (
-                validationApplication.expire < block.timestamp ||
-                validationApplication.isFinished
+                validatorApplication.expire < block.timestamp ||
+                validatorApplication.isFinished
             ) {
-                withdrawableBalance = validationBalanceOf[msg.sender];
-                validationBalanceOf[msg.sender] = 0;
+                withdrawableBalance = validatorBalanceOf[msg.sender];
+                validatorBalanceOf[msg.sender] = 0;
             }
         }
-        validationApplication.isFinished == true;
+        validatorApplication.isFinished == true;
         _withdrawValidator(msg.sender, withdrawableBalance);
     }
 
@@ -527,22 +554,22 @@ contract UDAOStaker is RoleController, EIP712 {
     /// @notice Returns the amount of token a validator could withdraw
     function withdrawableValidatorStake() public view returns (uint256) {
         uint256 withdrawableBalance;
-        ValidationApplication
-            storage validationApplication = validatorApplications[
+        ValidatiorApplication
+            storage validatorApplication = validatorApplications[
                 validatorApplicationId[msg.sender]
             ];
 
         if (IRM.hasRole(VALIDATOR_ROLE, msg.sender)) {
             if (
-                validationApplication.isFinished &&
-                validationApplication.expire < block.timestamp
+                validatorApplication.isFinished &&
+                validatorApplication.expire < block.timestamp
             ) {
-                withdrawableBalance = validationBalanceOf[msg.sender];
+                withdrawableBalance = validatorBalanceOf[msg.sender];
             }
         } else {
             // If application got rejected
-            if (validationApplication.isFinished) {
-                withdrawableBalance = validationBalanceOf[msg.sender];
+            if (validatorApplication.isFinished) {
+                withdrawableBalance = validatorBalanceOf[msg.sender];
             }
         }
         return withdrawableBalance;
@@ -557,7 +584,6 @@ contract UDAOStaker is RoleController, EIP712 {
     ) public whenNotPaused {
         require(IRM.isKYCed(msg.sender), "Address is not KYCed");
         require(!IRM.isBanned(msg.sender), "Address is banned");
-        udao.transferFrom(msg.sender, address(this), _amount);
         require(
             _days * (1 days) >= minimum_stake_days,
             "Can't stake less than minimum_stake_days"
@@ -566,7 +592,7 @@ contract UDAOStaker is RoleController, EIP712 {
             _days * (1 days) <= maximum_stake_days,
             "Can't stake more than maximum_stake_days"
         );
-
+        udao.transferFrom(msg.sender, address(this), _amount);
         GovernanceLock storage lock = governanceStakes[msg.sender].push();
         lock.amount = _amount;
         lock.expire = block.timestamp + (_days * (1 days));
@@ -642,10 +668,9 @@ contract UDAOStaker is RoleController, EIP712 {
         revert("You don't have enough withdrawable balance");
     }
 
-    /**
-     * @notice add vote reward to voters reward count
-     * @param voter address of the voter
-     */
+    
+    /// @notice add vote reward to voters reward count
+    /// @param voter address of the voter
     function addVoteRewards(
         address voter
     ) external whenNotPaused onlyRole(GOVERNANCE_CONTRACT) {
@@ -657,9 +682,8 @@ contract UDAOStaker is RoleController, EIP712 {
         emit VoteRewardAdded(voter, (votingPowerRatio * voteReward) / 10000);
     }
 
-    /**
-     * @notice withdraws reward earned from voting
-     */
+    
+    /// @notice withdraws reward earned from voting
     function withdrawRewards() external whenNotPaused {
         require(
             rewardBalanceOf[msg.sender] > 0,
@@ -674,9 +698,16 @@ contract UDAOStaker is RoleController, EIP712 {
         emit VoteRewardsWithdrawn(msg.sender, voteRewards);
     }
 
-    mapping(address => mapping(uint => uint)) corporateListingId;
-    mapping(address => uint) corporateLatestListingId;
+    /// @notice Allows admins to set corporateStakePerListing
+    /// @param _corporateStakePerListing the new corporateStakePerListing
+    function setCorporateStakePerListing(
+        uint256 _corporateStakePerListing
+    ) external onlyRoles(administrator_roles) {
+        corporateStakePerListing = _corporateStakePerListing;
+    } 
 
+    /// @notice Allows corporate to register job listings
+    /// @param jobListingCount the number of job listings to register
     function registerJobListing(
         uint jobListingCount
     ) external onlyRole(CORPORATE_ROLE) {
@@ -701,6 +732,9 @@ contract UDAOStaker is RoleController, EIP712 {
         );
     }
 
+    /// @notice Allows corporate to unregister job listings
+    /// @param listingIds the ids of the job listings to unregister
+    /// TODO Waiting ofr issue 54
     function unregisterJobListing(
         uint[] calldata listingIds
     ) external onlyRole(CORPORATE_ROLE) {

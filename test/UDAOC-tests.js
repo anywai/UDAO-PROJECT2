@@ -196,7 +196,8 @@ async function createContentVoucher(
   partPrices,
   coachingEnabled = true,
   coachingRefundable = true,
-  redeemType = 1
+  redeemType = 1,
+  validationScore = 1
 ) {
   // Get the current block timestamp
   const block = await ethers.provider.getBlock("latest");
@@ -220,7 +221,7 @@ async function createContentVoucher(
     coachingEnabled,
     coachingRefundable,
     redeemType,
-    0
+    validationScore
   );
 }
 
@@ -1410,12 +1411,12 @@ describe("UDAOC Contract", function () {
 
     // UnKYC content creator
     await contractRoleManager.setKYC(contentCreator.address, false);
-    // Add KYC requirement for createContent
+    // Add KYC requirement and expect it to emit KYCRequirementForCreateContentChanged
     await expect(
-      contractUDAOContent
-        .connect(foundation)
-        .setKYCRequirementForCreateContent(true)
-    );
+      contractUDAOContent.connect(backend).setKYCRequirementForCreateContent(true)
+    )
+      .to.emit(contractUDAOContent, "KYCRequirementForCreateContentChanged")
+      .withArgs(true);
     // new part information
     const tokenId = 0;
     const newPartId = 1;
