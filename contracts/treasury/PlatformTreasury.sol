@@ -43,6 +43,9 @@ contract PlatformTreasury is Pausable, ContentManager {
 
 
     /// @notice withdraws governance balance to governance treasury
+    /// TODO Bu fonksiyon gereksiz gibi. governanceTreasury aslında platformTreasury. Para burada birikiyor ve
+    /// transferGovernanceRewards fonksiyonu ile staking contract'a transfer ediliyor. Burada biriken parayı
+    /// governanceTreasury'e transfer etmek gereksiz.
     function withdrawGovernance()
         external
         whenNotPaused
