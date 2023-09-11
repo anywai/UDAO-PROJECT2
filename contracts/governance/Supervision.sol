@@ -4,10 +4,12 @@ pragma solidity ^0.8.4;
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
 import "../ContractManager.sol";
-import "../RoleController.sol";
 import "../interfaces/IUDAOC.sol";
 import "../interfaces/IPlatformTreasury.sol";
+import "../interfaces/IRoleManager.sol";
 import "hardhat/console.sol";
+import "@openzeppelin/contracts/security/Pausable.sol";
+import "../RoleNames.sol";
 
 interface IStakingContract {
     function checkExpireDateValidator(
@@ -19,11 +21,11 @@ interface IStakingContract {
     ) external view returns (uint256 expireDate);
 }
 
-contract Supervision is RoleController {
+contract Supervision is Pausable, RoleNames {
     IUDAOC udaoc;
     IPlatformTreasury PT;
     IStakingContract staker;
-
+    IRoleManager roleManager;
     ContractManager contractManager;
 
     /// @dev Events
@@ -161,13 +163,9 @@ contract Supervision is RoleController {
     uint256 maxObjection = 3;
 
     /// @dev Constructor
-    constructor(
-        address rmAddress,
-        address udaocAddress
-    )
-        //address ivmAddress
-        RoleController(rmAddress)
+    constructor(address rmAddress, address udaocAddress) //address ivmAddress
     {
+        roleManager = IRoleManager(rmAddress);
         udaoc = IUDAOC(udaocAddress);
         /* @dev disputes start from 1, meaning that the first dispute will have id 1.
         This is because we are assigning 0 if juror is not assigned to any dispute.
@@ -178,15 +176,19 @@ contract Supervision is RoleController {
 
     /// @dev Setters
     // Juror setters
-    function setContractManager(
-        address _contractManager
-    ) external onlyRole(BACKEND_ROLE) {
+    function setContractManager(address _contractManager) external {
+        require(
+            roleManager.hasRole(BACKEND_ROLE, msg.sender),
+            "Only backend can set contract manager"
+        );
         contractManager = ContractManager(_contractManager);
     }
 
-    function setPlatformTreasury(
-        address _platformTreasury
-    ) external onlyRole(BACKEND_ROLE) {
+    function setPlatformTreasury(address _platformTreasury) external {
+        require(
+            roleManager.hasRole(BACKEND_ROLE, msg.sender),
+            "Only backend can set platform treasury"
+        );
         PT = IPlatformTreasury(_platformTreasury);
     }
 
@@ -197,38 +199,50 @@ contract Supervision is RoleController {
     /// TODO Wth is this function.
     /// @notice sets required juror count per dispute
     /// @param _requiredJurors new required juror count
-    function setRequiredJurors(
-        uint128 _requiredJurors
-    ) external onlyRole(GOVERNANCE_ROLE) {
+    function setRequiredJurors(uint128 _requiredJurors) external {
+        require(
+            roleManager.hasRole(GOVERNANCE_ROLE, msg.sender),
+            "Only governance can set required juror count"
+        );
         requiredJurors = _requiredJurors;
     }
 
     // Validation setters
-    function setUDAOC(address udaocAddress) external onlyRole(BACKEND_ROLE) {
+    function setUDAOC(address udaocAddress) external {
+        require(
+            roleManager.hasRole(BACKEND_ROLE, msg.sender),
+            "Only backend can set UDAOC"
+        );
         udaoc = IUDAOC(udaocAddress);
     }
 
     /// @notice creates a validation for a token
     /// @param stakerAddress address of staking contract
-    function setAddressStaking(
-        address stakerAddress
-    ) external onlyRole(BACKEND_ROLE) {
+    function setAddressStaking(address stakerAddress) external {
+        require(
+            roleManager.hasRole(BACKEND_ROLE, msg.sender),
+            "Only backend can set staking contract"
+        );
         staker = IStakingContract(stakerAddress);
     }
 
     /// @notice sets required validator vote count per content
     /// @param _requiredValidators new required vote count
-    function setRequiredValidators(
-        uint128 _requiredValidators
-    ) external onlyRole(GOVERNANCE_ROLE) {
+    function setRequiredValidators(uint128 _requiredValidators) external {
+        require(
+            roleManager.hasRole(GOVERNANCE_ROLE, msg.sender),
+            "Only governance can set required validator count"
+        );
         requiredValidators = _requiredValidators;
     }
 
     /// @notice sets maximum objection count per latest validation
     /// @param _maxObjection new objection count
-    function setMaxObjectionCount(
-        uint256 _maxObjection
-    ) external onlyRole(GOVERNANCE_ROLE) {
+    function setMaxObjectionCount(uint256 _maxObjection) external {
+        require(
+            roleManager.hasRole(GOVERNANCE_ROLE, msg.sender),
+            "Only governance can set objection count"
+        );
         maxObjection = _maxObjection;
     }
 
@@ -312,7 +326,11 @@ contract Supervision is RoleController {
         uint256 tokenId,
         bytes calldata _data,
         address _targetContract
-    ) external onlyRole(BACKEND_ROLE) {
+    ) external {
+        require(
+            roleManager.hasRole(BACKEND_ROLE, msg.sender),
+            "Only backend can create dispute"
+        );
         Dispute storage dispute = disputes.push();
         dispute.caseId = disputes.length - 1;
         dispute.caseScope = caseScope;
@@ -330,10 +348,14 @@ contract Supervision is RoleController {
 
     /// @notice assign a dispute to self
     /// @param caseId id of the dispute
-    function assignDispute(uint256 caseId) external onlyRole(JUROR_ROLE) {
+    function assignDispute(uint256 caseId) external {
+        require(
+            roleManager.hasRole(JUROR_ROLE, msg.sender),
+            "Only jurors can assign dispute"
+        );
         //make sure juror is kyced and not banned
-        require(IRM.isKYCed(msg.sender), "You are not KYCed");
-        require(!IRM.isBanned(msg.sender), "You were banned");
+        require(roleManager.isKYCed(msg.sender), "You are not KYCed");
+        require(!roleManager.isBanned(msg.sender), "You were banned");
         require(
             staker.checkExpireDateJuror(msg.sender) > block.timestamp,
             "Your application is expired"
@@ -400,16 +422,20 @@ contract Supervision is RoleController {
     /// @notice Allows jurors to send dipsute result
     /// @param caseId id of the dispute
     /// @param result result of dispute
-    function sendDisputeResult(
-        uint256 caseId,
-        bool result
-    ) external onlyRole(JUROR_ROLE) {
+    function sendDisputeResult(uint256 caseId, bool result) external {
+        require(
+            roleManager.hasRole(JUROR_ROLE, msg.sender),
+            "Only jurors can send dispute result"
+        );
         /// @dev Below two requires are protecting against reentrancy
         require(
             activeDispute[msg.sender] == caseId,
             "This dispute is not assigned to this wallet"
         );
-        require(activeDispute[msg.sender] != 0, "You are not assigned to any dispute");
+        require(
+            activeDispute[msg.sender] != 0,
+            "You are not assigned to any dispute"
+        );
 
         activeDispute[msg.sender] = 0;
         if (result) {
@@ -506,19 +532,23 @@ contract Supervision is RoleController {
     /// Sends validation result of validator to blockchain
     /// @param validationId id of validation
     /// @param result result of validation
-    function sendValidation(
-        uint validationId,
-        bool result
-    ) external onlyRole(VALIDATOR_ROLE) {
+    function sendValidation(uint validationId, bool result) external {
+        require(
+            roleManager.hasRole(VALIDATOR_ROLE, msg.sender),
+            "Only validators can send validation result"
+        );
         /// @dev Below two requires are protecting against reentrancy
         require(
             activeValidation[msg.sender] == validationId,
             "This content is not assigned to this wallet"
         );
-        require(activeValidation[msg.sender] != 0, "You are not assigned to any validation");
+        require(
+            activeValidation[msg.sender] != 0,
+            "You are not assigned to any validation"
+        );
         activeValidation[msg.sender] = 0;
         validationCount[msg.sender]++; //?
-        
+
         if (result) {
             validations[validationId].acceptVoteCount++;
         } //else??
@@ -540,7 +570,10 @@ contract Supervision is RoleController {
             validations[validationId].validationCount >= requiredValidators,
             "Not enough validation"
         );
-        require(validations[validationId].isFinalized == false, "Validation is already finalized");
+        require(
+            validations[validationId].isFinalized == false,
+            "Validation is already finalized"
+        );
         validations[validationId].isFinalized = true;
         if (
             validations[validationId].acceptVoteCount >= minAcceptVoteValidation
@@ -598,8 +631,8 @@ contract Supervision is RoleController {
             removeValidatorFromValidation(demissionAddress);
         } else {
             require(
-                IRM.hasRole(BACKEND_ROLE, msg.sender) ||
-                    IRM.hasRole(ROLEMANAGER_CONTRACT, msg.sender),
+                roleManager.hasRole(BACKEND_ROLE, msg.sender) ||
+                    roleManager.hasRole(ROLEMANAGER_CONTRACT, msg.sender),
                 "Only backend or role manager contract can set ban"
             );
             if (activeValidation[demissionAddress] != 0) {
@@ -607,7 +640,7 @@ contract Supervision is RoleController {
             }
         }
     }
-    
+
     /* SIKINTI TODO
     1 = true;
     2 = true;
@@ -619,7 +652,7 @@ contract Supervision is RoleController {
     finalizeValidation() çalıştı.
     4. kişi henüz oy kullanmadı?!?!?!?!
     */
-    
+
     /* Muhtemel Çözüm TODO
     1 = true;
     2 = true;
@@ -672,8 +705,8 @@ contract Supervision is RoleController {
             removeJurorFromDispute(demissionAddress);
         } else {
             require(
-                IRM.hasRole(BACKEND_ROLE, msg.sender) ||
-                    IRM.hasRole(ROLEMANAGER_CONTRACT, msg.sender),
+                roleManager.hasRole(BACKEND_ROLE, msg.sender) ||
+                    roleManager.hasRole(ROLEMANAGER_CONTRACT, msg.sender),
                 "Only backend or role manager contract can set ban"
             );
             if (activeValidation[demissionAddress] != 0) {
@@ -707,10 +740,11 @@ contract Supervision is RoleController {
     /// @notice starts new validation for content
     /// @param tokenId id of the content that will be validated
     /// @param score validation score of the content
-    function createValidation(
-        uint256 tokenId,
-        uint256 score
-    ) external onlyRole(UDAOC_CONTRACT) {
+    function createValidation(uint256 tokenId, uint256 score) external {
+        require(
+            roleManager.hasRole(UDAOC_CONTRACT, msg.sender),
+            "Only UDAOC contract can create validation"
+        );
         require(
             udaoc.ownerOf(tokenId) != address(0),
             "Token owner is zero address"
@@ -722,7 +756,7 @@ contract Supervision is RoleController {
 
         address tokenOwner = udaoc.ownerOf(tokenId);
         //make sure token owner is not banned
-        require(!IRM.isBanned(tokenOwner), "Token owner is banned");
+        require(!roleManager.isBanned(tokenOwner), "Token owner is banned");
 
         // Change status to 2 = in validation
         isValidated[tokenId] = 2;
@@ -749,7 +783,7 @@ contract Supervision is RoleController {
             "Only token owner can re-create validation"
         );
         //make sure token owner is not banned
-        require(!IRM.isBanned(tokenOwner), "Token owner is banned");
+        require(!roleManager.isBanned(tokenOwner), "Token owner is banned");
         // Get the latest validation for this token
         uint256 validationId = latestValidationOfToken[tokenId];
         // Get the score
@@ -766,11 +800,13 @@ contract Supervision is RoleController {
 
     /// @notice assign validation to self
     /// @param validationId id of the validation
-    function assignValidation(
-        uint256 validationId
-    ) external onlyRole(VALIDATOR_ROLE) {
-        require(IRM.isKYCed(msg.sender), "You are not KYCed");
-        require(!IRM.isBanned(msg.sender), "You were banned");
+    function assignValidation(uint256 validationId) external {
+        require(
+            roleManager.hasRole(VALIDATOR_ROLE, msg.sender),
+            "Only validators can assign validation"
+        );
+        require(roleManager.isKYCed(msg.sender), "You are not KYCed");
+        require(!roleManager.isBanned(msg.sender), "You were banned");
         require(
             staker.checkExpireDateValidator(msg.sender) > block.timestamp,
             "Validation is expired"
@@ -805,25 +841,35 @@ contract Supervision is RoleController {
         );
     }
 
-    function setValidationStatus(
-        uint256 tokenId,
-        uint256 status
-    ) external onlyRole(UDAOC_CONTRACT) {
+    function setValidationStatus(uint256 tokenId, uint256 status) external {
+        require(
+            roleManager.hasRole(UDAOC_CONTRACT, msg.sender),
+            "Only UDAOC contract can set validation status"
+        );
+
         isValidated[tokenId] = status;
     }
 
     /// @dev Common functions
     /// @notice Starts the new reward round
-    function nextRound() external whenNotPaused onlyRole(TREASURY_CONTRACT) {
+    function nextRound() external whenNotPaused {
+        require(
+            roleManager.hasRole(TREASURY_CONTRACT, msg.sender),
+            "Only treasury contract can start new round"
+        );
         distributionRound++;
         emit NextRound(distributionRound);
     }
 
     /// @notice Get the updated addresses from contract manager
     /// TODO is this correct?
-    function updateAddresses() external onlyRole(BACKEND_ROLE) {
-        IRM = IRoleManager(contractManager.IrmAddress());
+    function updateAddresses() external {
+        require(
+            roleManager.hasRole(BACKEND_ROLE, msg.sender),
+            "Only backend can update addresses"
+        );
+        roleManager = IRoleManager(contractManager.IrmAddress());
         PT = IPlatformTreasury(contractManager.PlatformTreasuryAddress());
-        emit AddressesUpdated(address(IRM), address(PT));
+        emit AddressesUpdated(address(roleManager), address(PT));
     }
 }
