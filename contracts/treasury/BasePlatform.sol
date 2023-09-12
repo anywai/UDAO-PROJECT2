@@ -379,4 +379,20 @@ abstract contract BasePlatform is Pausable, RoleNames {
             distributionRound
         );
     }
+
+    function pause() external {
+        require(
+            roleManager.hasRole(BACKEND_ROLE, msg.sender),
+            "Only backend can pause"
+        );
+        _pause();
+    }
+
+    function unpause() external {
+        require(
+            roleManager.hasRole(BACKEND_ROLE, msg.sender),
+            "Only backend can unpause"
+        );
+        _unpause();
+    }
 }

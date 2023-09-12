@@ -883,4 +883,20 @@ contract UDAOStaker is RoleNames, EIP712, Pausable {
         bytes32 digest = _hashRole(voucher);
         return ECDSA.recover(digest, voucher.signature);
     }
+
+    function pause() external {
+        require(
+            roleManager.hasRole(BACKEND_ROLE, msg.sender),
+            "Only backend can pause"
+        );
+        _pause();
+    }
+
+    function unpause() external {
+        require(
+            roleManager.hasRole(BACKEND_ROLE, msg.sender),
+            "Only backend can unpause"
+        );
+        _unpause();
+    }
 }

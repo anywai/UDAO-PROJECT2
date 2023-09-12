@@ -872,4 +872,20 @@ contract Supervision is Pausable, RoleNames {
         PT = IPlatformTreasury(contractManager.PlatformTreasuryAddress());
         emit AddressesUpdated(address(roleManager), address(PT));
     }
+
+    function pause() external {
+        require(
+            roleManager.hasRole(BACKEND_ROLE, msg.sender),
+            "Only backend can pause"
+        );
+        _pause();
+    }
+
+    function unpause() external {
+        require(
+            roleManager.hasRole(BACKEND_ROLE, msg.sender),
+            "Only backend can unpause"
+        );
+        _unpause();
+    }
 }

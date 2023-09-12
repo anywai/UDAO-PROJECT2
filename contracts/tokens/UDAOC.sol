@@ -626,4 +626,20 @@ contract UDAOContent is
     ) public view override(ERC721, IERC165) returns (bool) {
         return super.supportsInterface(interfaceId);
     }
+
+    function pause() external {
+        require(
+            roleManager.hasRole(BACKEND_ROLE, msg.sender),
+            "Only backend can pause"
+        );
+        _pause();
+    }
+
+    function unpause() external {
+        require(
+            roleManager.hasRole(BACKEND_ROLE, msg.sender),
+            "Only backend can unpause"
+        );
+        _unpause();
+    }
 }

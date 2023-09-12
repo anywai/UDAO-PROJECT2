@@ -174,4 +174,20 @@ contract UDAOCertificate is
     ) public view override(ERC721, ERC721URIStorage) returns (string memory) {
         return super.tokenURI(tokenId);
     }
+
+    function pause() external {
+        require(
+            roleManager.hasRole(BACKEND_ROLE, msg.sender),
+            "Only backend can pause"
+        );
+        _pause();
+    }
+
+    function unpause() external {
+        require(
+            roleManager.hasRole(BACKEND_ROLE, msg.sender),
+            "Only backend can unpause"
+        );
+        _unpause();
+    }
 }
