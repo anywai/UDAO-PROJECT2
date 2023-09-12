@@ -868,7 +868,7 @@ contract Supervision is Pausable, RoleNames {
             roleManager.hasRole(BACKEND_ROLE, msg.sender),
             "Only backend can update addresses"
         );
-        roleManager = IRoleManager(contractManager.IrmAddress());
+        roleManager = IRoleManager(contractManager.RmAddress());
         PT = IPlatformTreasury(contractManager.PlatformTreasuryAddress());
         emit AddressesUpdated(address(roleManager), address(PT));
     }

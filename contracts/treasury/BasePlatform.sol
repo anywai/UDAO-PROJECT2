@@ -186,7 +186,7 @@ abstract contract BasePlatform is Pausable, RoleNames {
         udao = IERC20(contractManager.UdaoAddress());
         udaoc = IUDAOC(contractManager.UdaocAddress());
         ISupVis = ISupervision(contractManager.ISupVisAddress());
-        roleManager = IRoleManager(contractManager.IrmAddress());
+        roleManager = IRoleManager(contractManager.RmAddress());
 
         priceGetter = IPriceGetter(contractManager.IPriceGetterAddress());
 
@@ -194,7 +194,7 @@ abstract contract BasePlatform is Pausable, RoleNames {
             contractManager.UdaoAddress(),
             contractManager.UdaocAddress(),
             contractManager.ISupVisAddress(),
-            contractManager.IrmAddress()
+            contractManager.RmAddress()
         );
     }
 
