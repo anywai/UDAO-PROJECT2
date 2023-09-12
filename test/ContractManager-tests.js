@@ -299,6 +299,6 @@ describe("Contract Manager", function () {
     await contractContractManager
       .connect(backend)
       .setAddressIrmAddress(dummyAddress);
-    expect(await contractContractManager.IrmAddress()).to.equal(dummyAddress);
+    expect(await contractContractManager.RmAddress()).to.equal(dummyAddress);
   });
 });
