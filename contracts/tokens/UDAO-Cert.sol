@@ -8,13 +8,16 @@ import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
-import "../RoleController.sol";
+import "../interfaces/IRoleManager.sol";
+import "../RoleNames.sol";
+import "@openzeppelin/contracts/security/Pausable.sol";
 
 contract UDAOCertificate is
     ERC721,
     EIP712,
     ERC721URIStorage,
-    RoleController,
+    RoleNames,
+    Pausable,
     Ownable
 {
     string private constant SIGNING_DOMAIN = "UDAOCertMinter";
@@ -23,14 +26,14 @@ contract UDAOCertificate is
     using Counters for Counters.Counter;
 
     Counters.Counter private _tokenIdCounter;
+    IRoleManager roleManager;
 
     constructor(
-        address irmAdress
+        address rmAddress
     )
         ERC721("UDAO Certificate", "UDAO-Cert")
         EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION)
-        RoleController(irmAdress)
-    {}
+    {roleManager = IRoleManager(rmAddress);}
 
     /// @notice Represents an un-minted NFT, which has not yet been recorded into the blockchain.
     /// A signed voucher can be redeemed for a real NFT using the redeem function.
@@ -55,12 +58,12 @@ contract UDAOCertificate is
         // make sure redeemer is redeeming
         require(voucher.redeemer == msg.sender, "You are not the redeemer");
         //make sure redeemer is kyced and not banned
-        require(IRM.isKYCed(msg.sender), "You are not KYCed");
-        require(!IRM.isBanned(msg.sender), "You were banned");
+        require(roleManager.isKYCed(msg.sender), "You are not KYCed");
+        require(!roleManager.isBanned(msg.sender), "You were banned");
         // make sure signature is valid and get the address of the signer
         address signer = _verify(voucher);
         require(
-            IRM.hasRole(BACKEND_ROLE, signer),
+            roleManager.hasRole(BACKEND_ROLE, signer),
             "Signature invalid or unauthorized"
         );
 
@@ -123,10 +126,10 @@ contract UDAOCertificate is
         super._beforeTokenTransfer(from, to, tokenId);
         if (from != address(0) && to != address(0)) {
             //make sure to address is kyced and not banned
-            require(IRM.isKYCed(to), "Receiver is not KYCed");
-            require(!IRM.isBanned(to), "Receiver is banned");
+            require(roleManager.isKYCed(to), "Receiver is not KYCed");
+            require(!roleManager.isBanned(to), "Receiver is banned");
             require(
-                IRM.hasRole(BACKEND_ROLE, msg.sender),
+                roleManager.hasRole(BACKEND_ROLE, msg.sender),
                 "You don't have right to transfer token"
             );
         }
@@ -140,10 +143,13 @@ contract UDAOCertificate is
         address from,
         address to,
         uint256 tokenId
-    ) external onlyRole(BACKEND_ROLE) {
+    ) external  {
+        require(
+            roleManager.hasRole(BACKEND_ROLE, msg.sender),
+            "You don't have right to transfer token");
         //make sure "to" address is kyced and not banned
-        require(IRM.isKYCed(to), "Receiver is not KYCed");
-        require(!IRM.isBanned(to), "Receiver is banned");
+        require(roleManager.isKYCed(to), "Receiver is not KYCed");
+        require(!roleManager.isBanned(to), "Receiver is banned");
         _transfer(from, to, tokenId);
     }
 
