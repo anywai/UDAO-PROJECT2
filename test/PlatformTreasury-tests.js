@@ -2091,7 +2091,7 @@ describe("Platform Treasury General", function () {
         .connect(foundation)
         .forcedRefundJuror(coachingId1)
     ).to.be.revertedWith(
-      `'AccessControl: account ${foundation.address.toLowerCase()} is missing role ${hashedSUPERVISION_CONTRACT}'`
+      "Only supervision contract can force refund"
     );
   });
 
