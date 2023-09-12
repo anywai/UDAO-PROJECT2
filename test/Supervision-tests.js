@@ -1318,10 +1318,7 @@ describe("Supervision Contract", function () {
     await expect(
       contractSupervision.connect(backend).assignDispute(disputeId)
     ).to.be.revertedWith(
-      "AccessControl: account " +
-        backend.address.toLowerCase() +
-        " is missing role " +
-        hashedJUROR_ROLE
+      "Only jurors can assign dispute"
     );
   });
 
@@ -2049,7 +2046,7 @@ describe("Supervision Contract", function () {
           randomAddress
         )
     ).to.revertedWith(
-      `'AccessControl: account ${jurorMember1.address.toLowerCase()} is missing role ${BACKEND_ROLE}'`
+      "Only backend can create dispute"
     );
   });
 
@@ -2063,7 +2060,7 @@ describe("Supervision Contract", function () {
         .connect(jurorMember1)
         .setRequiredJurors(newRequiredJurors)
     ).to.revertedWith(
-      `AccessControl: account ${jurorMember1.address.toLowerCase()} is missing role ${GOVERNANCE_ROLE}`
+      "Only governance can set required juror count"
     );
   });
 
@@ -2278,7 +2275,7 @@ describe("Supervision Contract", function () {
         .connect(contentCreator)
         .sendDisputeResult(disputeId, disputeResultOfJurorMember1)
     ).to.revertedWith(
-      `'AccessControl: account ${contentCreator.address.toLowerCase()} is missing role ${hashedJUROR_ROLE}'`
+      "Only jurors can send dispute result"
     );
   });
 
@@ -2300,7 +2297,7 @@ describe("Supervision Contract", function () {
     await expect(
       contractSupervision.connect(contentCreator).nextRound()
     ).to.revertedWith(
-      `'AccessControl: account ${contentCreator.address.toLowerCase()} is missing role ${hashedTREASURY_CONTRACT}'`
+      "Only treasury contract can start new round"
     );
   });
 
@@ -2424,7 +2421,7 @@ describe("Supervision Contract", function () {
       .connect(backend)
       .setAddressIrmAddress(dummyAddress);
     // Check the current IRM address
-    const currentIrmAddress = await contractContractManager.IrmAddress();
+    const currentIrmAddress = await contractContractManager.RmAddress();
     expect(currentIrmAddress).to.equal(dummyAddress);
     // Update addresses
     await expect(contractSupervision.connect(backend).updateAddresses())
