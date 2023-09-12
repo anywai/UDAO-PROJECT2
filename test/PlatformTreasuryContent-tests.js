@@ -379,9 +379,7 @@ describe("Platform Treasury Contract - Content", function () {
     await expect(
       contractPlatformTreasury.connect(foundation).updateAddresses()
     ).to.revertedWith(
-      "AccessControl: account " +
-        foundation.address.toLowerCase() +
-        " is missing role 0x25cf2b509f2a7f322675b2a5322b182f44ad2c03ac941a0af17c9b178f5d5d5f"
+      "Only backend can update addresses"
     );
   });
   //!!Bu dünkü test
