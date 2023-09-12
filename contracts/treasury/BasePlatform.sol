@@ -203,7 +203,7 @@ abstract contract BasePlatform is Pausable, RoleNames {
     function setCoachingFoundationCut(
         uint _cut
     ) external {
-        require(roleManager.hasRole(BACKEND_ROLE, msg.sender), "Only backend can set cut");
+        require(roleManager.hasRole(GOVERNANCE_ROLE, msg.sender), "Only governance can set cut");
         require(
             _cut + coachingGovernanceCut < 100000,
             "Cuts cant be higher than %100"
