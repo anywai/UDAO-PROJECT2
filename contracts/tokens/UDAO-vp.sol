@@ -6,18 +6,22 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/draft-ERC20Permit.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Votes.sol";
-import "../RoleController.sol";
 import "../ContractManager.sol";
+import "../interfaces/IRoleManager.sol";
+import "../RoleNames.sol";
+import "@openzeppelin/contracts/security/Pausable.sol";
 
 contract UDAOVp is
+    Pausable,
+    RoleNames,
     ERC20,
     ERC20Burnable,
-    RoleController,
     ERC20Permit,
     ERC20Votes
 {
     address stakingContractAddress;
     ContractManager public contractManager;
+    IRoleManager roleManager;
 
     /// @param rmAddress The address of the deployed role manager
     constructor(
@@ -26,13 +30,18 @@ contract UDAOVp is
     )
         ERC20("UDAO-vp", "UDAOVP")
         ERC20Permit("UDAO-vp")
-        RoleController(rmAddress)
+        
     {
         contractManager = ContractManager(_contractManager);
+        roleManager = IRoleManager(rmAddress);
     }
 
     /// @notice Get the updated addresses from contract manager
-    function updateAddresses() external onlyRole(BACKEND_ROLE) {
+    function updateAddresses() external  {
+        require(
+            roleManager.hasRole(BACKEND_ROLE, msg.sender),
+            "Only backend can update addresses"
+        );
         stakingContractAddress = contractManager.StakingContractAddress();
     }
 
@@ -42,7 +51,8 @@ contract UDAOVp is
     function mint(
         address to,
         uint256 amount
-    ) public whenNotPaused onlyRole(STAKING_CONTRACT) {
+    ) public whenNotPaused {
+        require(roleManager.hasRole(STAKING_CONTRACT, msg.sender), "Only staker can mint");
         _mint(to, amount);
         /// @dev Staking contract requires allowence when user wants to unstake
         _approve(to, stakingContractAddress, 2 ** 256 - 1);
@@ -70,10 +80,7 @@ contract UDAOVp is
         uint256 amount
     ) internal override(ERC20, ERC20Votes) {
         super._afterTokenTransfer(from, to, amount);
-        require(
-            msg.sender == stakingContractAddress,
-            "Tx sender is not staking contract"
-        );
+        require(roleManager.hasRole(STAKING_CONTRACT, msg.sender), "Only staker can transfer");
     }
 
     function _mint(
