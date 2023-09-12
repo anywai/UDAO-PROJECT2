@@ -242,9 +242,7 @@ describe("UDAOStaker Contract", function () {
     await expect(
       contractUDAOStaker.connect(validator).setValidatorLockAmount("100")
     ).to.revertedWith(
-      `AccessControl: account ${validator.address
-        .toString()
-        .toLowerCase()} is missing role`
+      "Only admins can set validator lock amount"
     );
   });
 
@@ -268,9 +266,7 @@ describe("UDAOStaker Contract", function () {
     await expect(
       contractUDAOStaker.connect(validator).setJurorLockAmount("100")
     ).to.revertedWith(
-      `AccessControl: account ${validator.address
-        .toString()
-        .toLowerCase()} is missing role`
+      "Only admins can set juror lock amount"
     );
   });
 
@@ -296,9 +292,7 @@ describe("UDAOStaker Contract", function () {
     await expect(
       contractUDAOStaker.connect(validator).setValidatorLockTime("13")
     ).to.revertedWith(
-      `AccessControl: account ${validator.address
-        .toString()
-        .toLowerCase()} is missing role`
+     "Only admins can set validator lock time"
     );
   });
 
@@ -322,9 +316,7 @@ describe("UDAOStaker Contract", function () {
     await expect(
       contractUDAOStaker.connect(validator).setJurorLockTime("13")
     ).to.revertedWith(
-      `AccessControl: account ${validator.address
-        .toString()
-        .toLowerCase()} is missing role`
+      "Only admins can set juror lock time"
     );
   });
 
@@ -350,9 +342,7 @@ describe("UDAOStaker Contract", function () {
     await expect(
       contractUDAOStaker.connect(validator).setApplicationLockTime("13")
     ).to.revertedWith(
-      `AccessControl: account ${validator.address
-        .toString()
-        .toLowerCase()} is missing role`
+      "Only admins can set application lock time"
     );
   });
 
@@ -418,9 +408,7 @@ describe("UDAOStaker Contract", function () {
     await expect(
       contractUDAOStaker.connect(validator).setVoteReward("100")
     ).to.revertedWith(
-      `AccessControl: account ${validator.address
-        .toString()
-        .toLowerCase()} is missing role`
+     "Only admins can set vote reward"
     );
   });
 
@@ -444,9 +432,7 @@ describe("UDAOStaker Contract", function () {
         .connect(validator)
         .setPlatformTreasuryAddress(foundation.address)
     ).to.revertedWith(
-      `AccessControl: account ${validator.address
-        .toString()
-        .toLowerCase()} is missing role`
+     "Only admins can set platform treasury address"
     );
   });
 
@@ -1042,7 +1028,7 @@ describe("UDAOStaker Contract", function () {
         .connect(jurorCandidate)
         .rejectApplication(jurorCandidate.address, 1)
     ).to.revertedWith(
-      `AccessControl: account ${jurorCandidate.address.toLowerCase()} is missing role ${BACKEND_ROLE}`
+     "Only backend can reject application"
     );
   });
 
@@ -2211,7 +2197,7 @@ describe("UDAOStaker Contract", function () {
     await expect(
       contractUDAOStaker.connect(jurorMember).registerJobListing(5)
     ).to.revertedWith(
-      `'AccessControl: account ${jurorMember.address.toLowerCase()} is missing role ${CORPORATE_ROLE}'`
+      "Only corporate can register job listings"
     );
   });
 
@@ -2307,7 +2293,7 @@ describe("UDAOStaker Contract", function () {
     await expect(
       contractUDAOStaker.connect(jurorMember).unregisterJobListing([0])
     ).to.revertedWith(
-      `'AccessControl: account ${jurorMember.address.toLowerCase()} is missing role ${CORPORATE_ROLE}'`
+      "Only corporate can unregister job listings"
     );
   });
 
