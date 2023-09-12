@@ -1623,9 +1623,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     await expect(
       contractPlatformTreasury.connect(validator1).forcedPayment(0)
     ).to.revertedWith(
-      "AccessControl: account " +
-        validator1.address.toLowerCase() +
-        " is missing role"
+      "Only administrator_roles can force payment"
     );
   });
 
@@ -1971,9 +1969,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     await expect(
       contractPlatformTreasury.connect(validator1).forcedRefundAdmin(0)
     ).to.revertedWith(
-      "AccessControl: account " +
-        validator1.address.toLowerCase() +
-        " is missing role"
+      "Only administrator_roles can force refund"
     );
   });
 
