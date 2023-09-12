@@ -8,9 +8,12 @@ import "@openzeppelin/contracts/governance/utils/IVotes.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
-import "../RoleController.sol";
 import "../ContractManager.sol";
 import "../interfaces/IPlatformTreasury.sol";
+import "../interfaces/IRoleManager.sol";
+import "../RoleNames.sol";
+import "@openzeppelin/contracts/security/Pausable.sol";
+
 
 interface IUDAOVP is IVotes, IERC20 {
     function mint(address to, uint256 amount) external;
@@ -18,7 +21,7 @@ interface IUDAOVP is IVotes, IERC20 {
     function burnFrom(address account, uint256 amount) external;
 }
 
-contract UDAOStaker is RoleController, EIP712 {
+contract UDAOStaker is RoleNames, EIP712, Pausable {
     string private constant SIGNING_DOMAIN = "UDAOStaker";
     string private constant SIGNATURE_VERSION = "1";
 
@@ -26,6 +29,7 @@ contract UDAOStaker is RoleController, EIP712 {
     IUDAOVP udaovp;
     ContractManager contractManager;
     address platformTreasuryAddress;
+    IRoleManager roleManager;
 
     /// @notice the required duration to be a validator
     uint256 public jurorLockTime = 30 days;
@@ -171,15 +175,22 @@ contract UDAOStaker is RoleController, EIP712 {
         address rmAddress,
         address udaoVpAddress,
         address _contractManager
-    ) EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION) RoleController(rmAddress) {
+    ) EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION) {
         contractManager = ContractManager(_contractManager);
         udao = IERC20(contractManager.UdaoAddress());
         udaovp = IUDAOVP(udaoVpAddress);
         platformTreasuryAddress = _platformTreasuryAddress;
+        roleManager = IRoleManager(rmAddress);
     }
 
     /// @notice Get the updated addresses from contract manager
-    function updateAddresses() external onlyRole(BACKEND_ROLE) {
+    function updateAddresses() external  {
+        require(
+            roleManager.hasRole(
+                BACKEND_ROLE,
+                msg.sender
+            ), "Only backend can update addresses"
+        );
         platformTreasuryAddress = contractManager.PlatformTreasuryAddress();
         udao = IERC20(contractManager.UdaoAddress());
         udaovp = IUDAOVP(contractManager.UdaoVpAddress());
@@ -189,7 +200,13 @@ contract UDAOStaker is RoleController, EIP712 {
     /// @param _amount new amount that requried to be locked
     function setValidatorLockAmount(
         uint256 _amount
-    ) external onlyRoles(administrator_roles) {
+    ) external  {
+        require(
+            roleManager.hasRoles(
+                administrator_roles,
+                msg.sender
+            ), "Only admins can set validator lock amount"
+        );
         validatorLockAmount = _amount;
         emit SetValidatorLockAmount(_amount);
     }
@@ -199,7 +216,13 @@ contract UDAOStaker is RoleController, EIP712 {
     /// @param _amount new amount that requried to be locked
     function setJurorLockAmount(
         uint256 _amount
-    ) external onlyRoles(administrator_roles) {
+    ) external  {
+        require(
+            roleManager.hasRoles(
+                administrator_roles,
+                msg.sender
+            ), "Only admins can set juror lock amount"
+        );
         jurorLockAmount = _amount;
         emit SetJurorLockAmount(_amount);
     }
@@ -209,7 +232,13 @@ contract UDAOStaker is RoleController, EIP712 {
     /// @param _lockTime is new lock time for validators
     function setValidatorLockTime(
         uint256 _lockTime
-    ) external onlyRoles(administrator_roles) {
+    ) external  {
+        require(
+            roleManager.hasRoles(
+                administrator_roles,
+                msg.sender
+            ), "Only admins can set validator lock time"
+        );
         //convert it to unix timestamp
         _lockTime = _lockTime * (1 days);
         validatorLockTime = _lockTime;
@@ -221,7 +250,13 @@ contract UDAOStaker is RoleController, EIP712 {
     /// @param _lockTime is new lock time for jurors
     function setJurorLockTime(
         uint256 _lockTime
-    ) external onlyRoles(administrator_roles) {
+    ) external  {
+        require(
+            roleManager.hasRoles(
+                administrator_roles,
+                msg.sender
+            ), "Only admins can set juror lock time"
+        );
         //convert it to unix timestamp
         _lockTime = _lockTime * (1 days);
         jurorLockTime = _lockTime;
@@ -233,7 +268,13 @@ contract UDAOStaker is RoleController, EIP712 {
     /// @param _lockTime is new lock time for role applications
     function setApplicationLockTime(
         uint256 _lockTime
-    ) external onlyRoles(administrator_roles) {
+    ) external {
+        require(
+            roleManager.hasRoles(
+                administrator_roles,
+                msg.sender
+            ), "Only admins can set application lock time"
+        );
         //convert it to unix timestamp
         _lockTime = _lockTime * (1 days);
         applicationLockTime = _lockTime;
@@ -245,7 +286,13 @@ contract UDAOStaker is RoleController, EIP712 {
     /// @param _reward new amount of reward
     function setVoteReward(
         uint256 _reward
-    ) external onlyRoles(administrator_roles) {
+    ) external  {
+        require(
+            roleManager.hasRoles(
+                administrator_roles,
+                msg.sender
+            ), "Only admins can set vote reward"
+        );
         voteReward = _reward;
         emit SetVoteReward(_reward);
     }
@@ -255,7 +302,13 @@ contract UDAOStaker is RoleController, EIP712 {
     /// @param _platformTreasuryAddress the address of the new platform treasury
     function setPlatformTreasuryAddress(
         address _platformTreasuryAddress
-    ) external onlyRole(BACKEND_ROLE) {
+    ) external  {
+        require(
+            roleManager.hasRoles(
+                administrator_roles,
+                msg.sender
+            ), "Only admins can set platform treasury address"
+        );
         platformTreasuryAddress = _platformTreasuryAddress;
         emit SetPlatformTreasuryAddress(_platformTreasuryAddress);
     }
@@ -265,7 +318,13 @@ contract UDAOStaker is RoleController, EIP712 {
     /// @param _maximum_stake_days the new maximum stake days
     function setMaximumStakeDays(
         uint256 _maximum_stake_days
-    ) external onlyRoles(administrator_roles) {
+    ) external  {
+        require(
+            roleManager.hasRoles(
+                administrator_roles,
+                msg.sender
+            ), "Only admins can set maximum stake days"
+        );
         //convert it to unix timestamp
         _maximum_stake_days = _maximum_stake_days * (1 days);
         require(
@@ -280,7 +339,13 @@ contract UDAOStaker is RoleController, EIP712 {
     /// @param _minimum_stake_days the new minimum stake days
     function setMinimumStakeDays(
         uint256 _minimum_stake_days
-    ) external onlyRoles(administrator_roles) {
+    ) external  {
+        require(
+            roleManager.hasRoles(
+                administrator_roles,
+                msg.sender
+            ), "Only admins can set minimum stake days"
+        );
         //convert it to unix timestamp
         _minimum_stake_days = _minimum_stake_days * (1 days);
         require(
@@ -306,14 +371,14 @@ contract UDAOStaker is RoleController, EIP712 {
     /// @notice allows users to apply for validator role
     function applyForValidator() external whenNotPaused {
         //make sure redeemer is kyced and not banned
-        require(IRM.isKYCed(msg.sender), "You are not KYCed");
-        require(!IRM.isBanned(msg.sender), "You were banned");
+        require(roleManager.isKYCed(msg.sender), "You are not KYCed");
+        require(!roleManager.isBanned(msg.sender), "You were banned");
         require(
             udaovp.balanceOf(msg.sender) > 0,
             "You have to be governance member to apply"
         );
         require(
-            !IRM.hasRole(VALIDATOR_ROLE, msg.sender),
+            !roleManager.hasRole(VALIDATOR_ROLE, msg.sender),
             "Address is already a Validator"
         );
         require(
@@ -336,14 +401,14 @@ contract UDAOStaker is RoleController, EIP712 {
     /// @notice allows users to apply for juror role
     function applyForJuror() external whenNotPaused {
         //make sure redeemer is kyced and not banned
-        require(IRM.isKYCed(msg.sender), "You are not KYCed");
-        require(!IRM.isBanned(msg.sender), "You were banned");
+        require(roleManager.isKYCed(msg.sender), "You are not KYCed");
+        require(!roleManager.isBanned(msg.sender), "You were banned");
         require(
             udaovp.balanceOf(msg.sender) > 0,
             "You have to be governance member to apply"
         );
         require(
-            !IRM.hasRole(JUROR_ROLE, msg.sender),
+            !roleManager.hasRole(JUROR_ROLE, msg.sender),
             "Address is already a Juror"
         );
         require(
@@ -365,15 +430,15 @@ contract UDAOStaker is RoleController, EIP712 {
     /// @notice Users can use this function and assign validator or juror roles to themselves
     function getApproved(RoleVoucher calldata voucher) external whenNotPaused {
         //make sure redeemer is kyced and not banned
-        require(IRM.isKYCed(msg.sender), "You are not KYCed");
-        require(!IRM.isBanned(msg.sender), "You were banned");
+        require(roleManager.isKYCed(msg.sender), "You are not KYCed");
+        require(!roleManager.isBanned(msg.sender), "You were banned");
         // make sure redeemer is redeeming
         require(voucher.redeemer == msg.sender, "You are not the redeemer");
         // make sure signature is valid and get the address of the signer
         address signer = _verifyRole(voucher);
         require(voucher.validUntil >= block.timestamp, "Voucher has expired.");
         require(
-            IRM.hasRole(BACKEND_ROLE, signer),
+            roleManager.hasRole(BACKEND_ROLE, signer),
             "Signature invalid or unauthorized"
         );
 
@@ -391,7 +456,7 @@ contract UDAOStaker is RoleController, EIP712 {
             
             validatorApplication.isFinished = true;
             validatorApplication.expire = block.timestamp + validatorLockTime;
-            IRM.grantRoleStaker(VALIDATOR_ROLE, voucher.redeemer);
+            roleManager.grantRoleStaker(VALIDATOR_ROLE, voucher.redeemer);
             activeApplicationForValidator[voucher.redeemer] = false;
         } else if (roleId == 1) { /// @dev juror role application
             require(
@@ -407,10 +472,10 @@ contract UDAOStaker is RoleController, EIP712 {
             );
             jurorApplication.isFinished = true;
             jurorApplication.expire = block.timestamp + jurorLockTime;
-            IRM.grantRoleStaker(JUROR_ROLE, voucher.redeemer);
+            roleManager.grantRoleStaker(JUROR_ROLE, voucher.redeemer);
             activeApplicationForJuror[voucher.redeemer] = false;
         } else if (roleId == 2) {
-            IRM.grantRoleStaker(CORPORATE_ROLE, voucher.redeemer);
+            roleManager.grantRoleStaker(CORPORATE_ROLE, voucher.redeemer);
         } else {
             revert("Undefined role ID!");
         }
@@ -423,7 +488,13 @@ contract UDAOStaker is RoleController, EIP712 {
     function rejectApplication(
         address _applicant,
         uint256 roleId
-    ) external onlyRole(BACKEND_ROLE) {
+    ) external {
+        require(
+            roleManager.hasRole(
+                BACKEND_ROLE,
+                msg.sender
+            ), "Only backend can reject application"
+        );
         if (roleId == 0){
             ValidatiorApplication
                 storage validatorApplication = validatorApplications[
@@ -472,12 +543,12 @@ contract UDAOStaker is RoleController, EIP712 {
                 validatorApplicationId[msg.sender]
             ];
 
-        if (IRM.hasRole(VALIDATOR_ROLE, msg.sender)) {
+        if (roleManager.hasRole(VALIDATOR_ROLE, msg.sender)) {
             if (
                 validatorApplication.isFinished &&
                 validatorApplication.expire < block.timestamp
             ) {
-                IRM.revokeRoleStaker(VALIDATOR_ROLE, msg.sender);
+                roleManager.revokeRoleStaker(VALIDATOR_ROLE, msg.sender);
                 withdrawableBalance = validatorBalanceOf[msg.sender];
                 validatorBalanceOf[msg.sender] = 0;
             }
@@ -515,12 +586,12 @@ contract UDAOStaker is RoleController, EIP712 {
             jurorApplicationId[msg.sender]
         ];
 
-        if (IRM.hasRole(JUROR_ROLE, msg.sender)) {
+        if (roleManager.hasRole(JUROR_ROLE, msg.sender)) {
             if (
                 jurorApplication.isFinished &&
                 jurorApplication.expire < block.timestamp
             ) {
-                IRM.revokeRoleStaker(JUROR_ROLE, msg.sender);
+                roleManager.revokeRoleStaker(JUROR_ROLE, msg.sender);
                 withdrawableBalance = jurorBalanceOf[msg.sender];
                 jurorBalanceOf[msg.sender] = 0;
             }
@@ -559,7 +630,7 @@ contract UDAOStaker is RoleController, EIP712 {
                 validatorApplicationId[msg.sender]
             ];
 
-        if (IRM.hasRole(VALIDATOR_ROLE, msg.sender)) {
+        if (roleManager.hasRole(VALIDATOR_ROLE, msg.sender)) {
             if (
                 validatorApplication.isFinished &&
                 validatorApplication.expire < block.timestamp
@@ -582,8 +653,8 @@ contract UDAOStaker is RoleController, EIP712 {
         uint256 _amount,
         uint256 _days
     ) public whenNotPaused {
-        require(IRM.isKYCed(msg.sender), "Address is not KYCed");
-        require(!IRM.isBanned(msg.sender), "Address is banned");
+        require(roleManager.isKYCed(msg.sender), "Address is not KYCed");
+        require(!roleManager.isBanned(msg.sender), "Address is banned");
         require(
             _days * (1 days) >= minimum_stake_days,
             "Can't stake less than minimum_stake_days"
@@ -673,7 +744,13 @@ contract UDAOStaker is RoleController, EIP712 {
     /// @param voter address of the voter
     function addVoteRewards(
         address voter
-    ) external whenNotPaused onlyRole(GOVERNANCE_CONTRACT) {
+    ) external whenNotPaused  {
+        require(
+            roleManager.hasRole(
+                GOVERNANCE_CONTRACT,
+                msg.sender
+            ), "Only governance contract can add vote rewards"
+        );
         require(udaovp.balanceOf(voter) > 0, "Voter has no voting power");
         uint256 votingPowerRatio = (udaovp.balanceOf(voter) * 10000) /
             totalVotingPower;
@@ -702,7 +779,13 @@ contract UDAOStaker is RoleController, EIP712 {
     /// @param _corporateStakePerListing the new corporateStakePerListing
     function setCorporateStakePerListing(
         uint256 _corporateStakePerListing
-    ) external onlyRoles(administrator_roles) {
+    ) external  {
+        require(
+            roleManager.hasRoles(
+                administrator_roles,
+                msg.sender
+            ), "Only admins can set corporateStakePerListing"
+        );
         corporateStakePerListing = _corporateStakePerListing;
     } 
 
@@ -710,10 +793,16 @@ contract UDAOStaker is RoleController, EIP712 {
     /// @param jobListingCount the number of job listings to register
     function registerJobListing(
         uint jobListingCount
-    ) external onlyRole(CORPORATE_ROLE) {
+    ) external  {
+        require(
+            roleManager.hasRole(
+                CORPORATE_ROLE,
+                msg.sender
+            ), "Only corporate can register job listings"
+        );
         //make sure juror is kyced and not banned
-        require(IRM.isKYCed(msg.sender), "You are not KYCed");
-        require(!IRM.isBanned(msg.sender), "You were banned");
+        require(roleManager.isKYCed(msg.sender), "You are not KYCed");
+        require(!roleManager.isBanned(msg.sender), "You were banned");
         require(jobListingCount > 0, "Zero job listing count is not allowed");
         udao.transferFrom(
             msg.sender,
@@ -737,7 +826,13 @@ contract UDAOStaker is RoleController, EIP712 {
     /// TODO Waiting ofr issue 54
     function unregisterJobListing(
         uint[] calldata listingIds
-    ) external onlyRole(CORPORATE_ROLE) {
+    ) external  {
+        require(
+            roleManager.hasRole(
+                CORPORATE_ROLE,
+                msg.sender
+            ), "Only corporate can unregister job listings"
+        );
         uint totalUnstakeAmount;
         for (uint i = 0; i < listingIds.length; i++) {
             totalUnstakeAmount += corporateListingId[msg.sender][listingIds[i]];
