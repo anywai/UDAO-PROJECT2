@@ -6,8 +6,8 @@ import "@openzeppelin/contracts/governance/extensions/GovernorSettings.sol";
 import "@openzeppelin/contracts/governance/extensions/GovernorCountingSimple.sol";
 import "@openzeppelin/contracts/governance/extensions/GovernorVotes.sol";
 import "@openzeppelin/contracts/governance/extensions/GovernorTimelockControl.sol";
-
-import "../RoleController.sol";
+import "../interfaces/IRoleManager.sol";
+import "../RoleNames.sol";
 
 interface IUDAOStaker {
     function addVoteRewards(address voter) external;
@@ -19,9 +19,10 @@ contract UDAOGovernor is
     GovernorCountingSimple,
     GovernorVotes,
     GovernorTimelockControl,
-    RoleController
+    RoleNames
 {
     IUDAOStaker stakingContract;
+    IRoleManager roleManager;
 
     constructor(
         IVotes _token,
@@ -38,9 +39,10 @@ contract UDAOGovernor is
         )
         GovernorVotes(_token)
         GovernorTimelockControl(_timelock)
-        RoleController(rmAddress)
+        
     {
         stakingContract = IUDAOStaker(stakingContractAddress);
+        roleManager = IRoleManager(rmAddress);
     }
 
     uint _quorum = 1e18; // 720000000e18 (100.000.000 * 0.04 * 6 * 30)
@@ -53,7 +55,13 @@ contract UDAOGovernor is
     /// @param stakingContractAddress Address to set to
     function setStakingContract(
         address stakingContractAddress
-    ) external onlyRole(BACKEND_ROLE) {
+    ) external  {
+        require(
+            roleManager.hasRole(
+                BACKEND_ROLE,
+                msg.sender
+            ), "Only backend can set staking contract"
+        );
         stakingContract = IUDAOStaker(stakingContractAddress);
     }
 
