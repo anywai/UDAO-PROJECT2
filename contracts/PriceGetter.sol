@@ -6,9 +6,12 @@ import "./uniswap-0.8/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
 import "./uniswap-0.8/v3-periphery/contracts/libraries/OracleLibrary.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import "./interfaces/IPriceGetter.sol";
-import "./RoleController.sol";
+import "./interfaces/IRoleManager.sol";
+import "./RoleNames.sol";
 
-contract PriceGetter is IPriceGetter, RoleController {
+contract PriceGetter is IPriceGetter, RoleNames {
+    IRoleManager roleManager;
+
     address token0;
     address token1;
     address pool;
@@ -22,7 +25,9 @@ contract PriceGetter is IPriceGetter, RoleController {
         address _token1,
         uint24 _fee,
         address rmAddress
-    ) RoleController(rmAddress) {
+    )  {
+        roleManager = IRoleManager(rmAddress);
+
         token0 = _token0;
         token1 = _token1;
 
@@ -182,13 +187,21 @@ contract PriceGetter is IPriceGetter, RoleController {
     function addNewFiat(
         bytes32 fiat,
         address priceFeedAddress
-    ) external onlyRoles(administrator_roles) {
+    ) external {
+        require(
+            roleManager.hasRoles(administrator_roles, msg.sender),
+            "Only admins can add new fiat"
+        );
         fiatToPriceFeed[fiat] = AggregatorV3Interface(priceFeedAddress);
     }
 
     /// @notice Delete fiat currency from the contract
     /// @param fiat Name of the fiat currency
-    function deleteFiat(bytes32 fiat) external onlyRoles(administrator_roles) {
+    function deleteFiat(bytes32 fiat) external {
+        require(
+            roleManager.hasRoles(administrator_roles, msg.sender),
+            "Only admins can delete fiat"
+        );
         delete fiatToPriceFeed[fiat];
     }
 
