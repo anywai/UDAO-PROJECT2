@@ -49,8 +49,11 @@ contract PlatformTreasury is Pausable, ContentManager {
     function withdrawGovernance()
         external
         whenNotPaused
-        onlyRole(GOVERNANCE_ROLE)
     {
+        require(
+            roleManager.hasRole(GOVERNANCE_ROLE, msg.sender),
+            "Only governance can withdraw"
+        );
         uint withdrawableBalance = governanceBalance;
         governanceBalance = 0; /// @dev zeroing before the actual withdraw
         udao.transfer(governanceTreasury, withdrawableBalance);
@@ -61,8 +64,11 @@ contract PlatformTreasury is Pausable, ContentManager {
     function withdrawFoundation()
         external
         whenNotPaused
-        onlyRole(FOUNDATION_ROLE)
     {
+        require(
+            roleManager.hasRole(FOUNDATION_ROLE, msg.sender),
+            "Only foundation can withdraw"
+        );
         uint withdrawableBalance = foundationBalance;
         foundationBalance = 0; /// @dev zeroing before the actual withdraw
         udao.transfer(foundationWallet, withdrawableBalance);
@@ -73,8 +79,11 @@ contract PlatformTreasury is Pausable, ContentManager {
     function withdrawValidator()
         external
         whenNotPaused
-        onlyRole(VALIDATOR_ROLE)
     {
+        require(
+            roleManager.hasRole(VALIDATOR_ROLE, msg.sender),
+            "Only validator can withdraw"
+        );
         uint claimableRound = lastValidatorClaim[msg.sender];
         uint withdrawableBalance = 0;
         uint validatorScore = 0;
@@ -92,7 +101,11 @@ contract PlatformTreasury is Pausable, ContentManager {
     }
 
     /// @notice calculates juror earnings and withdraws calculated earning to juror's wallet
-    function withdrawJuror() external whenNotPaused onlyRole(JUROR_ROLE) {
+    function withdrawJuror() external whenNotPaused {
+        require(
+            roleManager.hasRole(JUROR_ROLE, msg.sender),
+            "Only juror can withdraw"
+        );
         uint claimableRound = lastJurorClaim[msg.sender];
         uint withdrawableBalance = 0;
         uint jurorScore = 0;
@@ -130,7 +143,11 @@ contract PlatformTreasury is Pausable, ContentManager {
     function transferGovernanceRewards(
         address _to,
         uint _amount
-    ) external whenNotPaused onlyRole(STAKING_CONTRACT) {
+    ) external whenNotPaused {
+        require(
+            roleManager.hasRole(STAKING_CONTRACT, msg.sender),
+            "Only staking contract can transfer governance rewards"
+        );
         udao.transfer(_to, _amount);
     }
 }
