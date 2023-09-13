@@ -144,10 +144,13 @@ contract UDAOContent is
         require(!IRM.isBanned(msg.sender), "Redeemer is banned!");
         require(voucher.validationScore != 0, "Validation score cannot be 0");
         // make sure the full content price is not 0
-        require(voucher._contentPrice[0] != 0, "Full content price cannot be 0");
+        require(
+            voucher._contentPrice[0] != 0,
+            "Full content price cannot be 0"
+        );
         // make sure the coaching price is not 0
         require(voucher._coachingPrice != 0, "Coaching price cannot be 0");
-        
+
         require(
             !isCalldataStringEmpty(voucher._coachingCurrencyName),
             "Coaching currency cannot be empty"
@@ -156,12 +159,12 @@ contract UDAOContent is
             !isCalldataStringEmpty(voucher._currencyName),
             "Content currency cannot be empty"
         );
-       
+
         require(
             !isCalldataStringEmpty(voucher._uri),
             "Content URI cannot be empty"
         );
-        
+
         // TODO Below two lines will probably be removed
         coachingEnabled[tokenId] = voucher._isCoachingEnabled;
         coachingRefundable[tokenId] = voucher._isCoachingRefundable;
@@ -194,8 +197,12 @@ contract UDAOContent is
 
     /// @notice Checks if a string is empty
     /// @param input The string to check
-    function isCalldataStringEmpty(string calldata input) internal pure returns (bool) {
-        return keccak256(abi.encodePacked(input)) == keccak256(abi.encodePacked(""));
+    function isCalldataStringEmpty(
+        string calldata input
+    ) internal pure returns (bool) {
+        return
+            keccak256(abi.encodePacked(input)) ==
+            keccak256(abi.encodePacked(""));
     }
 
     /// @notice Redeems a RedeemVoucher for an actual NFT, modifying existing content in the process.
@@ -408,6 +415,13 @@ contract UDAOContent is
         uint partId
     ) external view returns (uint256, bytes32) {
         return (contentPrice[tokenId][partId], currencyName[tokenId]);
+    }
+
+    function getContentPrice(
+        uint tokenId,
+        uint partId
+    ) external view returns (uint256) {
+        return (contentPrice[tokenId][partId]);
     }
 
     /// @notice allows content owners to set full content price
