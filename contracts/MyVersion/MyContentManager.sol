@@ -11,6 +11,9 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
     string private constant SIGNING_DOMAIN = "ContentManager";
     string private constant SIGNATURE_VERSION = "1";
 
+    using Counters for Counters.Counter;
+    Counters.Counter private purchaseID;
+
     /// @notice  triggered if coaching service payment to the instructor is forced
     event ForcedPayment(uint256 _coachingId, address forcedBy);
     /// @notice triggered when any kind of refund is done
@@ -106,6 +109,14 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
 
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@//
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@//
+    struct ASaleOccured {
+        address payee;
+        uint256 totalPriceToPayUdao;
+    }
+
+    //ASaleOccurred aSale;
+    mapping(uint256 => ASaleOccured) public sales;
+
     /// @notice Allows multiple content purchases using buyContent
     /// @param tokenIds ids of the content
     /// @param fullContentPurchases is full content purchased
@@ -133,6 +144,11 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
                 purchasedParts[i]
             );
         }
+
+        // payee, totalPriceToPayUdao
+        // paymentId = Counter;
+        // mapping Payment: paymentId => mapping(address => totalPriceToPayUdao)
+        // voucher.paymentId, Payment(paymentId)(msg.sender) : totalPriceToPayUdao
         require(msg.value >= totalPriceToPayUdao, "Not enough UDAO sent!");
         for (uint256 i; i < tokenIdsLength; i++) {
             _buyContentwithUDAO(
@@ -207,11 +223,13 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
             contentReceiver
         );
 
+        _saveTheSaleOnAListForRefund(priceToPayUdao /*instrShare + totalCut*/);
+
         //TODO List
         //1)every sale must be saved to a list/struct or whatever for if refund needed!
         //2)also cuts must be send to governanceTreasury but maybe we can add it to inside _updateGlobalBalances
         //3)we need to check functions visibility(view/pure/public) and behaviour (external/internal)
-        _saveTheSaleOnAListForRefund();
+        //_saveTheSaleOnAListForRefund();
         _sendCurrentGlobalCutsToGovernanceTreasury();
 
         emit ContentBought(tokenId, purchasedParts, priceToPayUdao, msg.sender);
@@ -279,11 +297,12 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
             contentReceiver
         );
 
+        _saveTheSaleOnAListForRefund(totalCut);
+
         //TODO List
         //1)every sale must be saved to a list/struct or whatever for if refund needed!
         //2)also cuts must be send to governanceTreasury but maybe we can add it to inside _updateGlobalBalances
         //3)we need to check functions visibility(view/pure/public) and behaviour (external/internal)
-        _saveTheSaleOnAListForRefund();
         _sendCurrentGlobalCutsToGovernanceTreasury();
 
         emit ContentBought(tokenId, purchasedParts, priceToPayUdao, msg.sender);
@@ -560,7 +579,12 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
         }
     }
 
-    function _saveTheSaleOnAListForRefund() internal {
+    function _saveTheSaleOnAListForRefund(uint totalPriceToPayUdao) internal {
+        sales[purchaseID.current()] = ASaleOccured({
+            payee: msg.sender,
+            totalPriceToPayUdao: totalPriceToPayUdao
+        });
+        purchaseID.increment();
         //TODO Not implemented YET
     }
 
@@ -568,7 +592,84 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
         //TODO Not implemented YET
     }
 
+    function _newRefund() internal {
+        //TODO Not implemented YET
+    }
+
+    function _buyDisc() internal {
+        //TODO Not implemented YET
+    }
+
+    // TODO Refund voucher için backend dışında farklı bir wallet kullanılsın.
+    // Biz kendimiz otomatize edelim.
+    /*
+    function refund(calldata RefundVoucher voucher) external {
+        uint256 buyTransactionTime = voucher.buyTransactionTime;
+        
+        uint paidPrice = voucher.paidPrice; //(instrShare + totalCut)
+        /// @dev Shares
+        uint256 foundShare = voucher.foundShare;
+        uint256 goverShare = voucher.goverShare;
+        uint256 valdtrShare = voucher.validtrShare;
+        uint256 jurorShare = voucher.jurorShare;
+        uint256 totalCut = = voucher.total.cut;
+        uint256 instrShare = voucher.instrShare;
+        /// @dev Wallet addrsses
+        address instructor = voucher.instructor;
+        address payee = voucher.payee;
+        address contentReceiver = voucher.contentReceiver;
+
+        uint256 tokenID = voucher.tokenID;
+        uint256[] memory purchasedParts = voucher.purchasedParts;
+        bool isAFIATPayout = voucher.isAFIATPayout;
+        uint256 validUntil = voucher.validUntil; //e.g  buyTransactionTime + RefundWindow
+        require(
+            // şu anki tarih <= 28 ocaktan küçük olmalı
+            block.timestamp <= validUntil,
+            "Refund voucher is expired!"
+        );
+
+        // Check if contentReceiver has the content or part
+        bool receiverHaveIt = _doReceiverHaveContentOrPart(
+            tokenID,
+            false,
+            purchasedParts,
+            contentReceiver
+        );
+        require(receiverHaveIt == true, "Content or part's is not bought");
+        // delete content from contentReceiver
+        // juror/foundation/validator/governance 'a borç yaz
+        // instructor' a borç yaz
+        // implement refund (udao.transfer(payee, paidPrice)))
+        
+        
+    }
+    */
     //TODO We should have
+    //_saveTheSaleOnAListForRefund(TransactionTime, msg.sender, (paidPrice, isAFIATPayout), instructor, contentReceiver, (tokenID, purchasedParts))
+    ////// Parayı FutureBalanceArray'inden alma, "Dept" olarak ekle! Çünkü refund windowu gelecekte değiştirirsen problem yaşarsın. (jurorDept, instructorDept[address],foundationDept)
+    ////// TransactionTime Lazım! Bu ve refund window kullanılarak refundun gerçekleşebileceği tarhi aralığı bulunur.
+    // TrasnactionTime lazım değil. Bir event trigger ederiz. Backend o eventin gerçekleşme tarihine bakar geçmişe dönük.
+    // ya da backendde satın alma tarihleri tutulur. Ona göre voucher oluşturulur.
+    ////// msg.sender kaydedilmeli! Bu parayı kime iade edeceğimi gösterecek. (Kişi çağırdıysa kişi platform çağırdıysa platform)
+    // Buna da gerek yok. transactionTime için yazdıklarım bunun içinde geçerli bence. uygulanabilir...
+    ////// fiatPayout mu udaoPayout mu? msg.sender'a ne kadar gidecek bu bilgi lazım. direk instructorShare + totalCut'ı yaz buraya
+    // Buna da gerek yok :D Yine backend halleder.
+    ////// instructor adress lazım! ödeme yapıldıysa kimden parayı geri alıcam.
+    // Buna da gerek yok. ownerOf(tokenId) zaten instructor adresini veriyor.
+    ////// contentReceiver lazım.
+    // Bunun için de voucher oluşturulurken contentReceiver'ı da yazdırırız.
+    ////// tokenID - purchasedParts lazım hangi kontenti ve parçalarını alıcıdan silicem
+    // BOSVER VOUCHER KULLAN burdaki tüm değişkenleri eventle dışarı aktar offchain Kaydetsin bieyere!
+
+    //_aNewRefundFunction()
+    ////// Refund talebi kullanıcı tarafından offChainde bize bildirilir.
+    ////// eğer fiat ödemeyse, kişi offChain butona basar ve refund fonksiyonunu biz çağırırız yada onaylamazsak çağırmayız. (yada tamamen voucher veririz ve bunu çağır deriz. seçeneklerdir bunlar.)
+    ////// off chainde biz belirlediğimiz şartlara göre onaylarsak yada instructor onaylarsa ödeme iade olur.(CALL refund function) Eğer iki tarafta redederse iade reddedilir. (NO CALL) Juror yok burda hiçbir şekil.
+
+    //_sendCurrentGlobalCutsToGovernanceTreasury
+
+    //BuyDiscountedContent() function
 
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@//
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@//
