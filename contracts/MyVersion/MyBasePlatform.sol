@@ -36,6 +36,18 @@ abstract contract MyBasePlatform is Pausable, RoleController {
     // constant one day equals that in epoch time
     uint256 epochOneDay = 86400;
 
+    //newTime
+    uint public gloCntntUpdTime;
+    uint public gloCoachUpdTime;
+
+    // Platform
+    uint256 public glbCntntCurBalance;
+    uint256[] public glbCntntFuBalance;
+
+    // Platform
+    uint256 public glbCoachCurBalance;
+    uint256[] public glbCoachFuBalance;
+
     // current balance & future balances of foundation pool
     uint public foundCurBalance;
     uint[] public foundFuBalance;
@@ -66,12 +78,60 @@ abstract contract MyBasePlatform is Pausable, RoleController {
     uint public contentJurorCut = 0; //100;
     uint public contentValidatorCut = 0; //200;
 
+    //totalCut
+    uint256 totalCutContent = (contentFoundationCut +
+        contentGovernanceCut +
+        contentJurorCut +
+        contentValidatorCut);
+
+    uint256 totalCutCoaching = (coachingFoundationCut +
+        coachingGovernanceCut +
+        coachingJurorCut);
+
+    mapping(address => uint) public instructorDebt;
+    uint256 globalCntntRefDept;
+    uint256 globalCoachRefDept;
+
     // Addresses of governanceTreasury & foundation wallet
     address governanceTreasury;
     address foundationWallet;
 
+    bool isGovernanceTreasuryOnline = false;
+
     // user address => content id => content owned by the user
     mapping(address => mapping(uint => mapping(uint => bool))) isTokenBought;
+
+    function getContentFoundShare(
+        uint256 _priceOf
+    ) public view returns (uint256) {
+        return ((_priceOf * contentFoundationCut) / totalCutContent);
+    }
+
+    function getContentGoverShare(
+        uint256 _priceOf
+    ) public view returns (uint256) {
+        return ((_priceOf * contentGovernanceCut) / totalCutContent);
+    }
+
+    function getContentJurorShare(
+        uint256 _priceOf
+    ) public view returns (uint256) {
+        return ((_priceOf * contentJurorCut) / totalCutContent);
+    }
+
+    function getContentValdtrShare(
+        uint256 _priceOf
+    ) public view returns (uint256) {
+        return ((_priceOf * contentValidatorCut) / totalCutContent);
+    }
+
+    function getTotalCutContentShare(
+        uint256 _priceOf
+    ) public view returns (uint256) {
+        return ((_priceOf * totalCutContent) / 100000);
+    }
+
+    //_some for coaching...
 
     /// @notice Triggered after every round is finalized and rewards are distributed
     event RewardsDistributed(
