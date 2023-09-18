@@ -16,6 +16,11 @@ interface IUDAOC is IERC721 {
         uint partId
     ) external view returns (uint256, bytes32);
 
+    function getContentPrice(
+        uint tokenId,
+        uint partId
+    ) external view returns (uint256);
+
     function getCoachingPriceAndCurrency(
         uint tokenId
     ) external view returns (uint256, bytes32);
