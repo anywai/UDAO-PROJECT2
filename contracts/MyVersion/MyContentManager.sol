@@ -64,6 +64,16 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
         bytes signature;
     }
 
+    /// @notice Represents a refund voucher for a coaching
+    struct RefundVoucher {
+        address contentReceiver;
+        uint256 refundID;
+        uint256 tokenId;
+        uint256[] finalParts;
+        uint256 validUntil;
+        bytes signature;
+    }
+
     // wallet => content token Ids
     mapping(address => uint256[][]) ownedContents;
     // tokenId => student addresses
@@ -119,7 +129,6 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
         uint256 validDate;
     }
 
-    //ASaleOccurred aSale;
     mapping(uint256 => ASaleOccured) public sales;
 
     /// @notice Returns amount of UDAO that is needed to buy the contents
@@ -736,16 +745,32 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
     }
 
     //    mapping(uint256 => ASaleOccured) public sales;
+    /// @notice Represents a refund voucher for a coaching
+    /*
+    struct RefundVoucher {
+        address contentReceiver;
+        uint256 refundID;
+        uint256 tokenId;
+        uint256[] finalParts;
+        uint256 validUntil;
+        bytes signature;
+    }
+    */
+    function newRefund(RefundVoucher calldata voucher) external {
+        address signer = _verifyRefundVoucher(voucher);
+        require(
+            IRM.hasRole(BACKEND_ROLE, signer),
+            "Signature invalid or unauthorized"
+        );
 
-    function _newRefund(uint _refundIDs) external {
-        ASaleOccured memory refundItem = sales[_refundIDs];
+        ASaleOccured storage refundItem = sales[voucher.refundID];
 
         for (uint256 j; j < refundItem.purchasedParts.length; j++) {
             uint256 part = refundItem.purchasedParts[j];
             if (
                 isTokenBought[refundItem.contentReceiver][refundItem.tokenId][
                     part
-                ] == true
+                ] == false
             ) {
                 revert("contentReceiver already refund this purchase");
             }
@@ -755,62 +780,18 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
             refundItem.validDate < (block.timestamp / epochOneDay),
             "refund period over you cant refund"
         );
-
-        //for (uint256 j; j < refundItem.purchasedParts.length; j++) {
-        //    uint part = refundItem.purchasedParts[j];
-        //    isTokenBought[refundItem.contentReceiver][refundItem.tokenId][part] = false; // mapping(address => uint256[][]) ownedContents;
-        //    // Swap the element to be removed with the last element
-        //
-        //    uint256[][] storage ownedContent = ownedContents[msg.sender];
-        //    ownedContent[refundItem.tokenId][j] = ownedContent[refundItem.tokenId][ownedContent[refundItem.tokenId].length - 1];
-        //    ownedContent[refundItem.tokenId].pop();
-        //
-        //}
-
-        //[1,2,4,3,5,6]
-        //[4 3]
-
-        //[1,2,5,6] (4) indix =2
-
-        // i:4, j:6
-
-        uint256[] memory partsHeHave = ownedContents[msg.sender][
-            refundItem.tokenId
-        ];
-        uint256[] memory refundHisParts = refundItem.purchasedParts;
-
-        uint256[] memory result;
-
-        uint256 refundStartIndex;
-
-        for (uint i = 0; i < partsHeHave.length; i++) {
-            if (partsHeHave[i] == refundHisParts[0]) {
-                refundStartIndex = i;
-                break;
-            }
-        }
-        for (
-            uint256 i = 0;
-            i < partsHeHave.length - refundHisParts.length;
-            i++
-        ) {
-            uint256 j;
-            if (
-                //refundHisParts.length + refundStartIndex > j >= refundStartIndex
-                ((refundHisParts.length) + refundStartIndex > j) &&
-                (j >= refundStartIndex)
-            ) {
-                i--;
-            } else {
-                result[i] = partsHeHave[j];
-            }
-            j++;
-        }
-
-        ownedContents[msg.sender][refundItem.tokenId] = result;
-
-        //TODO HOW WE TAKE BACK THAT?
-        //ownedContents[refundItem.contentReceiver].push([refundItem.tokenId, part]);
+        /*
+        1,2
+        4,5
+        3
+        [1][1,2,4,5,3]
+        [1][], [][]
+        [1][1,2,3]
+        */
+        /// @dev First remove specific content from the contentReceiver
+        delete ownedContents[voucher.contentReceiver][voucher.tokenId];
+        /// @dev Then add the content to the contentReceiver
+        ownedContents[voucher.contentReceiver][voucher.tokenId] = voucher.finalParts;
 
         address instructor = udaoc.ownerOf(refundItem.tokenId);
         instructorDebt[instructor] += refundItem.instrShare;
@@ -938,7 +919,7 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
 
     /// @notice Returns a hash of the given ContentDiscountVoucher, prepared using EIP712 typed data hashing rules.
     /// @param voucher A ContentDiscountVoucher to hash.
-    function _hash(
+    function _hashDiscountVoucher(
         ContentDiscountVoucher calldata voucher
     ) internal view returns (bytes32) {
         return
@@ -959,14 +940,45 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
                 )
             );
     }
+ 
+    /// @notice Returns a hash of the given RefundVoucher, prepared using EIP712 typed data hashing rules.
+    /// @param voucher A RefundVoucher to hash.
+    function _hashRefundVoucher(
+        RefundVoucher calldata voucher
+    ) internal view returns (bytes32) {
+        return
+            _hashTypedDataV4(
+                keccak256(
+                    abi.encode(
+                        keccak256(
+                            "RefundVoucher(address contentReceiver,uint256 refundID,uint256 tokenId,uint256[] finalParts,uint256 validUntil)"
+                        ),
+                        voucher.contentReceiver,
+                        voucher.refundID,
+                        voucher.tokenId,
+                        keccak256(abi.encodePacked(voucher.finalParts)),
+                        voucher.validUntil
+                    )
+                )
+            );
+    }
 
     /// @notice Verifies the signature for a given ContentDiscountVoucher, returning the address of the signer.
     /// @dev Will revert if the signature is invalid.
     /// @param voucher A ContentDiscountVoucher describing a content access rights.
-    function _verify(
+    function _verifyDiscountVoucher(
         ContentDiscountVoucher calldata voucher
     ) internal view returns (address) {
-        bytes32 digest = _hash(voucher);
+        bytes32 digest = _hashDiscountVoucher(voucher);
+        return ECDSA.recover(digest, voucher.signature);
+    }
+    /// @notice Verifies the signature for a given ContentDiscountVoucher, returning the address of the signer.
+    /// @dev Will revert if the signature is invalid.
+    /// @param voucher A ContentDiscountVoucher describing a content access rights.
+    function _verifyRefundVoucher(
+        RefundVoucher calldata voucher
+    ) internal view returns (address) {
+        bytes32 digest = _hashRefundVoucher(voucher);
         return ECDSA.recover(digest, voucher.signature);
     }
 }
