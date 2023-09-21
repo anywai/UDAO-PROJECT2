@@ -11,9 +11,6 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
     string private constant SIGNING_DOMAIN = "ContentManager";
     string private constant SIGNATURE_VERSION = "1";
 
-    using Counters for Counters.Counter;
-    Counters.Counter private purchaseID;
-
     /// @notice  triggered if coaching service payment to the instructor is forced
     event ForcedPayment(uint256 _coachingId, address forcedBy);
     /// @notice triggered when any kind of refund is done
@@ -67,6 +64,16 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
         bytes signature;
     }
 
+    /// @notice Represents a refund voucher for a coaching
+    struct RefundVoucher {
+        address contentReceiver;
+        uint256 refundID;
+        uint256 tokenId;
+        uint256[] finalParts;
+        uint256 validUntil;
+        bytes signature;
+    }
+
     // wallet => content token Ids
     mapping(address => uint256[][]) ownedContents;
     // tokenId => student addresses
@@ -109,13 +116,42 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
 
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@//
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@//
+    using Counters for Counters.Counter;
+    Counters.Counter private purchaseID;
+
     struct ASaleOccured {
         address payee;
-        uint256 totalPriceToPayUdao;
+        address contentReceiver;
+        uint256 instrShare;
+        uint256 totalCut;
+        uint256 tokenId;
+        uint256[] purchasedParts;
+        uint256 validDate;
     }
 
-    //ASaleOccurred aSale;
     mapping(uint256 => ASaleOccured) public sales;
+
+    /// @notice Returns amount of UDAO that is needed to buy the contents
+    /// @param tokenIds ids of the content
+    /// @param fullContentPurchases is full content purchased
+    /// @param purchasedParts parts of the content purchased
+    function calculatePriceToPay(
+        uint256[] calldata tokenIds,
+        bool[] calldata fullContentPurchases,
+        uint256[][] calldata purchasedParts
+    ) external view returns (uint256) {
+        uint256 tokenIdsLength = tokenIds.length;
+        uint256 totalPriceToPayUdao;
+        for (uint256 i; i < tokenIdsLength; i++) {
+            // Calculate purchased parts (or full Content) total list price.
+            totalPriceToPayUdao += _calculatePriceToPay(
+                tokenIds[i],
+                fullContentPurchases[i],
+                purchasedParts[i]
+            );
+        }
+        return (totalPriceToPayUdao);
+    }
 
     /// @notice Allows multiple content purchases using buyContent
     /// @param tokenIds ids of the content
@@ -126,8 +162,13 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
         uint256[] calldata tokenIds,
         bool[] calldata fullContentPurchases,
         uint256[][] calldata purchasedParts,
-        address[] calldata giftReceivers
+        address[] calldata giftReceivers,
+        uint256 amountToPay
     ) external payable whenNotPaused {
+        require(
+            udao.allowance(msg.sender, address(this)) >= amountToPay,
+            "Not enough allowance!"
+        );
         uint256 tokenIdsLength = tokenIds.length;
         require(
             tokenIdsLength == fullContentPurchases.length &&
@@ -136,35 +177,39 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
             "Array lengths are not equal!"
         );
         uint256 totalPriceToPayUdao;
+        uint256[] memory priceToPay;
         for (uint256 i; i < tokenIdsLength; i++) {
-            // Calculate purchased parts (or full Content) total list price.
-            totalPriceToPayUdao += _calculatePriceToPay(
+            priceToPay[i] = _calculatePriceToPay(
                 tokenIds[i],
                 fullContentPurchases[i],
                 purchasedParts[i]
             );
+            // Calculate purchased parts (or full Content) total list price.
+            totalPriceToPayUdao += priceToPay[i];
+            //HELLOOO: Eğer bir array tanımlayım _calculatePriceları içine atıp aşşağıdaki internale direl totalPrice sokarsan daha mı iyi?
         }
 
-        // payee, totalPriceToPayUdao
-        // paymentId = Counter;
-        // mapping Payment: paymentId => mapping(address => totalPriceToPayUdao)
-        // voucher.paymentId, Payment(paymentId)(msg.sender) : totalPriceToPayUdao
-        require(msg.value >= totalPriceToPayUdao, "Not enough UDAO sent!");
+        require(amountToPay >= totalPriceToPayUdao, "Not enough UDAO sent!");
+
         for (uint256 i; i < tokenIdsLength; i++) {
             _buyContentwithUDAO(
                 tokenIds[i],
                 fullContentPurchases[i],
                 purchasedParts[i],
-                giftReceivers[i]
+                giftReceivers[i],
+                priceToPay[i]
             );
         }
+
+        _sendCurrentGlobalCutsToGovernanceTreasury();
     }
 
     function _buyContentwithUDAO(
         uint256 tokenId,
         bool fullContentPurchase,
         uint256[] calldata purchasedParts,
-        address giftReceiver
+        address giftReceiver,
+        uint256 _priceToPayUdao
     ) internal whenNotPaused {
         // Check the existence of the content, if not revert
         require(udaoc.exists(tokenId), "Content does not exist!");
@@ -183,37 +228,30 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
         require(receiverHaveIt == false, "Content or part's is already bought");
         // Who created and own that content?
         address instructor = udaoc.ownerOf(tokenId);
-        // Calculate purchased parts (or full Content) total list price.
-        uint256 priceToPayUdao = _calculatePriceToPay(
-            tokenId,
-            fullContentPurchase,
-            purchasedParts
-        );
-        // Calculate the shares of those who will earn income.
-        uint256 foundShare;
-        uint256 goverShare;
-        uint256 valdtrShare;
-        uint256 jurorShare;
-        uint256 totalCut;
-        uint256 instrShare;
-        // _calculateShares will use contentCuts if isAContentSale=true and will use coachingCuts if isAcontentSale=false (Note: Maybe I should split them)
-        // _calculateShares will return instrShare= priceToPayUdao-totalCut if lastisAFIATPayout = false
-        (
-            foundShare,
-            goverShare,
-            valdtrShare,
-            jurorShare,
+
+        uint256 totalCut = getTotalCutContentShare(_priceToPayUdao);
+        uint256 instrShare = _priceToPayUdao - totalCut;
+
+        udao.transferFrom(msg.sender, address(this), instrShare + totalCut);
+
+        //timestamp returns 1694513188: 12Sep2023-10:06:28 so buyerTransactionTime is 19612.42
+        //this means 19612.42 day passed since 1Jan1970-0:0:0
+        //There is no fractional number in solidity so that buyerTransactionTime is 19612
+        uint256 transactionTime = (block.timestamp / epochOneDay);
+
+        //transactionFuIndex determines which position it will be added to in the FutureBalances array.
+        uint256 transactionFuIndex = transactionTime % refundWindow;
+        _updateGlobalContentBalances(
             totalCut,
-            instrShare
-        ) = _calculateShares(priceToPayUdao, true, false);
-
-        //require(priceToPayUdao==msg.value);
-        // transfer the tokens from buyer to contract
-        // udao.transferFrom(msg.sender, address(this), priceToPayUdao);
-
-        // distribute everyones share and pay to instructor (NOTE: maybe we should hold shares as a whole and end of lifecyle we should split them)
-        _updateGlobalBalances(foundShare, goverShare, valdtrShare, jurorShare);
-        _updateInstructorBalances(instrShare, instructor);
+            transactionTime,
+            transactionFuIndex
+        );
+        _updateInstructorBalances(
+            instrShare,
+            instructor,
+            transactionTime,
+            transactionFuIndex
+        );
 
         // give the content to the receiver
         _updateOwnedContentOrPart(
@@ -222,17 +260,22 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
             purchasedParts,
             contentReceiver
         );
+        _saveTheSaleOnAListForRefund(
+            contentReceiver,
+            instrShare,
+            totalCut,
+            tokenId,
+            purchasedParts,
+            transactionTime + refundWindow
+        );
 
-        _saveTheSaleOnAListForRefund(priceToPayUdao /*instrShare + totalCut*/);
-
-        //TODO List
-        //1)every sale must be saved to a list/struct or whatever for if refund needed!
-        //2)also cuts must be send to governanceTreasury but maybe we can add it to inside _updateGlobalBalances
-        //3)we need to check functions visibility(view/pure/public) and behaviour (external/internal)
-        //_saveTheSaleOnAListForRefund();
-        _sendCurrentGlobalCutsToGovernanceTreasury();
-
-        emit ContentBought(tokenId, purchasedParts, priceToPayUdao, msg.sender);
+        //TODO we need to check functions visibility(view/pure/public) and behaviour (external/internal)
+        emit ContentBought(
+            tokenId,
+            purchasedParts,
+            _priceToPayUdao,
+            msg.sender
+        );
     }
 
     function _buyContentwithFIAT(
@@ -264,30 +307,34 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
             fullContentPurchase,
             purchasedParts
         );
-        // Calculate the shares of those who will earn income.
-        uint256 foundShare;
-        uint256 goverShare;
-        uint256 valdtrShare;
-        uint256 jurorShare;
-        uint256 totalCut;
-        uint256 instrShare;
-        // _calculateShares will use contentCuts if isAContentSale=true and will use coachingCuts if isAcontentSale=false (Note: Maybe I should split them)
-        // _calculateShares will return instrShare=0 if lastisAFIATPayout = true
-        (
-            foundShare,
-            goverShare,
-            valdtrShare,
-            jurorShare,
-            totalCut,
-            instrShare
-        ) = _calculateShares(priceToPayUdao, true, true);
+
+        uint256 totalCut = getTotalCutContentShare(priceToPayUdao);
+        uint256 instrShare = 0;
+
+        //timestamp returns 1694513188: 12Sep2023-10:06:28 so buyerTransactionTime is 19612.42
+        //this means 19612.42 day passed since 1Jan1970-0:0:0
+        //There is no fractional number in solidity so that buyerTransactionTime is 19612
+        uint256 transactionTime = (block.timestamp / epochOneDay);
+
+        //transactionFuIndex determines which position it will be added to in the FutureBalances array.
+        uint256 transactionFuIndex = transactionTime % refundWindow;
 
         // transfer the tokens from buyer to contract (NOTE: Actually priceToPayUdao= totalCut + instrShare, maybe use that)
+        // NOTE: Eğer payable olacaksa buna gerekyok. Hala batch bir fonsiyon lazım ama yeni bir buyContentFIAT fonksiyonu yazalım o bu internal fonksiyonu çağırsın.
         udao.transferFrom(msg.sender, address(this), totalCut);
 
         // distribute everyones share and pay to instructor (NOTE: maybe we should hold shares as a whole and end of lifecyle we should split them)
-        _updateGlobalBalances(foundShare, goverShare, valdtrShare, jurorShare);
-        _updateInstructorBalances(instrShare, instructor);
+        _updateGlobalContentBalances(
+            totalCut,
+            transactionTime,
+            transactionFuIndex
+        );
+        _updateInstructorBalances(
+            instrShare,
+            instructor,
+            transactionTime,
+            transactionFuIndex
+        );
 
         // give the content to the receiver
         _updateOwnedContentOrPart(
@@ -296,15 +343,20 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
             purchasedParts,
             contentReceiver
         );
-
-        _saveTheSaleOnAListForRefund(totalCut);
+        _saveTheSaleOnAListForRefund(
+            contentReceiver,
+            instrShare,
+            totalCut,
+            tokenId,
+            purchasedParts,
+            transactionTime + refundWindow
+        );
 
         //TODO List
-        //1)every sale must be saved to a list/struct or whatever for if refund needed!
         //2)also cuts must be send to governanceTreasury but maybe we can add it to inside _updateGlobalBalances
         //3)we need to check functions visibility(view/pure/public) and behaviour (external/internal)
+        //NOTE: aşşağıdaki fonksiyonu batch buyContentFIAT external fonksiyonuna taşı
         _sendCurrentGlobalCutsToGovernanceTreasury();
-
         emit ContentBought(tokenId, purchasedParts, priceToPayUdao, msg.sender);
     }
 
@@ -389,23 +441,17 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
 
     function _updateInstructorBalances(
         uint256 _instrShare,
-        address _inst
+        address _inst,
+        uint256 _transactionTime,
+        uint256 _transactionFuIndex
     ) internal {
-        //timestamp returns 1694513188: 12Sep2023-10:06:28 so buyerTransactionTime is 19612.42
-        //this means 19612.42 day passed since 1Jan1970-0:0:0
-        //There is no fractional number in solidity so that buyerTransactionTime is 19612
-        uint256 transactionTime = (block.timestamp / epochOneDay);
-
-        //transactionFuIndex determines which position it will be added to in the FutureBalances array.
-        uint256 transactionFuIndex = transactionTime % refundWindow;
-
         //how many day passed since last update of instructor balance
-        uint256 dayPassedInst = transactionTime - instUpdTime[_inst];
+        uint256 dayPassedInst = _transactionTime - instUpdTime[_inst];
 
         if (dayPassedInst < refundWindow) {
             // if(true):There is no payment yet to be paid to the seller in the future balance array.
             // add new payment to instructor futureBalanceArray
-            instFuBalance[_inst][transactionFuIndex] += _instrShare;
+            instFuBalance[_inst][_transactionFuIndex] += _instrShare;
         } else {
             // if(else): The future balance array contains values that must be paid to the user.
             if (dayPassedInst >= (refundWindow * 2)) {
@@ -415,12 +461,12 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
                     instFuBalance[_inst][i] = 0;
                 }
                 // add new payment to instructor futureBalanceArray
-                instFuBalance[_inst][transactionFuIndex] += _instrShare;
+                instFuBalance[_inst][_transactionFuIndex] += _instrShare;
 
                 // you updated instructor currentBalance of instructorso declare a new time to instUpdTime
                 // why (-refundWindow + 1)? This will sustain today will be no more update on balances...
                 // ...but tomarrow a transaction will produce new update.
-                instUpdTime[_inst] = (transactionTime - refundWindow) + 1;
+                instUpdTime[_inst] = (_transactionTime - refundWindow) + 1;
             } else {
                 //Just some part of Future Balance Array must paid to instructor
                 uint256 dayPassedInstMod = dayPassedInst % refundWindow;
@@ -428,7 +474,7 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
                 //if Mod 0 for loop works for today, if Mod 2 it works for today+ yesterday,,, if it 13
                 for (uint256 i = 0; i <= dayPassedInstMod; i++) {
                     //Index of the day to be payout to instructor.
-                    uint256 indexOfPayout = ((transactionFuIndex +
+                    uint256 indexOfPayout = ((_transactionFuIndex +
                         refundWindow) - i) % refundWindow;
                     instCurBalance[_inst] += instFuBalance[_inst][
                         indexOfPayout
@@ -437,12 +483,12 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
                 }
 
                 // add new payment to instructor futureBalanceArray
-                instFuBalance[_inst][transactionFuIndex] += _instrShare;
+                instFuBalance[_inst][_transactionFuIndex] += _instrShare;
 
                 // you updated instructor currentBalance of instructorso declare a new time to instUpdTime
                 // why (-refundWindow + 1)? This will sustain today will be no more update on balances...
                 // ...but tomarrow a transaction will produce new update.
-                instUpdTime[_inst] = (transactionTime - refundWindow) + 1;
+                instUpdTime[_inst] = (_transactionTime - refundWindow) + 1;
             }
         }
     }
@@ -538,6 +584,62 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
         }
     }
 
+    //    uint256 public glbCntntCurBalance;
+    //    uint256[] public glbCntntFuBalance;
+    function _updateGlobalContentBalances(
+        uint256 totalCutContentShare,
+        uint256 _transactionTime,
+        uint256 _transactionFuIndex
+    ) internal {
+        //how many day passed since last update of instructor balance
+        uint256 dayPassedGlo = _transactionTime - gloCntntUpdTime;
+
+        if (dayPassedGlo < refundWindow) {
+            // if(true):There is no payment yet to be paid to the seller in the future balance array.
+            // add new payment to instructor futureBalanceArray
+            glbCntntFuBalance[_transactionFuIndex] += totalCutContentShare;
+        } else {
+            // if(else): The future balance array contains values that must be paid to the user.
+            if (dayPassedGlo >= (refundWindow * 2)) {
+                //Whole Future Balance Array must paid to user (Because (refundWindow x2)28 day passed)
+                for (uint256 i = 0; i < refundWindow; i++) {
+                    glbCntntCurBalance += glbCntntFuBalance[i];
+
+                    glbCntntFuBalance[i] = 0;
+                }
+
+                // add new payment to instructor futureBalanceArray
+                glbCntntFuBalance[_transactionFuIndex] += totalCutContentShare;
+
+                // you updated instructor currentBalance of instructorso declare a new time to instUpdTime
+                // why (-refundWindow + 1)? This will sustain today will be no more update on balances...
+                // ...but tomarrow a transaction will produce new update.
+                gloCntntUpdTime = (_transactionTime - refundWindow) + 1;
+            } else {
+                //Just some part of Future Balance Array must paid to instructor
+                uint256 dayPassedGloMod = dayPassedGlo % refundWindow;
+                //minimum dayPassedInst=14 so Mod 0, maximum dayPassedInst=27 so Mod 13
+                //if Mod 0 for loop works for today, if Mod 2 it works for today+ yesterday,,, if it 13
+                for (uint256 i = 0; i <= dayPassedGloMod; i++) {
+                    //Index of the day to be payout to instructor.
+                    uint256 indexOfPayout = ((_transactionFuIndex +
+                        refundWindow) - i) % refundWindow;
+                    glbCntntCurBalance += glbCntntFuBalance[indexOfPayout];
+
+                    glbCntntFuBalance[indexOfPayout] = 0;
+                }
+
+                // add new payment to instructor futureBalanceArray
+                glbCntntFuBalance[_transactionFuIndex] += totalCutContentShare;
+
+                // you updated instructor futureBalanceArray updated so declare a new time to instUpdTime
+                // why (-refundWindow + 1)? This will sustain today will be no more update on balances...
+                // ...but tomarrow a transaction will produce new update.
+                gloCntntUpdTime = (_transactionTime - refundWindow) + 1;
+            }
+        }
+    }
+
     function _doReceiverHaveContentOrPart(
         uint256 tokenId,
         bool fullContentPurchase,
@@ -579,10 +681,22 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
         }
     }
 
-    function _saveTheSaleOnAListForRefund(uint totalPriceToPayUdao) internal {
+    function _saveTheSaleOnAListForRefund(
+        address _contentReceiver,
+        uint256 _instrShare,
+        uint256 _totalCut,
+        uint256 _tokenId,
+        uint256[] memory _purchasedParts,
+        uint256 _validDate
+    ) internal {
         sales[purchaseID.current()] = ASaleOccured({
             payee: msg.sender,
-            totalPriceToPayUdao: totalPriceToPayUdao
+            contentReceiver: _contentReceiver,
+            instrShare: _instrShare,
+            totalCut: _totalCut,
+            tokenId: _tokenId,
+            purchasedParts: _purchasedParts,
+            validDate: _validDate
         });
         purchaseID.increment();
         //TODO Not implemented YET
@@ -590,10 +704,104 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
 
     function _sendCurrentGlobalCutsToGovernanceTreasury() internal {
         //TODO Not implemented YET
+        if (glbCntntCurBalance > 0) {
+            jurorCurBalance = getContentJurorShare(glbCntntCurBalance);
+            valdtrCurBalance = getContentValdtrShare(glbCntntCurBalance);
+            goverCurBalance = getContentGoverShare(glbCntntCurBalance);
+            foundCurBalance = getContentFoundShare(glbCntntCurBalance);
+        }
+        if (isGovernanceTreasuryOnline == true) {
+            if (jurorCurBalance > 0) {
+                uint sendJurorShareToGovTre = jurorCurBalance;
+                jurorCurBalance = 0;
+                udao.transferFrom(
+                    address(this),
+                    governanceTreasury,
+                    sendJurorShareToGovTre
+                );
+                //iGovernanceTreasury.jurorBalanceUpdate(sendJurorShareToGovTre);
+            }
+            if (valdtrCurBalance > 0) {
+                uint sendValdtrShareToGovTre = valdtrCurBalance;
+                valdtrCurBalance = 0;
+                udao.transferFrom(
+                    address(this),
+                    governanceTreasury,
+                    sendValdtrShareToGovTre
+                );
+                //iGovernanceTreasury.validatorBalanceUpdate(sendValdtrShareToGovTre);
+            }
+            if (goverCurBalance > 0) {
+                uint sendGoverShareToGovTre = goverCurBalance;
+                goverCurBalance = 0;
+                udao.transferFrom(
+                    address(this),
+                    governanceTreasury,
+                    sendGoverShareToGovTre
+                );
+                //iGovernanceTreasury.governanceBalanceUpdate(sendGoverShareToGovTre);
+            }
+        }
     }
 
-    function _newRefund() internal {
-        //TODO Not implemented YET
+    //    mapping(uint256 => ASaleOccured) public sales;
+    /// @notice Represents a refund voucher for a coaching
+    /*
+    struct RefundVoucher {
+        address contentReceiver;
+        uint256 refundID;
+        uint256 tokenId;
+        uint256[] finalParts;
+        uint256 validUntil;
+        bytes signature;
+    }
+    */
+    function newRefund(RefundVoucher calldata voucher) external {
+        address signer = _verifyRefundVoucher(voucher);
+        require(
+            IRM.hasRole(BACKEND_ROLE, signer),
+            "Signature invalid or unauthorized"
+        );
+
+        ASaleOccured storage refundItem = sales[voucher.refundID];
+
+        for (uint256 j; j < refundItem.purchasedParts.length; j++) {
+            uint256 part = refundItem.purchasedParts[j];
+            if (
+                isTokenBought[refundItem.contentReceiver][refundItem.tokenId][
+                    part
+                ] == false
+            ) {
+                revert("contentReceiver already refund this purchase");
+            }
+        }
+
+        require(
+            refundItem.validDate < (block.timestamp / epochOneDay),
+            "refund period over you cant refund"
+        );
+        /*
+        1,2
+        4,5
+        3
+        [1][1,2,4,5,3]
+        [1][], [][]
+        [1][1,2,3]
+        */
+        /// @dev First remove specific content from the contentReceiver
+        delete ownedContents[voucher.contentReceiver][voucher.tokenId];
+        /// @dev Then add the content to the contentReceiver
+        ownedContents[voucher.contentReceiver][voucher.tokenId] = voucher.finalParts;
+
+        address instructor = udaoc.ownerOf(refundItem.tokenId);
+        instructorDebt[instructor] += refundItem.instrShare;
+        globalCntntRefDept += refundItem.totalCut;
+
+        udao.transferFrom(
+            address(this),
+            refundItem.payee,
+            (refundItem.instrShare + refundItem.totalCut)
+        );
     }
 
     function _buyDisc() internal {
@@ -711,7 +919,7 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
 
     /// @notice Returns a hash of the given ContentDiscountVoucher, prepared using EIP712 typed data hashing rules.
     /// @param voucher A ContentDiscountVoucher to hash.
-    function _hash(
+    function _hashDiscountVoucher(
         ContentDiscountVoucher calldata voucher
     ) internal view returns (bytes32) {
         return
@@ -732,14 +940,45 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
                 )
             );
     }
+ 
+    /// @notice Returns a hash of the given RefundVoucher, prepared using EIP712 typed data hashing rules.
+    /// @param voucher A RefundVoucher to hash.
+    function _hashRefundVoucher(
+        RefundVoucher calldata voucher
+    ) internal view returns (bytes32) {
+        return
+            _hashTypedDataV4(
+                keccak256(
+                    abi.encode(
+                        keccak256(
+                            "RefundVoucher(address contentReceiver,uint256 refundID,uint256 tokenId,uint256[] finalParts,uint256 validUntil)"
+                        ),
+                        voucher.contentReceiver,
+                        voucher.refundID,
+                        voucher.tokenId,
+                        keccak256(abi.encodePacked(voucher.finalParts)),
+                        voucher.validUntil
+                    )
+                )
+            );
+    }
 
     /// @notice Verifies the signature for a given ContentDiscountVoucher, returning the address of the signer.
     /// @dev Will revert if the signature is invalid.
     /// @param voucher A ContentDiscountVoucher describing a content access rights.
-    function _verify(
+    function _verifyDiscountVoucher(
         ContentDiscountVoucher calldata voucher
     ) internal view returns (address) {
-        bytes32 digest = _hash(voucher);
+        bytes32 digest = _hashDiscountVoucher(voucher);
+        return ECDSA.recover(digest, voucher.signature);
+    }
+    /// @notice Verifies the signature for a given ContentDiscountVoucher, returning the address of the signer.
+    /// @dev Will revert if the signature is invalid.
+    /// @param voucher A ContentDiscountVoucher describing a content access rights.
+    function _verifyRefundVoucher(
+        RefundVoucher calldata voucher
+    ) internal view returns (address) {
+        bytes32 digest = _hashRefundVoucher(voucher);
         return ECDSA.recover(digest, voucher.signature);
     }
 }
