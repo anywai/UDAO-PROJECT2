@@ -8,10 +8,13 @@ import "../ContractManager.sol";
 import "../interfaces/IUDAOC.sol";
 import "../RoleController.sol";
 import "../interfaces/ISupervision.sol";
-
 import "../interfaces/IPriceGetter.sol";
 
 abstract contract MyBasePlatform is Pausable, RoleController {
+    ////////////////////////////////////////////////////////
+    ////////////////COMMON WİTH OLD TREASURY////////////////
+    ////////////////////////////////////////////////////////
+
     //ContractManager is our update contract
     ContractManager public contractManager;
 
@@ -21,165 +24,14 @@ abstract contract MyBasePlatform is Pausable, RoleController {
     // UDAO (ERC721) Token interface
     IUDAOC udaoc;
 
-    // instructor => instructor's current balance
-    mapping(address => uint) public instCurBalance;
-    // instructor => instructor's future balances
-    mapping(address => uint[]) public instFuBalance;
-
-    // instructor => last update time of instructor's balance
-    mapping(address => uint256) public instUpdTime;
-    // last update time of global balances (common for Foundation/Governance/Jurors/Validators)
-    uint public gloUpdTime;
-
-    // accepted refund period by platform
-    uint256 refundWindow = 14;
-    // constant one day equals that in epoch time
-    uint256 epochOneDay = 86400;
-
-    //newTime
-    uint public gloCntntUpdTime;
-    uint public gloCoachUpdTime;
-
-    // Platform
-    uint256 public glbCntntCurBalance;
-    uint256[] public glbCntntFuBalance;
-
-    // Platform
-    uint256 public glbCoachCurBalance;
-    uint256[] public glbCoachFuBalance;
-
-    // current balance & future balances of foundation pool
-    uint public foundCurBalance;
-    uint[] public foundFuBalance;
-
-    // current balance & future balances of governance pool
-    uint public goverCurBalance;
-    uint[] public goverFuBalance;
-
-    // current balance & future balances of juror pool
-    uint public jurorCurBalance;
-    uint[] public jurorFuBalance;
-
-    // current balance & future balances of validator pool
-    uint public valdtrCurBalance;
-    uint[] public valdtrFuBalance;
-
-    // balance to be used in staking pool
-    uint public stakingBalance;
-
-    // 100000 -> 100% | 5000 -> 5%
-    // cuts for foundation/governance/juror/validator from a coaching
-    uint public coachingFoundationCut = 4000;
-    uint public coachingGovernanceCut = 0; //700;
-    uint public coachingJurorCut = 0; //NOT IMPLEMENTED YET
-    // cuts for foundation/governance/juror/validator from a content
-    uint public contentFoundationCut = 4000;
-    uint public contentGovernanceCut = 0; //700;
-    uint public contentJurorCut = 0; //100;
-    uint public contentValidatorCut = 0; //200;
-
-    //totalCut
-    uint256 totalCutContent = (contentFoundationCut +
-        contentGovernanceCut +
-        contentJurorCut +
-        contentValidatorCut);
-
-    uint256 totalCutCoaching = (coachingFoundationCut +
-        coachingGovernanceCut +
-        coachingJurorCut);
-
-    mapping(address => uint) public instructorDebt;
-    uint256 globalCntntRefDept;
-    uint256 globalCoachRefDept;
-
     // Addresses of governanceTreasury & foundation wallet
     address governanceTreasury;
     address foundationWallet;
 
-    bool isGovernanceTreasuryOnline = false;
-
     // user address => content id => content owned by the user
     mapping(address => mapping(uint => mapping(uint => bool))) isTokenBought;
 
-    function getContentFoundShare(
-        uint256 _priceOf
-    ) public view returns (uint256) {
-        return ((_priceOf * contentFoundationCut) / totalCutContent);
-    }
-
-    function getContentGoverShare(
-        uint256 _priceOf
-    ) public view returns (uint256) {
-        return ((_priceOf * contentGovernanceCut) / totalCutContent);
-    }
-
-    function getContentJurorShare(
-        uint256 _priceOf
-    ) public view returns (uint256) {
-        return ((_priceOf * contentJurorCut) / totalCutContent);
-    }
-
-    function getContentValdtrShare(
-        uint256 _priceOf
-    ) public view returns (uint256) {
-        return ((_priceOf * contentValidatorCut) / totalCutContent);
-    }
-
-    function getTotalCutContentShare(
-        uint256 _priceOf
-    ) public view returns (uint256) {
-        return ((_priceOf * totalCutContent) / 100000);
-    }
-
-    //_some for coaching...
-
-    /// @notice Triggered after every round is finalized and rewards are distributed
-    event RewardsDistributed(
-        uint payPerValidationScore,
-        uint payPerJurorPoint,
-        uint newRoundId
-    );
-
-    /// @notice This event is triggered if a cut is updated.
-    event CutsUpdated(
-        uint coachFnd,
-        uint coachGov,
-        uint contentFnd,
-        uint contentGov,
-        uint contentJuror,
-        uint contentValid
-    );
-
-    /// @notice This event is triggered if the governance treasury address is updated.
-    event GovernanceTreasuryUpdated(address newAddress);
-
-    /// @notice This event is triggered if the foundation wallet address is updated.
-    event FoundationWalletUpdated(address newAddress);
-
-    /// @notice This event is triggered if the contract manager address is updated.
-    event ContractManagerUpdated(address newAddress);
-
-    /// @notice This event is triggered if the contract manager updates the addresses.
-    event AddressesUpdated(
-        address udao,
-        address udaoc,
-        address isupvis,
-        address irm
-    );
-
-    /**
-
-     */
-    constructor(
-        address _contractManager,
-        address _rmAddress
-    ) RoleController(_rmAddress) {
-        contractManager = ContractManager(_contractManager);
-        udao = IERC20(contractManager.UdaoAddress());
-        udaoc = IUDAOC(contractManager.UdaocAddress());
-    }
-
-    // SETTERS
+    // SETTERS COMMON
 
     /// @notice Sets the address of the governance treasury
     /// @param _newAddress New address of the governance treasury
@@ -214,6 +66,12 @@ abstract contract MyBasePlatform is Pausable, RoleController {
         udaoc = IUDAOC(contractManager.UdaocAddress());
         IRM = IRoleManager(contractManager.IrmAddress());
 
+        /*
+        //REMOVED BELONGS TO OLD TREASURY
+            //ISupVis = ISupervision(contractManager.ISupVisAddress());
+            //priceGetter = IPriceGetter(contractManager.IPriceGetterAddress());
+        */
+
         emit AddressesUpdated(
             contractManager.UdaoAddress(),
             contractManager.UdaocAddress(),
@@ -222,137 +80,249 @@ abstract contract MyBasePlatform is Pausable, RoleController {
         );
     }
 
+    constructor(
+        address _contractManager,
+        address _rmAddress
+    ) RoleController(_rmAddress) {
+        contractManager = ContractManager(_contractManager);
+        udao = IERC20(contractManager.UdaoAddress());
+        udaoc = IUDAOC(contractManager.UdaocAddress());
+        /*
+        //REMOVED BELONGS TO OLD TREASURY
+            //ISupVis = ISupervision(contractManager.ISupVisAddress());
+            //priceGetter = IPriceGetter(priceGetterAddress);
+        */
+    }
+
+    // EVENTS COMMON
+
+    /// @notice This event is triggered if the governance treasury address is updated.
+    event GovernanceTreasuryUpdated(address newAddress);
+
+    /// @notice This event is triggered if the foundation wallet address is updated.
+    event FoundationWalletUpdated(address newAddress);
+
+    /// @notice This event is triggered if the contract manager address is updated.
+    event ContractManagerUpdated(address newAddress);
+
+    /// @notice This event is triggered if the contract manager updates the addresses.
+    event AddressesUpdated(
+        address udao,
+        address udaoc,
+        address isupvis,
+        address irm
+    );
+
+    ////////////////////////////////////////////////////////
+    ////////////////NEWLY ADDED TO TREASURY/////////////////
+    ////////////////////////////////////////////////////////
+
+    // Accepted refund period by platform
+    uint256 refundWindow = 14;
+    // Constant one day equals that in epoch time
+    uint256 epochOneDay = 86400;
+
+    // Instructor => current balance & future balances of instructor
+    mapping(address => uint) public instCurBalance;
+    mapping(address => uint[]) public instFuBalance;
+
+    // Current balance & future balances of total contract pool for content sale
+    uint256 public glbCntntCurBalance;
+    uint256[] public glbCntntFuBalance;
+    // Current balance & future balances of total contract pool for coaching sale
+    uint256 public glbCoachCurBalance;
+    uint256[] public glbCoachFuBalance;
+
+    // Current balance of foundation/governance/juror/validator pool
+    uint public foundCurBalance;
+    uint public goverCurBalance;
+    uint public jurorCurBalance;
+    uint public valdtrCurBalance;
+
+    // Instructor => last update time of instructor's current balance
+    mapping(address => uint256) public instUpdTime;
+    // Last update time of current balances
+    uint public glbCntntUpdTime;
+    uint public glbCoachUpdTime;
+
+    // Instructor => instructor debt amount (debt occured due to refund)
+    mapping(address => uint) public instRefDebt;
+    // Global balances debt amount (debt occured due to refund)
+    uint256 globalCntntRefDebt;
+    uint256 globalCoachRefDebt;
+
+    // 100000 -> 100% | 5000 -> 5%
+    // Cuts for foundation/governance/juror/validator for a coaching sale
+    uint public coachFoundCut = 4000;
+    uint public coachGoverCut = 0; //700;
+    uint public coachJurorCut = 0; //new!!
+    // Cuts for foundation/governance/juror/validator for a content sale
+    uint public cntntFoundCut = 4000;
+    uint public cntntGoverCut = 0; //700;
+    uint public cntntJurorCut = 0; //100;
+    uint public cntntValidtrCut = 0; //200;
+
+    // Total cuts for content&coaching sale
+    uint256 cntntTotalCut =
+        cntntFoundCut + cntntGoverCut + cntntJurorCut + cntntValidtrCut;
+    uint256 totalCutCoaching = coachFoundCut + coachGoverCut + coachJurorCut;
+
+    // There is no GovernanceTreasury in MVP, after governance release will be set
+    bool isGovernanceTreasuryOnline = false;
+
+    /*
+    //REMOVED to reduce gas cost
+        //future balances of foundation/governance/juror/validator pool
+            uint[] public foundFuBalance;
+            uint[] public goverFuBalance;
+            uint[] public jurorFuBalance;
+            uint[] public valdtrFuBalance;
+        // last update time of global balances (common for Foundation/Governance/Jurors/Validators)
+            uint public gloUpdTime;
+    */
+
+    /// @notice This event is triggered if a cut is updated.
+    event PlatformCutsUpdated(
+        uint coachFnd,
+        uint coachGov,
+        uint coachJuror,
+        uint contentFnd,
+        uint contentGov,
+        uint contentJuror,
+        uint contentValid
+    );
+
+    function calculateContentFoundShare(
+        uint256 _priceOf
+    ) public view returns (uint256) {
+        return ((_priceOf * cntntFoundCut) / cntntTotalCut);
+    }
+
+    function calculateContentGoverShare(
+        uint256 _priceOf
+    ) public view returns (uint256) {
+        return ((_priceOf * cntntGoverCut) / cntntTotalCut);
+    }
+
+    function calculateContentJurorShare(
+        uint256 _priceOf
+    ) public view returns (uint256) {
+        return ((_priceOf * cntntJurorCut) / cntntTotalCut);
+    }
+
+    function calculateContentValdtrShare(
+        uint256 _priceOf
+    ) public view returns (uint256) {
+        return ((_priceOf * cntntValidtrCut) / cntntTotalCut);
+    }
+
+    function calculateTotalCutContentShare(
+        uint256 _priceOf
+    ) public view returns (uint256) {
+        return ((_priceOf * cntntTotalCut) / 100000);
+    }
+
+    // SETTERS
+
     /// @notice changes cut from coaching for foundation
     /// @param _cut new cut (100000 -> 100% | 5000 -> 5%)
-    function setCoachingFoundationCut(
-        uint _cut
-    ) external onlyRole(GOVERNANCE_ROLE) {
-        require(
-            _cut + coachingGovernanceCut < 100000,
-            "Cuts cant be higher than %100"
-        );
-        coachingFoundationCut = _cut;
-        emit CutsUpdated(
-            coachingFoundationCut,
-            coachingGovernanceCut,
-            contentFoundationCut,
-            contentGovernanceCut,
-            contentJurorCut,
-            contentValidatorCut
-        );
+    function setCoachFoundCut(uint _cut) external onlyRole(GOVERNANCE_ROLE) {
+        uint256 otherCuts = coachGoverCut + coachJurorCut;
+        require(_cut + otherCuts < 100000, "Cuts cant be higher than %100");
+
+        coachFoundCut = _cut;
+        setCoachTotalCut();
     }
 
     /// @notice changes cut from coaching for governance
     /// @param _cut new cut (100000 -> 100% | 5000 -> 5%)
-    function setCoachingGovernanceCut(
-        uint _cut
-    ) external onlyRole(GOVERNANCE_ROLE) {
-        require(
-            coachingFoundationCut + _cut < 100000,
-            "Cuts cant be higher than %100"
-        );
-        coachingGovernanceCut = _cut;
-        emit CutsUpdated(
-            coachingFoundationCut,
-            coachingGovernanceCut,
-            contentFoundationCut,
-            contentGovernanceCut,
-            contentJurorCut,
-            contentValidatorCut
+    function setCoachGoverCut(uint _cut) external onlyRole(GOVERNANCE_ROLE) {
+        uint256 otherCuts = coachGoverCut + coachJurorCut;
+        require(_cut + otherCuts < 100000, "Cuts cant be higher than %100");
+
+        coachGoverCut = _cut;
+        setCoachTotalCut();
+    }
+
+    /// @notice changes cut from coaching for governance
+    /// @param _cut new cut (100000 -> 100% | 5000 -> 5%)
+    function setCoachJurorCut(uint256 _cut) external onlyRole(GOVERNANCE_ROLE) {
+        uint256 otherCuts = coachFoundCut + coachGoverCut;
+        require(_cut + otherCuts < 100000, "Cuts cant be higher than %100");
+
+        coachJurorCut = _cut;
+        setCoachTotalCut();
+    }
+
+    function setCoachTotalCut() internal {
+        totalCutCoaching = (coachFoundCut + coachGoverCut + coachJurorCut);
+
+        emit PlatformCutsUpdated(
+            coachFoundCut,
+            coachGoverCut,
+            coachJurorCut,
+            cntntFoundCut,
+            cntntGoverCut,
+            cntntJurorCut,
+            cntntValidtrCut
         );
     }
 
     /// @notice changes cut from content for foundation
     /// @param _cut new cut (100000 -> 100% | 5000 -> 5%)
-    function setContentFoundationCut(
-        uint _cut
-    ) external onlyRole(GOVERNANCE_ROLE) {
-        require(
-            _cut +
-                contentGovernanceCut +
-                contentJurorCut +
-                contentValidatorCut <
-                10000,
-            "Cuts cant be higher than %100"
-        );
-        contentFoundationCut = _cut;
-        emit CutsUpdated(
-            coachingFoundationCut,
-            coachingGovernanceCut,
-            contentFoundationCut,
-            contentGovernanceCut,
-            contentJurorCut,
-            contentValidatorCut
-        );
+    function setCntntFounCut(uint _cut) external onlyRole(GOVERNANCE_ROLE) {
+        //uint256 otherCuts = cntntGoverCut + cntntJurorCut + cntntValdtrCut;
+        uint otherCuts = cntntGoverCut + cntntJurorCut + cntntValidtrCut;
+        require(_cut + otherCuts < 10000, "Cuts cant be higher than %100");
+
+        cntntFoundCut = _cut;
+        setCntntTotalCut();
     }
 
     /// @notice changes cut from content for governance
     /// @param _cut new cut (100000 -> 100% | 5000 -> 5%)
-    function setContentGovernanceCut(
-        uint _cut
-    ) external onlyRole(GOVERNANCE_ROLE) {
-        require(
-            contentFoundationCut +
-                _cut +
-                contentJurorCut +
-                contentValidatorCut <
-                10000,
-            "Cuts cant be higher than %100"
-        );
-        contentGovernanceCut = _cut;
-        emit CutsUpdated(
-            coachingFoundationCut,
-            coachingGovernanceCut,
-            contentFoundationCut,
-            contentGovernanceCut,
-            contentJurorCut,
-            contentValidatorCut
-        );
+    function setCntntGoverCut(uint _cut) external onlyRole(GOVERNANCE_ROLE) {
+        uint otherCuts = cntntFoundCut + cntntJurorCut + cntntValidtrCut;
+        require(_cut + otherCuts < 10000, "Cuts cant be higher than %100");
+
+        cntntGoverCut = _cut;
+        setCntntTotalCut();
     }
 
     /// @notice changes cut from content for juror pool
     /// @param _cut new cut (100000 -> 100% | 5000 -> 5%)
-    function setContentJurorCut(uint _cut) external onlyRole(GOVERNANCE_ROLE) {
-        require(
-            contentFoundationCut +
-                contentGovernanceCut +
-                _cut +
-                contentValidatorCut <
-                10000,
-            "Cuts cant be higher than %100"
-        );
-        contentJurorCut = _cut;
-        emit CutsUpdated(
-            coachingFoundationCut,
-            coachingGovernanceCut,
-            contentFoundationCut,
-            contentGovernanceCut,
-            contentJurorCut,
-            contentValidatorCut
-        );
+    function setCntntJurorCut(uint _cut) external onlyRole(GOVERNANCE_ROLE) {
+        uint otherCuts = cntntFoundCut + cntntGoverCut + cntntValidtrCut;
+        require(_cut + otherCuts < 10000, "Cuts cant be higher than %100");
+
+        cntntJurorCut = _cut;
+        setCntntTotalCut();
     }
 
     /// @notice changes cut from content for validator pool
     /// @param _cut new cut (100000 -> 100% | 5000 -> 5%)
-    function setContentValidatorCut(
-        uint _cut
-    ) external onlyRole(GOVERNANCE_ROLE) {
-        require(
-            contentFoundationCut +
-                contentGovernanceCut +
-                contentJurorCut +
-                _cut <
-                10000,
-            "Cuts cant be higher than %100"
-        );
-        contentValidatorCut = _cut;
-        emit CutsUpdated(
-            coachingFoundationCut,
-            coachingGovernanceCut,
-            contentFoundationCut,
-            contentGovernanceCut,
-            contentJurorCut,
-            contentValidatorCut
+    function setCntntValidtrCut(uint _cut) external onlyRole(GOVERNANCE_ROLE) {
+        uint otherCuts = cntntFoundCut + cntntGoverCut + cntntJurorCut;
+        require(_cut + otherCuts < 10000, "Cuts cant be higher than %100");
+
+        cntntValidtrCut = _cut;
+        setCntntTotalCut();
+    }
+
+    function setCntntTotalCut() internal {
+        cntntTotalCut = (cntntFoundCut +
+            cntntGoverCut +
+            cntntJurorCut +
+            cntntValidtrCut);
+
+        emit PlatformCutsUpdated(
+            coachFoundCut,
+            coachGoverCut,
+            coachJurorCut,
+            cntntFoundCut,
+            cntntGoverCut,
+            cntntJurorCut,
+            cntntValidtrCut
         );
     }
 }
