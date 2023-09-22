@@ -6,15 +6,15 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract TokenSeller is AccessControl {
     IERC20 public udaoToken;
-    bool tokenRelased = false;
+    bool public tokenRelased = false;
 
     // Events
-    event TokensWithdrawn(address indexed user, uint256 amount);
-    event TokensReleased(bool indexed tokenRelased);
-    event BalanceAdded(address indexed user, uint256 amount);
-    event BatchBalanceAdded(address[] indexed users, uint256[] amounts);
-    event BalanceReset(address indexed user);
-    event UDAOSet(address indexed udaoToken);
+    event TokensWithdrawn(address user, uint256 amount);
+    event TokensReleased(bool tokenRelased);
+    event BalanceAdded(address user, uint256 amount);
+    event BatchBalanceAdded(address[] users, uint256[] amounts);
+    event BalanceReset(address user);
+    event UDAOSet(address udaoToken);
 
     constructor() {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
