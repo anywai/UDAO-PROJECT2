@@ -104,252 +104,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
         //priceGetter = IPriceGetter(priceGetterAddress);
     }
 
-    /// @notice Allows multiple content purchases using buyContent
-    /// @param tokenIds ids of the content
-    /// @param fullContentPurchases is full content purchased
-    /// @param purchasedParts parts of the content purchased
-    /// @param giftReceivers address of the gift receiver if purchase is a gift
-    function buyContent(
-        uint256[] calldata tokenIds,
-        bool[] calldata fullContentPurchases,
-        uint256[][] calldata purchasedParts,
-        address[] calldata giftReceivers
-    ) external whenNotPaused {
-        uint256 tokenIdsLength = tokenIds.length;
-        require(
-            tokenIdsLength == fullContentPurchases.length &&
-                tokenIdsLength == purchasedParts.length &&
-                tokenIdsLength == giftReceivers.length,
-            "Array lengths are not equal!"
-        );
-        for (uint256 i; i < tokenIdsLength; i++) {
-            _buyContent(
-                tokenIds[i],
-                fullContentPurchases[i],
-                purchasedParts[i],
-                giftReceivers[i]
-            );
-        }
-    }
-
-    /// @notice allows users to purchase a content
-    /// @param tokenId id of the content
-    /// @param fullContentPurchase is full content purchased
-    /// @param purchasedParts parts of the content purchased
-    /// @param giftReceiver address of the gift receiver if purchase is a gift
-    function _buyContent(
-        uint256 tokenId,
-        bool fullContentPurchase,
-        uint256[] calldata purchasedParts,
-        address giftReceiver
-    ) internal whenNotPaused {
-        uint256 partIdLength = purchasedParts.length;
-        uint256 priceToPayUdao;
-        uint256 priceToPay;
-        uint256 pricePerPart;
-        bytes32 sellingCurrency;
-        address contentReceiver = msg.sender;
-
-        require(udaoc.exists(tokenId), "Content does not exist!");
-        if (giftReceiver != address(0)) {
-            contentReceiver = giftReceiver;
-            require(!IRM.isBanned(contentReceiver), "Gift receiver is banned");
-        }
-        require(!IRM.isBanned(msg.sender), "You are banned");
-        address instructor = udaoc.ownerOf(tokenId);
-        require(!IRM.isBanned(instructor), "Instructor is banned");
-        require(
-            isTokenBought[msg.sender][tokenId][0] == false,
-            "Full content is already bought"
-        );
-
-        /// @dev Get the total payment amount first
-        if (fullContentPurchase) {
-            (priceToPay, sellingCurrency) = udaoc.getContentPriceAndCurrency(
-                tokenId,
-                0
-            );
-        } else {
-            require(
-                purchasedParts[0] != 0,
-                "Purchased parts says 0, but fullContentPurchase is false!"
-            );
-            for (uint256 j; j < partIdLength; j++) {
-                require(
-                    purchasedParts[j] < udaoc.getPartNumberOfContent(tokenId),
-                    "Part does not exist!"
-                );
-                (pricePerPart, sellingCurrency) = udaoc
-                    .getContentPriceAndCurrency(tokenId, purchasedParts[j]);
-                priceToPay += pricePerPart;
-            }
-        }
-
-        /// @dev Check if sold in udao or fiat and get the price in udao
-        if (sellingCurrency == keccak256(abi.encodePacked("udao"))) {
-            priceToPayUdao = priceToPay;
-        } else {
-            priceToPayUdao = priceGetter.getUdaoOut(
-                uint128(priceToPay),
-                sellingCurrency
-            );
-        }
-
-        /// @dev transfer the tokens from buyer to contract
-        udao.transferFrom(msg.sender, address(this), priceToPayUdao);
-
-        /// @dev Calculate and assign the cuts
-        _updateBalancesContent(priceToPayUdao, instructor);
-
-        if (fullContentPurchase) {
-            _updateOwned(tokenId, 0, contentReceiver);
-        } else {
-            for (uint256 j; j < partIdLength; j++) {
-                _updateOwned(tokenId, purchasedParts[j], contentReceiver);
-            }
-        }
-
-        emit ContentBought(tokenId, purchasedParts, priceToPayUdao, msg.sender);
-    }
-
-    /// @notice allows users to purchase a content. Notice that there is no price conversion
-    /// since the total payment amount is coming from backend with voucher where
-    /// the total amount of payment in UDAO is calculated.
-    /// @param voucher voucher for the content purchase
-    function buyDiscountedContent(
-        ContentDiscountVoucher calldata voucher
-    ) external whenNotPaused {
-        // make sure signature is valid and get the address of the signer
-        address signer = _verify(voucher);
-        require(
-            IRM.hasRole(BACKEND_ROLE, signer),
-            "Signature invalid or unauthorized"
-        );
-        require(voucher.validUntil >= block.timestamp, "Voucher has expired.");
-        require(msg.sender == voucher.redeemer, "You are not redeemer.");
-        require(!IRM.isBanned(msg.sender), "You are banned");
-
-        uint256 tokenId = voucher.tokenId;
-        uint256 partIdLength = voucher.purchasedParts.length;
-        address contentReceiver = msg.sender;
-
-        require(udaoc.exists(tokenId), "Content does not exist!");
-        if (voucher.giftReceiver != address(0)) {
-            contentReceiver = voucher.giftReceiver;
-            require(!IRM.isBanned(contentReceiver), "Gift receiver is banned");
-        }
-        address instructor = udaoc.ownerOf(tokenId);
-        require(!IRM.isBanned(instructor), "Instructor is banned");
-        require(
-            isTokenBought[contentReceiver][tokenId][0] == false,
-            "Full content is already bought"
-        );
-        require(msg.sender == voucher.redeemer, "You are not redeemer.");
-
-        uint256 priceToPay = voucher.priceToPay;
-        /// @dev transfer the tokens from buyer to contract
-        udao.transferFrom(msg.sender, address(this), priceToPay);
-
-        /// @dev Calculate and assing the cuts
-        _updateBalancesContent(priceToPay, instructor);
-
-        /// @dev Get the total payment amount first
-        if (voucher.fullContentPurchase) {
-            _updateOwned(tokenId, voucher.purchasedParts[0], contentReceiver);
-        } else {
-            require(
-                voucher.purchasedParts[0] != 0,
-                "Purchased parts says 0, but fullContentPurchase is false!"
-            );
-            for (uint256 j; j < partIdLength; j++) {
-                require(
-                    voucher.purchasedParts[j] <
-                        udaoc.getPartNumberOfContent(tokenId),
-                    "Part does not exist!"
-                );
-                _updateOwned(
-                    tokenId,
-                    voucher.purchasedParts[j],
-                    contentReceiver
-                );
-            }
-        }
-
-        emit ContentBought(
-            voucher.tokenId,
-            voucher.purchasedParts,
-            priceToPay,
-            msg.sender
-        );
-    }
-
-    /*
-    function buyContent(
-        address instructor
-    ) external payable onlyRole(RELAY_ROLE) {
-        uint256 foundationCalc = (priceToPay * contentFoundationCut) / 100000;
-        uint256 governanceCalc = (priceToPay * contentGovernanceCut) / 100000;
-        uint256 validatorCalc = (priceToPay * contentValidatorCut) / 100000;
-        uint256 jurorCalc = (priceToPay * contentJurorCut) / 100000;
-
-        foundationBalance += foundationCalc;
-        governanceBalance += governanceCalc;
-        validatorBalanceForRound += validatorCalc;
-        jurorBalanceForRound += jurorCalc;
-
-        instructorBalance[instructor] +=
-            priceToPay -
-            (foundationCalc) -
-            (governanceCalc) -
-            (validatorCalc) -
-            (jurorCalc);
-    }
-    */
-
-    /// @notice allows users to purchase a content
-    /// @param priceToPay price to pay for the content
-    /// @param instructor instructor of the content
-    function _updateBalancesContent(
-        uint priceToPay,
-        address instructor
-    ) internal {
-        uint256 foundationCalc = (priceToPay * contentFoundationCut) / 100000;
-        uint256 governanceCalc = (priceToPay * contentGovernanceCut) / 100000;
-        uint256 validatorCalc = (priceToPay * contentValidatorCut) / 100000;
-        uint256 jurorCalc = (priceToPay * contentJurorCut) / 100000;
-
-        foundationBalance += foundationCalc;
-        governanceBalance += governanceCalc;
-        validatorBalanceForRound += validatorCalc;
-        jurorBalanceForRound += jurorCalc;
-
-        instructorBalance[instructor] +=
-            priceToPay -
-            (foundationCalc) -
-            (governanceCalc) -
-            (validatorCalc) -
-            (jurorCalc);
-    }
-
-    /**
-     * @notice an internal function to update owned contents of the user
-     * @param tokenId id of the token that bought (completely of partially)
-     * @param purchasedPart purchased part of the content (all of the content if 0)
-     * @param contentReceiver content receiver
-     */
-    function _updateOwned(
-        uint256 tokenId,
-        uint256 purchasedPart,
-        address contentReceiver
-    ) internal {
-        require(
-            isTokenBought[contentReceiver][tokenId][purchasedPart] == false,
-            "Content part is already bought"
-        );
-
-        isTokenBought[contentReceiver][tokenId][purchasedPart] = true;
-        ownedContents[contentReceiver].push([tokenId, purchasedPart]);
-    }
+    //Current coaching functions but they needs reworks
 
     /// @notice Allows users to buy coaching service.
     function buyCoaching(uint tokenId) external whenNotPaused {
@@ -622,6 +377,240 @@ abstract contract ContentManager is EIP712, BasePlatform {
     ) external view returns (uint256[] memory) {
         return coachingIdsOfToken[_tokenId];
     }
+
+    //
+    //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@//
+    //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@//
+
+    // OLD BUY CONTENT FUNCTIONS
+
+    /// @notice Allows multiple content purchases using buyContent
+    /// @param tokenIds ids of the content
+    /// @param fullContentPurchases is full content purchased
+    /// @param purchasedParts parts of the content purchased
+    /// @param giftReceivers address of the gift receiver if purchase is a gift
+    function buyContent(
+        uint256[] calldata tokenIds,
+        bool[] calldata fullContentPurchases,
+        uint256[][] calldata purchasedParts,
+        address[] calldata giftReceivers
+    ) external whenNotPaused {
+        uint256 tokenIdsLength = tokenIds.length;
+        require(
+            tokenIdsLength == fullContentPurchases.length &&
+                tokenIdsLength == purchasedParts.length &&
+                tokenIdsLength == giftReceivers.length,
+            "Array lengths are not equal!"
+        );
+        for (uint256 i; i < tokenIdsLength; i++) {
+            _buyContent(
+                tokenIds[i],
+                fullContentPurchases[i],
+                purchasedParts[i],
+                giftReceivers[i]
+            );
+        }
+    }
+
+    /// @notice allows users to purchase a content
+    /// @param tokenId id of the content
+    /// @param fullContentPurchase is full content purchased
+    /// @param purchasedParts parts of the content purchased
+    /// @param giftReceiver address of the gift receiver if purchase is a gift
+    function _buyContent(
+        uint256 tokenId,
+        bool fullContentPurchase,
+        uint256[] calldata purchasedParts,
+        address giftReceiver
+    ) internal whenNotPaused {
+        uint256 partIdLength = purchasedParts.length;
+        uint256 priceToPayUdao;
+        uint256 priceToPay;
+        uint256 pricePerPart;
+        bytes32 sellingCurrency;
+        address contentReceiver = msg.sender;
+
+        require(udaoc.exists(tokenId), "Content does not exist!");
+        if (giftReceiver != address(0)) {
+            contentReceiver = giftReceiver;
+            require(!IRM.isBanned(contentReceiver), "Gift receiver is banned");
+        }
+        require(!IRM.isBanned(msg.sender), "You are banned");
+        address instructor = udaoc.ownerOf(tokenId);
+        require(!IRM.isBanned(instructor), "Instructor is banned");
+        require(
+            isTokenBought[msg.sender][tokenId][0] == false,
+            "Full content is already bought"
+        );
+
+        /// @dev Get the total payment amount first
+        if (fullContentPurchase) {
+            (priceToPay, sellingCurrency) = udaoc.getContentPriceAndCurrency(
+                tokenId,
+                0
+            );
+        } else {
+            require(
+                purchasedParts[0] != 0,
+                "Purchased parts says 0, but fullContentPurchase is false!"
+            );
+            for (uint256 j; j < partIdLength; j++) {
+                require(
+                    purchasedParts[j] < udaoc.getPartNumberOfContent(tokenId),
+                    "Part does not exist!"
+                );
+                (pricePerPart, sellingCurrency) = udaoc
+                    .getContentPriceAndCurrency(tokenId, purchasedParts[j]);
+                priceToPay += pricePerPart;
+            }
+        }
+
+        /// @dev Check if sold in udao or fiat and get the price in udao
+        if (sellingCurrency == keccak256(abi.encodePacked("udao"))) {
+            priceToPayUdao = priceToPay;
+        } else {
+            priceToPayUdao = priceGetter.getUdaoOut(
+                uint128(priceToPay),
+                sellingCurrency
+            );
+        }
+
+        /// @dev transfer the tokens from buyer to contract
+        udao.transferFrom(msg.sender, address(this), priceToPayUdao);
+
+        /// @dev Calculate and assign the cuts
+        _updateBalancesContent(priceToPayUdao, instructor);
+
+        if (fullContentPurchase) {
+            _updateOwned(tokenId, 0, contentReceiver);
+        } else {
+            for (uint256 j; j < partIdLength; j++) {
+                _updateOwned(tokenId, purchasedParts[j], contentReceiver);
+            }
+        }
+
+        emit ContentBought(tokenId, purchasedParts, priceToPayUdao, msg.sender);
+    }
+
+    /// @notice allows users to purchase a content. Notice that there is no price conversion
+    /// since the total payment amount is coming from backend with voucher where
+    /// the total amount of payment in UDAO is calculated.
+    /// @param voucher voucher for the content purchase
+    function buyDiscountedContent(
+        ContentDiscountVoucher calldata voucher
+    ) external whenNotPaused {
+        // make sure signature is valid and get the address of the signer
+        address signer = _verify(voucher);
+        require(
+            IRM.hasRole(BACKEND_ROLE, signer),
+            "Signature invalid or unauthorized"
+        );
+        require(voucher.validUntil >= block.timestamp, "Voucher has expired.");
+        require(msg.sender == voucher.redeemer, "You are not redeemer.");
+        require(!IRM.isBanned(msg.sender), "You are banned");
+
+        uint256 tokenId = voucher.tokenId;
+        uint256 partIdLength = voucher.purchasedParts.length;
+        address contentReceiver = msg.sender;
+
+        require(udaoc.exists(tokenId), "Content does not exist!");
+        if (voucher.giftReceiver != address(0)) {
+            contentReceiver = voucher.giftReceiver;
+            require(!IRM.isBanned(contentReceiver), "Gift receiver is banned");
+        }
+        address instructor = udaoc.ownerOf(tokenId);
+        require(!IRM.isBanned(instructor), "Instructor is banned");
+        require(
+            isTokenBought[contentReceiver][tokenId][0] == false,
+            "Full content is already bought"
+        );
+        require(msg.sender == voucher.redeemer, "You are not redeemer.");
+
+        uint256 priceToPay = voucher.priceToPay;
+        /// @dev transfer the tokens from buyer to contract
+        udao.transferFrom(msg.sender, address(this), priceToPay);
+
+        /// @dev Calculate and assing the cuts
+        _updateBalancesContent(priceToPay, instructor);
+
+        /// @dev Get the total payment amount first
+        if (voucher.fullContentPurchase) {
+            _updateOwned(tokenId, voucher.purchasedParts[0], contentReceiver);
+        } else {
+            require(
+                voucher.purchasedParts[0] != 0,
+                "Purchased parts says 0, but fullContentPurchase is false!"
+            );
+            for (uint256 j; j < partIdLength; j++) {
+                require(
+                    voucher.purchasedParts[j] <
+                        udaoc.getPartNumberOfContent(tokenId),
+                    "Part does not exist!"
+                );
+                _updateOwned(
+                    tokenId,
+                    voucher.purchasedParts[j],
+                    contentReceiver
+                );
+            }
+        }
+
+        emit ContentBought(
+            voucher.tokenId,
+            voucher.purchasedParts,
+            priceToPay,
+            msg.sender
+        );
+    }
+
+    // OLD CONTENT SALE HELPER FUNCTIONS
+
+    /// @notice allows users to purchase a content
+    /// @param priceToPay price to pay for the content
+    /// @param instructor instructor of the content
+    function _updateBalancesContent(
+        uint priceToPay,
+        address instructor
+    ) internal {
+        uint256 foundationCalc = (priceToPay * contentFoundationCut) / 100000;
+        uint256 governanceCalc = (priceToPay * contentGovernanceCut) / 100000;
+        uint256 validatorCalc = (priceToPay * contentValidatorCut) / 100000;
+        uint256 jurorCalc = (priceToPay * contentJurorCut) / 100000;
+
+        foundationBalance += foundationCalc;
+        governanceBalance += governanceCalc;
+        validatorBalanceForRound += validatorCalc;
+        jurorBalanceForRound += jurorCalc;
+
+        instructorBalance[instructor] +=
+            priceToPay -
+            (foundationCalc) -
+            (governanceCalc) -
+            (validatorCalc) -
+            (jurorCalc);
+    }
+
+    /**
+     * @notice an internal function to update owned contents of the user
+     * @param tokenId id of the token that bought (completely of partially)
+     * @param purchasedPart purchased part of the content (all of the content if 0)
+     * @param contentReceiver content receiver
+     */
+    function _updateOwned(
+        uint256 tokenId,
+        uint256 purchasedPart,
+        address contentReceiver
+    ) internal {
+        require(
+            isTokenBought[contentReceiver][tokenId][purchasedPart] == false,
+            "Content part is already bought"
+        );
+
+        isTokenBought[contentReceiver][tokenId][purchasedPart] = true;
+        ownedContents[contentReceiver].push([tokenId, purchasedPart]);
+    }
+
+    // GETTERS AND VOUCHER RELATED
 
     /// @notice returns owned contents of the _owner
     /// @param _owner address of the user that will owned contents be returned

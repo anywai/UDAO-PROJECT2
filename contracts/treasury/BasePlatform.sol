@@ -8,20 +8,118 @@ import "../ContractManager.sol";
 import "../interfaces/IUDAOC.sol";
 import "../RoleController.sol";
 import "../interfaces/ISupervision.sol";
-
 import "../interfaces/IPriceGetter.sol";
 
-
 abstract contract BasePlatform is Pausable, RoleController {
+    ////////////////////////////////////////////////////////
+    ////////////////COMMON WİTH OLD TREASURY////////////////
+    ////////////////////////////////////////////////////////
+
+    //ContractManager is our update contract
     ContractManager public contractManager;
 
-    // content id => content balance
-    mapping(address => uint) public instructorBalance;
-    mapping(address => uint) public instructorDebt;
+    // UDAO (ERC20) Token interface
+    IERC20 udao;
+
+    // UDAO (ERC721) Token interface
+    IUDAOC udaoc;
+
+    // Addresses of governanceTreasury & foundation wallet
+    address governanceTreasury;
+    address foundationWallet;
 
     // user address => content id => content owned by the user
     mapping(address => mapping(uint => mapping(uint => bool))) isTokenBought;
 
+    // SETTERS COMMON
+
+    /// @notice Sets the address of the governance treasury
+    /// @param _newAddress New address of the governance treasury
+    function setGovernanceTreasuryAddress(
+        address _newAddress
+    ) external onlyRole(BACKEND_ROLE) {
+        governanceTreasury = _newAddress;
+        emit GovernanceTreasuryUpdated(_newAddress);
+    }
+
+    /// @notice Sets the address of the foundation wallet
+    /// @param _newAddress New address of the foundation wallet
+    function setFoundationWalletAddress(
+        address _newAddress
+    ) external onlyRole(BACKEND_ROLE) {
+        foundationWallet = _newAddress;
+        emit FoundationWalletUpdated(_newAddress);
+    }
+
+    /// @notice Sets the address of the contract manager
+    /// @param _newAddress New address of the contract manager
+    function setContractManagerAddress(
+        address _newAddress
+    ) external onlyRole(BACKEND_ROLE) {
+        contractManager = ContractManager(_newAddress);
+        emit ContractManagerUpdated(_newAddress);
+    }
+
+    /// @notice Get the updated addresses from contract manager
+    function updateAddresses() external onlyRole(BACKEND_ROLE) {
+        udao = IERC20(contractManager.UdaoAddress());
+        udaoc = IUDAOC(contractManager.UdaocAddress());
+        IRM = IRoleManager(contractManager.IrmAddress());
+
+        //
+        // ISupVis & priceGetter will be removed from contract
+        ISupVis = ISupervision(contractManager.ISupVisAddress());
+        priceGetter = IPriceGetter(contractManager.IPriceGetterAddress());
+        //
+
+        emit AddressesUpdated(
+            contractManager.UdaoAddress(),
+            contractManager.UdaocAddress(),
+            contractManager.ISupVisAddress(),
+            contractManager.IrmAddress()
+        );
+    }
+
+    constructor(
+        address _contractManager,
+        address _rmAddress,
+        address priceGetterAddress
+    ) RoleController(_rmAddress) {
+        contractManager = ContractManager(_contractManager);
+        udao = IERC20(contractManager.UdaoAddress());
+        udaoc = IUDAOC(contractManager.UdaocAddress());
+
+        //ISupVis & priceGetter will be removed from contract
+        ISupVis = ISupervision(contractManager.ISupVisAddress());
+        priceGetter = IPriceGetter(priceGetterAddress);
+    }
+
+    // EVENTS COMMON
+
+    /// @notice This event is triggered if the governance treasury address is updated.
+    event GovernanceTreasuryUpdated(address newAddress);
+
+    /// @notice This event is triggered if the foundation wallet address is updated.
+    event FoundationWalletUpdated(address newAddress);
+
+    /// @notice This event is triggered if the contract manager address is updated.
+    event ContractManagerUpdated(address newAddress);
+
+    /// @notice This event is triggered if the contract manager updates the addresses.
+    event AddressesUpdated(
+        address udao,
+        address udaoc,
+        address isupvis,
+        address irm
+    );
+
+    ////////////////////////////////////////////////////////
+    ////////////////RENEWED FUNCT&VARIABLES/////////////////
+    ////////////////////////////////////////////////////////
+
+    // content id => content balance
+    mapping(address => uint) public instructorBalance;
+    mapping(address => uint) public instructorDebt;
     // balance of foundation
     uint public foundationBalance;
 
@@ -58,12 +156,6 @@ abstract contract BasePlatform is Pausable, RoleController {
     // juror => last claimed round
     mapping(address => uint) lastJurorClaim;
 
-    // UDAO (ERC20) Token interface
-    IERC20 udao;
-
-    // UDAO (ERC721) Token interface
-    IUDAOC udaoc;
-
     // 100000 -> 100% | 5000 -> 5%
     // cut for foundation from coaching
     uint public coachingFoundationCut = 4000;
@@ -78,10 +170,8 @@ abstract contract BasePlatform is Pausable, RoleController {
     // cut for validator pool from content
     uint public contentValidatorCut = 200;
 
-    address governanceTreasury; 
-    address foundationWallet;
-
     ISupervision ISupVis;
+    IPriceGetter priceGetter;
 
     /// @notice Triggered after every round is finalized and rewards are distributed
     event RewardsDistributed(
@@ -100,85 +190,7 @@ abstract contract BasePlatform is Pausable, RoleController {
         uint contentValid
     );
 
-    /// @notice This event is triggered if the governance treasury address is updated.
-    event GovernanceTreasuryUpdated(address newAddress);
-
-    /// @notice This event is triggered if the foundation wallet address is updated.
-    event FoundationWalletUpdated(address newAddress);
-
-    /// @notice This event is triggered if the contract manager address is updated.
-    event ContractManagerUpdated(address newAddress);
-
-    /// @notice This event is triggered if the contract manager updates the addresses.
-    event AddressesUpdated(
-        address udao,
-        address udaoc,
-        address isupvis,
-        address irm
-    );
-
-    IPriceGetter priceGetter;
-
-    /**
-
-     */
-    constructor(
-        address _contractManager,
-        address _rmAddress,
-        address priceGetterAddress
-    ) RoleController(_rmAddress) {
-        contractManager = ContractManager(_contractManager);
-        udao = IERC20(contractManager.UdaoAddress());
-        udaoc = IUDAOC(contractManager.UdaocAddress());
-        ISupVis = ISupervision(contractManager.ISupVisAddress());
-        priceGetter = IPriceGetter(priceGetterAddress);
-    }
-
     // SETTERS
-
-    /// @notice Sets the address of the governance treasury
-    /// @param _newAddress New address of the governance treasury
-    function setGovernanceTreasuryAddress(
-        address _newAddress
-    ) external onlyRole(BACKEND_ROLE) {
-        governanceTreasury = _newAddress;
-        emit GovernanceTreasuryUpdated(_newAddress);
-    }
-
-    /// @notice Sets the address of the foundation wallet
-    /// @param _newAddress New address of the foundation wallet
-    function setFoundationWalletAddress(
-        address _newAddress
-    ) external onlyRole(BACKEND_ROLE) {
-        foundationWallet = _newAddress;
-        emit FoundationWalletUpdated(_newAddress);
-    }
-
-    /// @notice Sets the address of the contract manager
-    /// @param _newAddress New address of the contract manager
-    function setContractManagerAddress(
-        address _newAddress
-    ) external onlyRole(BACKEND_ROLE) {
-        contractManager = ContractManager(_newAddress);
-        emit ContractManagerUpdated(_newAddress);
-    }
-
-    /// @notice Get the updated addresses from contract manager
-    function updateAddresses() external onlyRole(BACKEND_ROLE) {
-        udao = IERC20(contractManager.UdaoAddress());
-        udaoc = IUDAOC(contractManager.UdaocAddress());
-        ISupVis = ISupervision(contractManager.ISupVisAddress());
-        IRM = IRoleManager(contractManager.IrmAddress());
-
-        priceGetter = IPriceGetter(contractManager.IPriceGetterAddress());
-
-        emit AddressesUpdated(
-            contractManager.UdaoAddress(),
-            contractManager.UdaocAddress(),
-            contractManager.ISupVisAddress(),
-            contractManager.IrmAddress()
-        );
-    }
 
     /// @notice changes cut from coaching for foundation
     /// @param _cut new cut (100000 -> 100% | 5000 -> 5%)
