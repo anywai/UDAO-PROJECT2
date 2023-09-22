@@ -558,6 +558,17 @@ contract UDAOContent is
     }
 
     /// @notice Allows off-chain check if a token(content) exists
+    function existsBatch(
+        uint[] memory tokenId
+    ) external view returns (bool[] memory) {
+        bool[] memory existanceResult;
+        for (uint i = 0; i < tokenId.length; i++) {
+            existanceResult[i] = _exists(tokenId[i]);
+        }
+        return existanceResult;
+    }
+
+    /// @notice Allows off-chain check if a token(content) exists
     function exists(uint tokenId) external view returns (bool) {
         return _exists(tokenId);
     }
