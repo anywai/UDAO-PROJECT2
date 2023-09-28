@@ -9,6 +9,7 @@ import "../interfaces/IUDAOC.sol";
 import "../RoleController.sol";
 import "../interfaces/ISupervision.sol";
 import "../interfaces/IPriceGetter.sol";
+import "./IGovernanceTreasury.sol";
 
 abstract contract MyBasePlatform is Pausable, RoleController {
     ////////////////////////////////////////////////////////
@@ -17,6 +18,8 @@ abstract contract MyBasePlatform is Pausable, RoleController {
 
     //ContractManager is our update contract
     ContractManager public contractManager;
+
+    IGovernanceTreasury public iGovernanceTreasury;
 
     // UDAO (ERC20) Token interface
     IERC20 udao;
@@ -65,6 +68,7 @@ abstract contract MyBasePlatform is Pausable, RoleController {
         udao = IERC20(contractManager.UdaoAddress());
         udaoc = IUDAOC(contractManager.UdaocAddress());
         IRM = IRoleManager(contractManager.IrmAddress());
+        iGovernanceTreasury = IGovernanceTreasury(contractManager.GovernanceTreasuryAddress());
 
         /*
         //REMOVED BELONGS TO OLD TREASURY
@@ -82,11 +86,13 @@ abstract contract MyBasePlatform is Pausable, RoleController {
 
     constructor(
         address _contractManager,
-        address _rmAddress
+        address _rmAddress,
+        address _iGovernanceTreasuryAddress
     ) RoleController(_rmAddress) {
         contractManager = ContractManager(_contractManager);
         udao = IERC20(contractManager.UdaoAddress());
         udaoc = IUDAOC(contractManager.UdaocAddress());
+        iGovernanceTreasury = IGovernanceTreasury(_iGovernanceTreasuryAddress);
         /*
         //REMOVED BELONGS TO OLD TREASURY
             //ISupVis = ISupervision(contractManager.ISupVisAddress());
