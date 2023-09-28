@@ -4,10 +4,10 @@ pragma solidity ^0.8.4;
 import "./MyBasePlatform.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
-
 //import "../interfaces/IPriceGetter.sol";
 
 abstract contract ContentManager is EIP712, MyBasePlatform {
+
     string private constant SIGNING_DOMAIN = "ContentManager";
     string private constant SIGNATURE_VERSION = "1";
 
@@ -829,7 +829,7 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
                     governanceTreasury,
                     sendJurorShareToGovTre
                 );
-                //iGovernanceTreasury.jurorBalanceUpdate(sendJurorShareToGovTre);
+                iGovernanceTreasury.jurorBalanceUpdate(sendJurorShareToGovTre);
             }
             if (valdtrCurBalance > 0) {
                 uint sendValdtrShareToGovTre = valdtrCurBalance;
@@ -839,17 +839,17 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
                     governanceTreasury,
                     sendValdtrShareToGovTre
                 );
-                //iGovernanceTreasury.validatorBalanceUpdate(sendValdtrShareToGovTre);
+                iGovernanceTreasury.validatorBalanceUpdate(sendValdtrShareToGovTre);
             }
             if (goverCurBalance > 0) {
                 uint sendGoverShareToGovTre = goverCurBalance;
                 goverCurBalance = 0;
                 udao.transferFrom(
                     address(this),
-                    governanceTreasury,
+                    governanceTreasury, 
                     sendGoverShareToGovTre
                 );
-                //iGovernanceTreasury.governanceBalanceUpdate(sendGoverShareToGovTre);
+                iGovernanceTreasury.governanceBalanceUpdate(sendGoverShareToGovTre);
             }
         }
     }
