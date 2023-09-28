@@ -19,6 +19,7 @@ contract ContractManager is RoleController {
 
     /// @dev unknown if before or after
     address public IPriceGetterAddress; // price getter interface address
+    address public GovernanceTreasuryAddress; // governance treasury contract
 
     constructor(
         address _supAddress,
@@ -33,6 +34,11 @@ contract ContractManager is RoleController {
         IrmAddress = _irmAddress;
     }
 
+    function setGovernanceTreasuryAddress(
+        address _governanceTreasuryAddress
+    ) external onlyRole(BACKEND_ROLE) {
+        GovernanceTreasuryAddress = _governanceTreasuryAddress;
+    }
     function setPlatformTreasuryAddress(
         address _platformTreasuryAddress
     ) external onlyRole(BACKEND_ROLE) {
