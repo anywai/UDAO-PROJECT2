@@ -411,6 +411,10 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
             udao.allowance(msg.sender, address(this)) >= amountToPay,
             "Not enough allowance!"
         );
+
+        /// @dev The BUYER should have enough UDAO to pay for the cart
+        /// TODO
+        require(udao.balanceOf(msg.sender) >= amountToPay, "Not enough UDAO!");
         /// @dev The function arguments must have equal size
         require(
             tokenIdsLength == fullContentPurchases.length &&
