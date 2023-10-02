@@ -381,6 +381,99 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
     
     */
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@//
+       
+    function buyContentWithDiscount(
+        ContentDiscountVoucher[] calldata voucher
+    ) external whenNotPaused {
+        /// @dev Determine the number of items in the cart
+        uint256 voucherIdsLength = voucher.length;
+        /// @dev Determine the RECEIVER of each item in the cart
+        address[] memory contentReceiver;
+        /// @dev Calculate the BUYER's, how much will pay to each item
+        uint256[] memory priceToPay;
+        uint256[] memory totalCut;
+        uint256[] memory instrShare;
+        uint256 totalTotalCut;
+        uint256 totalInstrShare;
+
+        bool fiatPurchase;
+        if (IRM.hasRole(BACKEND_ROLE, msg.sender)) {
+            fiatPurchase = true;
+        }
+
+        for (uint256 i; i < voucherIdsLength; i++) {
+            // make sure signature is valid and get the address of the signer
+            address signer = _verifyDiscountVoucher(voucher[i]);
+            require(
+                IRM.hasRole(BACKEND_ROLE, signer),
+                "Signature invalid or unauthorized"
+            );
+            require(voucher[i].validUntil >= block.timestamp, "Voucher has expired.");
+            require(msg.sender == voucher[i].redeemer, "You are not redeemer.");
+            require(!IRM.isBanned(msg.sender), "You are banned");
+
+            /// @dev Check the existance of content for each item in the cart
+            require(udaoc.exists(voucher[i].tokenId) == true, "Content not exist!");
+            /// @dev Determine the RECEIVER of each item in cart, address(0) means RECEIVER is BUYER
+            if (voucher[i].giftReceiver != address(0)) {
+                contentReceiver[i]= voucher[i].giftReceiver;
+            } else {
+                require(!fiatPurchase, "Fiat purchase requires a receiver!");
+                contentReceiver[i] = msg.sender;
+            }
+            /// @dev The RECEIVER cannot already own the content or parts which in the cart.
+            require(
+                _doReceiverHaveContentOrPart(
+                    voucher[i].tokenId,
+                    voucher[i].fullContentPurchase,
+                    voucher[i].purchasedParts,
+                    contentReceiver[i]
+                ) == false,
+                "Content or part's is already bought"
+            );
+            /// @dev Calculate the BUYER's, how much will pay to each item
+            priceToPay[i] = _calculatePriceToPay(
+                voucher[i].tokenId,
+                voucher[i].fullContentPurchase,
+                voucher[i].purchasedParts
+            );
+            totalCut[i] = calculateTotalCutContentShare(priceToPay[i]);
+
+            if (fiatPurchase) {
+                instrShare[i] = 0;
+            } else {
+                instrShare[i] = priceToPay[i] - totalCut[i];
+            }
+
+            totalTotalCut += totalCut[i];
+            totalInstrShare += instrShare[i];
+        }
+
+        /// @dev The BUYER should have enough UDAO to pay for the cart
+        require(
+            udao.balanceOf(msg.sender) >= totalTotalCut + totalInstrShare,
+            "Not enough UDAO sent!"
+        );
+
+        /// @dev The BUYER should approve the contract for the amount they will pay
+        require(
+            udao.allowance(msg.sender, address(this)) >= totalTotalCut + totalInstrShare,
+            "Not enough allowance!"
+        );
+
+        for (uint256 i; i < voucherIdsLength; i++) {
+            _buyContentwithUDAO(
+                voucher[i].tokenId,
+                voucher[i].fullContentPurchase,
+                voucher[i].purchasedParts,
+                contentReceiver[i],
+                totalCut[i],
+                instrShare[i]
+            );
+        }
+        _sendCurrentGlobalCutsToGovernanceTreasury();
+    }
+
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@//
 
     /// @notice Allows multiple content purchases using buyContent
@@ -392,9 +485,8 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
         uint256[] calldata tokenIds,
         bool[] calldata fullContentPurchases,
         uint256[][] calldata purchasedParts,
-        address[] calldata giftReceivers,
-        uint256 amountToPay
-    ) external payable whenNotPaused {
+        address[] calldata giftReceivers
+    ) external whenNotPaused {
         /// @dev Determine the number of items in the cart
         uint256 tokenIdsLength = tokenIds.length;
         /// @dev Determine the RECEIVER of each item in the cart
@@ -410,15 +502,6 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
         if (IRM.hasRole(BACKEND_ROLE, msg.sender)) {
             fiatPurchase = true;
         }
-        /// @dev The BUYER should approve the contract for the amount they will pay
-        require(
-            udao.allowance(msg.sender, address(this)) >= amountToPay,
-            "Not enough allowance!"
-        );
-
-        /// @dev The BUYER should have enough UDAO to pay for the cart
-        /// TODO
-        require(udao.balanceOf(msg.sender) >= amountToPay, "Not enough UDAO!");
         /// @dev The function arguments must have equal size
         require(
             tokenIdsLength == fullContentPurchases.length &&
@@ -465,14 +548,18 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
             totalInstrShare += instrShare[i];
         }
 
-        if (fiatPurchase) {
-            require(amountToPay >= totalTotalCut, "Not enough UDAO sent!");
-        } else {
-            require(
-                amountToPay >= totalTotalCut + totalInstrShare,
-                "Not enough UDAO sent!"
-            );
-        }
+        /// @dev The BUYER should have enough UDAO to pay for the cart
+        require(
+            udao.balanceOf(msg.sender) >= totalTotalCut + totalInstrShare,
+            "Not enough UDAO sent!"
+        );
+        
+        /// @dev The BUYER should approve the contract for the amount they will pay
+        require(
+            udao.allowance(msg.sender, address(this)) >= totalTotalCut + totalInstrShare,
+            "Not enough allowance!"
+        );
+
 
         for (uint256 i; i < tokenIdsLength; i++) {
             _buyContentwithUDAO(
