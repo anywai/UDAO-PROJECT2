@@ -4,10 +4,10 @@ pragma solidity ^0.8.4;
 import "./MyBasePlatform.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
+
 //import "../interfaces/IPriceGetter.sol";
 
 abstract contract ContentManager is EIP712, MyBasePlatform {
-
     string private constant SIGNING_DOMAIN = "ContentManager";
     string private constant SIGNATURE_VERSION = "1";
 
@@ -383,8 +383,6 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@//
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@//
 
-    // NEW BUY CONTENT FUNCTIONS
-
     /// @notice Allows multiple content purchases using buyContent
     /// @param tokenIds ids of the content
     /// @param fullContentPurchases is full content purchased
@@ -403,9 +401,15 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
         address[] memory contentReceiver;
         /// @dev Calculate the BUYER's, how much will pay to each item
         uint256[] memory priceToPay;
-        /// @dev Calculate the BUYER's, how much will pay to total purchases
-        uint256 totalPriceToPayUdao;
+        uint256[] memory totalCut;
+        uint256[] memory instrShare;
+        uint256 totalTotalCut;
+        uint256 totalInstrShare;
 
+        bool fiatPurchase;
+        if (IRM.hasRole(BACKEND_ROLE, msg.sender)) {
+            fiatPurchase = true;
+        }
         /// @dev The BUYER should approve the contract for the amount they will pay
         require(
             udao.allowance(msg.sender, address(this)) >= amountToPay,
@@ -430,6 +434,7 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
             if (giftReceivers[i] != address(0)) {
                 contentReceiver[i] = giftReceivers[i];
             } else {
+                require(!fiatPurchase, "Fiat purchase requires a receiver!");
                 contentReceiver[i] = msg.sender;
             }
             /// @dev The RECEIVER cannot already own the content or parts which in the cart.
@@ -448,12 +453,26 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
                 fullContentPurchases[i],
                 purchasedParts[i]
             );
-            /// @dev Calculate the BUYER's, how much will pay to total purchases
-            totalPriceToPayUdao += priceToPay[i];
+            totalCut[i] = calculateTotalCutContentShare(priceToPay[i]);
+
+            if (fiatPurchase) {
+                instrShare[i] = 0;
+            } else {
+                instrShare[i] = priceToPay[i] - totalCut[i];
+            }
+
+            totalTotalCut += totalCut[i];
+            totalInstrShare += instrShare[i];
         }
 
-        /// @dev The amount paid by the BUYER must be equal to or greater than the total cost the cart.
-        require(amountToPay >= totalPriceToPayUdao, "Not enough UDAO sent!");
+        if (fiatPurchase) {
+            require(amountToPay >= totalTotalCut, "Not enough UDAO sent!");
+        } else {
+            require(
+                amountToPay >= totalTotalCut + totalInstrShare,
+                "Not enough UDAO sent!"
+            );
+        }
 
         for (uint256 i; i < tokenIdsLength; i++) {
             _buyContentwithUDAO(
@@ -461,7 +480,8 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
                 fullContentPurchases[i],
                 purchasedParts[i],
                 contentReceiver[i],
-                priceToPay[i]
+                totalCut[i],
+                instrShare[i]
             );
         }
         _sendCurrentGlobalCutsToGovernanceTreasury();
@@ -472,13 +492,14 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
         bool fullContentPurchase,
         uint256[] calldata purchasedParts,
         address contentReceiver,
-        uint256 _priceToPayUdao
+        uint256 totalCut,
+        uint256 instrShare
     ) internal whenNotPaused {
         // Who created and own that content?
         address instructor = udaoc.ownerOf(tokenId);
 
-        uint256 totalCut = calculateTotalCutContentShare(_priceToPayUdao);
-        uint256 instrShare = _priceToPayUdao - totalCut;
+        //uint256 totalCut = calculateTotalCutContentShare(_priceToPayUdao);
+        //uint256 instrShare = _priceToPayUdao - totalCut;
 
         udao.transferFrom(msg.sender, address(this), instrShare + totalCut);
 
@@ -509,6 +530,7 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
             contentReceiver
         );
         _saveTheSaleOnAListForRefund(
+            msg.sender,
             contentReceiver,
             instrShare,
             totalCut,
@@ -520,99 +542,9 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
         emit ContentBought(
             tokenId,
             purchasedParts,
-            _priceToPayUdao,
+            totalCut + instrShare,
             msg.sender
         );
-    }
-
-    function buyContentwithFIAT(
-        uint256[] calldata tokenIds,
-        bool[] calldata fullContentPurchases,
-        uint256[][] calldata purchasedParts,
-        address[] calldata giftReceivers,
-        uint256 amountToPay
-    ) external payable whenNotPaused {}
-
-    function _buyContentwithFIAT(
-        uint256 tokenId,
-        bool fullContentPurchase,
-        uint256[] calldata purchasedParts,
-        address contentReceiver
-    ) internal whenNotPaused {
-        // Check the existence of the content, if not revert
-        require(udaoc.exists(tokenId), "Content does not exist!");
-        // Platform uses backend wallet to do this transaction There should be a receiver
-        require(
-            contentReceiver != address(0),
-            "Content receiver cannot be zero address"
-        );
-        // Check do receiver have that content or its part, if it is revert
-        bool receiverHaveIt = _doReceiverHaveContentOrPart(
-            tokenId,
-            fullContentPurchase,
-            purchasedParts,
-            contentReceiver
-        );
-        require(receiverHaveIt == false, "Content or part's is already bought");
-        // Who created and own that content?
-        address instructor = udaoc.ownerOf(tokenId);
-        // Calculate purchased parts (or full Content) total list price.
-        uint256 priceToPayUdao = _calculatePriceToPay(
-            tokenId,
-            fullContentPurchase,
-            purchasedParts
-        );
-
-        uint256 totalCut = calculateTotalCutContentShare(priceToPayUdao);
-        uint256 instrShare = 0;
-
-        //timestamp returns 1694513188: 12Sep2023-10:06:28 so buyerTransactionTime is 19612.42
-        //this means 19612.42 day passed since 1Jan1970-0:0:0
-        //There is no fractional number in solidity so that buyerTransactionTime is 19612
-        uint256 transactionTime = (block.timestamp / epochOneDay);
-
-        //transactionFuIndex determines which position it will be added to in the FutureBalances array.
-        uint256 transactionFuIndex = transactionTime % refundWindow;
-
-        // transfer the tokens from buyer to contract (NOTE: Actually priceToPayUdao= totalCut + instrShare, maybe use that)
-        // NOTE: Eğer payable olacaksa buna gerekyok. Hala batch bir fonsiyon lazım ama yeni bir buyContentFIAT fonksiyonu yazalım o bu internal fonksiyonu çağırsın.
-        udao.transferFrom(msg.sender, address(this), totalCut);
-
-        // distribute everyones share and pay to instructor (NOTE: maybe we should hold shares as a whole and end of lifecyle we should split them)
-        _updateGlobalContentBalances(
-            totalCut,
-            transactionTime,
-            transactionFuIndex
-        );
-        _updateInstructorBalances(
-            instrShare,
-            instructor,
-            transactionTime,
-            transactionFuIndex
-        );
-
-        // give the content to the receiver
-        _updateOwnedContentOrPart(
-            tokenId,
-            fullContentPurchase,
-            purchasedParts,
-            contentReceiver
-        );
-        _saveTheSaleOnAListForRefund(
-            contentReceiver,
-            instrShare,
-            totalCut,
-            tokenId,
-            purchasedParts,
-            transactionTime + refundWindow
-        );
-
-        //TODO List
-        //2)also cuts must be send to governanceTreasury but maybe we can add it to inside _updateGlobalBalances
-        //3)we need to check functions visibility(view/pure/public) and behaviour (external/internal)
-        //NOTE: aşşağıdaki fonksiyonu batch buyContentFIAT external fonksiyonuna taşı
-        _sendCurrentGlobalCutsToGovernanceTreasury();
-        emit ContentBought(tokenId, purchasedParts, priceToPayUdao, msg.sender);
     }
 
     // NEW CONTENT SALE HELPER FUNCTIONS
@@ -752,7 +684,7 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
     ) internal {
         //how many day passed since last update of instructor balance
         uint256 dayPassedInst = _transactionTime - instUpdTime[_inst];
-
+        uint256 tempSafetyBalance; // for reentrancy check
         if (dayPassedInst < refundWindow) {
             // if(true):There is no payment yet to be paid to the seller in the future balance array.
             // add new payment to instructor futureBalanceArray
@@ -762,8 +694,9 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
             if (dayPassedInst >= (refundWindow * 2)) {
                 //Whole Future Balance Array must paid to user (Because (refundWindow x2)28 day passed)
                 for (uint256 i = 0; i < refundWindow; i++) {
-                    instCurBalance[_inst] += instFuBalance[_inst][i];
+                    tempSafetyBalance = instFuBalance[_inst][i];
                     instFuBalance[_inst][i] = 0;
+                    instCurBalance[_inst] += tempSafetyBalance;
                 }
                 // add new payment to instructor futureBalanceArray
                 instFuBalance[_inst][_transactionFuIndex] += _instrShare;
@@ -781,10 +714,9 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
                     //Index of the day to be payout to instructor.
                     uint256 indexOfPayout = ((_transactionFuIndex +
                         refundWindow) - i) % refundWindow;
-                    instCurBalance[_inst] += instFuBalance[_inst][
-                        indexOfPayout
-                    ];
+                    tempSafetyBalance = instFuBalance[_inst][indexOfPayout];
                     instFuBalance[_inst][indexOfPayout] = 0;
+                    instCurBalance[_inst] += tempSafetyBalance;
                 }
 
                 // add new payment to instructor futureBalanceArray
@@ -828,32 +760,24 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
             if (jurorCurBalance > 0) {
                 uint sendJurorShareToGovTre = jurorCurBalance;
                 jurorCurBalance = 0;
-                udao.transferFrom(
-                    address(this),
-                    governanceTreasury,
-                    sendJurorShareToGovTre
-                );
+                udao.transfer(governanceTreasury, sendJurorShareToGovTre);
                 iGovernanceTreasury.jurorBalanceUpdate(sendJurorShareToGovTre);
             }
             if (valdtrCurBalance > 0) {
                 uint sendValdtrShareToGovTre = valdtrCurBalance;
                 valdtrCurBalance = 0;
-                udao.transferFrom(
-                    address(this),
-                    governanceTreasury,
+                udao.transfer(governanceTreasury, sendValdtrShareToGovTre);
+                iGovernanceTreasury.validatorBalanceUpdate(
                     sendValdtrShareToGovTre
                 );
-                iGovernanceTreasury.validatorBalanceUpdate(sendValdtrShareToGovTre);
             }
             if (goverCurBalance > 0) {
                 uint sendGoverShareToGovTre = goverCurBalance;
                 goverCurBalance = 0;
-                udao.transferFrom(
-                    address(this),
-                    governanceTreasury, 
+                udao.transfer(governanceTreasury, sendGoverShareToGovTre);
+                iGovernanceTreasury.governanceBalanceUpdate(
                     sendGoverShareToGovTre
                 );
-                iGovernanceTreasury.governanceBalanceUpdate(sendGoverShareToGovTre);
             }
         }
     }
@@ -1032,6 +956,7 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
     */
 
     function _saveTheSaleOnAListForRefund(
+        address _payee,
         address _contentReceiver,
         uint256 _instrShare,
         uint256 _totalCut,
@@ -1040,7 +965,7 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
         uint256 _validDate
     ) internal {
         sales[purchaseID.current()] = ASaleOccured({
-            payee: msg.sender,
+            payee: _payee,
             contentReceiver: _contentReceiver,
             instrShare: _instrShare,
             totalCut: _totalCut,
@@ -1106,15 +1031,10 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
         instRefDebt[instructor] += refundItem.instrShare;
         globalCntntRefDebt += refundItem.totalCut;
 
-        udao.transferFrom(
-            address(this),
+        udao.transfer(
             refundItem.payee,
             (refundItem.instrShare + refundItem.totalCut)
         );
-    }
-
-    function _buyDisc() internal {
-        //TODO Not implemented YET
     }
 
     // TODO Refund voucher için backend dışında farklı bir wallet kullanılsın.
@@ -1294,108 +1214,3 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
 }
 
 //TODO we need to check functions visibility(view/pure/public) and behaviour (external/internal)
-
-//Needs work
-/*
-
-    function isThatValidPurchaseBatch(
-        uint256[] calldata tokenIds,
-        bool[] calldata fullContentPurchases,
-        uint256[][] calldata purchasedParts,
-        address[] calldata contentReceiver
-    ) external view returns (bool, uint256, uint256) {
-        //State 0: purcahse valid
-        //State 1: purcahse invalid, ArgumantsLength not equal
-        //State 2: purcahse invalid, content do not exist
-        //State 3: purcahse invalid, receiver have content already
-
-        bool result = true;
-        uint256 state = 0; //
-        uint256 totalPriceToPayUdao = 0;
-
-        uint256 tokenIdsLength = tokenIds.length;
-        if (
-            (tokenIdsLength == fullContentPurchases.length &&
-                tokenIdsLength == purchasedParts.length &&
-                tokenIdsLength == contentReceiver.length) == false
-        ) {
-            result = false;
-            state = 1;
-            return (result, state, totalPriceToPayUdao);
-        }
-        for (uint256 i; i < tokenIdsLength; i++) {
-            //
-            //if (udaoc.exists(tokenIds[i]) == false) {
-            //    result = false;
-            //    state = 2;
-            //    return (result, state, totalPriceToPayUdao);
-            //}
-            //////////////
-            //if (
-            //    _doReceiverHaveContentOrPart(
-            //        tokenIds[i],
-            //        fullContentPurchases[i],
-            //        purchasedParts[i],
-            //        contentReceiver[i]
-            //    ) == true
-            //) {
-            //    result = false;
-            //    state = 3;
-            //    return (result, state, totalPriceToPayUdao);
-            //}
-            ///// @dev Calculate the BUYER's, how much will pay to total purchases
-            //totalPriceToPayUdao += _calculatePriceToPay(
-            //    tokenIds[i],
-            //    fullContentPurchases[i],
-            //    purchasedParts[i]
-            //);
-            //
-        }
-        return (result, state, totalPriceToPayUdao);
-    }
-
-    function isThatValidPurchase(
-        uint256 tokenIds,
-        bool fullContentPurchases,
-        uint256[] calldata purchasedParts,
-        address contentReceiver
-    ) external view returns (bool, uint256, uint256) {
-        //State 0: purcahse valid
-        //State 1: XXXX
-        //State 2: purcahse invalid, content do not exist
-        //State 3: purcahse invalid, receiver have content already
-
-        bool result = true;
-        uint256 state = 0;
-        uint256 priceToPayUdao = 0;
-
-        ////////////
-        if (udaoc.exists(tokenIds) == false) {
-            result = false;
-            state = 2;
-            return (result, state, priceToPayUdao);
-        }
-        ////////////
-        if (
-            _doReceiverHaveContentOrPart(
-                tokenIds,
-                fullContentPurchases,
-                purchasedParts,
-                contentReceiver
-            ) == true
-        ) {
-            result = false;
-            state = 3;
-            return (result, state, priceToPayUdao);
-        }
-        /// @dev Calculate the BUYER's, how much will pay to total purchases
-        priceToPayUdao += _calculatePriceToPay(
-            tokenIds,
-            fullContentPurchases,
-            purchasedParts
-        );
-
-        return (result, state, priceToPayUdao);
-    }
-
-    */
