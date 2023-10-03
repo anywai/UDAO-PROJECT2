@@ -64,6 +64,32 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
         bytes signature;
     }
 
+    // GETTERS AND VOUCHER RELATED
+
+    /// @notice Represents a refund voucher for a coaching
+    struct RefundVoucher {
+        address contentReceiver;
+        uint256 refundID;
+        uint256 tokenId;
+        uint256[] finalParts;
+        uint256 validUntil;
+        bytes signature;
+    }
+
+    using Counters for Counters.Counter;
+    Counters.Counter private purchaseID;
+
+    struct ASaleOccured {
+        address payee;
+        address contentReceiver;
+        uint256 instrShare;
+        uint256 totalCut;
+        uint256 tokenId;
+        uint256[] purchasedParts;
+        uint256 validDate;
+    }
+
+    mapping(uint256 => ASaleOccured) public sales;
     // wallet => content token Ids
     mapping(address => uint256[][]) ownedContents;
     // tokenId => student addresses
@@ -381,7 +407,7 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
     
     */
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@//
-       
+
     function buyContentWithDiscount(
         ContentDiscountVoucher[] calldata voucher
     ) external whenNotPaused {
@@ -408,15 +434,21 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
                 IRM.hasRole(BACKEND_ROLE, signer),
                 "Signature invalid or unauthorized"
             );
-            require(voucher[i].validUntil >= block.timestamp, "Voucher has expired.");
+            require(
+                voucher[i].validUntil >= block.timestamp,
+                "Voucher has expired."
+            );
             require(msg.sender == voucher[i].redeemer, "You are not redeemer.");
             require(!IRM.isBanned(msg.sender), "You are banned");
 
             /// @dev Check the existance of content for each item in the cart
-            require(udaoc.exists(voucher[i].tokenId) == true, "Content not exist!");
+            require(
+                udaoc.exists(voucher[i].tokenId) == true,
+                "Content not exist!"
+            );
             /// @dev Determine the RECEIVER of each item in cart, address(0) means RECEIVER is BUYER
             if (voucher[i].giftReceiver != address(0)) {
-                contentReceiver[i]= voucher[i].giftReceiver;
+                contentReceiver[i] = voucher[i].giftReceiver;
             } else {
                 require(!fiatPurchase, "Fiat purchase requires a receiver!");
                 contentReceiver[i] = msg.sender;
@@ -432,7 +464,7 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
                 "Content or part's is already bought"
             );
             /// @dev Calculate the BUYER's, how much will pay to each item
-            priceToPay[i] = _calculatePriceToPay(
+            priceToPay[i] = calculatePriceToPay(
                 voucher[i].tokenId,
                 voucher[i].fullContentPurchase,
                 voucher[i].purchasedParts
@@ -457,7 +489,8 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
 
         /// @dev The BUYER should approve the contract for the amount they will pay
         require(
-            udao.allowance(msg.sender, address(this)) >= totalTotalCut + totalInstrShare,
+            udao.allowance(msg.sender, address(this)) >=
+                totalTotalCut + totalInstrShare,
             "Not enough allowance!"
         );
 
@@ -531,7 +564,7 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
                 "Content or part's is already bought"
             );
             /// @dev Calculate the BUYER's, how much will pay to each item
-            priceToPay[i] = _calculatePriceToPay(
+            priceToPay[i] = calculatePriceToPay(
                 tokenIds[i],
                 fullContentPurchases[i],
                 purchasedParts[i]
@@ -553,13 +586,13 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
             udao.balanceOf(msg.sender) >= totalTotalCut + totalInstrShare,
             "Not enough UDAO sent!"
         );
-        
+
         /// @dev The BUYER should approve the contract for the amount they will pay
         require(
-            udao.allowance(msg.sender, address(this)) >= totalTotalCut + totalInstrShare,
+            udao.allowance(msg.sender, address(this)) >=
+                totalTotalCut + totalInstrShare,
             "Not enough allowance!"
         );
-
 
         for (uint256 i; i < tokenIdsLength; i++) {
             _buyContentwithUDAO(
@@ -659,7 +692,11 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
         return false;
     }
 
-    function calculatePriceToPay(
+    /// @notice Calculates total amount to pay for a cart purchase
+    /// @param tokenIds ids of the contents
+    /// @param fullContentPurchases is full content purchased
+    /// @param purchasedParts parts of the content purchased
+    function calculatePriceToPayInTotal(
         uint256[] calldata tokenIds,
         bool[] calldata fullContentPurchases,
         uint256[][] calldata purchasedParts
@@ -668,7 +705,7 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
         uint256 totalPriceToPayUdao;
         for (uint256 i; i < tokenIdsLength; i++) {
             // Calculate purchased parts (or full Content) total list price.
-            totalPriceToPayUdao += _calculatePriceToPay(
+            totalPriceToPayUdao += calculatePriceToPay(
                 tokenIds[i],
                 fullContentPurchases[i],
                 purchasedParts[i]
@@ -677,7 +714,11 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
         return (totalPriceToPayUdao);
     }
 
-    function _calculatePriceToPay(
+    /// @notice Calculates price to pay for a purchase
+    /// @param _tokenId id of the content
+    /// @param _fullContentPurchase is full content purchased
+    /// @param _purchasedParts parts of the content purchased
+    function calculatePriceToPay(
         uint256 _tokenId,
         bool _fullContentPurchase,
         uint256[] calldata _purchasedParts
@@ -708,7 +749,7 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
         }
         return _priceToPay;
     }
-
+    
     function _updateGlobalContentBalances(
         uint256 totalCutContentShare,
         uint256 _transactionTime,
@@ -869,32 +910,7 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
         }
     }
 
-    // GETTERS AND VOUCHER RELATED
-
-    /// @notice Represents a refund voucher for a coaching
-    struct RefundVoucher {
-        address contentReceiver;
-        uint256 refundID;
-        uint256 tokenId;
-        uint256[] finalParts;
-        uint256 validUntil;
-        bytes signature;
-    }
-
-    using Counters for Counters.Counter;
-    Counters.Counter private purchaseID;
-
-    struct ASaleOccured {
-        address payee;
-        address contentReceiver;
-        uint256 instrShare;
-        uint256 totalCut;
-        uint256 tokenId;
-        uint256[] purchasedParts;
-        uint256 validDate;
-    }
-
-    mapping(uint256 => ASaleOccured) public sales;
+    
 
     /*
     //REMOVED to reduce gas cost
