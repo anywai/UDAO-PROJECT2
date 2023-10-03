@@ -5,8 +5,6 @@ import "./MyBasePlatform.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
 
-//import "../interfaces/IPriceGetter.sol";
-
 abstract contract ContentManager is EIP712, MyBasePlatform {
     string private constant SIGNING_DOMAIN = "ContentManager";
     string private constant SIGNATURE_VERSION = "1";
@@ -33,18 +31,15 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
         address buyer
     );
 
-    /// @notice Represents usage rights for a content (or part)
-    /**
-     * @notice struct to hold content discount voucher information
-     * @param tokenId id of the content
-     * @param fullContentPurchase is full content purchased
-     * @param purchasedParts parts of the content purchased
-     * @param priceToPay price to pay
-     * @param validUntil date until the voucher is valid
-     * @param redeemer address of the redeemer
-     * @param giftReceiver address of the gift receiver if purchase is a gift
-     * @param signature the EIP-712 signature of all other fields in the ContentDiscountVoucher struct.
-     */
+    /// @notice struct to hold content discount voucher information
+    /// @param tokenId id of the content
+    /// @param fullContentPurchase is full content purchased
+    /// @param purchasedParts parts of the content purchased
+    /// @param priceToPay price to pay
+    /// @param validUntil date until the voucher is valid
+    /// @param redeemer address of the redeemer
+    /// @param giftReceiver address of the gift receiver if purchase is a gift
+    /// @param signature the EIP-712 signature of all other fields in the ContentDiscountVoucher struct.
     struct ContentDiscountVoucher {
         /// @notice The id of the token (content) to be redeemed.
         uint256 tokenId;
@@ -63,8 +58,6 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
         /// @notice the EIP-712 signature of all other fields in the ContentDiscountVoucher struct.
         bytes signature;
     }
-
-    // GETTERS AND VOUCHER RELATED
 
     /// @notice Represents a refund voucher for a coaching
     struct RefundVoucher {
@@ -95,16 +88,14 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
     // tokenId => student addresses
     mapping(uint256 => address[]) public studentList;
 
-    /**
-     * @notice struct to hold coaching information
-     * @param coach address of the coach
-     * @param learner address of the learner
-     * @param moneyLockDeadline deadline of the money locked
-     * @param coachingPaymentAmount amount of token that coach is going to get
-     * @param isDone status of the coaching
-     * @param totalPaymentAmount total payment amount to buy coaching (includes cuts for platform)
-     * @param isRefundable is coaching refundable
-     */
+    /// @notice struct to hold coaching information
+    /// @param coach address of the coach
+    /// @param learner address of the learner
+    /// @param moneyLockDeadline deadline of the money locked
+    /// @param coachingPaymentAmount amount of token that coach is going to get
+    /// @param isDone status of the coaching
+    /// @param totalPaymentAmount total payment amount to buy coaching (includes cuts for platform)
+    /// @param isRefundable is coaching refundable
     struct CoachingStruct {
         address coach;
         address learner;
@@ -121,20 +112,13 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
     mapping(uint256 => CoachingStruct) public coachingStructs;
     uint256 private coachingIndex;
 
-    //IPriceGetter priceGetter;
-
-    constructor()
-        // address priceGetterAddress
-        EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION)
-    {
-        //priceGetter = IPriceGetter(priceGetterAddress);
-    }
+    constructor() EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION) {}
 
     /*
-    //Coaching functions needs reworks
-    
-    /// @notice Allows users to buy coaching service.
-    function buyCoaching(uint tokenId) external whenNotPaused {
+        //Coaching functions needs reworks
+
+        /// @notice Allows users to buy coaching service.
+        function buyCoaching(uint tokenId) external whenNotPaused {
         require(udaoc.exists(tokenId), "Content does not exist!");
         require(!IRM.isBanned(msg.sender), "You are banned");
         address instructor = udaoc.ownerOf(tokenId);
@@ -183,231 +167,233 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
         coachingIndex++;
 
         studentList[tokenId].push(msg.sender);
-    }
+        }
 
-    /// @notice Allows both parties to finalize coaching service.
-    /// @param _coachingId The ID of the coaching service
-    function finalizeCoaching(uint256 _coachingId) external whenNotPaused {
-        require(_coachingId < coachingIndex, "Coaching id doesn't exist");
-        CoachingStruct storage currentCoaching = coachingStructs[_coachingId];
-        require(
-            (msg.sender == currentCoaching.coach) ||
-                (msg.sender == currentCoaching.learner),
-            "You are not learner neither coach"
-        );
-        if (msg.sender == currentCoaching.coach) {
+        /// @notice Allows both parties to finalize coaching service.
+        /// @param _coachingId The ID of the coaching service
+        function finalizeCoaching(uint256 _coachingId) external whenNotPaused {
+            require(_coachingId < coachingIndex, "Coaching id doesn't exist");
+            CoachingStruct storage currentCoaching = coachingStructs[_coachingId];
             require(
-                (block.timestamp > currentCoaching.moneyLockDeadline),
-                "Deadline is not met yet"
+                (msg.sender == currentCoaching.coach) ||
+                    (msg.sender == currentCoaching.learner),
+                "You are not learner neither coach"
+            );
+            if (msg.sender == currentCoaching.coach) {
+                require(
+                    (block.timestamp > currentCoaching.moneyLockDeadline),
+                    "Deadline is not met yet"
+                );
+            }
+            instructorBalance[currentCoaching.coach] += coachingStructs[_coachingId]
+                .coachingPaymentAmount;
+
+            currentCoaching.isDone = 1;
+            emit CoachingFinalized(
+                _coachingId,
+                currentCoaching.coach,
+                currentCoaching.learner
             );
         }
-        instructorBalance[currentCoaching.coach] += coachingStructs[_coachingId]
-            .coachingPaymentAmount;
 
-        currentCoaching.isDone = 1;
-        emit CoachingFinalized(
-            _coachingId,
-            currentCoaching.coach,
-            currentCoaching.learner
-        );
-    }
-
-    //
-    //  @notice The learner or the coach could delay the service payment
-    //  deadline in the last 3 days of the deadline
-    //  @param _coachingId id of the coaching service
-    ///
-    function delayDeadline(uint256 _coachingId) external whenNotPaused {
-        require(
-            msg.sender == coachingStructs[_coachingId].coach ||
-                msg.sender == coachingStructs[_coachingId].learner,
-            "You are neither coach nor learner"
-        );
+        //
+        //  @notice The learner or the coach could delay the service payment
+        //  deadline in the last 3 days of the deadline
+        //  @param _coachingId id of the coaching service
+        ///
+        function delayDeadline(uint256 _coachingId) external whenNotPaused {
+            require(
+                msg.sender == coachingStructs[_coachingId].coach ||
+                    msg.sender == coachingStructs[_coachingId].learner,
+                "You are neither coach nor learner"
+            );
         require(
             (coachingStructs[_coachingId].moneyLockDeadline - block.timestamp) <
-                3 days,
-            "Only can be delayed in last 3 days"
-        );
-        coachingStructs[_coachingId].moneyLockDeadline += 7 days;
-        emit DeadlineDelayed(
-            _coachingId,
-            coachingStructs[_coachingId].moneyLockDeadline
-        );
-    }
-
-    /// @notice Payment and coaching service can be forcefully done by administrator_roles
-    /// @param _coachingId id of the coaching service
-    function forcedPayment(
-        uint256 _coachingId
-    ) external whenNotPaused onlyRoles(administrator_roles) {
-        CoachingStruct storage currentCoaching = coachingStructs[_coachingId];
-        instructorBalance[currentCoaching.coach] += coachingStructs[_coachingId]
-            .coachingPaymentAmount;
-
-        currentCoaching.isDone = 1;
-        emit ForcedPayment(_coachingId, currentCoaching.coach);
-    }
-
-    /// @notice Payment and coaching service can be forcefully done by jurors
-    /// @param _coachingId id of the coaching service
-    function forcedPaymentJuror(
-        uint256 _coachingId
-    ) external whenNotPaused onlyRole(SUPERVISION_CONTRACT) {
-        CoachingStruct storage currentCoaching = coachingStructs[_coachingId];
-        instructorBalance[currentCoaching.coach] += coachingStructs[_coachingId]
-            .coachingPaymentAmount;
-
-        currentCoaching.isDone = 1;
-        emit ForcedPayment(_coachingId, msg.sender);
-    }
-
-    /// @notice refunds the coaching service callable by coach
-    /// @param _coachingId id of the coaching service
-    function refund(uint256 _coachingId) external whenNotPaused {
-        CoachingStruct storage currentCoaching = coachingStructs[_coachingId];
-        uint256 totalPaymentAmount = currentCoaching.totalPaymentAmount;
-        require(msg.sender == currentCoaching.coach, "Your are not the coach");
-        foundationBalance -=
-            (totalPaymentAmount * coachingFoundationCut) /
-            100000;
-        governanceBalance -=
-            (totalPaymentAmount * coachingGovernanceCut) /
-            100000;
-
-        uint instructorRefunds = 0;
-        if (currentCoaching.isDone == 1) {
-            instructorRefunds =
-                totalPaymentAmount -
-                ((totalPaymentAmount * coachingFoundationCut) / 100000) -
-                ((totalPaymentAmount * coachingGovernanceCut) / 100000);
+                    3 days,
+                "Only can be delayed in last 3 days"
+            );
+            coachingStructs[_coachingId].moneyLockDeadline += 7 days;
+            emit DeadlineDelayed(
+                _coachingId,
+                coachingStructs[_coachingId].moneyLockDeadline
+            );
         }
-
-        currentCoaching.isDone = 2;
-
-        if (instructorBalance[currentCoaching.coach] >= instructorRefunds) {
-            instructorBalance[currentCoaching.coach] -= instructorRefunds;
-        } else {
-            instructorDebt[currentCoaching.coach] += instructorRefunds;
+    
+        /// @notice Payment and coaching service can be forcefully done by administrator_roles
+        /// @param _coachingId id of the coaching service
+        function forcedPayment(
+            uint256 _coachingId
+        ) external whenNotPaused onlyRoles(administrator_roles) {
+            CoachingStruct storage currentCoaching = coachingStructs[_coachingId];
+            instructorBalance[currentCoaching.coach] += coachingStructs[_coachingId]
+                .coachingPaymentAmount;
+    
+            currentCoaching.isDone = 1;
+            emit ForcedPayment(_coachingId, currentCoaching.coach);
         }
-        udao.transfer(currentCoaching.learner, totalPaymentAmount);
-
-        emit Refund(_coachingId, currentCoaching.learner, totalPaymentAmount);
-    }
-
-    /// @notice forces refund of coaching service only be callable by administrator_role (FOUNDATION_ROLE, GOVERNANCE_ROLE)
-    /// @param _coachingId id of the coaching service
-    function forcedRefundAdmin(
-        uint256 _coachingId
-    ) external whenNotPaused onlyRoles(administrator_roles) {
-        uint256 startGas = gasleft();
-        CoachingStruct storage currentCoaching = coachingStructs[_coachingId];
-        uint256 totalPaymentAmount = currentCoaching.totalPaymentAmount;
-
-        require(currentCoaching.isRefundable, "Coaching is not refundable");
-        foundationBalance -=
-            (totalPaymentAmount * coachingFoundationCut) /
-            100000;
-        governanceBalance -=
-            (totalPaymentAmount * coachingGovernanceCut) /
-            100000;
-        uint instructorRefunds = 0;
-        if (currentCoaching.isDone == 1) {
-            instructorRefunds =
-                totalPaymentAmount -
-                ((totalPaymentAmount * coachingFoundationCut) / 100000) -
-                ((totalPaymentAmount * coachingGovernanceCut) / 100000);
+    
+        /// @notice Payment and coaching service can be forcefully done by jurors
+        /// @param _coachingId id of the coaching service
+        function forcedPaymentJuror(
+            uint256 _coachingId
+        ) external whenNotPaused onlyRole(SUPERVISION_CONTRACT) {
+            CoachingStruct storage currentCoaching = coachingStructs[_coachingId];
+            instructorBalance[currentCoaching.coach] += coachingStructs[_coachingId]
+                .coachingPaymentAmount;
+    
+            currentCoaching.isDone = 1;
+            emit ForcedPayment(_coachingId, msg.sender);
         }
-        currentCoaching.isDone = 2;
-        udao.transfer(currentCoaching.learner, totalPaymentAmount);
-
-        //
-        // @dev this function checks the gas used since the start of the function using the global
-        // function `gasleft()`, then checks if instructor balance has more tokens than required gas
-        // to pay for this function. If instructos has enough balance, gas cost of this function is
-        // deducted from instructors balance, if instructor does not have enough balance, insturctor
-        // balance deducts to 0.
-        //
-        //
-        uint256 gasUsed = startGas - gasleft();
-
-        if (
-            instructorBalance[currentCoaching.coach] >=
-            (gasUsed * tx.gasprice + instructorRefunds)
-        ) {
-            instructorBalance[currentCoaching.coach] -= (gasUsed *
-                tx.gasprice +
-                instructorRefunds);
-        } else {
-            instructorDebt[currentCoaching.coach] += (gasUsed *
-                tx.gasprice +
-                instructorRefunds);
+    
+        /// @notice refunds the coaching service callable by coach
+        /// @param _coachingId id of the coaching service
+        function refund(uint256 _coachingId) external whenNotPaused {
+            CoachingStruct storage currentCoaching = coachingStructs[_coachingId];
+            uint256 totalPaymentAmount = currentCoaching.totalPaymentAmount;
+            require(msg.sender == currentCoaching.coach, "Your are not the coach");
+            foundationBalance -=
+                (totalPaymentAmount * coachingFoundationCut) /
+                100000;
+            governanceBalance -=
+                (totalPaymentAmount * coachingGovernanceCut) /
+                100000;
+    
+            uint instructorRefunds = 0;
+            if (currentCoaching.isDone == 1) {
+                instructorRefunds =
+                    totalPaymentAmount -
+                    ((totalPaymentAmount * coachingFoundationCut) / 100000) -
+                    ((totalPaymentAmount * coachingGovernanceCut) / 100000);
+            }
+    
+            currentCoaching.isDone = 2;
+    
+            if (instructorBalance[currentCoaching.coach] >= instructorRefunds) {
+                instructorBalance[currentCoaching.coach] -= instructorRefunds;
+            } else {
+                instructorDebt[currentCoaching.coach] += instructorRefunds;
+            }
+            udao.transfer(currentCoaching.learner, totalPaymentAmount);
+    
+            emit Refund(_coachingId, currentCoaching.learner, totalPaymentAmount);
         }
-
-        emit Refund(_coachingId, currentCoaching.learner, totalPaymentAmount);
-    }
-
-    /// @notice Jurors can force refund of a coaching service
-    /// @param _coachingId The ID of the coaching service
-    function forcedRefundJuror(
-        uint256 _coachingId
-    ) external whenNotPaused onlyRole(SUPERVISION_CONTRACT) {
-        uint256 startGas = gasleft();
-        CoachingStruct storage currentCoaching = coachingStructs[_coachingId];
-        uint256 totalPaymentAmount = currentCoaching.totalPaymentAmount;
-
-        require(currentCoaching.isRefundable, "Coaching is not refundable");
-        foundationBalance -=
-            (totalPaymentAmount * coachingFoundationCut) /
-            100000;
-        governanceBalance -=
-            (totalPaymentAmount * coachingGovernanceCut) /
-            100000;
-
-        uint instructorRefunds = 0;
-        if (currentCoaching.isDone == 1) {
-            instructorRefunds =
-                totalPaymentAmount -
-                ((totalPaymentAmount * coachingFoundationCut) / 100000) -
-                ((totalPaymentAmount * coachingGovernanceCut) / 100000);
+    
+        /// @notice forces refund of coaching service only be callable by administrator_role (FOUNDATION_ROLE, GOVERNANCE_ROLE)
+        /// @param _coachingId id of the coaching service
+        function forcedRefundAdmin(
+            uint256 _coachingId
+        ) external whenNotPaused onlyRoles(administrator_roles) {
+            uint256 startGas = gasleft();
+            CoachingStruct storage currentCoaching = coachingStructs[_coachingId];
+            uint256 totalPaymentAmount = currentCoaching.totalPaymentAmount;
+    
+            require(currentCoaching.isRefundable, "Coaching is not refundable");
+            foundationBalance -=
+                (totalPaymentAmount * coachingFoundationCut) /
+                100000;
+            governanceBalance -=
+                (totalPaymentAmount * coachingGovernanceCut) /
+                100000;
+            uint instructorRefunds = 0;
+            if (currentCoaching.isDone == 1) {
+                instructorRefunds =
+                    totalPaymentAmount -
+                    ((totalPaymentAmount * coachingFoundationCut) / 100000) -
+                    ((totalPaymentAmount * coachingGovernanceCut) / 100000);
+            }
+            currentCoaching.isDone = 2;
+            udao.transfer(currentCoaching.learner, totalPaymentAmount);
+    
+            //
+            // @dev this function checks the gas used since the start of the function using the global
+            // function `gasleft()`, then checks if instructor balance has more tokens than required gas
+            // to pay for this function. If instructos has enough balance, gas cost of this function is
+            // deducted from instructors balance, if instructor does not have enough balance, insturctor
+            // balance deducts to 0.
+            //
+            //
+            uint256 gasUsed = startGas - gasleft();
+    
+            if (
+                instructorBalance[currentCoaching.coach] >=
+                (gasUsed * tx.gasprice + instructorRefunds)
+            ) {
+                instructorBalance[currentCoaching.coach] -= (gasUsed *
+                    tx.gasprice +
+                    instructorRefunds);
+            } else {
+                instructorDebt[currentCoaching.coach] += (gasUsed *
+                    tx.gasprice +
+                    instructorRefunds);
+            }
+    
+            emit Refund(_coachingId, currentCoaching.learner, totalPaymentAmount);
         }
-        currentCoaching.isDone = 2;
-        udao.transfer(currentCoaching.learner, totalPaymentAmount);
-
-        //
-        // @dev this function checks the gas used since the start of the function using the global
-        // function `gasleft()`, then checks if instructor balance has more tokens than required gas
-        // to pay for this function. If instructos has enough balance, gas cost of this function is
-        // deducted from instructors balance, if instructor does not have enough balance, insturctor
-        // balance deducts to 0.
-        //
-        uint256 gasUsed = startGas - gasleft();
-        if (
-            instructorBalance[currentCoaching.coach] >=
-            (gasUsed * tx.gasprice + instructorRefunds)
-        ) {
-            instructorBalance[currentCoaching.coach] -= (gasUsed *
-                tx.gasprice +
-                instructorRefunds);
-        } else {
-            instructorDebt[currentCoaching.coach] += (gasUsed *
-                tx.gasprice +
-                instructorRefunds);
+    
+        /// @notice Jurors can force refund of a coaching service
+        /// @param _coachingId The ID of the coaching service
+        function forcedRefundJuror(
+            uint256 _coachingId
+        ) external whenNotPaused onlyRole(SUPERVISION_CONTRACT) {
+            uint256 startGas = gasleft();
+            CoachingStruct storage currentCoaching = coachingStructs[_coachingId];
+            uint256 totalPaymentAmount = currentCoaching.totalPaymentAmount;
+    
+            require(currentCoaching.isRefundable, "Coaching is not refundable");
+            foundationBalance -=
+                (totalPaymentAmount * coachingFoundationCut) /
+                100000;
+            governanceBalance -=
+                (totalPaymentAmount * coachingGovernanceCut) /
+                100000;
+    
+            uint instructorRefunds = 0;
+            if (currentCoaching.isDone == 1) {
+                instructorRefunds =
+                    totalPaymentAmount -
+                    ((totalPaymentAmount * coachingFoundationCut) / 100000) -
+                    ((totalPaymentAmount * coachingGovernanceCut) / 100000);
+            }
+            currentCoaching.isDone = 2;
+            udao.transfer(currentCoaching.learner, totalPaymentAmount);
+    
+            //
+            // @dev this function checks the gas used since the start of the function using the global
+            // function `gasleft()`, then checks if instructor balance has more tokens than required gas
+            // to pay for this function. If instructos has enough balance, gas cost of this function is
+            // deducted from instructors balance, if instructor does not have enough balance, insturctor
+            // balance deducts to 0.
+            //
+            uint256 gasUsed = startGas - gasleft();
+            if (
+                instructorBalance[currentCoaching.coach] >=
+                (gasUsed * tx.gasprice + instructorRefunds)
+            ) {
+                instructorBalance[currentCoaching.coach] -= (gasUsed *
+                    tx.gasprice +
+                    instructorRefunds);
+            } else {
+                instructorDebt[currentCoaching.coach] += (gasUsed *
+                    tx.gasprice +
+                    instructorRefunds);
+            }
+    
+            emit Refund(_coachingId, msg.sender, totalPaymentAmount);
         }
-
-        emit Refund(_coachingId, msg.sender, totalPaymentAmount);
-    }
-
-    /// @notice returns coaching informations of token
-    /// @param _tokenId id of token that coaching will be returned
-    function getCoachings(
-        uint256 _tokenId
-    ) external view returns (uint256[] memory) {
-        return coachingIdsOfToken[_tokenId];
-    }
+    
+        /// @notice returns coaching informations of token
+        /// @param _tokenId id of token that coaching will be returned
+        function getCoachings(
+            uint256 _tokenId
+        ) external view returns (uint256[] memory) {
+            return coachingIdsOfToken[_tokenId];
+        }
     
     */
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@//
 
+    /// @notice Allows users to buy content with discount voucher
+    /// @param voucher discount vouchers
     function buyContentWithDiscount(
         ContentDiscountVoucher[] calldata voucher
     ) external whenNotPaused {
@@ -415,18 +401,23 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
         uint256 voucherIdsLength = voucher.length;
         /// @dev Determine the RECEIVER of each item in the cart
         address[] memory contentReceiver;
-        /// @dev Calculate the BUYER's, how much will pay to each item
+        /// @dev Used for recording the price to pay for each item in the cart
         uint256[] memory priceToPay;
+        /// @dev Used for recording the all roles cut for each item in the cart
         uint256[] memory totalCut;
+        /// @dev Used for recording the instructor share for each item in the cart
         uint256[] memory instrShare;
+        /// @dev Used for recording the total roles cut for all items in the cart
         uint256 totalTotalCut;
+        /// @dev Used for recording the total instructor share for all items in the cart
         uint256 totalInstrShare;
-
-        bool fiatPurchase;
+        /// @dev Boolean flag to determine if the purchase is made by a backend role
+        /// if so then this purchase is a fiat purchase
+        bool isFiatPurchase;
         if (IRM.hasRole(BACKEND_ROLE, msg.sender)) {
-            fiatPurchase = true;
+            isFiatPurchase = true;
         }
-
+        /// @dev Loop through the cart
         for (uint256 i; i < voucherIdsLength; i++) {
             // make sure signature is valid and get the address of the signer
             address signer = _verifyDiscountVoucher(voucher[i]);
@@ -450,7 +441,10 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
             if (voucher[i].giftReceiver != address(0)) {
                 contentReceiver[i] = voucher[i].giftReceiver;
             } else {
-                require(!fiatPurchase, "Fiat purchase requires a receiver!");
+                require(
+                    !isFiatPurchase,
+                    "Fiat purchase requires a gift receiver!"
+                );
                 contentReceiver[i] = msg.sender;
             }
             /// @dev The RECEIVER cannot already own the content or parts which in the cart.
@@ -471,7 +465,7 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
             );
             totalCut[i] = calculateTotalCutContentShare(priceToPay[i]);
 
-            if (fiatPurchase) {
+            if (isFiatPurchase) {
                 instrShare[i] = 0;
             } else {
                 instrShare[i] = priceToPay[i] - totalCut[i];
@@ -509,7 +503,7 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
 
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@//
 
-    /// @notice Allows multiple content purchases using buyContent
+    /// @notice Allows multiple content purchases using buyContent
     /// @param tokenIds ids of the content
     /// @param fullContentPurchases is full content purchased
     /// @param purchasedParts parts of the content purchased
@@ -524,16 +518,21 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
         uint256 tokenIdsLength = tokenIds.length;
         /// @dev Determine the RECEIVER of each item in the cart
         address[] memory contentReceiver;
-        /// @dev Calculate the BUYER's, how much will pay to each item
+        /// @dev Used for recording the price to pay for each item in the cart
         uint256[] memory priceToPay;
+        /// @dev Used for recording the all roles cut for each item in the cart
         uint256[] memory totalCut;
+        /// @dev Used for recording the instructor share for each item in the cart
         uint256[] memory instrShare;
+        /// @dev Used for recording the total roles cut for all items in the cart
         uint256 totalTotalCut;
+        /// @dev Used for recording the total instructor share for all items in the cart
         uint256 totalInstrShare;
-
-        bool fiatPurchase;
+        /// @dev Boolean flag to determine if the purchase is made by a backend role
+        /// if so then this purchase is a fiat purchase
+        bool isFiatPurchase;
         if (IRM.hasRole(BACKEND_ROLE, msg.sender)) {
-            fiatPurchase = true;
+            isFiatPurchase = true;
         }
         /// @dev The function arguments must have equal size
         require(
@@ -550,7 +549,10 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
             if (giftReceivers[i] != address(0)) {
                 contentReceiver[i] = giftReceivers[i];
             } else {
-                require(!fiatPurchase, "Fiat purchase requires a receiver!");
+                require(
+                    !isFiatPurchase,
+                    "Fiat purchase requires a gift receiver!"
+                );
                 contentReceiver[i] = msg.sender;
             }
             /// @dev The RECEIVER cannot already own the content or parts which in the cart.
@@ -571,7 +573,7 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
             );
             totalCut[i] = calculateTotalCutContentShare(priceToPay[i]);
 
-            if (fiatPurchase) {
+            if (isFiatPurchase) {
                 instrShare[i] = 0;
             } else {
                 instrShare[i] = priceToPay[i] - totalCut[i];
@@ -749,36 +751,40 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
         }
         return _priceToPay;
     }
-    
+
     function _updateGlobalContentBalances(
         uint256 totalCutContentShare,
         uint256 _transactionTime,
         uint256 _transactionFuIndex
     ) internal {
         //how many day passed since last update of instructor balance
-        uint256 dayPassedGlo = _transactionTime - glbCntntUpdTime;
+        uint256 dayPassedGlo = _transactionTime - gContentUpdateTime;
 
         if (dayPassedGlo < refundWindow) {
             // if(true):There is no payment yet to be paid to the seller in the future balance array.
             // add new payment to instructor futureBalanceArray
-            glbCntntFuBalance[_transactionFuIndex] += totalCutContentShare;
+            gContentCutFutureBalance[
+                _transactionFuIndex
+            ] += totalCutContentShare;
         } else {
             // if(else): The future balance array contains values that must be paid to the user.
             if (dayPassedGlo >= (refundWindow * 2)) {
                 //Whole Future Balance Array must paid to user (Because (refundWindow x2)28 day passed)
                 for (uint256 i = 0; i < refundWindow; i++) {
-                    glbCntntCurBalance += glbCntntFuBalance[i];
+                    gContentCutCurrentBalance += gContentCutFutureBalance[i];
 
-                    glbCntntFuBalance[i] = 0;
+                    gContentCutFutureBalance[i] = 0;
                 }
 
                 // add new payment to instructor futureBalanceArray
-                glbCntntFuBalance[_transactionFuIndex] += totalCutContentShare;
+                gContentCutFutureBalance[
+                    _transactionFuIndex
+                ] += totalCutContentShare;
 
-                // you updated instructor currentBalance of instructorso declare a new time to instUpdTime
+                // you updated instructor currentBalance of instructorso declare a new time to instUpdateTime
                 // why (-refundWindow + 1)? This will sustain today will be no more update on balances...
                 // ...but tomarrow a transaction will produce new update.
-                glbCntntUpdTime = (_transactionTime - refundWindow) + 1;
+                gContentUpdateTime = (_transactionTime - refundWindow) + 1;
             } else {
                 //Just some part of Future Balance Array must paid to instructor
                 uint256 dayPassedGloMod = dayPassedGlo % refundWindow;
@@ -788,18 +794,22 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
                     //Index of the day to be payout to instructor.
                     uint256 indexOfPayout = ((_transactionFuIndex +
                         refundWindow) - i) % refundWindow;
-                    glbCntntCurBalance += glbCntntFuBalance[indexOfPayout];
+                    gContentCutCurrentBalance += gContentCutFutureBalance[
+                        indexOfPayout
+                    ];
 
-                    glbCntntFuBalance[indexOfPayout] = 0;
+                    gContentCutFutureBalance[indexOfPayout] = 0;
                 }
 
                 // add new payment to instructor futureBalanceArray
-                glbCntntFuBalance[_transactionFuIndex] += totalCutContentShare;
+                gContentCutFutureBalance[
+                    _transactionFuIndex
+                ] += totalCutContentShare;
 
-                // you updated instructor futureBalanceArray updated so declare a new time to instUpdTime
+                // you updated instructor futureBalanceArray updated so declare a new time to instUpdateTime
                 // why (-refundWindow + 1)? This will sustain today will be no more update on balances...
                 // ...but tomarrow a transaction will produce new update.
-                glbCntntUpdTime = (_transactionTime - refundWindow) + 1;
+                gContentUpdateTime = (_transactionTime - refundWindow) + 1;
             }
         }
     }
@@ -811,28 +821,28 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
         uint256 _transactionFuIndex
     ) internal {
         //how many day passed since last update of instructor balance
-        uint256 dayPassedInst = _transactionTime - instUpdTime[_inst];
+        uint256 dayPassedInst = _transactionTime - instUpdateTime[_inst];
         uint256 tempSafetyBalance; // for reentrancy check
         if (dayPassedInst < refundWindow) {
             // if(true):There is no payment yet to be paid to the seller in the future balance array.
             // add new payment to instructor futureBalanceArray
-            instFuBalance[_inst][_transactionFuIndex] += _instrShare;
+            instFutureBalance[_inst][_transactionFuIndex] += _instrShare;
         } else {
             // if(else): The future balance array contains values that must be paid to the user.
             if (dayPassedInst >= (refundWindow * 2)) {
                 //Whole Future Balance Array must paid to user (Because (refundWindow x2)28 day passed)
                 for (uint256 i = 0; i < refundWindow; i++) {
-                    tempSafetyBalance = instFuBalance[_inst][i];
-                    instFuBalance[_inst][i] = 0;
-                    instCurBalance[_inst] += tempSafetyBalance;
+                    tempSafetyBalance = instFutureBalance[_inst][i];
+                    instFutureBalance[_inst][i] = 0;
+                    instCurrentBalance[_inst] += tempSafetyBalance;
                 }
                 // add new payment to instructor futureBalanceArray
-                instFuBalance[_inst][_transactionFuIndex] += _instrShare;
+                instFutureBalance[_inst][_transactionFuIndex] += _instrShare;
 
-                // you updated instructor currentBalance of instructorso declare a new time to instUpdTime
+                // you updated instructor currentBalance of instructorso declare a new time to instUpdateTime
                 // why (-refundWindow + 1)? This will sustain today will be no more update on balances...
                 // ...but tomarrow a transaction will produce new update.
-                instUpdTime[_inst] = (_transactionTime - refundWindow) + 1;
+                instUpdateTime[_inst] = (_transactionTime - refundWindow) + 1;
             } else {
                 //Just some part of Future Balance Array must paid to instructor
                 uint256 dayPassedInstMod = dayPassedInst % refundWindow;
@@ -842,18 +852,18 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
                     //Index of the day to be payout to instructor.
                     uint256 indexOfPayout = ((_transactionFuIndex +
                         refundWindow) - i) % refundWindow;
-                    tempSafetyBalance = instFuBalance[_inst][indexOfPayout];
-                    instFuBalance[_inst][indexOfPayout] = 0;
-                    instCurBalance[_inst] += tempSafetyBalance;
+                    tempSafetyBalance = instFutureBalance[_inst][indexOfPayout];
+                    instFutureBalance[_inst][indexOfPayout] = 0;
+                    instCurrentBalance[_inst] += tempSafetyBalance;
                 }
 
                 // add new payment to instructor futureBalanceArray
-                instFuBalance[_inst][_transactionFuIndex] += _instrShare;
+                instFutureBalance[_inst][_transactionFuIndex] += _instrShare;
 
-                // you updated instructor currentBalance of instructorso declare a new time to instUpdTime
+                // you updated instructor currentBalance of instructorso declare a new time to instUpdateTime
                 // why (-refundWindow + 1)? This will sustain today will be no more update on balances...
                 // ...but tomarrow a transaction will produce new update.
-                instUpdTime[_inst] = (_transactionTime - refundWindow) + 1;
+                instUpdateTime[_inst] = (_transactionTime - refundWindow) + 1;
             }
         }
     }
@@ -877,31 +887,38 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
     }
 
     function _sendCurrentGlobalCutsToGovernanceTreasury() internal {
-        //TODO Not implemented YET
-        if (glbCntntCurBalance > 0) {
-            jurorCurBalance = calculateContentJurorShare(glbCntntCurBalance);
-            valdtrCurBalance = calculateContentValdtrShare(glbCntntCurBalance);
-            goverCurBalance = calculateContentGoverShare(glbCntntCurBalance);
-            foundCurBalance = calculateContentFoundShare(glbCntntCurBalance);
+        if (gContentCutCurrentBalance > 0) {
+            jurorCurrentBalance = calculateContentJurorShare(
+                gContentCutCurrentBalance
+            );
+            validCurrentBalance = calculateContentValdtrShare(
+                gContentCutCurrentBalance
+            );
+            goverCurrentBalance = calculateContentGoverShare(
+                gContentCutCurrentBalance
+            );
+            foundCurrentBalance = calculateContentFoundShare(
+                gContentCutCurrentBalance
+            );
         }
         if (isGovernanceTreasuryOnline == true) {
-            if (jurorCurBalance > 0) {
-                uint sendJurorShareToGovTre = jurorCurBalance;
-                jurorCurBalance = 0;
+            if (jurorCurrentBalance > 0) {
+                uint sendJurorShareToGovTre = jurorCurrentBalance;
+                jurorCurrentBalance = 0;
                 udao.transfer(governanceTreasury, sendJurorShareToGovTre);
                 iGovernanceTreasury.jurorBalanceUpdate(sendJurorShareToGovTre);
             }
-            if (valdtrCurBalance > 0) {
-                uint sendValdtrShareToGovTre = valdtrCurBalance;
-                valdtrCurBalance = 0;
+            if (validCurrentBalance > 0) {
+                uint sendValdtrShareToGovTre = validCurrentBalance;
+                validCurrentBalance = 0;
                 udao.transfer(governanceTreasury, sendValdtrShareToGovTre);
                 iGovernanceTreasury.validatorBalanceUpdate(
                     sendValdtrShareToGovTre
                 );
             }
-            if (goverCurBalance > 0) {
-                uint sendGoverShareToGovTre = goverCurBalance;
-                goverCurBalance = 0;
+            if (goverCurrentBalance > 0) {
+                uint sendGoverShareToGovTre = goverCurrentBalance;
+                goverCurrentBalance = 0;
                 udao.transfer(governanceTreasury, sendGoverShareToGovTre);
                 iGovernanceTreasury.governanceBalanceUpdate(
                     sendGoverShareToGovTre
@@ -909,154 +926,6 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
             }
         }
     }
-
-    
-
-    /*
-    //REMOVED to reduce gas cost
-        function _updateGlobalBalances(
-            uint256 foundShare,
-            uint256 goverShare,
-            uint256 valdtrShare,
-            uint256 jurorShare
-        ) internal {
-            //timestamp returns 1694513188: 12Sep2023-10:06:28 so buyerTransactionTime is 19612.42
-            //this means 19612.42 day passed since 1Jan1970-0:0:0
-            //There is no fractional number in solidity so that buyerTransactionTime is 19612
-            uint256 transactionTime = (block.timestamp / epochOneDay);
-
-            //transactionFuIndex determines which position it will be added to in the FutureBalances array.
-            uint256 transactionFuIndex = transactionTime % refundWindow;
-
-            //how many day passed since last update of instructor balance
-            uint256 dayPassedGlo = transactionTime - gloUpdTime;
-    
-            if (dayPassedGlo < refundWindow) {
-                // if(true):There is no payment yet to be paid to the seller in the future balance array.
-                // add new payment to instructor futureBalanceArray
-                //REP//instFuBalance[_inst][transactionFuIndex] += _instrShare;
-                foundFuBalance[transactionFuIndex] += foundShare;
-                goverFuBalance[transactionFuIndex] += goverShare;
-                valdtrFuBalance[transactionFuIndex] += valdtrShare;
-                jurorFuBalance[transactionFuIndex] += jurorShare;
-            } else {
-                // if(else): The future balance array contains values that must be paid to the user.
-                if (dayPassedGlo >= (refundWindow * 2)) {
-                    //Whole Future Balance Array must paid to user (Because (refundWindow x2)28 day passed)
-                    for (uint256 i = 0; i < refundWindow; i++) {
-                        //REP//instCurBalance[_inst] += instFuBalance[_inst][i];
-                        foundCurBalance += foundFuBalance[i];
-                        goverCurBalance += goverFuBalance[i];
-                        valdtrCurBalance += valdtrFuBalance[i];
-                        jurorCurBalance += jurorFuBalance[i];
-                        //REP//instFuBalance[_inst][i] = 0;
-                        foundFuBalance[i] = 0;
-                        goverFuBalance[i] = 0;
-                        valdtrFuBalance[i] = 0;
-                        jurorFuBalance[i] = 0;
-                    }
-
-                    // add new payment to instructor futureBalanceArray
-                    //REP//instFuBalance[_inst][transactionFuIndex] += _instrShare;
-                    foundFuBalance[transactionFuIndex] += foundShare;
-                    goverFuBalance[transactionFuIndex] += goverShare;
-                    valdtrFuBalance[transactionFuIndex] += valdtrShare;
-                    jurorFuBalance[transactionFuIndex] += jurorShare;
-
-                    // you updated instructor currentBalance of instructorso declare a new time to instUpdTime
-                    // why (-refundWindow + 1)? This will sustain today will be no more update on balances...
-                    // ...but tomarrow a transaction will produce new update.
-                    //REP//instUpdTime[_inst] = (transactionTime - refundWindow) + 1;
-                    gloUpdTime = (transactionTime - refundWindow) + 1;
-                } else {
-                    //Just some part of Future Balance Array must paid to instructor
-                    uint256 dayPassedGloMod = dayPassedGlo % refundWindow;
-                    //minimum dayPassedInst=14 so Mod 0, maximum dayPassedInst=27 so Mod 13
-                    //if Mod 0 for loop works for today, if Mod 2 it works for today+ yesterday,,, if it 13
-                    for (uint256 i = 0; i <= dayPassedGloMod; i++) {
-                        //Index of the day to be payout to instructor.
-                        uint256 indexOfPayout = ((transactionFuIndex +
-                            refundWindow) - i) % refundWindow;
-                        //REP//instCurBalance[_inst] += instFuBalance[_inst][indexOfPayout];
-                        foundCurBalance += foundFuBalance[indexOfPayout];
-                        goverCurBalance += goverFuBalance[indexOfPayout];
-                        valdtrCurBalance += valdtrFuBalance[indexOfPayout];
-                        jurorCurBalance += jurorFuBalance[indexOfPayout];
-                        //REP//instFuBalance[_inst][indexOfPayout] = 0;
-                        foundFuBalance[indexOfPayout] = 0;
-                        goverFuBalance[indexOfPayout] = 0;
-                        valdtrFuBalance[indexOfPayout] = 0;
-                        jurorFuBalance[indexOfPayout] = 0;
-                    }
-
-                // add new payment to instructor futureBalanceArray
-                //REP//instFuBalance[_inst][transactionFuIndex] += _instrShare;
-                foundFuBalance[transactionFuIndex] += foundShare;
-                goverFuBalance[transactionFuIndex] += goverShare;
-                valdtrFuBalance[transactionFuIndex] += valdtrShare;
-                jurorFuBalance[transactionFuIndex] += jurorShare;
-
-                // you updated instructor futureBalanceArray updated so declare a new time to instUpdTime
-                // why (-refundWindow + 1)? This will sustain today will be no more update on balances...
-                // ...but tomarrow a transaction will produce new update.
-                //REP//instUpdTime[_inst] = (transactionTime - refundWindow) + 1;
-                gloUpdTime = (transactionTime - refundWindow) + 1;
-                }
-            }
-        }
-
-
-        function _calculateShares(
-            uint256 _priceOf,
-            bool isAContentSale,
-            bool isAFIATPayout
-        )
-            internal
-            view
-            returns (uint256, uint256, uint256, uint256, uint256, uint256)
-        {
-            uint256 foundShare;
-            uint256 goverShare;
-            uint256 valdtrShare;
-            uint256 jurorShare;
-            uint256 instrShare;
-    
-            //isAContentSale: (=true for ContentSale), (=false for CoachingSale)
-            if (isAContentSale) {
-                foundShare = (_priceOf * cntntFoundCut) / 100000;
-                goverShare = (_priceOf * cntntGoverCut) / 100000;
-                valdtrShare = (_priceOf * cntntValidtrCut) / 100000;
-                jurorShare = (_priceOf * cntntJurorCut) / 100000;
-            } else {
-                foundShare = (_priceOf * coachFoundCut) / 100000;
-                goverShare = (_priceOf * coachGoverCut) / 100000;
-                valdtrShare = 0; //due to (_priceOf * {coachingValidatorCut=0}) / 100000;
-                jurorShare = (_priceOf * coachJurorCut) / 100000;
-            }
-    
-            uint256 totalCut;
-            totalCut = foundShare + goverShare + valdtrShare + jurorShare;
-    
-            if (isAFIATPayout) {
-                instrShare = 0;
-            } else {
-                instrShare = _priceOf - totalCut;
-            }
-    
-            return (
-                foundShare,
-                goverShare,
-                valdtrShare,
-                jurorShare,
-                totalCut,
-                instrShare
-            );
-        }
-
-
-
-
-    */
 
     function _saveTheSaleOnAListForRefund(
         address _payee,
@@ -1077,21 +946,8 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
             validDate: _validDate
         });
         purchaseID.increment();
-        //TODO Not implemented YET
     }
 
-    //    mapping(uint256 => ASaleOccured) public sales;
-    /// @notice Represents a refund voucher for a coaching
-    /*
-    struct RefundVoucher {
-        address contentReceiver;
-        uint256 refundID;
-        uint256 tokenId;
-        uint256[] finalParts;
-        uint256 validUntil;
-        bytes signature;
-    }
-    */
     function newRefund(RefundVoucher calldata voucher) external {
         address signer = _verifyRefundVoucher(voucher);
         require(
@@ -1116,14 +972,7 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
             refundItem.validDate < (block.timestamp / epochOneDay),
             "refund period over you cant refund"
         );
-        /*
-        1,2
-        4,5
-        3
-        [1][1,2,4,5,3]
-        [1][], [][]
-        [1][1,2,3]
-        */
+
         /// @dev First remove specific content from the contentReceiver
         delete ownedContents[voucher.contentReceiver][voucher.tokenId];
         /// @dev Then add the content to the contentReceiver
@@ -1131,8 +980,8 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
             .finalParts;
 
         address instructor = udaoc.ownerOf(refundItem.tokenId);
-        instRefDebt[instructor] += refundItem.instrShare;
-        globalCntntRefDebt += refundItem.totalCut;
+        instRefundDebt[instructor] += refundItem.instrShare;
+        gContentRefundDebt += refundItem.totalCut;
 
         udao.transfer(
             refundItem.payee,
@@ -1140,8 +989,6 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
         );
     }
 
-    // TODO Refund voucher için backend dışında farklı bir wallet kullanılsın.
-    // Biz kendimiz otomatize edelim.
     /*
     function refund(calldata RefundVoucher voucher) external {
         uint256 buyTransactionTime = voucher.buyTransactionTime;
@@ -1185,32 +1032,6 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
         
     }
     */
-    //TODO We should have
-    //_saveTheSaleOnAListForRefund(TransactionTime, msg.sender, (paidPrice, isAFIATPayout), instructor, contentReceiver, (tokenID, purchasedParts))
-    ////// Parayı FutureBalanceArray'inden alma, "Dept" olarak ekle! Çünkü refund windowu gelecekte değiştirirsen problem yaşarsın. (jurorDept, instructorDept[address],foundationDept)
-    ////// TransactionTime Lazım! Bu ve refund window kullanılarak refundun gerçekleşebileceği tarhi aralığı bulunur.
-    // TrasnactionTime lazım değil. Bir event trigger ederiz. Backend o eventin gerçekleşme tarihine bakar geçmişe dönük.
-    // ya da backendde satın alma tarihleri tutulur. Ona göre voucher oluşturulur.
-    ////// msg.sender kaydedilmeli! Bu parayı kime iade edeceğimi gösterecek. (Kişi çağırdıysa kişi platform çağırdıysa platform)
-    // Buna da gerek yok. transactionTime için yazdıklarım bunun içinde geçerli bence. uygulanabilir...
-    ////// fiatPayout mu udaoPayout mu? msg.sender'a ne kadar gidecek bu bilgi lazım. direk instructorShare + totalCut'ı yaz buraya
-    // Buna da gerek yok :D Yine backend halleder.
-    ////// instructor adress lazım! ödeme yapıldıysa kimden parayı geri alıcam.
-    // Buna da gerek yok. ownerOf(tokenId) zaten instructor adresini veriyor.
-    ////// contentReceiver lazım.
-    // Bunun için de voucher oluşturulurken contentReceiver'ı da yazdırırız.
-    ////// tokenID - purchasedParts lazım hangi kontenti ve parçalarını alıcıdan silicem
-    // BOSVER VOUCHER KULLAN burdaki tüm değişkenleri eventle dışarı aktar offchain Kaydetsin bieyere!
-
-    //_aNewRefundFunction()
-    ////// Refund talebi kullanıcı tarafından offChainde bize bildirilir.
-    ////// eğer fiat ödemeyse, kişi offChain butona basar ve refund fonksiyonunu biz çağırırız yada onaylamazsak çağırmayız. (yada tamamen voucher veririz ve bunu çağır deriz. seçeneklerdir bunlar.)
-    ////// off chainde biz belirlediğimiz şartlara göre onaylarsak yada instructor onaylarsa ödeme iade olur.(CALL refund function) Eğer iki tarafta redederse iade reddedilir. (NO CALL) Juror yok burda hiçbir şekil.
-
-    //_sendCurrentGlobalCutsToGovernanceTreasury
-
-    //BuyDiscountedContent() function
-
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@//
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@//
 
@@ -1317,3 +1138,4 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
 }
 
 //TODO we need to check functions visibility(view/pure/public) and behaviour (external/internal)
+//TODO Refund voucher icin backend disinda farkli bir wallet kullanilsin.
