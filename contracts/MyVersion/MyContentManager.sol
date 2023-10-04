@@ -46,16 +46,15 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
 
     /// @notice Represents a refund voucher for a coaching
     struct RefundVoucher {
-        address contentReceiver;
-        uint256 refundID;
-        uint256 tokenId;
+        uint256 saleID;
+        address instructor;
         uint256[] finalParts;
         uint256 validUntil;
         bytes signature;
     }
 
     using Counters for Counters.Counter;
-    Counters.Counter private purchaseID;
+    Counters.Counter private saleID;
 
     struct ASaleOccured {
         address payee;
@@ -67,7 +66,20 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
         uint256 validDate;
     }
 
+    struct ASaleOccured2 {
+        address payee;
+        address contentReceiver;
+        uint256 instrShare;
+        uint256 totalCut;
+        uint256 tokenId;
+        uint256[] purchasedParts;
+        bool isRefunded;
+        uint256 validDate;
+    }
+
     mapping(uint256 => ASaleOccured) public sales;
+    mapping(uint256 => ASaleOccured2) public coachSales;
+
     // wallet => content token Ids
     mapping(address => uint256[][]) ownedContents;
     // tokenId => student addresses (Coaching Related)
@@ -81,7 +93,7 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
     /// @param isDone status of the coaching
     /// @param totalPaymentAmount total payment amount to buy coaching (includes cuts for platform)
     /// @param isRefundable is coaching refundable
-    struct CoachingStruct {
+    struct CoachingStructOld {
         address coach;
         address learner;
         uint256 moneyLockDeadline;
@@ -94,7 +106,7 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
     // tokenId => coachingId[]  which tokens have which coachings
     mapping(uint256 => uint256[]) coachingIdsOfToken;
     // coachinId => coachingStruct  Coaching details
-    mapping(uint256 => CoachingStruct) public coachingStructs;
+    mapping(uint256 => CoachingStructOld) public coachingStructs;
     uint256 private coachingIndex;
 
     constructor() EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION) {}
@@ -210,7 +222,32 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
         _sendCurrentGlobalCutsToGovernanceTreasury();
     }
 
+    struct CoachingStructNew {
+        address coach;
+        uint256 price;
+        uint256 coachingDate;
+        address learner;
+    }
+
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@//
+    function buyCoaching(
+        CoachingStructNew calldata voucher
+    ) external whenNotPaused {
+        address signer = _verifyCoachingVoucher(voucher);
+        require(signer == voucher.coach, "Signature invalid or unauthorized");
+        require(
+            voucher.coachingDate >= block.timestamp + epochOneDay * 1,
+            "Coaching date must be at least 1 day before."
+        );
+        require(
+            voucher.coachingDate <= block.timestamp + epochOneDay * 7,
+            "Coaching date must be at most 7 days before."
+        );
+        require(msg.sender == voucher.learner, "You are not the learner.");
+        require(!IRM.isBanned(msg.sender), "You are banned");
+
+        udao.transferFrom(msg.sender, address(this), voucher.price);
+    }
 
     /// @notice Allows multiple content purchases using buyContent
     /// @param tokenIds ids of the content
@@ -644,7 +681,7 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
         uint256[] memory _purchasedParts,
         uint256 _validDate
     ) internal {
-        sales[purchaseID.current()] = ASaleOccured({
+        sales[saleID.current()] = ASaleOccured({
             payee: _payee,
             contentReceiver: _contentReceiver,
             instrShare: _instrShare,
@@ -653,7 +690,32 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
             purchasedParts: _purchasedParts,
             validDate: _validDate
         });
-        purchaseID.increment();
+        saleID.increment();
+    }
+
+    function newRefundCoaching(RefundVoucher calldata voucher) external {
+        address signer = _verifyRefundVoucher(voucher);
+        require(
+            IRM.hasRole(BACKEND_ROLE, signer),
+            "Signature invalid or unauthorized"
+        );
+
+        ASaleOccured2 storage refundItem = coachSales[voucher.saleID];
+        require(
+            refundItem.validDate < (block.timestamp / epochOneDay),
+            "Refund period over you cant refund"
+        );
+
+        require(refundItem.isRefunded == false, "Already refunded!");
+        coachSales[voucher.saleID].isRefunded = true;
+
+        instRefundDebt[voucher.instructor] += refundItem.instrShare;
+        gCoachingRefundDebt += refundItem.totalCut;
+
+        udao.transfer(
+            refundItem.payee,
+            (refundItem.instrShare + refundItem.totalCut)
+        );
     }
 
     function newRefund(RefundVoucher calldata voucher) external {
@@ -663,7 +725,7 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
             "Signature invalid or unauthorized"
         );
 
-        ASaleOccured storage refundItem = sales[voucher.refundID];
+        ASaleOccured storage refundItem = sales[voucher.saleID];
 
         for (uint256 j; j < refundItem.purchasedParts.length; j++) {
             uint256 part = refundItem.purchasedParts[j];
@@ -682,9 +744,9 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
         );
 
         /// @dev First remove specific content from the contentReceiver
-        delete ownedContents[voucher.contentReceiver][voucher.tokenId];
+        delete ownedContents[refundItem.contentReceiver][refundItem.tokenId];
         /// @dev Then add the content to the contentReceiver
-        ownedContents[voucher.contentReceiver][voucher.tokenId] = voucher
+        ownedContents[refundItem.contentReceiver][refundItem.tokenId] = voucher
             .finalParts;
 
         address instructor = udaoc.ownerOf(refundItem.tokenId);
@@ -769,11 +831,10 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
                 keccak256(
                     abi.encode(
                         keccak256(
-                            "RefundVoucher(address contentReceiver,uint256 refundID,uint256 tokenId,uint256[] finalParts,uint256 validUntil)"
+                            "RefundVoucher(uint256 saleID,address instructor,uint256[] finalParts,uint256 validUntil)"
                         ),
-                        voucher.contentReceiver,
-                        voucher.refundID,
-                        voucher.tokenId,
+                        voucher.saleID,
+                        voucher.instructor,
                         keccak256(abi.encodePacked(voucher.finalParts)),
                         voucher.validUntil
                     )
@@ -804,3 +865,11 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
 
 //TODO we need to check functions visibility(view/pure/public) and behaviour (external/internal)
 //TODO Refund voucher icin backend disinda farkli bir wallet kullanilsin.
+// TODO Refund requested by the instructor
+// function refundRequestedByInstructor(uint256 _saleID) external {};
+// TODO User refund
+// function userRefundCoaching() external whenNotPaused {
+// require(coachingDate + (1 * epochOneDay) < block.timestamp , ".");
+
+// Eğer coachingDate gelmediyse anında refund edebilcek ama en geç 1 gün kala
+//}

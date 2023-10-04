@@ -157,7 +157,7 @@ abstract contract MyBasePlatform is Pausable, RoleController {
     mapping(address => uint) public instRefundDebt;
     // Global balances debt amount (debt occured due to refund)
     uint256 gContentRefundDebt;
-    uint256 globalCoachRefDebt;
+    uint256 gCoachingRefundDebt;
 
     // 100000 -> 100% | 5000 -> 5%
     // Cuts for foundation/governance/juror/validator for a coaching sale
