@@ -164,6 +164,7 @@ abstract contract MyBasePlatform is Pausable, RoleController {
     uint public coachFoundCut = 4000;
     uint public coachGoverCut = 0; //700;
     uint public coachJurorCut = 0; //new!!
+    uint public coachValidCut = 0;
     // Cuts for foundation/governance/juror/validator for a content sale
     uint public contentFoundCut = 4000;
     uint public contentGoverCut = 0; //700;
@@ -171,9 +172,8 @@ abstract contract MyBasePlatform is Pausable, RoleController {
     uint public contentValidCut = 0; //200;
 
     // Total cuts for content&coaching sale
-    uint256 contentTotalCut =
-        contentFoundCut + contentGoverCut + contentJurorCut + contentValidCut;
-    uint256 totalCutCoaching = coachFoundCut + coachGoverCut + coachJurorCut;
+    uint256 contentTotalCut =contentFoundCut + contentGoverCut + contentJurorCut + contentValidCut;
+    uint256 totalCutCoaching = coachFoundCut + coachGoverCut + coachJurorCut + coachValidCut;
 
     // There is no GovernanceTreasury in MVP, after governance release will be set
     bool isGovernanceTreasuryOnline = false;
@@ -183,6 +183,7 @@ abstract contract MyBasePlatform is Pausable, RoleController {
         uint256 coachFoundCut,
         uint256 coachGoverCut,
         uint256 coachJurorCut,
+        uint256 coachValidCut,
         uint256 contentFoundCut,
         uint256 contentGoverCut,
         uint256 contentJurorCut,
@@ -218,13 +219,39 @@ abstract contract MyBasePlatform is Pausable, RoleController {
     ) public view returns (uint256) {
         return ((_priceOf * contentTotalCut) / 100000);
     }
+    
 
+    function calculateCoachingFoundShare(
+        uint256 _priceOf
+    ) public view returns (uint256) {
+        return ((_priceOf * coachFoundCut) / totalCutCoaching);
+    }
+    function calculateCoachingGoverShare(
+        uint256 _priceOf
+    ) public view returns (uint256) {
+        return ((_priceOf * coachGoverCut) / totalCutCoaching);
+    }
+    function calculateCoachingJurorShare(
+        uint256 _priceOf
+    ) public view returns (uint256) {
+        return ((_priceOf * coachJurorCut) / totalCutCoaching);
+    }
+    function calculateCoachingValidShare(
+        uint256 _priceOf
+    ) public view returns (uint256) {
+        return ((_priceOf * coachValidCut) / totalCutCoaching);
+    }
+    function calculateTotalCutCoachingShare(
+        uint256 _priceOf
+    ) public view returns (uint256) {
+        return ((_priceOf * totalCutCoaching) / 100000);
+    }
     // SETTERS
 
     /// @notice changes cut from coaching for foundation
     /// @param _cut new cut (100000 -> 100% | 5000 -> 5%)
     function setCoachFoundCut(uint _cut) external onlyRole(GOVERNANCE_ROLE) {
-        uint256 otherCuts = coachGoverCut + coachJurorCut;
+        uint256 otherCuts = coachGoverCut + coachJurorCut + coachValidCut;
         require(_cut + otherCuts < 100000, "Cuts cant be higher than %100");
 
         coachFoundCut = _cut;
@@ -234,7 +261,7 @@ abstract contract MyBasePlatform is Pausable, RoleController {
     /// @notice changes cut from coaching for governance
     /// @param _cut new cut (100000 -> 100% | 5000 -> 5%)
     function setCoachGoverCut(uint _cut) external onlyRole(GOVERNANCE_ROLE) {
-        uint256 otherCuts = coachGoverCut + coachJurorCut;
+        uint256 otherCuts = coachGoverCut + coachJurorCut + coachValidCut;
         require(_cut + otherCuts < 100000, "Cuts cant be higher than %100");
 
         coachGoverCut = _cut;
@@ -244,27 +271,36 @@ abstract contract MyBasePlatform is Pausable, RoleController {
     /// @notice changes cut from coaching for governance
     /// @param _cut new cut (100000 -> 100% | 5000 -> 5%)
     function setCoachJurorCut(uint256 _cut) external onlyRole(GOVERNANCE_ROLE) {
-        uint256 otherCuts = coachFoundCut + coachGoverCut;
+        uint256 otherCuts = coachFoundCut + coachGoverCut + coachValidCut;
         require(_cut + otherCuts < 100000, "Cuts cant be higher than %100");
 
         coachJurorCut = _cut;
         setCoachTotalCut();
     }
 
+    function setCoachValidCut(uint256 _cut) external onlyRole(GOVERNANCE_ROLE) {
+        uint256 otherCuts = coachFoundCut + coachGoverCut + coachJurorCut;
+        require(_cut + otherCuts < 100000, "Cuts cant be higher than %100");
+
+        coachValidCut = _cut;
+        setCoachTotalCut();
+    }
+
     function setCoachTotalCut() internal {
-        totalCutCoaching = (coachFoundCut + coachGoverCut + coachJurorCut);
+        totalCutCoaching = (coachFoundCut + coachGoverCut + coachJurorCut + coachValidCut);
 
         emit PlatformCutsUpdated(
             coachFoundCut,
             coachGoverCut,
             coachJurorCut,
+            coachValidCut,
             contentFoundCut,
             contentGoverCut,
             contentJurorCut,
             contentValidCut
         );
     }
-
+    
     /// @notice changes cut from content for foundation
     /// @param _cut new cut (100000 -> 100% | 5000 -> 5%)
     function setcontentFoundCut(uint _cut) external onlyRole(GOVERNANCE_ROLE) {
@@ -316,6 +352,7 @@ abstract contract MyBasePlatform is Pausable, RoleController {
             coachFoundCut,
             coachGoverCut,
             coachJurorCut,
+            coachValidCut,
             contentFoundCut,
             contentGoverCut,
             contentJurorCut,

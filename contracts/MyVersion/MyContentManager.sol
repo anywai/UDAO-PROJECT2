@@ -53,32 +53,43 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
         bytes signature;
     }
 
-    using Counters for Counters.Counter;
-    Counters.Counter private saleID;
-
-    struct ASaleOccured {
-        address payee;
-        address contentReceiver;
-        uint256 instrShare;
-        uint256 totalCut;
-        uint256 tokenId;
-        uint256[] purchasedParts;
-        uint256 validDate;
+    /// @notice struct to hold coaching voucher information
+    struct CoachingVoucher {
+        address coach;
+        uint256 priceToPay;
+        uint256 coachingDate;
+        address learner;
+        bytes signature;
     }
 
-    struct ASaleOccured2 {
+    using Counters for Counters.Counter;
+    Counters.Counter private saleID;
+    Counters.Counter private coachingSaleID;
+
+    struct ContentSale {
         address payee;
         address contentReceiver;
+        address instructor;
         uint256 instrShare;
         uint256 totalCut;
         uint256 tokenId;
         uint256[] purchasedParts;
         bool isRefunded;
-        uint256 validDate;
+        uint256 refundablePeriod;
+    }
+    struct CoachingSale {
+        address payee;
+        address contentReceiver;
+        address instructor;
+        uint256 instrShare;
+        uint256 totalCut;
+        bool isRefunded;
+        uint256 coachingDate;
+        uint256 refundablePeriod;
     }
 
-    mapping(uint256 => ASaleOccured) public sales;
-    mapping(uint256 => ASaleOccured2) public coachSales;
+    mapping(uint256 => ContentSale) public sales;
+    mapping(uint256 => CoachingSale) public coachSales;
 
     // wallet => content token Ids
     mapping(address => uint256[][]) ownedContents;
@@ -138,6 +149,7 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
         if (IRM.hasRole(BACKEND_ROLE, msg.sender)) {
             isFiatPurchase = true;
         }
+
         /// @dev Loop through the cart
         for (uint256 i; i < voucherIdsLength; i++) {
             // make sure signature is valid and get the address of the signer
@@ -222,17 +234,15 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
         _sendCurrentGlobalCutsToGovernanceTreasury();
     }
 
-    struct CoachingStructNew {
-        address coach;
-        uint256 price;
-        uint256 coachingDate;
-        address learner;
-    }
-
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@//
     function buyCoaching(
-        CoachingStructNew calldata voucher
+        CoachingVoucher calldata voucher
     ) external whenNotPaused {
+        uint256 totalCut;
+        uint256 instrShare;
+        address learner;
+        bool isFiatPurchase;
+
         address signer = _verifyCoachingVoucher(voucher);
         require(signer == voucher.coach, "Signature invalid or unauthorized");
         require(
@@ -243,10 +253,67 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
             voucher.coachingDate <= block.timestamp + epochOneDay * 7,
             "Coaching date must be at most 7 days before."
         );
-        require(msg.sender == voucher.learner, "You are not the learner.");
-        require(!IRM.isBanned(msg.sender), "You are banned");
+        if (IRM.hasRole(BACKEND_ROLE, msg.sender)) {
+            learner = voucher.learner;
+            isFiatPurchase = true;
+        } else {
+            require(msg.sender == voucher.learner, "You are not the learner.");
+            require(!IRM.isBanned(msg.sender), "You are banned");
+            learner = msg.sender;
+        }
 
-        udao.transferFrom(msg.sender, address(this), voucher.price);
+        totalCut = calculateTotalCutCoachingShare(voucher.priceToPay);
+
+        if (isFiatPurchase) {
+            instrShare = 0;
+        } else {
+            instrShare = voucher.priceToPay - totalCut;
+        }
+
+        /// @dev The BUYER should have enough UDAO to pay for the cart
+        require(
+            udao.balanceOf(msg.sender) >= totalCut + instrShare,
+            "Not enough UDAO sent!"
+        );
+
+        /// @dev The BUYER should approve the contract for the amount they will pay
+        require(
+            udao.allowance(msg.sender, address(this)) >= totalCut + instrShare,
+            "Not enough allowance!"
+        );
+
+        udao.transferFrom(msg.sender, address(this), totalCut + instrShare);
+
+        uint256 transactionTime = (block.timestamp / epochOneDay);
+
+        //transactionFuIndex determines which position it will be added to in the FutureBalances array.
+        uint256 transactionFuIndex = transactionTime % refundWindow;
+        _updateGlobalCoachingBalances(
+            totalCut,
+            transactionTime,
+            transactionFuIndex
+        );
+        _updateInstructorBalances(
+            instrShare,
+            voucher.coach,
+            transactionTime,
+            transactionFuIndex
+        );
+
+        _saveTheSaleOnAListForRefund(
+            msg.sender,
+            learner,
+            voucher.coach,
+            instrShare,
+            totalCut,
+            0, //empty tokenId
+            new uint256[](0), //empty purchased parts
+            voucher.coachingDate,
+            transactionTime+refundWindow,
+            false
+        );
+
+        _sendCurrentGlobalCutsToGovernanceTreasury();
     }
 
     /// @notice Allows multiple content purchases using buyContent
@@ -400,11 +467,14 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
         _saveTheSaleOnAListForRefund(
             msg.sender,
             contentReceiver,
+            instructor,
             instrShare,
             totalCut,
             tokenId,
             purchasedParts,
-            transactionTime + refundWindow
+            0, //coachingdate
+            transactionTime+refundWindow,
+            true
         );
 
         emit ContentBought(
@@ -559,6 +629,68 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
         }
     }
 
+    function _updateGlobalCoachingBalances(
+        uint256 totalCutCoachingShare,
+        uint256 _transactionTime,
+        uint256 _transactionFuIndex
+    ) internal {
+        //how many day passed since last update of instructor balance
+        uint256 dayPassedGlo = _transactionTime - gCoachingUpdateTime;
+
+        if (dayPassedGlo < refundWindow) {
+            // if(true):There is no payment yet to be paid to the seller in the future balance array.
+            // add new payment to instructor futureBalanceArray
+            gCoachingFutureBalance[
+                _transactionFuIndex
+            ] += totalCutCoachingShare;
+        } else {
+            // if(else): The future balance array contains values that must be paid to the user.
+            if (dayPassedGlo >= (refundWindow * 2)) {
+                //Whole Future Balance Array must paid to user (Because (refundWindow x2)28 day passed)
+                for (uint256 i = 0; i < refundWindow; i++) {
+                    gCoachingCurrentBalance += gCoachingFutureBalance[i];
+
+                    gCoachingFutureBalance[i] = 0;
+                }
+
+                // add new payment to instructor futureBalanceArray
+                gCoachingFutureBalance[
+                    _transactionFuIndex
+                ] += totalCutCoachingShare;
+
+                // you updated instructor currentBalance of instructorso declare a new time to instUpdateTime
+                // why (-refundWindow + 1)? This will sustain today will be no more update on balances...
+                // ...but tomarrow a transaction will produce new update.
+                gCoachingUpdateTime = (_transactionTime - refundWindow) + 1;
+            } else {
+                //Just some part of Future Balance Array must paid to instructor
+                uint256 dayPassedGloMod = dayPassedGlo % refundWindow;
+                //minimum dayPassedInst=14 so Mod 0, maximum dayPassedInst=27 so Mod 13
+                //if Mod 0 for loop works for today, if Mod 2 it works for today+ yesterday,,, if it 13
+                for (uint256 i = 0; i <= dayPassedGloMod; i++) {
+                    //Index of the day to be payout to instructor.
+                    uint256 indexOfPayout = ((_transactionFuIndex +
+                        refundWindow) - i) % refundWindow;
+                    gCoachingCurrentBalance += gCoachingFutureBalance[
+                        indexOfPayout
+                    ];
+
+                    gCoachingFutureBalance[indexOfPayout] = 0;
+                }
+
+                // add new payment to instructor futureBalanceArray
+                gCoachingFutureBalance[
+                    _transactionFuIndex
+                ] += totalCutCoachingShare;
+
+                // you updated instructor futureBalanceArray updated so declare a new time to instUpdateTime
+                // why (-refundWindow + 1)? This will sustain today will be no more update on balances...
+                // ...but tomarrow a transaction will produce new update.
+                gCoachingUpdateTime = (_transactionTime - refundWindow) + 1;
+            }
+        }
+    }
+
     function _updateInstructorBalances(
         uint256 _instrShare,
         address _inst,
@@ -633,16 +765,16 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
 
     function _sendCurrentGlobalCutsToGovernanceTreasury() internal {
         if (gContentCutCurrentBalance > 0) {
-            jurorCurrentBalance = calculateContentJurorShare(
+            jurorCurrentBalance += calculateContentJurorShare(
                 gContentCutCurrentBalance
             );
-            validCurrentBalance = calculateContentValdtrShare(
+            validCurrentBalance += calculateContentValdtrShare(
                 gContentCutCurrentBalance
             );
-            goverCurrentBalance = calculateContentGoverShare(
+            goverCurrentBalance += calculateContentGoverShare(
                 gContentCutCurrentBalance
             );
-            foundCurrentBalance = calculateContentFoundShare(
+            foundCurrentBalance += calculateContentFoundShare(
                 gContentCutCurrentBalance
             );
         }
@@ -675,41 +807,60 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
     function _saveTheSaleOnAListForRefund(
         address _payee,
         address _contentReceiver,
+        address _instructor,
         uint256 _instrShare,
         uint256 _totalCut,
         uint256 _tokenId,
         uint256[] memory _purchasedParts,
-        uint256 _validDate
+        uint256 _coachingDate,
+        uint256 _refundablePeriod,
+        bool isContentSale
     ) internal {
-        sales[saleID.current()] = ASaleOccured({
-            payee: _payee,
-            contentReceiver: _contentReceiver,
-            instrShare: _instrShare,
-            totalCut: _totalCut,
-            tokenId: _tokenId,
-            purchasedParts: _purchasedParts,
-            validDate: _validDate
-        });
-        saleID.increment();
+        if (isContentSale) {
+            sales[saleID.current()] = ContentSale({
+                payee: _payee,
+                contentReceiver: _contentReceiver,
+                instructor: _instructor,
+                instrShare: _instrShare,
+                totalCut: _totalCut,
+                tokenId: _tokenId,
+                purchasedParts: _purchasedParts,
+                isRefunded: false,
+                refundablePeriod: _refundablePeriod
+            });
+            saleID.increment();
+        } else {
+            coachSales[coachingSaleID.current()] = CoachingSale({
+                payee: _payee,
+                contentReceiver: _contentReceiver,
+                instructor: _instructor,
+                instrShare: _instrShare,
+                totalCut: _totalCut,
+                isRefunded: false,
+                coachingDate: _coachingDate,
+                refundablePeriod: _refundablePeriod
+            });
+            coachingSaleID.increment();
+        }
     }
-
-    function newRefundCoaching(RefundVoucher calldata voucher) external {
-        address signer = _verifyRefundVoucher(voucher);
+    
+    function refundCoachingByInstructorOrLearner(uint256 _saleID) external {
+        CoachingSale storage refundItem = coachSales[_saleID];
         require(
-            IRM.hasRole(BACKEND_ROLE, signer),
-            "Signature invalid or unauthorized"
-        );
-
-        ASaleOccured2 storage refundItem = coachSales[voucher.saleID];
-        require(
-            refundItem.validDate < (block.timestamp / epochOneDay),
+            refundItem.refundablePeriod >= (block.timestamp / epochOneDay),
             "Refund period over you cant refund"
         );
+        if(msg.sender == refundItem.payee){
+            require(refundItem.coachingDate >= block.timestamp + 1 days);
+        }else if(msg.sender != refundItem.instructor) {
+            revert("You are not the payee or instructor");
+        }
+        
 
         require(refundItem.isRefunded == false, "Already refunded!");
-        coachSales[voucher.saleID].isRefunded = true;
+        coachSales[_saleID].isRefunded = true;
 
-        instRefundDebt[voucher.instructor] += refundItem.instrShare;
+        instRefundDebt[refundItem.instructor] += refundItem.instrShare;
         gCoachingRefundDebt += refundItem.totalCut;
 
         udao.transfer(
@@ -718,14 +869,41 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
         );
     }
 
-    function newRefund(RefundVoucher calldata voucher) external {
+    /// @notice Allows refund of coaching with a voucher
+    /// @param voucher A RefundVoucher 
+    function newRefundCoaching(RefundVoucher calldata voucher) external {
         address signer = _verifyRefundVoucher(voucher);
         require(
             IRM.hasRole(BACKEND_ROLE, signer),
             "Signature invalid or unauthorized"
         );
 
-        ASaleOccured storage refundItem = sales[voucher.saleID];
+        CoachingSale storage refundItem = coachSales[voucher.saleID];
+        require(
+            refundItem.refundablePeriod >= (block.timestamp / epochOneDay),
+            "Refund period over you cant refund"
+        );
+
+        require(refundItem.isRefunded == false, "Already refunded!");
+        coachSales[voucher.saleID].isRefunded = true;
+
+        instRefundDebt[refundItem.instructor] += refundItem.instrShare;
+        gCoachingRefundDebt += refundItem.totalCut;
+
+        udao.transfer(
+            refundItem.payee,
+            (refundItem.instrShare + refundItem.totalCut)
+        );
+    }
+
+    function newRefundContent(RefundVoucher calldata voucher) external {
+        address signer = _verifyRefundVoucher(voucher);
+        require(
+            IRM.hasRole(BACKEND_ROLE, signer),
+            "Signature invalid or unauthorized"
+        );
+
+        ContentSale storage refundItem = sales[voucher.saleID];
 
         for (uint256 j; j < refundItem.purchasedParts.length; j++) {
             uint256 part = refundItem.purchasedParts[j];
@@ -739,9 +917,12 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
         }
 
         require(
-            refundItem.validDate < (block.timestamp / epochOneDay),
+            refundItem.refundablePeriod < (block.timestamp / epochOneDay),
             "refund period over you cant refund"
         );
+
+        require(refundItem.isRefunded == false, "Already refunded!");
+        coachSales[voucher.saleID].isRefunded = true;
 
         /// @dev First remove specific content from the contentReceiver
         delete ownedContents[refundItem.contentReceiver][refundItem.tokenId];
@@ -842,6 +1023,27 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
             );
     }
 
+    /// @notice Returns a hash of the given CoachingVoucher, prepared using EIP712 typed data hashing rules.
+    /// @param voucher A CoachingVoucher to hash.
+    function _hashCoachingVoucher(
+        CoachingVoucher calldata voucher
+    ) internal view returns (bytes32) {
+        return
+            _hashTypedDataV4(
+                keccak256(
+                    abi.encode(
+                        keccak256(
+                            "CoachingVoucher(address coach,uint256 priceToPay,uint256 coachingDate,address learner)"
+                        ),
+                        voucher.coach,
+                        voucher.priceToPay,
+                        voucher.coachingDate,
+                        voucher.learner
+                    )
+                )
+            );
+    }
+
     /// @notice Verifies the signature for a given ContentDiscountVoucher, returning the address of the signer.
     /// @dev Will revert if the signature is invalid.
     /// @param voucher A ContentDiscountVoucher describing a content access rights.
@@ -861,15 +1063,19 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
         bytes32 digest = _hashRefundVoucher(voucher);
         return ECDSA.recover(digest, voucher.signature);
     }
+
+    /// @notice Verifies the signature for a given CoachingVoucher, returning the address of the signer.
+    /// @dev Will revert if the signature is invalid.
+    /// @param voucher A CoachingVoucher describing a content access rights.
+    function _verifyCoachingVoucher(
+        CoachingVoucher calldata voucher
+    ) internal view returns (address) {
+        bytes32 digest = _hashCoachingVoucher(voucher);
+        return ECDSA.recover(digest, voucher.signature);
+    }
 }
 
 //TODO we need to check functions visibility(view/pure/public) and behaviour (external/internal)
 //TODO Refund voucher icin backend disinda farkli bir wallet kullanilsin.
-// TODO Refund requested by the instructor
-// function refundRequestedByInstructor(uint256 _saleID) external {};
-// TODO User refund
-// function userRefundCoaching() external whenNotPaused {
-// require(coachingDate + (1 * epochOneDay) < block.timestamp , ".");
-
-// Eğer coachingDate gelmediyse anında refund edebilcek ama en geç 1 gün kala
-//}
+//TODO event ler eksik
+//TODO pnly Role ler eksik
