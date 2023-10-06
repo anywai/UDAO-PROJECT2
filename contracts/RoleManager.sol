@@ -11,6 +11,10 @@ import "./RoleNames.sol";
 contract RoleManager is AccessControl, RoleNames {
     ContractManager public contractManager;
     ISupervision ISupVis;
+    
+    // functionId => if Active or not
+    mapping(uint256 => bool) public activeKYCFunctions;
+    mapping(uint256 => bool) public activeBanFunctions;
 
     event AddressesUpdated(address ContractManagerAddress);
 
@@ -99,16 +103,46 @@ contract RoleManager is AccessControl, RoleNames {
         }
     }
 
+    /// @notice Setter function of activeKYCFunctions
+    /// @param functionId function id of the function
+    /// @param status KYC status of the function
+    function setActiveKYCFunctions(uint256 functionId, bool status) external {
+        require(
+            hasRole(BACKEND_ROLE, msg.sender),
+            "Only backend can set activeKYCFunctions"
+        );
+        activeKYCFunctions[functionId] = status;
+    }
+
+    /// @notice Setter function of activeBanFunctions
+    /// @param functionId function id of the function
+    /// @param status Ban status of the function
+    function setActiveBanFunctions(uint256 functionId, bool status) external {
+        require(
+            hasRole(BACKEND_ROLE, msg.sender),
+            "Only backend can set activeBanFunctions"
+        );
+        activeBanFunctions[functionId] = status;
+    }
+
     /// @notice gets KYC result of the address
     /// @param _address wallet that KYC result will be sent
-    function isKYCed(address _address) external view returns (bool) {
-        return KYCList[_address];
+    function isKYCed(address _address, uint256 functionId) external view returns (bool) {
+        if(activeKYCFunctions[functionId] == false){
+            return true;
+        }else{
+            return KYCList[_address];
+        }
     }
 
     /// @notice gets ban result of the address
     /// @param _address wallet that ban result will be sent
-    function isBanned(address _address) external view returns (bool) {
-        return BanList[_address];
+    function isBanned(address _address, uint256 functionId) external view returns (bool) {
+        if(activeBanFunctions[functionId] == false){
+            return false;
+        }else{
+            return BanList[_address];
+        }
     }
 
     /// @notice grants a role to an account
