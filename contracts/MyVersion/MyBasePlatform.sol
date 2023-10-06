@@ -172,8 +172,10 @@ abstract contract MyBasePlatform is Pausable, RoleController {
     uint public contentValidCut = 0; //200;
 
     // Total cuts for content&coaching sale
-    uint256 contentTotalCut =contentFoundCut + contentGoverCut + contentJurorCut + contentValidCut;
-    uint256 totalCutCoaching = coachFoundCut + coachGoverCut + coachJurorCut + coachValidCut;
+    uint256 contentTotalCut =
+        contentFoundCut + contentGoverCut + contentJurorCut + contentValidCut;
+    uint256 totalCutCoaching =
+        coachFoundCut + coachGoverCut + coachJurorCut + coachValidCut;
 
     // There is no GovernanceTreasury in MVP, after governance release will be set
     bool isGovernanceTreasuryOnline = false;
@@ -219,33 +221,37 @@ abstract contract MyBasePlatform is Pausable, RoleController {
     ) public view returns (uint256) {
         return ((_priceOf * contentTotalCut) / 100000);
     }
-    
 
     function calculateCoachingFoundShare(
         uint256 _priceOf
     ) public view returns (uint256) {
         return ((_priceOf * coachFoundCut) / totalCutCoaching);
     }
+
     function calculateCoachingGoverShare(
         uint256 _priceOf
     ) public view returns (uint256) {
         return ((_priceOf * coachGoverCut) / totalCutCoaching);
     }
+
     function calculateCoachingJurorShare(
         uint256 _priceOf
     ) public view returns (uint256) {
         return ((_priceOf * coachJurorCut) / totalCutCoaching);
     }
+
     function calculateCoachingValidShare(
         uint256 _priceOf
     ) public view returns (uint256) {
         return ((_priceOf * coachValidCut) / totalCutCoaching);
     }
+
     function calculateTotalCutCoachingShare(
         uint256 _priceOf
     ) public view returns (uint256) {
         return ((_priceOf * totalCutCoaching) / 100000);
     }
+
     // SETTERS
 
     /// @notice changes cut from coaching for foundation
@@ -287,7 +293,10 @@ abstract contract MyBasePlatform is Pausable, RoleController {
     }
 
     function setCoachTotalCut() internal {
-        totalCutCoaching = (coachFoundCut + coachGoverCut + coachJurorCut + coachValidCut);
+        totalCutCoaching = (coachFoundCut +
+            coachGoverCut +
+            coachJurorCut +
+            coachValidCut);
 
         emit PlatformCutsUpdated(
             coachFoundCut,
@@ -300,7 +309,7 @@ abstract contract MyBasePlatform is Pausable, RoleController {
             contentValidCut
         );
     }
-    
+
     /// @notice changes cut from content for foundation
     /// @param _cut new cut (100000 -> 100% | 5000 -> 5%)
     function setcontentFoundCut(uint _cut) external onlyRole(GOVERNANCE_ROLE) {
