@@ -9,6 +9,7 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
     string private constant SIGNING_DOMAIN = "ContentManager";
     string private constant SIGNATURE_VERSION = "1";
 
+    /// @notice Emitted when a content is bought
     event ContentBought(
         uint256 tokenId,
         uint256[] parts,
@@ -26,21 +27,13 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
     /// @param giftReceiver address of the gift receiver if purchase is a gift
     /// @param signature the EIP-712 signature of all other fields in the ContentDiscountVoucher struct.
     struct ContentDiscountVoucher {
-        /// @notice The id of the token (content) to be redeemed.
         uint256 tokenId;
-        /// @notice True, if full content is purchased
         bool fullContentPurchase;
-        /// @notice Purchased parts
         uint256[] purchasedParts;
-        /// @notice Price to deduct
         uint256 priceToPay;
-        /// @notice The date until the voucher is valid
         uint256 validUntil;
-        /// @notice Address of the redeemer
         address redeemer;
-        /// @notice Address of the gift receiver if purhcase is a gift
         address giftReceiver;
-        /// @notice the EIP-712 signature of all other fields in the ContentDiscountVoucher struct.
         bytes signature;
     }
 
@@ -63,7 +56,9 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
     }
 
     using Counters for Counters.Counter;
+    /// @notice Used to generate unique ids for content sales
     Counters.Counter private saleID;
+    /// @notice Used to generate unique ids for coaching sales
     Counters.Counter private coachingSaleID;
 
     struct ContentSale {
@@ -309,7 +304,7 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
             0, //empty tokenId
             new uint256[](0), //empty purchased parts
             voucher.coachingDate,
-            transactionTime+refundWindow,
+            transactionTime + refundWindow,
             false
         );
 
@@ -473,7 +468,7 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
             tokenId,
             purchasedParts,
             0, //coachingdate
-            transactionTime+refundWindow,
+            transactionTime + refundWindow,
             true
         );
 
@@ -843,19 +838,20 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
             coachingSaleID.increment();
         }
     }
-    
+
+    /// @notice Allows learner to get refund of coaching 1 day prior to coaching date or instructor to refund anytime
+    /// @param _saleID id of the coaching sale
     function refundCoachingByInstructorOrLearner(uint256 _saleID) external {
         CoachingSale storage refundItem = coachSales[_saleID];
         require(
             refundItem.refundablePeriod >= (block.timestamp / epochOneDay),
             "Refund period over you cant refund"
         );
-        if(msg.sender == refundItem.payee){
+        if (msg.sender == refundItem.payee) {
             require(refundItem.coachingDate >= block.timestamp + 1 days);
-        }else if(msg.sender != refundItem.instructor) {
+        } else if (msg.sender != refundItem.instructor) {
             revert("You are not the payee or instructor");
         }
-        
 
         require(refundItem.isRefunded == false, "Already refunded!");
         coachSales[_saleID].isRefunded = true;
@@ -870,7 +866,7 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
     }
 
     /// @notice Allows refund of coaching with a voucher
-    /// @param voucher A RefundVoucher 
+    /// @param voucher A RefundVoucher
     function newRefundCoaching(RefundVoucher calldata voucher) external {
         address signer = _verifyRefundVoucher(voucher);
         require(
@@ -896,6 +892,8 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
         );
     }
 
+    /// @notice Allows refund of a content with a voucher
+    /// @param voucher A RefundVoucher
     function newRefundContent(RefundVoucher calldata voucher) external {
         address signer = _verifyRefundVoucher(voucher);
         require(
