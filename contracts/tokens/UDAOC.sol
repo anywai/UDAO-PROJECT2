@@ -39,7 +39,9 @@ contract UDAOContent is
     )
         ERC721("UDAO Content", "UDAOC")
         EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION)
-    {roleManager = IRoleManager(rmAddress);}
+    {
+        roleManager = IRoleManager(rmAddress);
+    }
 
     // tokenId => (partId => price), first part is the full price
     mapping(uint => mapping(uint => uint)) public contentPrice;
@@ -99,9 +101,7 @@ contract UDAOContent is
     /// @notice Allows backend to set the contract manager address
     /// @dev This function is needed because the contract manager address is not known at compile time.
     /// @param _contractManager The address of the contract manager
-    function setContractManager(
-        address _contractManager
-    ) external {
+    function setContractManager(address _contractManager) external {
         require(
             roleManager.hasRole(BACKEND_ROLE, msg.sender),
             "Only backend can set contract manager"
@@ -122,9 +122,7 @@ contract UDAOContent is
 
     /// @notice Allows backend to set the KYC requirement for creating content
     /// @param _status The status of the KYC requirement
-    function setKYCRequirementForCreateContent(
-        bool _status
-    ) external  {
+    function setKYCRequirementForCreateContent(bool _status) external {
         require(
             roleManager.hasRole(BACKEND_ROLE, msg.sender),
             "Only backend can set KYC requirement for creating content"
@@ -153,10 +151,10 @@ contract UDAOContent is
         // KYC requirement is predetermined by admin roles.
         if (isKYCRequiredToCreateContent) {
             //make sure redeemer is kyced
-            require(roleManager.isKYCed(msg.sender), "You are not KYCed");
+            require(roleManager.isKYCed(msg.sender, 13), "You are not KYCed");
         }
         //make sure redeemer is not banned
-        require(!roleManager.isBanned(msg.sender), "Redeemer is banned!");
+        require(!roleManager.isBanned(msg.sender, 13), "Redeemer is banned!");
         require(voucher.validationScore != 0, "Validation score cannot be 0");
         // make sure the full content price is not 0
         require(
@@ -242,10 +240,10 @@ contract UDAOContent is
         // KYC requirement is predetermined by admin roles.
         if (isKYCRequiredToCreateContent) {
             //make sure redeemer is kyced
-            require(roleManager.isKYCed(msg.sender), "You are not KYCed");
+            require(roleManager.isKYCed(msg.sender, 14), "You are not KYCed");
         }
         // make sure caller is not banned
-        require(!roleManager.isBanned(msg.sender), "You are banned");
+        require(!roleManager.isBanned(msg.sender, 14), "You are banned");
         // A content can be modified only if it is not in validation
         if (voucher.validationScore != 0) {
             require(
@@ -290,10 +288,10 @@ contract UDAOContent is
         // KYC requirement is predetermined by admin roles.
         if (isKYCRequiredToCreateContent) {
             //make sure redeemer is kyced
-            require(roleManager.isKYCed(msg.sender), "You are not KYCed");
+            require(roleManager.isKYCed(msg.sender, 15), "You are not KYCed");
         }
         //make sure caller is not banned
-        require(!roleManager.isBanned(msg.sender), "You are banned");
+        require(!roleManager.isBanned(msg.sender, 15), "You are banned");
         // make sure currency name is the same
         require(
             keccak256(abi.encodePacked(_currencyName)) == currencyName[tokenId],
@@ -370,7 +368,7 @@ contract UDAOContent is
             "You are not the owner of token"
         );
         //make sure caller is not banned
-        require(!roleManager.isBanned(msg.sender), "You were banned!");
+        require(!roleManager.isBanned(msg.sender, 22), "You were banned!");
 
         coachingEnabled[tokenId] = true;
     }
@@ -383,7 +381,7 @@ contract UDAOContent is
             "You are not the owner of token"
         );
         //make sure caller is not banned
-        require(!roleManager.isBanned(msg.sender), "You were banned!");
+        require(!roleManager.isBanned(msg.sender, 23), "You were banned!");
         coachingEnabled[tokenId] = false;
     }
 
@@ -407,9 +405,9 @@ contract UDAOContent is
             "You are not the owner of token"
         );
         //make sure caller is kyced
-        require(roleManager.isKYCed(msg.sender), "You are not KYCed");
+        require(roleManager.isKYCed(msg.sender, 16), "You are not KYCed");
         //make sure caller is not banned
-        require(!roleManager.isBanned(msg.sender), "You were banned!");
+        require(!roleManager.isBanned(msg.sender, 16), "You were banned!");
         coachingPrice[tokenId] = price;
         coachingCurrency[tokenId] = currency;
     }
@@ -445,7 +443,7 @@ contract UDAOContent is
     function setFullPriceContent(uint tokenId, uint _contentPrice) external {
         require(ownerOf(tokenId) == msg.sender, "You are not the owner");
         //make sure caller is not banned
-        require(!roleManager.isBanned(msg.sender), "You were banned!");
+        require(!roleManager.isBanned(msg.sender, 24), "You were banned!");
         // make sure full content price is not zero
         require(_contentPrice != 0, "Full content price cannot be 0");
 
@@ -470,7 +468,7 @@ contract UDAOContent is
             "Part does not exist!"
         );
         //make sure caller is not banned
-        require(!roleManager.isBanned(msg.sender), "You were banned!");
+        require(!roleManager.isBanned(msg.sender, 25), "You were banned!");
         contentPrice[tokenId][partId] = _contentPrice;
     }
 
@@ -484,7 +482,7 @@ contract UDAOContent is
     ) external {
         require(ownerOf(tokenId) == msg.sender, "You are not the owner");
         //make sure caller is not banned
-        require(!roleManager.isBanned(msg.sender), "You were banned!");
+        require(!roleManager.isBanned(msg.sender, 26), "You were banned!");
         uint partLength = partId.length;
         for (uint i = 0; i < partLength; i++) {
             require(
@@ -509,7 +507,7 @@ contract UDAOContent is
     ) external {
         require(ownerOf(tokenId) == msg.sender, "You are not the owner");
         //make sure caller is not banned
-        require(!roleManager.isBanned(msg.sender), "You were banned!");
+        require(!roleManager.isBanned(msg.sender, 27), "You were banned!");
         uint partLength = partId.length;
         require(
             partId[0] == 0,
@@ -544,9 +542,9 @@ contract UDAOContent is
             "You are not the owner of token"
         );
         //make sure caller is kyced
-        require(roleManager.isKYCed(msg.sender), "You are not KYCed");
+        require(roleManager.isKYCed(msg.sender, 17), "You are not KYCed");
         //make sure caller is not banned
-        require(!roleManager.isBanned(msg.sender), "You were banned!");
+        require(!roleManager.isBanned(msg.sender, 17), "You were banned!");
         _burn(tokenId);
     }
 
@@ -563,12 +561,12 @@ contract UDAOContent is
     ) internal virtual override {
         super._beforeTokenTransfer(from, to, tokenId);
         if (to != address(0)) {
-            require(roleManager.isKYCed(to), "Receiver is not KYCed!");
-            require(!roleManager.isBanned(to), "Receiver is banned!");
+            require(roleManager.isKYCed(to, 18), "Receiver is not KYCed!");
+            require(!roleManager.isBanned(to, 18), "Receiver is banned!");
         }
         if (from != address(0)) {
-            require(roleManager.isKYCed(from), "Sender is not KYCed!");
-            require(!roleManager.isBanned(from), "Sender is banned!");
+            require(roleManager.isKYCed(from, 19), "Sender is not KYCed!");
+            require(!roleManager.isBanned(from, 19), "Sender is banned!");
         }
     }
 

@@ -6,16 +6,17 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "../ContractManager.sol";
 import "../interfaces/IUDAOC.sol";
-import "../RoleController.sol";
 import "../interfaces/ISupervision.sol";
 import "../interfaces/IPriceGetter.sol";
 import "./IGovernanceTreasury.sol";
+import "../interfaces/IRoleManager.sol";
+import "../RoleNames.sol";
 
-abstract contract MyBasePlatform is Pausable, RoleController {
+abstract contract MyBasePlatform is Pausable, RoleNames {
     ////////////////////////////////////////////////////////
     ////////////////COMMON WİTH OLD TREASURY////////////////
     ////////////////////////////////////////////////////////
-
+    IRoleManager roleManager;
     //ContractManager is our update contract
     ContractManager public contractManager;
 
@@ -38,36 +39,46 @@ abstract contract MyBasePlatform is Pausable, RoleController {
 
     /// @notice Sets the address of the governance treasury
     /// @param _newAddress New address of the governance treasury
-    function setGovernanceTreasuryAddress(
-        address _newAddress
-    ) external onlyRole(BACKEND_ROLE) {
+    function setGovernanceTreasuryAddress(address _newAddress) external {
+        require(
+            roleManager.hasRole(BACKEND_ROLE, msg.sender),
+            "Only backend can set governance treasury address"
+        );
         governanceTreasury = _newAddress;
         emit GovernanceTreasuryUpdated(_newAddress);
     }
 
     /// @notice Sets the address of the foundation wallet
     /// @param _newAddress New address of the foundation wallet
-    function setFoundationWalletAddress(
-        address _newAddress
-    ) external onlyRole(BACKEND_ROLE) {
+    function setFoundationWalletAddress(address _newAddress) external {
+        require(
+            roleManager.hasRole(BACKEND_ROLE, msg.sender),
+            "Only backend can set foundation wallet address"
+        );
         foundationWallet = _newAddress;
         emit FoundationWalletUpdated(_newAddress);
     }
 
     /// @notice Sets the address of the contract manager
     /// @param _newAddress New address of the contract manager
-    function setContractManagerAddress(
-        address _newAddress
-    ) external onlyRole(BACKEND_ROLE) {
+    function setContractManagerAddress(address _newAddress) external {
+        require(
+            roleManager.hasRole(BACKEND_ROLE, msg.sender),
+            "Only backend can set contract manager address"
+        );
         contractManager = ContractManager(_newAddress);
         emit ContractManagerUpdated(_newAddress);
     }
 
     /// @notice Get the updated addresses from contract manager
-    function updateAddresses() external onlyRole(BACKEND_ROLE) {
+    function updateAddresses() external {
+        require(
+            roleManager.hasRole(BACKEND_ROLE, msg.sender),
+            "Only backend can update addresses"
+        );
         udao = IERC20(contractManager.UdaoAddress());
         udaoc = IUDAOC(contractManager.UdaocAddress());
-        IRM = IRoleManager(contractManager.IrmAddress());
+        roleManager = IRoleManager(contractManager.RmAddress());
         iGovernanceTreasury = IGovernanceTreasury(
             contractManager.GovernanceTreasuryAddress()
         );
@@ -82,15 +93,16 @@ abstract contract MyBasePlatform is Pausable, RoleController {
             contractManager.UdaoAddress(),
             contractManager.UdaocAddress(),
             contractManager.ISupVisAddress(),
-            contractManager.IrmAddress()
+            contractManager.RmAddress()
         );
     }
 
     constructor(
         address _contractManager,
-        address _rmAddress,
+        address rmAddress,
         address _iGovernanceTreasuryAddress
-    ) RoleController(_rmAddress) {
+    ) {
+        roleManager = IRoleManager(rmAddress);
         contractManager = ContractManager(_contractManager);
         udao = IERC20(contractManager.UdaoAddress());
         udaoc = IUDAOC(contractManager.UdaocAddress());
@@ -256,7 +268,11 @@ abstract contract MyBasePlatform is Pausable, RoleController {
 
     /// @notice changes cut from coaching for foundation
     /// @param _cut new cut (100000 -> 100% | 5000 -> 5%)
-    function setCoachFoundCut(uint _cut) external onlyRole(GOVERNANCE_ROLE) {
+    function setCoachFoundCut(uint _cut) external {
+        require(
+            roleManager.hasRole(GOVERNANCE_ROLE, msg.sender),
+            "Only governance can set coach foundation cut"
+        );
         uint256 otherCuts = coachGoverCut + coachJurorCut + coachValidCut;
         require(_cut + otherCuts < 100000, "Cuts cant be higher than %100");
 
@@ -266,7 +282,11 @@ abstract contract MyBasePlatform is Pausable, RoleController {
 
     /// @notice changes cut from coaching for governance
     /// @param _cut new cut (100000 -> 100% | 5000 -> 5%)
-    function setCoachGoverCut(uint _cut) external onlyRole(GOVERNANCE_ROLE) {
+    function setCoachGoverCut(uint _cut) external {
+        require(
+            roleManager.hasRole(GOVERNANCE_ROLE, msg.sender),
+            "Only governance can set coach governance cut"
+        );
         uint256 otherCuts = coachGoverCut + coachJurorCut + coachValidCut;
         require(_cut + otherCuts < 100000, "Cuts cant be higher than %100");
 
@@ -276,7 +296,11 @@ abstract contract MyBasePlatform is Pausable, RoleController {
 
     /// @notice changes cut from coaching for governance
     /// @param _cut new cut (100000 -> 100% | 5000 -> 5%)
-    function setCoachJurorCut(uint256 _cut) external onlyRole(GOVERNANCE_ROLE) {
+    function setCoachJurorCut(uint256 _cut) external {
+        require(
+            roleManager.hasRole(GOVERNANCE_ROLE, msg.sender),
+            "Only backend can set governance treasury address"
+        );
         uint256 otherCuts = coachFoundCut + coachGoverCut + coachValidCut;
         require(_cut + otherCuts < 100000, "Cuts cant be higher than %100");
 
@@ -284,7 +308,11 @@ abstract contract MyBasePlatform is Pausable, RoleController {
         setCoachTotalCut();
     }
 
-    function setCoachValidCut(uint256 _cut) external onlyRole(GOVERNANCE_ROLE) {
+    function setCoachValidCut(uint256 _cut) external {
+        require(
+            roleManager.hasRole(GOVERNANCE_ROLE, msg.sender),
+            "Only backend can set governance treasury address"
+        );
         uint256 otherCuts = coachFoundCut + coachGoverCut + coachJurorCut;
         require(_cut + otherCuts < 100000, "Cuts cant be higher than %100");
 
@@ -312,7 +340,11 @@ abstract contract MyBasePlatform is Pausable, RoleController {
 
     /// @notice changes cut from content for foundation
     /// @param _cut new cut (100000 -> 100% | 5000 -> 5%)
-    function setcontentFoundCut(uint _cut) external onlyRole(GOVERNANCE_ROLE) {
+    function setcontentFoundCut(uint _cut) external {
+        require(
+            roleManager.hasRole(GOVERNANCE_ROLE, msg.sender),
+            "Only backend can set governance treasury address"
+        );
         //uint256 otherCuts = contentGoverCut + contentJurorCut + cntntValdtrCut;
         uint otherCuts = contentGoverCut + contentJurorCut + contentValidCut;
         require(_cut + otherCuts < 10000, "Cuts cant be higher than %100");
@@ -323,7 +355,11 @@ abstract contract MyBasePlatform is Pausable, RoleController {
 
     /// @notice changes cut from content for governance
     /// @param _cut new cut (100000 -> 100% | 5000 -> 5%)
-    function setcontentGoverCut(uint _cut) external onlyRole(GOVERNANCE_ROLE) {
+    function setcontentGoverCut(uint _cut) external {
+        require(
+            roleManager.hasRole(GOVERNANCE_ROLE, msg.sender),
+            "Only backend can set governance treasury address"
+        );
         uint otherCuts = contentFoundCut + contentJurorCut + contentValidCut;
         require(_cut + otherCuts < 10000, "Cuts cant be higher than %100");
 
@@ -333,7 +369,11 @@ abstract contract MyBasePlatform is Pausable, RoleController {
 
     /// @notice changes cut from content for juror pool
     /// @param _cut new cut (100000 -> 100% | 5000 -> 5%)
-    function setcontentJurorCut(uint _cut) external onlyRole(GOVERNANCE_ROLE) {
+    function setcontentJurorCut(uint _cut) external {
+        require(
+            roleManager.hasRole(GOVERNANCE_ROLE, msg.sender),
+            "Only backend can set governance treasury address"
+        );
         uint otherCuts = contentFoundCut + contentGoverCut + contentValidCut;
         require(_cut + otherCuts < 10000, "Cuts cant be higher than %100");
 
@@ -343,7 +383,11 @@ abstract contract MyBasePlatform is Pausable, RoleController {
 
     /// @notice changes cut from content for validator pool
     /// @param _cut new cut (100000 -> 100% | 5000 -> 5%)
-    function setcontentValidCut(uint _cut) external onlyRole(GOVERNANCE_ROLE) {
+    function setcontentValidCut(uint _cut) external {
+        require(
+            roleManager.hasRole(GOVERNANCE_ROLE, msg.sender),
+            "Only backend can set governance treasury address"
+        );
         uint otherCuts = contentFoundCut + contentGoverCut + contentJurorCut;
         require(_cut + otherCuts < 10000, "Cuts cant be higher than %100");
 

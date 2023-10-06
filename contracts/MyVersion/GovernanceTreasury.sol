@@ -10,7 +10,6 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "../ContractManager.sol";
 import "../interfaces/IUDAOC.sol";
-import "../RoleController.sol";
 import "../interfaces/ISupervision.sol";
 import "../interfaces/IPriceGetter.sol";
 

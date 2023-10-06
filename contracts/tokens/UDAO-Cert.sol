@@ -33,7 +33,9 @@ contract UDAOCertificate is
     )
         ERC721("UDAO Certificate", "UDAO-Cert")
         EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION)
-    {roleManager = IRoleManager(rmAddress);}
+    {
+        roleManager = IRoleManager(rmAddress);
+    }
 
     /// @notice Represents an un-minted NFT, which has not yet been recorded into the blockchain.
     /// A signed voucher can be redeemed for a real NFT using the redeem function.
@@ -58,8 +60,8 @@ contract UDAOCertificate is
         // make sure redeemer is redeeming
         require(voucher.redeemer == msg.sender, "You are not the redeemer");
         //make sure redeemer is kyced and not banned
-        require(roleManager.isKYCed(msg.sender), "You are not KYCed");
-        require(!roleManager.isBanned(msg.sender), "You were banned");
+        require(roleManager.isKYCed(msg.sender, 10), "You are not KYCed");
+        require(!roleManager.isBanned(msg.sender, 10), "You were banned");
         // make sure signature is valid and get the address of the signer
         address signer = _verify(voucher);
         require(
@@ -126,8 +128,8 @@ contract UDAOCertificate is
         super._beforeTokenTransfer(from, to, tokenId);
         if (from != address(0) && to != address(0)) {
             //make sure to address is kyced and not banned
-            require(roleManager.isKYCed(to), "Receiver is not KYCed");
-            require(!roleManager.isBanned(to), "Receiver is banned");
+            require(roleManager.isKYCed(to, 11), "Receiver is not KYCed");
+            require(!roleManager.isBanned(to, 11), "Receiver is banned");
             require(
                 roleManager.hasRole(BACKEND_ROLE, msg.sender),
                 "You don't have right to transfer token"
@@ -143,13 +145,14 @@ contract UDAOCertificate is
         address from,
         address to,
         uint256 tokenId
-    ) external  {
+    ) external {
         require(
             roleManager.hasRole(BACKEND_ROLE, msg.sender),
-            "You don't have right to transfer token");
+            "You don't have right to transfer token"
+        );
         //make sure "to" address is kyced and not banned
-        require(roleManager.isKYCed(to), "Receiver is not KYCed");
-        require(!roleManager.isBanned(to), "Receiver is banned");
+        require(roleManager.isKYCed(to, 12), "Receiver is not KYCed");
+        require(!roleManager.isBanned(to, 12), "Receiver is banned");
         _transfer(from, to, tokenId);
     }
 

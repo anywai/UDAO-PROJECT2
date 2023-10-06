@@ -163,8 +163,10 @@ contract Supervision is Pausable, RoleNames {
     uint256 maxObjection = 3;
 
     /// @dev Constructor
-    constructor(address rmAddress, address udaocAddress) //address ivmAddress
-    {
+    constructor(
+        address rmAddress,
+        address udaocAddress //address ivmAddress
+    ) {
         roleManager = IRoleManager(rmAddress);
         udaoc = IUDAOC(udaocAddress);
         /* @dev disputes start from 1, meaning that the first dispute will have id 1.
@@ -354,8 +356,8 @@ contract Supervision is Pausable, RoleNames {
             "Only jurors can assign dispute"
         );
         //make sure juror is kyced and not banned
-        require(roleManager.isKYCed(msg.sender), "You are not KYCed");
-        require(!roleManager.isBanned(msg.sender), "You were banned");
+        require(roleManager.isKYCed(msg.sender, 1), "You are not KYCed");
+        require(!roleManager.isBanned(msg.sender, 1), "You were banned");
         require(
             staker.checkExpireDateJuror(msg.sender) > block.timestamp,
             "Your application is expired"
@@ -756,7 +758,7 @@ contract Supervision is Pausable, RoleNames {
 
         address tokenOwner = udaoc.ownerOf(tokenId);
         //make sure token owner is not banned
-        require(!roleManager.isBanned(tokenOwner), "Token owner is banned");
+        require(!roleManager.isBanned(tokenOwner, 2), "Token owner is banned");
 
         // Change status to 2 = in validation
         isValidated[tokenId] = 2;
@@ -783,7 +785,7 @@ contract Supervision is Pausable, RoleNames {
             "Only token owner can re-create validation"
         );
         //make sure token owner is not banned
-        require(!roleManager.isBanned(tokenOwner), "Token owner is banned");
+        require(!roleManager.isBanned(tokenOwner, 3), "Token owner is banned");
         // Get the latest validation for this token
         uint256 validationId = latestValidationOfToken[tokenId];
         // Get the score
@@ -805,8 +807,8 @@ contract Supervision is Pausable, RoleNames {
             roleManager.hasRole(VALIDATOR_ROLE, msg.sender),
             "Only validators can assign validation"
         );
-        require(roleManager.isKYCed(msg.sender), "You are not KYCed");
-        require(!roleManager.isBanned(msg.sender), "You were banned");
+        require(roleManager.isKYCed(msg.sender, 4), "You are not KYCed");
+        require(!roleManager.isBanned(msg.sender, 4), "You were banned");
         require(
             staker.checkExpireDateValidator(msg.sender) > block.timestamp,
             "Validation is expired"

@@ -153,11 +153,14 @@ abstract contract ContentManager is EIP712, BasePlatform {
         require(udaoc.exists(tokenId), "Content does not exist!");
         if (giftReceiver != address(0)) {
             contentReceiver = giftReceiver;
-            require(!roleManager.isBanned(contentReceiver), "Gift receiver is banned");
+            require(
+                !roleManager.isBanned(contentReceiver, 28),
+                "Gift receiver is banned"
+            );
         }
-        require(!roleManager.isBanned(msg.sender), "You are banned");
+        require(!roleManager.isBanned(msg.sender, 29), "You are banned");
         address instructor = udaoc.ownerOf(tokenId);
-        require(!roleManager.isBanned(instructor), "Instructor is banned");
+        require(!roleManager.isBanned(instructor, 30), "Instructor is banned");
         require(
             isTokenBought[msg.sender][tokenId][0] == false,
             "Full content is already bought"
@@ -227,7 +230,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
         );
         require(voucher.validUntil >= block.timestamp, "Voucher has expired.");
         require(msg.sender == voucher.redeemer, "You are not redeemer.");
-        require(!roleManager.isBanned(msg.sender), "You are banned");
+        require(!roleManager.isBanned(msg.sender, 31), "You are banned");
 
         uint256 tokenId = voucher.tokenId;
         uint256 partIdLength = voucher.purchasedParts.length;
@@ -236,10 +239,13 @@ abstract contract ContentManager is EIP712, BasePlatform {
         require(udaoc.exists(tokenId), "Content does not exist!");
         if (voucher.giftReceiver != address(0)) {
             contentReceiver = voucher.giftReceiver;
-            require(!roleManager.isBanned(contentReceiver), "Gift receiver is banned");
+            require(
+                !roleManager.isBanned(contentReceiver, 32),
+                "Gift receiver is banned"
+            );
         }
         address instructor = udaoc.ownerOf(tokenId);
-        require(!roleManager.isBanned(instructor), "Instructor is banned");
+        require(!roleManager.isBanned(instructor, 33), "Instructor is banned");
         require(
             isTokenBought[contentReceiver][tokenId][0] == false,
             "Full content is already bought"
@@ -354,9 +360,9 @@ abstract contract ContentManager is EIP712, BasePlatform {
     /// @notice Allows users to buy coaching service.
     function buyCoaching(uint tokenId) external whenNotPaused {
         require(udaoc.exists(tokenId), "Content does not exist!");
-        require(!roleManager.isBanned(msg.sender), "You are banned");
+        require(!roleManager.isBanned(msg.sender, 34), "You are banned");
         address instructor = udaoc.ownerOf(tokenId);
-        require(!roleManager.isBanned(instructor), "Instructor is banned");
+        require(!roleManager.isBanned(instructor, 35), "Instructor is banned");
         require(
             udaoc.coachingEnabled(tokenId),
             "Coaching is not enabled for this content"
@@ -455,10 +461,11 @@ abstract contract ContentManager is EIP712, BasePlatform {
 
     /// @notice Payment and coaching service can be forcefully done by administrator_roles
     /// @param _coachingId id of the coaching service
-    function forcedPayment(
-        uint256 _coachingId
-    ) external whenNotPaused {
-        require(roleManager.hasRoles(administrator_roles, msg.sender), "Only administrator_roles can force payment");
+    function forcedPayment(uint256 _coachingId) external whenNotPaused {
+        require(
+            roleManager.hasRoles(administrator_roles, msg.sender),
+            "Only administrator_roles can force payment"
+        );
         CoachingStruct storage currentCoaching = coachingStructs[_coachingId];
         instructorBalance[currentCoaching.coach] += coachingStructs[_coachingId]
             .coachingPaymentAmount;
@@ -469,10 +476,11 @@ abstract contract ContentManager is EIP712, BasePlatform {
 
     /// @notice Payment and coaching service can be forcefully done by jurors
     /// @param _coachingId id of the coaching service
-    function forcedPaymentJuror(
-        uint256 _coachingId
-    ) external whenNotPaused {
-        require(roleManager.hasRole(SUPERVISION_CONTRACT, msg.sender), "Only supervision contract can force payment");
+    function forcedPaymentJuror(uint256 _coachingId) external whenNotPaused {
+        require(
+            roleManager.hasRole(SUPERVISION_CONTRACT, msg.sender),
+            "Only supervision contract can force payment"
+        );
         CoachingStruct storage currentCoaching = coachingStructs[_coachingId];
         instructorBalance[currentCoaching.coach] += coachingStructs[_coachingId]
             .coachingPaymentAmount;
@@ -516,10 +524,11 @@ abstract contract ContentManager is EIP712, BasePlatform {
 
     /// @notice forces refund of coaching service only be callable by administrator_role (FOUNDATION_ROLE, GOVERNANCE_ROLE)
     /// @param _coachingId id of the coaching service
-    function forcedRefundAdmin(
-        uint256 _coachingId
-    ) external whenNotPaused {
-        require(roleManager.hasRoles(administrator_roles, msg.sender), "Only administrator_roles can force refund");
+    function forcedRefundAdmin(uint256 _coachingId) external whenNotPaused {
+        require(
+            roleManager.hasRoles(administrator_roles, msg.sender),
+            "Only administrator_roles can force refund"
+        );
         uint256 startGas = gasleft();
         CoachingStruct storage currentCoaching = coachingStructs[_coachingId];
         uint256 totalPaymentAmount = currentCoaching.totalPaymentAmount;
@@ -569,10 +578,11 @@ abstract contract ContentManager is EIP712, BasePlatform {
 
     /// @notice Jurors can force refund of a coaching service
     /// @param _coachingId The ID of the coaching service
-    function forcedRefundJuror(
-        uint256 _coachingId
-    ) external whenNotPaused {
-        require(roleManager.hasRole(SUPERVISION_CONTRACT, msg.sender), "Only supervision contract can force refund");
+    function forcedRefundJuror(uint256 _coachingId) external whenNotPaused {
+        require(
+            roleManager.hasRole(SUPERVISION_CONTRACT, msg.sender),
+            "Only supervision contract can force refund"
+        );
         uint256 startGas = gasleft();
         CoachingStruct storage currentCoaching = coachingStructs[_coachingId];
         uint256 totalPaymentAmount = currentCoaching.totalPaymentAmount;

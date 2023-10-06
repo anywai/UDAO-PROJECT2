@@ -141,7 +141,7 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
         /// @dev Boolean flag to determine if the purchase is made by a backend role
         /// if so then this purchase is a fiat purchase
         bool isFiatPurchase;
-        if (IRM.hasRole(BACKEND_ROLE, msg.sender)) {
+        if (roleManager.hasRole(BACKEND_ROLE, msg.sender)) {
             isFiatPurchase = true;
         }
 
@@ -150,7 +150,7 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
             // make sure signature is valid and get the address of the signer
             address signer = _verifyDiscountVoucher(voucher[i]);
             require(
-                IRM.hasRole(BACKEND_ROLE, signer),
+                roleManager.hasRole(BACKEND_ROLE, signer),
                 "Signature invalid or unauthorized"
             );
             require(
@@ -158,7 +158,7 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
                 "Voucher has expired."
             );
             require(msg.sender == voucher[i].redeemer, "You are not redeemer.");
-            require(!IRM.isBanned(msg.sender), "You are banned");
+            require(!roleManager.isBanned(msg.sender, 20), "You are banned");
 
             /// @dev Check the existance of content for each item in the cart
             require(
@@ -248,12 +248,12 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
             voucher.coachingDate <= block.timestamp + epochOneDay * 7,
             "Coaching date must be at most 7 days before."
         );
-        if (IRM.hasRole(BACKEND_ROLE, msg.sender)) {
+        if (roleManager.hasRole(BACKEND_ROLE, msg.sender)) {
             learner = voucher.learner;
             isFiatPurchase = true;
         } else {
             require(msg.sender == voucher.learner, "You are not the learner.");
-            require(!IRM.isBanned(msg.sender), "You are banned");
+            require(!roleManager.isBanned(msg.sender, 21), "You are banned");
             learner = msg.sender;
         }
 
@@ -339,7 +339,7 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
         /// @dev Boolean flag to determine if the purchase is made by a backend role
         /// if so then this purchase is a fiat purchase
         bool isFiatPurchase;
-        if (IRM.hasRole(BACKEND_ROLE, msg.sender)) {
+        if (roleManager.hasRole(BACKEND_ROLE, msg.sender)) {
             isFiatPurchase = true;
         }
         /// @dev The function arguments must have equal size
@@ -870,7 +870,7 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
     function newRefundCoaching(RefundVoucher calldata voucher) external {
         address signer = _verifyRefundVoucher(voucher);
         require(
-            IRM.hasRole(BACKEND_ROLE, signer),
+            roleManager.hasRole(BACKEND_ROLE, signer),
             "Signature invalid or unauthorized"
         );
 
@@ -897,7 +897,7 @@ abstract contract ContentManager is EIP712, MyBasePlatform {
     function newRefundContent(RefundVoucher calldata voucher) external {
         address signer = _verifyRefundVoucher(voucher);
         require(
-            IRM.hasRole(BACKEND_ROLE, signer),
+            roleManager.hasRole(BACKEND_ROLE, signer),
             "Signature invalid or unauthorized"
         );
 
