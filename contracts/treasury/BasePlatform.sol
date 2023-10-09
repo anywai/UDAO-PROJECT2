@@ -215,28 +215,22 @@ abstract contract BasePlatform is Pausable, RoleNames {
         return ((_priceOf * contentTotalCut) / 100000);
     }
 
-    function calculateCoachingFoundShare(
+    function calculateTotalCutCoachingShares(
         uint256 _priceOf
-    ) public view returns (uint256) {
-        return ((_priceOf * coachFoundCut) / totalCutCoaching);
-    }
-
-    function calculateCoachingGoverShare(
-        uint256 _priceOf
-    ) public view returns (uint256) {
-        return ((_priceOf * coachGoverCut) / totalCutCoaching);
-    }
-
-    function calculateCoachingJurorShare(
-        uint256 _priceOf
-    ) public view returns (uint256) {
-        return ((_priceOf * coachJurorCut) / totalCutCoaching);
-    }
-
-    function calculateCoachingValidShare(
-        uint256 _priceOf
-    ) public view returns (uint256) {
-        return ((_priceOf * coachValidCut) / totalCutCoaching);
+    )
+        public
+        view
+        returns (
+            uint256 foundationShare,
+            uint256 governanceShare,
+            uint256 jurorShare,
+            uint256 validatorShare
+        )
+    {
+        foundationShare = ((_priceOf * coachFoundCut) / totalCutCoaching);
+        governanceShare = ((_priceOf * coachGoverCut) / totalCutCoaching);
+        jurorShare = ((_priceOf * coachJurorCut) / totalCutCoaching);
+        validatorShare = ((_priceOf * coachValidCut) / totalCutCoaching);
     }
 
     function calculateTotalCutCoachingShare(
