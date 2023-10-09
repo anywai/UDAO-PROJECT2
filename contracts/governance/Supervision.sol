@@ -165,7 +165,7 @@ contract Supervision is Pausable, RoleNames {
     /// @dev Constructor
     constructor(
         address rmAddress,
-        address udaocAddress //address ivmAddress
+        address udaocAddress 
     ) {
         roleManager = IRoleManager(rmAddress);
         udaoc = IUDAOC(udaocAddress);
