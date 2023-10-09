@@ -6,11 +6,11 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "../ContractManager.sol";
 import "../interfaces/IUDAOC.sol";
-import "./IGovernanceTreasury.sol";
+import "../interfaces/IGovernanceTreasury.sol";
 import "../interfaces/IRoleManager.sol";
 import "../RoleNames.sol";
 
-abstract contract MyBasePlatform is Pausable, RoleNames {
+abstract contract BasePlatform is Pausable, RoleNames {
     ////////////////////////////////////////////////////////
     ////////////////COMMON WİTH OLD TREASURY////////////////
     ////////////////////////////////////////////////////////
