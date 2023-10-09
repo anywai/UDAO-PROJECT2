@@ -3,6 +3,7 @@
 // 2-3) validatorBalanceUpdate(): governanceBalanceUpdate(): aynısı üstekininin
 
 // SPDX-License-Identifier: MIT
+/// @title Dummy version of the governance treasury contract.
 pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/security/Pausable.sol";
