@@ -315,13 +315,13 @@ abstract contract ContentManager is EIP712, BasePlatform {
         /// @dev Determine the number of items in the cart
         uint256 tokenIdsLength;
         /// @dev Determine the RECEIVER of each item in the cart
-        address[]  contentReceiver;
+        address[] contentReceiver;
         /// @dev Used for recording the price to pay for each item in the cart
-        uint256[]  priceToPay;
+        uint256[] priceToPay;
         /// @dev Used for recording the all roles cut for each item in the cart
-        uint256[]  totalCut;
+        uint256[] totalCut;
         /// @dev Used for recording the instructor share for each item in the cart
-        uint256[]  instrShare;
+        uint256[] instrShare;
         /// @dev Used for recording the total roles cut for all items in the cart
         uint256 totalTotalCut;
         /// @dev Used for recording the total instructor share for all items in the cart
@@ -385,7 +385,9 @@ abstract contract ContentManager is EIP712, BasePlatform {
                 fullContentPurchases[i],
                 purchasedParts[i]
             );
-            specs.totalCut[i] = calculateTotalCutContentShare(specs.priceToPay[i]);
+            specs.totalCut[i] = calculateTotalCutContentShare(
+                specs.priceToPay[i]
+            );
 
             if (specs.isFiatPurchase) {
                 specs.instrShare[i] = 0;
@@ -399,7 +401,8 @@ abstract contract ContentManager is EIP712, BasePlatform {
 
         /// @dev The BUYER should have enough UDAO to pay for the cart
         require(
-            udao.balanceOf(msg.sender) >= specs.totalTotalCut + specs.totalInstrShare,
+            udao.balanceOf(msg.sender) >=
+                specs.totalTotalCut + specs.totalInstrShare,
             "Not enough UDAO sent!"
         );
 

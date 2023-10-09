@@ -163,7 +163,7 @@ abstract contract BasePlatform is Pausable, RoleNames {
     uint public coachFoundCut = 4000;
     uint public coachGoverCut = 0; //700;
     uint public coachJurorCut = 0; //new!!
-    uint public coachValidCut = 0;
+    uint public coachValidCut = 0; //new!!ButNoUseArea
     // Cuts for foundation/governance/juror/validator for a content sale
     uint public contentFoundCut = 4000;
     uint public contentGoverCut = 0; //700;
