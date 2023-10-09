@@ -6,8 +6,6 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "../ContractManager.sol";
 import "../interfaces/IUDAOC.sol";
-import "../interfaces/ISupervision.sol";
-import "../interfaces/IPriceGetter.sol";
 import "./IGovernanceTreasury.sol";
 import "../interfaces/IRoleManager.sol";
 import "../RoleNames.sol";
@@ -83,12 +81,6 @@ abstract contract MyBasePlatform is Pausable, RoleNames {
             contractManager.GovernanceTreasuryAddress()
         );
 
-        /*
-        //REMOVED BELONGS TO OLD TREASURY
-            //ISupVis = ISupervision(contractManager.ISupVisAddress());
-            //priceGetter = IPriceGetter(contractManager.IPriceGetterAddress());
-        */
-
         emit AddressesUpdated(
             contractManager.UdaoAddress(),
             contractManager.UdaocAddress(),
@@ -107,11 +99,6 @@ abstract contract MyBasePlatform is Pausable, RoleNames {
         udao = IERC20(contractManager.UdaoAddress());
         udaoc = IUDAOC(contractManager.UdaocAddress());
         iGovernanceTreasury = IGovernanceTreasury(_iGovernanceTreasuryAddress);
-        /*
-        //REMOVED BELONGS TO OLD TREASURY
-            //ISupVis = ISupervision(contractManager.ISupVisAddress());
-            //priceGetter = IPriceGetter(priceGetterAddress);
-        */
     }
 
     // EVENTS COMMON

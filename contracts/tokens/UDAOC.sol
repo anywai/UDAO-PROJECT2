@@ -8,7 +8,6 @@ import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
 import "../ContractManager.sol";
-import "../interfaces/IPriceGetter.sol";
 import "../interfaces/IUDAOC.sol";
 import "../interfaces/ISupervision.sol";
 import "../interfaces/IRoleManager.sol";
@@ -49,7 +48,6 @@ contract UDAOContent is
     mapping(uint => bytes32) currencyName;
     // tokenId => number of Parts
     mapping(uint => uint) private partNumberOfContent;
-
     // tokenId => is coaching service buyable
     mapping(uint => bool) public coachingEnabled;
     // tokenId => coaching price

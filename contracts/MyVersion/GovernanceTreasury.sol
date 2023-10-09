@@ -11,7 +11,6 @@ import "@openzeppelin/contracts/utils/Counters.sol";
 import "../ContractManager.sol";
 import "../interfaces/IUDAOC.sol";
 import "../interfaces/ISupervision.sol";
-import "../interfaces/IPriceGetter.sol";
 
 contract GovernanceTreasury {
     // UDAO (ERC20) Token interface

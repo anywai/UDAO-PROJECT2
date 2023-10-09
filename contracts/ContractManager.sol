@@ -21,7 +21,6 @@ contract ContractManager is RoleNames {
     address public RmAddress; // role manager interface address
 
     /// @dev unknown if before or after
-    address public IPriceGetterAddress; // price getter interface address
     address public GovernanceTreasuryAddress; // governance treasury contract
 
     constructor(
@@ -104,15 +103,5 @@ contract ContractManager is RoleNames {
             "Only backend can set irm address"
         );
         RmAddress = _rmAddress;
-    }
-
-    function setAddressIPriceGetterAddress(
-        address _priceGetterAddress
-    ) external {
-        require(
-            roleManager.hasRole(BACKEND_ROLE, msg.sender),
-            "Only backend can set price getter address"
-        );
-        IPriceGetterAddress = _priceGetterAddress;
     }
 }
