@@ -191,28 +191,22 @@ abstract contract BasePlatform is Pausable, RoleNames {
         uint256 contentValidCut
     );
 
-    function calculateContentFoundShare(
+    function calculateTotalCutContentShares(
         uint256 _priceOf
-    ) public view returns (uint256) {
-        return ((_priceOf * contentFoundCut) / contentTotalCut);
-    }
-
-    function calculateContentGoverShare(
-        uint256 _priceOf
-    ) public view returns (uint256) {
-        return ((_priceOf * contentGoverCut) / contentTotalCut);
-    }
-
-    function calculateContentJurorShare(
-        uint256 _priceOf
-    ) public view returns (uint256) {
-        return ((_priceOf * contentJurorCut) / contentTotalCut);
-    }
-
-    function calculateContentValdtrShare(
-        uint256 _priceOf
-    ) public view returns (uint256) {
-        return ((_priceOf * contentValidCut) / contentTotalCut);
+    )
+        public
+        view
+        returns (
+            uint256 foundationShare,
+            uint256 governanceShare,
+            uint256 jurorShare,
+            uint256 validatorShare
+        )
+    {
+        foundationShare = ((_priceOf * contentFoundCut) / contentTotalCut);
+        governanceShare = ((_priceOf * contentGoverCut) / contentTotalCut);
+        jurorShare = ((_priceOf * contentJurorCut) / contentTotalCut);
+        validatorShare = ((_priceOf * contentValidCut) / contentTotalCut);
     }
 
     function calculateTotalCutContentShare(
