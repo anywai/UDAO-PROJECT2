@@ -765,19 +765,47 @@ abstract contract ContentManager is EIP712, BasePlatform {
     }
 
     function _sendCurrentGlobalCutsToGovernanceTreasury() internal {
-        if (gContentCutCurrentBalance > 0) {
-            jurorCurrentBalance += calculateContentJurorShare(
-                gContentCutCurrentBalance
-            );
-            validCurrentBalance += calculateContentValdtrShare(
-                gContentCutCurrentBalance
-            );
-            goverCurrentBalance += calculateContentGoverShare(
-                gContentCutCurrentBalance
-            );
-            foundCurrentBalance += calculateContentFoundShare(
-                gContentCutCurrentBalance
-            );
+        uint foundTempBalance;
+        uint goverTempBalance;
+        uint jurorTempBalance;
+        uint validTempBalance;
+
+        if (gContentCutCurrentBalance > gContentRefundDebt) {
+            uint withdrawableContentShare = gContentCutCurrentBalance -
+                gContentRefundDebt;
+            gContentCutCurrentBalance = 0;
+            gContentRefundDebt = 0;
+
+            (
+                foundTempBalance,
+                goverTempBalance,
+                jurorTempBalance,
+                validTempBalance
+            ) = calculateTotalCutContentShares(withdrawableContentShare);
+
+            foundCurrentBalance += foundTempBalance;
+            goverCurrentBalance += goverTempBalance;
+            jurorCurrentBalance += jurorTempBalance;
+            validCurrentBalance += validTempBalance;
+        }
+
+        if (gCoachingCurrentBalance > gCoachingRefundDebt) {
+            uint withdrawableContentShare = gCoachingCurrentBalance -
+                gCoachingRefundDebt;
+            gCoachingCurrentBalance = 0;
+            gCoachingRefundDebt = 0;
+
+            (
+                foundTempBalance,
+                goverTempBalance,
+                jurorTempBalance,
+                validTempBalance
+            ) = calculateTotalCutCoachingShares(withdrawableContentShare);
+
+            foundCurrentBalance += foundTempBalance;
+            goverCurrentBalance += goverTempBalance;
+            jurorCurrentBalance += jurorTempBalance;
+            validCurrentBalance += validTempBalance;
         }
         if (isGovernanceTreasuryOnline == true) {
             if (jurorCurrentBalance > 0) {
