@@ -33,8 +33,6 @@ interface ISupervision {
 
     function nextRound() external;
 
-    function testFunction() external;
-
     function dismissValidation(address demissionAdress) external;
 
     function dismissDispute(address demissionAdress) external;
