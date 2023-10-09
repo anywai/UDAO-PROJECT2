@@ -22,14 +22,7 @@ contract PlatformTreasury is Pausable, ContentManager {
     event JurorWithdrawn(address juror, uint amount);
 
     /// this event gets triggered when a instructor withdraw tokens
-    event InstructorWithdrawn(address instructor, uint amount);
-
-    /// this event gets triggered when a instructor withdraw tokens and if has debt
-    event InstructorWithdrawnWithDebt(
-        address instructor,
-        uint amount,
-        uint debtAmount
-    );
+    event InstructorWithdrawn(address instructor, uint amount, uint debt);
 
     /// @param _contractManagerAddress The address of the deployed role manager
     /// @param _rmAddress The address of the deployed role manager
@@ -37,117 +30,33 @@ contract PlatformTreasury is Pausable, ContentManager {
         address _contractManagerAddress,
         address _rmAddress,
         address priceGetterAddress
-    )
-        BasePlatform(_contractManagerAddress, _rmAddress, priceGetterAddress)
-    {}
-
-
-    /// @notice withdraws governance balance to governance treasury
-    /// TODO Bu fonksiyon gereksiz gibi. governanceTreasury aslında platformTreasury. Para burada birikiyor ve
-    /// transferGovernanceRewards fonksiyonu ile staking contract'a transfer ediliyor. Burada biriken parayı
-    /// governanceTreasury'e transfer etmek gereksiz.
-    function withdrawGovernance()
-        external
-        whenNotPaused
-    {
-        require(
-            roleManager.hasRole(GOVERNANCE_ROLE, msg.sender),
-            "Only governance can withdraw"
-        );
-        uint withdrawableBalance = governanceBalance;
-        governanceBalance = 0; /// @dev zeroing before the actual withdraw
-        udao.transfer(governanceTreasury, withdrawableBalance);
-        emit GovernanceWithdrawn(withdrawableBalance);
-    }
+    ) BasePlatform(_contractManagerAddress, _rmAddress, priceGetterAddress) {}
 
     /// @notice withdraws foundation balance to foundation wallet
-    function withdrawFoundation()
-        external
-        whenNotPaused
-    {
+    function withdrawFoundation() external whenNotPaused {
         require(
             roleManager.hasRole(FOUNDATION_ROLE, msg.sender),
             "Only foundation can withdraw"
         );
-        uint withdrawableBalance = foundationBalance;
-        foundationBalance = 0; /// @dev zeroing before the actual withdraw
+        uint withdrawableBalance = foundCurrentBalance;
+        foundCurrentBalance = 0; /// @dev zeroing before the actual withdraw
         udao.transfer(foundationWallet, withdrawableBalance);
         emit FoundationWithdrawn(withdrawableBalance);
-    }
-
-    /// @notice calculates validator earnings and withdraws calculated earning to validator's wallet
-    function withdrawValidator()
-        external
-        whenNotPaused
-    {
-        require(
-            roleManager.hasRole(VALIDATOR_ROLE, msg.sender),
-            "Only validator can withdraw"
-        );
-        uint claimableRound = lastValidatorClaim[msg.sender];
-        uint withdrawableBalance = 0;
-        uint validatorScore = 0;
-        for (uint i = claimableRound; i < distributionRound; i++) {
-            validatorScore += ISupVis.getValidatorScore(
-                msg.sender,
-                claimableRound
-            );
-            withdrawableBalance += (payPerValidationScore[claimableRound] *
-                validatorScore);
-        }
-        lastValidatorClaim[msg.sender] = distributionRound;
-        udao.transfer(msg.sender, withdrawableBalance);
-        emit ValidatorWithdrawn(msg.sender, withdrawableBalance);
-    }
-
-    /// @notice calculates juror earnings and withdraws calculated earning to juror's wallet
-    function withdrawJuror() external whenNotPaused {
-        require(
-            roleManager.hasRole(JUROR_ROLE, msg.sender),
-            "Only juror can withdraw"
-        );
-        uint claimableRound = lastJurorClaim[msg.sender];
-        uint withdrawableBalance = 0;
-        uint jurorScore = 0;
-        for (uint i = claimableRound; i < distributionRound; i++) {
-            jurorScore += ISupVis.getJurorScore(msg.sender, claimableRound);
-            withdrawableBalance += (payPerJuror[claimableRound] * jurorScore);
-        }
-        lastJurorClaim[msg.sender] = distributionRound;
-        udao.transfer(msg.sender, withdrawableBalance);
-        emit JurorWithdrawn(msg.sender, withdrawableBalance);
     }
 
     /// @notice Allows instructers to withdraw individually.
     function withdrawInstructor() external whenNotPaused {
         require(
-            instructorBalance[msg.sender] >= instructorDebt[msg.sender],
+            instCurrentBalance[msg.sender] >= instRefundDebt[msg.sender],
             "Debt is larger than balance"
         );
-        uint debtAmount = instructorDebt[msg.sender];
-        uint withdrawableBalance = instructorBalance[msg.sender] - debtAmount;
-        instructorBalance[msg.sender] = 0;
-        instructorDebt[msg.sender] = 0;
+        uint debtAmount = instRefundDebt[msg.sender];
+        uint withdrawableBalance = instCurrentBalance[msg.sender] - debtAmount;
+        instCurrentBalance[msg.sender] = 0;
+        instRefundDebt[msg.sender] = 0;
         udao.transfer(msg.sender, withdrawableBalance);
-        if (debtAmount > 0) {
-            emit InstructorWithdrawnWithDebt(
-                msg.sender,
-                withdrawableBalance,
-                debtAmount
-            );
-        } else {
-            emit InstructorWithdrawn(msg.sender, withdrawableBalance);
-        }
-    }
 
-    function transferGovernanceRewards(
-        address _to,
-        uint _amount
-    ) external whenNotPaused {
-        require(
-            roleManager.hasRole(STAKING_CONTRACT, msg.sender),
-            "Only staking contract can transfer governance rewards"
-        );
-        udao.transfer(_to, _amount);
+        emit InstructorWithdrawn(msg.sender, withdrawableBalance, debtAmount);
+    
     }
 }
