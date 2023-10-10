@@ -12,9 +12,7 @@ import "../RoleNames.sol";
 import "../interfaces/IVoucherVerifier.sol";
 
 abstract contract BasePlatform is Pausable, RoleNames {
-    ////////////////////////////////////////////////////////
-    ////////////////COMMON WİTH OLD TREASURY////////////////
-    ////////////////////////////////////////////////////////
+
     IRoleManager roleManager;
     IVoucherVerifier voucherVerifier;
     //ContractManager is our update contract
@@ -82,12 +80,16 @@ abstract contract BasePlatform is Pausable, RoleNames {
         iGovernanceTreasury = IGovernanceTreasury(
             contractManager.GovernanceTreasuryAddress()
         );
+        voucherVerifier = IVoucherVerifier(
+            contractManager.VoucherVerifierAddress()
+        );
 
         emit AddressesUpdated(
             contractManager.UdaoAddress(),
             contractManager.UdaocAddress(),
             contractManager.ISupVisAddress(),
-            contractManager.RmAddress()
+            contractManager.RmAddress(),
+            contractManager.VoucherVerifierAddress()
         );
     }
 
@@ -103,7 +105,6 @@ abstract contract BasePlatform is Pausable, RoleNames {
         udaoc = IUDAOC(contractManager.UdaocAddress());
         iGovernanceTreasury = IGovernanceTreasury(_iGovernanceTreasuryAddress);
         voucherVerifier = IVoucherVerifier(_voucherVerifierAddress);
-        
     }
 
     // EVENTS COMMON
@@ -122,12 +123,9 @@ abstract contract BasePlatform is Pausable, RoleNames {
         address udao,
         address udaoc,
         address isupvis,
-        address irm
+        address irm,
+        address voucherVerifier
     );
-
-    ////////////////////////////////////////////////////////
-    ////////////////NEWLY ADDED TO TREASURY/////////////////
-    ////////////////////////////////////////////////////////
 
     // Accepted refund period by platform
     uint256 refundWindow = 14;
@@ -246,65 +244,34 @@ abstract contract BasePlatform is Pausable, RoleNames {
 
     // SETTERS
 
-    /// @notice changes cut from coaching for foundation
-    /// @param _cut new cut (100000 -> 100% | 5000 -> 5%)
-    function setCoachFoundCut(uint _cut) external {
+    /// @notice sets the cut for foundation/governance/juror/validator for a coaching sale
+    /// @param _coachFoundCut new cut for foundation
+    /// @param _coachGoverCut new cut for governance
+    /// @param _coachJurorCut new cut for juror pool
+    /// @param _coachValidCut new cut for validator pool
+    function setCoachCuts(
+        uint256 _coachFoundCut,
+        uint256 _coachGoverCut,
+        uint256 _coachJurorCut,
+        uint256 _coachValidCut
+    ) external {
+        uint newTotal = _coachFoundCut +
+            _coachGoverCut +
+            _coachJurorCut +
+            _coachFoundCut;
         require(
-            roleManager.hasRole(GOVERNANCE_ROLE, msg.sender),
-            "Only governance can set coach foundation cut"
+            roleManager.hasRoles(administrator_roles, msg.sender),
+            "Only admins can set coach cuts"
         );
-        uint256 otherCuts = coachGoverCut + coachJurorCut + coachValidCut;
-        require(_cut + otherCuts < 100000, "Cuts cant be higher than %100");
 
-        coachFoundCut = _cut;
-        setCoachTotalCut();
-    }
+        require(newTotal < 100000, "Cuts cant be higher than %100");
 
-    /// @notice changes cut from coaching for governance
-    /// @param _cut new cut (100000 -> 100% | 5000 -> 5%)
-    function setCoachGoverCut(uint _cut) external {
-        require(
-            roleManager.hasRole(GOVERNANCE_ROLE, msg.sender),
-            "Only governance can set coach governance cut"
-        );
-        uint256 otherCuts = coachGoverCut + coachJurorCut + coachValidCut;
-        require(_cut + otherCuts < 100000, "Cuts cant be higher than %100");
+        coachFoundCut = _coachFoundCut;
+        coachGoverCut = _coachGoverCut;
+        coachJurorCut = _coachJurorCut;
+        coachValidCut = _coachValidCut;
 
-        coachGoverCut = _cut;
-        setCoachTotalCut();
-    }
-
-    /// @notice changes cut from coaching for governance
-    /// @param _cut new cut (100000 -> 100% | 5000 -> 5%)
-    function setCoachJurorCut(uint256 _cut) external {
-        require(
-            roleManager.hasRole(GOVERNANCE_ROLE, msg.sender),
-            "Only backend can set governance treasury address"
-        );
-        uint256 otherCuts = coachFoundCut + coachGoverCut + coachValidCut;
-        require(_cut + otherCuts < 100000, "Cuts cant be higher than %100");
-
-        coachJurorCut = _cut;
-        setCoachTotalCut();
-    }
-
-    function setCoachValidCut(uint256 _cut) external {
-        require(
-            roleManager.hasRole(GOVERNANCE_ROLE, msg.sender),
-            "Only backend can set governance treasury address"
-        );
-        uint256 otherCuts = coachFoundCut + coachGoverCut + coachJurorCut;
-        require(_cut + otherCuts < 100000, "Cuts cant be higher than %100");
-
-        coachValidCut = _cut;
-        setCoachTotalCut();
-    }
-
-    function setCoachTotalCut() internal {
-        totalCutCoaching = (coachFoundCut +
-            coachGoverCut +
-            coachJurorCut +
-            coachValidCut);
+        totalCutCoaching = newTotal;
 
         emit PlatformCutsUpdated(
             coachFoundCut,
@@ -318,68 +285,34 @@ abstract contract BasePlatform is Pausable, RoleNames {
         );
     }
 
-    /// @notice changes cut from content for foundation
-    /// @param _cut new cut (100000 -> 100% | 5000 -> 5%)
-    function setcontentFoundCut(uint _cut) external {
+    /// @notice sets the cut for foundation/governance/juror/validator for a content sale
+    /// @param _contentFoundCut new cut for foundation
+    /// @param _contentGoverCut new cut for governance
+    /// @param _contentJurorCut new cut for juror pool
+    /// @param _contentValidCut new cut for validator pool
+    function setContentCuts(
+        uint256 _contentFoundCut,
+        uint256 _contentGoverCut,
+        uint256 _contentJurorCut,
+        uint256 _contentValidCut
+    ) external {
+        uint newTotal = _contentFoundCut +
+            _contentGoverCut +
+            _contentJurorCut +
+            _contentFoundCut;
         require(
-            roleManager.hasRole(GOVERNANCE_ROLE, msg.sender),
-            "Only backend can set governance treasury address"
+            roleManager.hasRoles(administrator_roles, msg.sender),
+            "Only admins can set content cuts"
         );
-        //uint256 otherCuts = contentGoverCut + contentJurorCut + cntntValdtrCut;
-        uint otherCuts = contentGoverCut + contentJurorCut + contentValidCut;
-        require(_cut + otherCuts < 10000, "Cuts cant be higher than %100");
 
-        contentFoundCut = _cut;
-        setcontentTotalCut();
-    }
+        require(newTotal < 100000, "Cuts cant be higher than %100");
 
-    /// @notice changes cut from content for governance
-    /// @param _cut new cut (100000 -> 100% | 5000 -> 5%)
-    function setcontentGoverCut(uint _cut) external {
-        require(
-            roleManager.hasRole(GOVERNANCE_ROLE, msg.sender),
-            "Only backend can set governance treasury address"
-        );
-        uint otherCuts = contentFoundCut + contentJurorCut + contentValidCut;
-        require(_cut + otherCuts < 10000, "Cuts cant be higher than %100");
+        contentFoundCut = _contentFoundCut;
+        contentGoverCut = _contentGoverCut;
+        contentJurorCut = _contentJurorCut;
+        contentValidCut = _contentValidCut;
 
-        contentGoverCut = _cut;
-        setcontentTotalCut();
-    }
-
-    /// @notice changes cut from content for juror pool
-    /// @param _cut new cut (100000 -> 100% | 5000 -> 5%)
-    function setcontentJurorCut(uint _cut) external {
-        require(
-            roleManager.hasRole(GOVERNANCE_ROLE, msg.sender),
-            "Only backend can set governance treasury address"
-        );
-        uint otherCuts = contentFoundCut + contentGoverCut + contentValidCut;
-        require(_cut + otherCuts < 10000, "Cuts cant be higher than %100");
-
-        contentJurorCut = _cut;
-        setcontentTotalCut();
-    }
-
-    /// @notice changes cut from content for validator pool
-    /// @param _cut new cut (100000 -> 100% | 5000 -> 5%)
-    function setcontentValidCut(uint _cut) external {
-        require(
-            roleManager.hasRole(GOVERNANCE_ROLE, msg.sender),
-            "Only backend can set governance treasury address"
-        );
-        uint otherCuts = contentFoundCut + contentGoverCut + contentJurorCut;
-        require(_cut + otherCuts < 10000, "Cuts cant be higher than %100");
-
-        contentValidCut = _cut;
-        setcontentTotalCut();
-    }
-
-    function setcontentTotalCut() internal {
-        contentTotalCut = (contentFoundCut +
-            contentGoverCut +
-            contentJurorCut +
-            contentValidCut);
+        contentTotalCut = newTotal;
 
         emit PlatformCutsUpdated(
             coachFoundCut,
