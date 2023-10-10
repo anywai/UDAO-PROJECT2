@@ -49,8 +49,6 @@ abstract contract ContentManager is BasePlatform {
 
     uint256 private coachingIndex;
 
-    constructor() {}
-
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@//
 
     /// @notice Allows users to buy content with discount voucher
@@ -876,3 +874,6 @@ abstract contract ContentManager is BasePlatform {
 //TODO Refund voucher icin backend disinda farkli bir wallet kullanilsin.
 //TODO event ler eksik
 //TODO pnly Role ler eksik
+//TODO create content srasında instructor ıpdate time 'ı başlatman gerek!
+//TODO instructorWitdrawableBalance view fonksiyonu eksik
+//TODO set new refundWindow algoritması implemente edilmesi gerekiyor!
