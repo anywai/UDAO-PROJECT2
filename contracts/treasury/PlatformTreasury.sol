@@ -1,11 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.4;
 
-import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import "@openzeppelin/contracts/security/Pausable.sol";
 import "./ContentManager.sol";
 
-contract PlatformTreasury is Pausable, ContentManager {
+contract PlatformTreasury is ContentManager {
     string private constant SIGNING_DOMAIN = "ValidationScore";
     string private constant SIGNATURE_VERSION = "1";
 
@@ -29,8 +27,9 @@ contract PlatformTreasury is Pausable, ContentManager {
     constructor(
         address _contractManagerAddress,
         address _rmAddress,
-        address priceGetterAddress
-    ) BasePlatform(_contractManagerAddress, _rmAddress, priceGetterAddress) {}
+        address _iGovernanceTreasuryAddress,
+        address voucherVerifierAddress
+    ) BasePlatform(_contractManagerAddress, _rmAddress, _iGovernanceTreasuryAddress, voucherVerifierAddress) {}
 
     /// @notice withdraws foundation balance to foundation wallet
     function withdrawFoundation() external whenNotPaused {
