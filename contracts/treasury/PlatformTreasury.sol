@@ -29,7 +29,14 @@ contract PlatformTreasury is ContentManager {
         address _rmAddress,
         address _iGovernanceTreasuryAddress,
         address voucherVerifierAddress
-    ) BasePlatform(_contractManagerAddress, _rmAddress, _iGovernanceTreasuryAddress, voucherVerifierAddress) {}
+    )
+        BasePlatform(
+            _contractManagerAddress,
+            _rmAddress,
+            _iGovernanceTreasuryAddress,
+            voucherVerifierAddress
+        )
+    {}
 
     /// @notice withdraws foundation balance to foundation wallet
     function withdrawFoundation() external whenNotPaused {
@@ -37,8 +44,8 @@ contract PlatformTreasury is ContentManager {
             roleManager.hasRole(FOUNDATION_ROLE, msg.sender),
             "Only foundation can withdraw"
         );
-        uint withdrawableBalance = foundCurrentBalance;
-        foundCurrentBalance = 0; /// @dev zeroing before the actual withdraw
+        uint withdrawableBalance = foundationBalance;
+        foundationBalance = 0; /// @dev zeroing before the actual withdraw
         udao.transfer(foundationWallet, withdrawableBalance);
         emit FoundationWithdrawn(withdrawableBalance);
     }
@@ -46,16 +53,15 @@ contract PlatformTreasury is ContentManager {
     /// @notice Allows instructers to withdraw individually.
     function withdrawInstructor() external whenNotPaused {
         require(
-            instCurrentBalance[msg.sender] >= instRefundDebt[msg.sender],
+            instBalance[msg.sender] >= instRefundedBalance[msg.sender],
             "Debt is larger than balance"
         );
-        uint debtAmount = instRefundDebt[msg.sender];
-        uint withdrawableBalance = instCurrentBalance[msg.sender] - debtAmount;
-        instCurrentBalance[msg.sender] = 0;
-        instRefundDebt[msg.sender] = 0;
+        uint debtAmount = instRefundedBalance[msg.sender];
+        uint withdrawableBalance = instBalance[msg.sender] - debtAmount;
+        instBalance[msg.sender] = 0;
+        instRefundedBalance[msg.sender] = 0;
         udao.transfer(msg.sender, withdrawableBalance);
 
         emit InstructorWithdrawn(msg.sender, withdrawableBalance, debtAmount);
-    
     }
 }

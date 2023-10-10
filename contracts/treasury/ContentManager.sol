@@ -4,7 +4,6 @@ pragma solidity ^0.8.4;
 import "./BasePlatform.sol";
 
 abstract contract ContentManager is BasePlatform {
-
     /// @notice Emitted when a content is bought
     event ContentBought(
         uint256 tokenId,
@@ -119,7 +118,7 @@ abstract contract ContentManager is BasePlatform {
                 voucher[i].fullContentPurchase,
                 voucher[i].purchasedParts
             );
-            totalCut[i] = calculateTotalCutContentShare(priceToPay[i]);
+            totalCut[i] = calculateContentSaleTotalCut(priceToPay[i]);
 
             if (isFiatPurchase) {
                 instrShare[i] = 0;
@@ -185,7 +184,7 @@ abstract contract ContentManager is BasePlatform {
             learner = msg.sender;
         }
 
-        totalCut = calculateTotalCutCoachingShare(voucher.priceToPay);
+        totalCut = calculateCoachingSaleTotalCut(voucher.priceToPay);
 
         if (isFiatPurchase) {
             instrShare = 0;
@@ -313,7 +312,7 @@ abstract contract ContentManager is BasePlatform {
                 fullContentPurchases[i],
                 purchasedParts[i]
             );
-            specs.totalCut[i] = calculateTotalCutContentShare(
+            specs.totalCut[i] = calculateContentSaleTotalCut(
                 specs.priceToPay[i]
             );
 
@@ -365,7 +364,7 @@ abstract contract ContentManager is BasePlatform {
         // Who created and own that content?
         address instructor = udaoc.ownerOf(tokenId);
 
-        //uint256 totalCut = calculateTotalCutContentShare(_priceToPayUdao);
+        //uint256 totalCut = calculateContentSaleTotalCut(_priceToPayUdao);
         //uint256 instrShare = _priceToPayUdao - totalCut;
 
         udao.transferFrom(msg.sender, address(this), instrShare + totalCut);
@@ -511,33 +510,31 @@ abstract contract ContentManager is BasePlatform {
         uint256 _transactionFuIndex
     ) internal {
         //how many day passed since last update of instructor balance
-        uint256 dayPassedGlo = _transactionTime - gContentUpdateTime;
+        uint256 dayPassedGlo = _transactionTime - contentLockTime;
 
         if (dayPassedGlo < refundWindow) {
             // if(true):There is no payment yet to be paid to the seller in the future balance array.
             // add new payment to instructor futureBalanceArray
-            gContentCutFutureBalance[
-                _transactionFuIndex
-            ] += totalCutContentShare;
+            contentCutLockedPool[_transactionFuIndex] += totalCutContentShare;
         } else {
             // if(else): The future balance array contains values that must be paid to the user.
             if (dayPassedGlo >= (refundWindow * 2)) {
                 //Whole Future Balance Array must paid to user (Because (refundWindow x2)28 day passed)
                 for (uint256 i = 0; i < refundWindow; i++) {
-                    gContentCutCurrentBalance += gContentCutFutureBalance[i];
+                    contentCutPool += contentCutLockedPool[i];
 
-                    gContentCutFutureBalance[i] = 0;
+                    contentCutLockedPool[i] = 0;
                 }
 
                 // add new payment to instructor futureBalanceArray
-                gContentCutFutureBalance[
+                contentCutLockedPool[
                     _transactionFuIndex
                 ] += totalCutContentShare;
 
-                // you updated instructor currentBalance of instructorso declare a new time to instUpdateTime
+                // you updated instructor currentBalance of instructorso declare a new time to instLockTime
                 // why (-refundWindow + 1)? This will sustain today will be no more update on balances...
                 // ...but tomarrow a transaction will produce new update.
-                gContentUpdateTime = (_transactionTime - refundWindow) + 1;
+                contentLockTime = (_transactionTime - refundWindow) + 1;
             } else {
                 //Just some part of Future Balance Array must paid to instructor
                 uint256 dayPassedGloMod = dayPassedGlo % refundWindow;
@@ -547,22 +544,20 @@ abstract contract ContentManager is BasePlatform {
                     //Index of the day to be payout to instructor.
                     uint256 indexOfPayout = ((_transactionFuIndex +
                         refundWindow) - i) % refundWindow;
-                    gContentCutCurrentBalance += gContentCutFutureBalance[
-                        indexOfPayout
-                    ];
+                    contentCutPool += contentCutLockedPool[indexOfPayout];
 
-                    gContentCutFutureBalance[indexOfPayout] = 0;
+                    contentCutLockedPool[indexOfPayout] = 0;
                 }
 
                 // add new payment to instructor futureBalanceArray
-                gContentCutFutureBalance[
+                contentCutLockedPool[
                     _transactionFuIndex
                 ] += totalCutContentShare;
 
-                // you updated instructor futureBalanceArray updated so declare a new time to instUpdateTime
+                // you updated instructor futureBalanceArray updated so declare a new time to instLockTime
                 // why (-refundWindow + 1)? This will sustain today will be no more update on balances...
                 // ...but tomarrow a transaction will produce new update.
-                gContentUpdateTime = (_transactionTime - refundWindow) + 1;
+                contentLockTime = (_transactionTime - refundWindow) + 1;
             }
         }
     }
@@ -573,33 +568,31 @@ abstract contract ContentManager is BasePlatform {
         uint256 _transactionFuIndex
     ) internal {
         //how many day passed since last update of instructor balance
-        uint256 dayPassedGlo = _transactionTime - gCoachingUpdateTime;
+        uint256 dayPassedGlo = _transactionTime - coachingLockTime;
 
         if (dayPassedGlo < refundWindow) {
             // if(true):There is no payment yet to be paid to the seller in the future balance array.
             // add new payment to instructor futureBalanceArray
-            gCoachingFutureBalance[
-                _transactionFuIndex
-            ] += totalCutCoachingShare;
+            coachingCutLockedPool[_transactionFuIndex] += totalCutCoachingShare;
         } else {
             // if(else): The future balance array contains values that must be paid to the user.
             if (dayPassedGlo >= (refundWindow * 2)) {
                 //Whole Future Balance Array must paid to user (Because (refundWindow x2)28 day passed)
                 for (uint256 i = 0; i < refundWindow; i++) {
-                    gCoachingCurrentBalance += gCoachingFutureBalance[i];
+                    coachingCutPool += coachingCutLockedPool[i];
 
-                    gCoachingFutureBalance[i] = 0;
+                    coachingCutLockedPool[i] = 0;
                 }
 
                 // add new payment to instructor futureBalanceArray
-                gCoachingFutureBalance[
+                coachingCutLockedPool[
                     _transactionFuIndex
                 ] += totalCutCoachingShare;
 
-                // you updated instructor currentBalance of instructorso declare a new time to instUpdateTime
+                // you updated instructor currentBalance of instructorso declare a new time to instLockTime
                 // why (-refundWindow + 1)? This will sustain today will be no more update on balances...
                 // ...but tomarrow a transaction will produce new update.
-                gCoachingUpdateTime = (_transactionTime - refundWindow) + 1;
+                coachingLockTime = (_transactionTime - refundWindow) + 1;
             } else {
                 //Just some part of Future Balance Array must paid to instructor
                 uint256 dayPassedGloMod = dayPassedGlo % refundWindow;
@@ -609,22 +602,20 @@ abstract contract ContentManager is BasePlatform {
                     //Index of the day to be payout to instructor.
                     uint256 indexOfPayout = ((_transactionFuIndex +
                         refundWindow) - i) % refundWindow;
-                    gCoachingCurrentBalance += gCoachingFutureBalance[
-                        indexOfPayout
-                    ];
+                    coachingCutPool += coachingCutLockedPool[indexOfPayout];
 
-                    gCoachingFutureBalance[indexOfPayout] = 0;
+                    coachingCutLockedPool[indexOfPayout] = 0;
                 }
 
                 // add new payment to instructor futureBalanceArray
-                gCoachingFutureBalance[
+                coachingCutLockedPool[
                     _transactionFuIndex
                 ] += totalCutCoachingShare;
 
-                // you updated instructor futureBalanceArray updated so declare a new time to instUpdateTime
+                // you updated instructor futureBalanceArray updated so declare a new time to instLockTime
                 // why (-refundWindow + 1)? This will sustain today will be no more update on balances...
                 // ...but tomarrow a transaction will produce new update.
-                gCoachingUpdateTime = (_transactionTime - refundWindow) + 1;
+                coachingLockTime = (_transactionTime - refundWindow) + 1;
             }
         }
     }
@@ -636,28 +627,28 @@ abstract contract ContentManager is BasePlatform {
         uint256 _transactionFuIndex
     ) internal {
         //how many day passed since last update of instructor balance
-        uint256 dayPassedInst = _transactionTime - instUpdateTime[_inst];
+        uint256 dayPassedInst = _transactionTime - instLockTime[_inst];
         uint256 tempSafetyBalance; // for reentrancy check
         if (dayPassedInst < refundWindow) {
             // if(true):There is no payment yet to be paid to the seller in the future balance array.
             // add new payment to instructor futureBalanceArray
-            instFutureBalance[_inst][_transactionFuIndex] += _instrShare;
+            instLockedBalance[_inst][_transactionFuIndex] += _instrShare;
         } else {
             // if(else): The future balance array contains values that must be paid to the user.
             if (dayPassedInst >= (refundWindow * 2)) {
                 //Whole Future Balance Array must paid to user (Because (refundWindow x2)28 day passed)
                 for (uint256 i = 0; i < refundWindow; i++) {
-                    tempSafetyBalance = instFutureBalance[_inst][i];
-                    instFutureBalance[_inst][i] = 0;
-                    instCurrentBalance[_inst] += tempSafetyBalance;
+                    tempSafetyBalance = instLockedBalance[_inst][i];
+                    instLockedBalance[_inst][i] = 0;
+                    instBalance[_inst] += tempSafetyBalance;
                 }
                 // add new payment to instructor futureBalanceArray
-                instFutureBalance[_inst][_transactionFuIndex] += _instrShare;
+                instLockedBalance[_inst][_transactionFuIndex] += _instrShare;
 
-                // you updated instructor currentBalance of instructorso declare a new time to instUpdateTime
+                // you updated instructor currentBalance of instructorso declare a new time to instLockTime
                 // why (-refundWindow + 1)? This will sustain today will be no more update on balances...
                 // ...but tomarrow a transaction will produce new update.
-                instUpdateTime[_inst] = (_transactionTime - refundWindow) + 1;
+                instLockTime[_inst] = (_transactionTime - refundWindow) + 1;
             } else {
                 //Just some part of Future Balance Array must paid to instructor
                 uint256 dayPassedInstMod = dayPassedInst % refundWindow;
@@ -667,18 +658,18 @@ abstract contract ContentManager is BasePlatform {
                     //Index of the day to be payout to instructor.
                     uint256 indexOfPayout = ((_transactionFuIndex +
                         refundWindow) - i) % refundWindow;
-                    tempSafetyBalance = instFutureBalance[_inst][indexOfPayout];
-                    instFutureBalance[_inst][indexOfPayout] = 0;
-                    instCurrentBalance[_inst] += tempSafetyBalance;
+                    tempSafetyBalance = instLockedBalance[_inst][indexOfPayout];
+                    instLockedBalance[_inst][indexOfPayout] = 0;
+                    instBalance[_inst] += tempSafetyBalance;
                 }
 
                 // add new payment to instructor futureBalanceArray
-                instFutureBalance[_inst][_transactionFuIndex] += _instrShare;
+                instLockedBalance[_inst][_transactionFuIndex] += _instrShare;
 
-                // you updated instructor currentBalance of instructorso declare a new time to instUpdateTime
+                // you updated instructor currentBalance of instructorso declare a new time to instLockTime
                 // why (-refundWindow + 1)? This will sustain today will be no more update on balances...
                 // ...but tomarrow a transaction will produce new update.
-                instUpdateTime[_inst] = (_transactionTime - refundWindow) + 1;
+                instLockTime[_inst] = (_transactionTime - refundWindow) + 1;
             }
         }
     }
@@ -689,61 +680,61 @@ abstract contract ContentManager is BasePlatform {
         uint jurorTempBalance;
         uint validTempBalance;
 
-        if (gContentCutCurrentBalance > gContentRefundDebt) {
-            uint withdrawableContentShare = gContentCutCurrentBalance -
-                gContentRefundDebt;
-            gContentCutCurrentBalance = 0;
-            gContentRefundDebt = 0;
+        if (contentCutPool > contentCutRefundedBalance) {
+            uint withdrawableContentShare = contentCutPool -
+                contentCutRefundedBalance;
+            contentCutPool = 0;
+            contentCutRefundedBalance = 0;
 
             (
                 foundTempBalance,
                 goverTempBalance,
                 jurorTempBalance,
                 validTempBalance
-            ) = calculateTotalCutContentShares(withdrawableContentShare);
+            ) = calculateContentCutShares(withdrawableContentShare);
 
-            foundCurrentBalance += foundTempBalance;
-            goverCurrentBalance += goverTempBalance;
-            jurorCurrentBalance += jurorTempBalance;
-            validCurrentBalance += validTempBalance;
+            foundationBalance += foundTempBalance;
+            governanceBalance += goverTempBalance;
+            jurorBalance += jurorTempBalance;
+            validatorsBalance += validTempBalance;
         }
 
-        if (gCoachingCurrentBalance > gCoachingRefundDebt) {
-            uint withdrawableContentShare = gCoachingCurrentBalance -
-                gCoachingRefundDebt;
-            gCoachingCurrentBalance = 0;
-            gCoachingRefundDebt = 0;
+        if (coachingCutPool > coachingCutRefundedBalance) {
+            uint withdrawableContentShare = coachingCutPool -
+                coachingCutRefundedBalance;
+            coachingCutPool = 0;
+            coachingCutRefundedBalance = 0;
 
             (
                 foundTempBalance,
                 goverTempBalance,
                 jurorTempBalance,
                 validTempBalance
-            ) = calculateTotalCutCoachingShares(withdrawableContentShare);
+            ) = calculateCoachingCutShares(withdrawableContentShare);
 
-            foundCurrentBalance += foundTempBalance;
-            goverCurrentBalance += goverTempBalance;
-            jurorCurrentBalance += jurorTempBalance;
-            validCurrentBalance += validTempBalance;
+            foundationBalance += foundTempBalance;
+            governanceBalance += goverTempBalance;
+            jurorBalance += jurorTempBalance;
+            validatorsBalance += validTempBalance;
         }
         if (isGovernanceTreasuryOnline == true) {
-            if (jurorCurrentBalance > 0) {
-                uint sendJurorShareToGovTre = jurorCurrentBalance;
-                jurorCurrentBalance = 0;
+            if (jurorBalance > 0) {
+                uint sendJurorShareToGovTre = jurorBalance;
+                jurorBalance = 0;
                 udao.transfer(governanceTreasury, sendJurorShareToGovTre);
                 iGovernanceTreasury.jurorBalanceUpdate(sendJurorShareToGovTre);
             }
-            if (validCurrentBalance > 0) {
-                uint sendValdtrShareToGovTre = validCurrentBalance;
-                validCurrentBalance = 0;
+            if (validatorsBalance > 0) {
+                uint sendValdtrShareToGovTre = validatorsBalance;
+                validatorsBalance = 0;
                 udao.transfer(governanceTreasury, sendValdtrShareToGovTre);
                 iGovernanceTreasury.validatorBalanceUpdate(
                     sendValdtrShareToGovTre
                 );
             }
-            if (goverCurrentBalance > 0) {
-                uint sendGoverShareToGovTre = goverCurrentBalance;
-                goverCurrentBalance = 0;
+            if (governanceBalance > 0) {
+                uint sendGoverShareToGovTre = governanceBalance;
+                governanceBalance = 0;
                 udao.transfer(governanceTreasury, sendGoverShareToGovTre);
                 iGovernanceTreasury.governanceBalanceUpdate(
                     sendGoverShareToGovTre
@@ -769,8 +760,8 @@ abstract contract ContentManager is BasePlatform {
         require(refundItem.isRefunded == false, "Already refunded!");
         coachSales[_saleID].isRefunded = true;
 
-        instRefundDebt[refundItem.instructor] += refundItem.instrShare;
-        gCoachingRefundDebt += refundItem.totalCut;
+        instRefundedBalance[refundItem.instructor] += refundItem.instrShare;
+        coachingCutRefundedBalance += refundItem.totalCut;
 
         udao.transfer(
             refundItem.payee,
@@ -794,8 +785,8 @@ abstract contract ContentManager is BasePlatform {
         require(refundItem.isRefunded == false, "Already refunded!");
         coachSales[voucher.saleID].isRefunded = true;
 
-        instRefundDebt[refundItem.instructor] += refundItem.instrShare;
-        gCoachingRefundDebt += refundItem.totalCut;
+        instRefundedBalance[refundItem.instructor] += refundItem.instrShare;
+        coachingCutRefundedBalance += refundItem.totalCut;
 
         udao.transfer(
             refundItem.payee,
@@ -838,8 +829,8 @@ abstract contract ContentManager is BasePlatform {
             .finalParts;
 
         address instructor = udaoc.ownerOf(refundItem.tokenId);
-        instRefundDebt[instructor] += refundItem.instrShare;
-        gContentRefundDebt += refundItem.totalCut;
+        instRefundedBalance[instructor] += refundItem.instrShare;
+        contentCutRefundedBalance += refundItem.totalCut;
 
         udao.transfer(
             refundItem.payee,

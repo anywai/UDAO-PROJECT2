@@ -12,28 +12,27 @@ import "../RoleNames.sol";
 import "../interfaces/IVoucherVerifier.sol";
 
 abstract contract BasePlatform is Pausable, RoleNames {
-
+    // roleManager is project role manager contract
     IRoleManager roleManager;
+    // VoucherVerifier is platform treasury voucher/verifier contract
     IVoucherVerifier voucherVerifier;
-    //ContractManager is our update contract
+    // ContractManager is project update address contract
     ContractManager public contractManager;
-
+    // GovernanceTreasury is platforms governance related funds treasury contract
     IGovernanceTreasury public iGovernanceTreasury;
 
     // UDAO (ERC20) Token interface
     IERC20 udao;
-
     // UDAO (ERC721) Token interface
     IUDAOC udaoc;
 
-    // Addresses of governanceTreasury & foundation wallet
+    // Address of governanceTreasury
     address governanceTreasury;
+    // Address of foundation wallet
     address foundationWallet;
 
-    // user address => content id => content owned by the user
+    // user address => (content id => (content part id => owned/not owned by the user))
     mapping(address => mapping(uint => mapping(uint => bool))) isTokenBought;
-
-    // SETTERS COMMON
 
     /// @notice Sets the address of the governance treasury
     /// @param _newAddress New address of the governance treasury
@@ -107,8 +106,6 @@ abstract contract BasePlatform is Pausable, RoleNames {
         voucherVerifier = IVoucherVerifier(_voucherVerifierAddress);
     }
 
-    // EVENTS COMMON
-
     /// @notice This event is triggered if the governance treasury address is updated.
     event GovernanceTreasuryUpdated(address newAddress);
 
@@ -129,37 +126,37 @@ abstract contract BasePlatform is Pausable, RoleNames {
 
     // Accepted refund period by platform
     uint256 refundWindow = 14;
-    // Constant one day equals that in epoch time
+    // Constant: one day equals that in epoch time
     uint256 epochOneDay = 86400;
 
     // Instructor => current balance & future balances of instructor
-    mapping(address => uint) public instCurrentBalance;
-    mapping(address => uint[]) public instFutureBalance;
+    mapping(address => uint) public instBalance;
+    mapping(address => uint[]) public instLockedBalance;
 
     // Current balance & future balances of total contract pool for content sale
-    uint256 public gContentCutCurrentBalance;
-    uint256[] public gContentCutFutureBalance;
+    uint256 public contentCutPool;
+    uint256[] public contentCutLockedPool;
     // Current balance & future balances of total contract pool for coaching sale
-    uint256 public gCoachingCurrentBalance;
-    uint256[] public gCoachingFutureBalance;
+    uint256 public coachingCutPool;
+    uint256[] public coachingCutLockedPool;
 
     // Current balance of foundation/governance/juror/validator pool
-    uint public foundCurrentBalance;
-    uint public goverCurrentBalance;
-    uint public jurorCurrentBalance;
-    uint public validCurrentBalance;
+    uint public foundationBalance;
+    uint public governanceBalance;
+    uint public jurorBalance;
+    uint public validatorsBalance;
 
     // Instructor => last update time of instructor's current balance
-    mapping(address => uint256) public instUpdateTime;
+    mapping(address => uint256) public instLockTime;
     // Last update time of current balances
-    uint public gContentUpdateTime;
-    uint public gCoachingUpdateTime;
+    uint public contentLockTime;
+    uint public coachingLockTime;
 
     // Instructor => instructor debt amount (debt occured due to refund)
-    mapping(address => uint) public instRefundDebt;
+    mapping(address => uint) public instRefundedBalance;
     // Global balances debt amount (debt occured due to refund)
-    uint256 gContentRefundDebt;
-    uint256 gCoachingRefundDebt;
+    uint256 contentCutRefundedBalance;
+    uint256 coachingCutRefundedBalance;
 
     // 100000 -> 100% | 5000 -> 5%
     // Cuts for foundation/governance/juror/validator for a coaching sale
@@ -176,7 +173,7 @@ abstract contract BasePlatform is Pausable, RoleNames {
     // Total cuts for content&coaching sale
     uint256 contentTotalCut =
         contentFoundCut + contentGoverCut + contentJurorCut + contentValidCut;
-    uint256 totalCutCoaching =
+    uint256 coachTotalCut =
         coachFoundCut + coachGoverCut + coachJurorCut + coachValidCut;
 
     // There is no GovernanceTreasury in MVP, after governance release will be set
@@ -194,8 +191,8 @@ abstract contract BasePlatform is Pausable, RoleNames {
         uint256 contentValidCut
     );
 
-    function calculateTotalCutContentShares(
-        uint256 _priceOf
+    function calculateContentCutShares(
+        uint256 _revenue
     )
         public
         view
@@ -206,20 +203,20 @@ abstract contract BasePlatform is Pausable, RoleNames {
             uint256 validatorShare
         )
     {
-        foundationShare = ((_priceOf * contentFoundCut) / contentTotalCut);
-        governanceShare = ((_priceOf * contentGoverCut) / contentTotalCut);
-        jurorShare = ((_priceOf * contentJurorCut) / contentTotalCut);
-        validatorShare = ((_priceOf * contentValidCut) / contentTotalCut);
+        foundationShare = ((_revenue * contentFoundCut) / contentTotalCut);
+        governanceShare = ((_revenue * contentGoverCut) / contentTotalCut);
+        jurorShare = ((_revenue * contentJurorCut) / contentTotalCut);
+        validatorShare = ((_revenue * contentValidCut) / contentTotalCut);
     }
 
-    function calculateTotalCutContentShare(
+    function calculateContentSaleTotalCut(
         uint256 _priceOf
     ) public view returns (uint256) {
         return ((_priceOf * contentTotalCut) / 100000);
     }
 
-    function calculateTotalCutCoachingShares(
-        uint256 _priceOf
+    function calculateCoachingCutShares(
+        uint256 _revenue
     )
         public
         view
@@ -230,16 +227,16 @@ abstract contract BasePlatform is Pausable, RoleNames {
             uint256 validatorShare
         )
     {
-        foundationShare = ((_priceOf * coachFoundCut) / totalCutCoaching);
-        governanceShare = ((_priceOf * coachGoverCut) / totalCutCoaching);
-        jurorShare = ((_priceOf * coachJurorCut) / totalCutCoaching);
-        validatorShare = ((_priceOf * coachValidCut) / totalCutCoaching);
+        foundationShare = ((_revenue * coachFoundCut) / coachTotalCut);
+        governanceShare = ((_revenue * coachGoverCut) / coachTotalCut);
+        jurorShare = ((_revenue * coachJurorCut) / coachTotalCut);
+        validatorShare = ((_revenue * coachValidCut) / coachTotalCut);
     }
 
-    function calculateTotalCutCoachingShare(
+    function calculateCoachingSaleTotalCut(
         uint256 _priceOf
     ) public view returns (uint256) {
-        return ((_priceOf * totalCutCoaching) / 100000);
+        return ((_priceOf * coachTotalCut) / 100000);
     }
 
     // SETTERS
@@ -271,7 +268,7 @@ abstract contract BasePlatform is Pausable, RoleNames {
         coachJurorCut = _coachJurorCut;
         coachValidCut = _coachValidCut;
 
-        totalCutCoaching = newTotal;
+        coachTotalCut = newTotal;
 
         emit PlatformCutsUpdated(
             coachFoundCut,
