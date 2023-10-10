@@ -27,17 +27,13 @@ contract UDAOVp is
     constructor(
         address rmAddress,
         address _contractManager
-    )
-        ERC20("UDAO-vp", "UDAOVP")
-        ERC20Permit("UDAO-vp")
-        
-    {
+    ) ERC20("UDAO-vp", "UDAOVP") ERC20Permit("UDAO-vp") {
         contractManager = ContractManager(_contractManager);
         roleManager = IRoleManager(rmAddress);
     }
 
     /// @notice Get the updated addresses from contract manager
-    function updateAddresses() external  {
+    function updateAddresses() external {
         require(
             roleManager.hasRole(BACKEND_ROLE, msg.sender),
             "Only backend can update addresses"
@@ -48,11 +44,11 @@ contract UDAOVp is
     /// @notice Allows staking contract to mint vp token "to" an address
     /// @param to The address of the vp token recipient
     /// @param amount of the vp token
-    function mint(
-        address to,
-        uint256 amount
-    ) public whenNotPaused {
-        require(roleManager.hasRole(STAKING_CONTRACT, msg.sender), "Only staker can mint");
+    function mint(address to, uint256 amount) public whenNotPaused {
+        require(
+            roleManager.hasRole(STAKING_CONTRACT, msg.sender),
+            "Only staker can mint"
+        );
         _mint(to, amount);
         /// @dev Staking contract requires allowence when user wants to unstake
         _approve(to, stakingContractAddress, 2 ** 256 - 1);
@@ -80,7 +76,10 @@ contract UDAOVp is
         uint256 amount
     ) internal override(ERC20, ERC20Votes) {
         super._afterTokenTransfer(from, to, amount);
-        require(roleManager.hasRole(STAKING_CONTRACT, msg.sender), "Only staker can transfer");
+        require(
+            roleManager.hasRole(STAKING_CONTRACT, msg.sender),
+            "Only staker can transfer"
+        );
     }
 
     function _mint(

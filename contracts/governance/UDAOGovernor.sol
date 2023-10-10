@@ -39,7 +39,6 @@ contract UDAOGovernor is
         )
         GovernorVotes(_token)
         GovernorTimelockControl(_timelock)
-        
     {
         stakingContract = IUDAOStaker(stakingContractAddress);
         roleManager = IRoleManager(rmAddress);
@@ -53,14 +52,10 @@ contract UDAOGovernor is
 
     /// @notice Allows backend to set the staking contract address.
     /// @param stakingContractAddress Address to set to
-    function setStakingContract(
-        address stakingContractAddress
-    ) external  {
+    function setStakingContract(address stakingContractAddress) external {
         require(
-            roleManager.hasRole(
-                BACKEND_ROLE,
-                msg.sender
-            ), "Only backend can set staking contract"
+            roleManager.hasRole(BACKEND_ROLE, msg.sender),
+            "Only backend can set staking contract"
         );
         stakingContract = IUDAOStaker(stakingContractAddress);
     }

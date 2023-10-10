@@ -11,7 +11,7 @@ import "./RoleNames.sol";
 contract RoleManager is AccessControl, RoleNames {
     ContractManager public contractManager;
     ISupervision ISupVis;
-    
+
     // functionId => if Active or not
     mapping(uint256 => bool) public activeKYCFunctions;
     mapping(uint256 => bool) public activeBanFunctions;
@@ -127,20 +127,26 @@ contract RoleManager is AccessControl, RoleNames {
 
     /// @notice gets KYC result of the address
     /// @param _address wallet that KYC result will be sent
-    function isKYCed(address _address, uint256 functionId) external view returns (bool) {
-        if(activeKYCFunctions[functionId] == false){
+    function isKYCed(
+        address _address,
+        uint256 functionId
+    ) external view returns (bool) {
+        if (activeKYCFunctions[functionId] == false) {
             return true;
-        }else{
+        } else {
             return KYCList[_address];
         }
     }
 
     /// @notice gets ban result of the address
     /// @param _address wallet that ban result will be sent
-    function isBanned(address _address, uint256 functionId) external view returns (bool) {
-        if(activeBanFunctions[functionId] == false){
+    function isBanned(
+        address _address,
+        uint256 functionId
+    ) external view returns (bool) {
+        if (activeBanFunctions[functionId] == false) {
             return false;
-        }else{
+        } else {
             return BanList[_address];
         }
     }

@@ -22,6 +22,7 @@ contract TokenSeller is AccessControl {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _grantRole(RECORDER_ROLE, msg.sender);
     }
+
     // user_address => balance
     mapping(address => uint256) public balances;
     mapping(address => bool) public KYCList;
@@ -37,9 +38,12 @@ contract TokenSeller is AccessControl {
 
     /// @notice DEFAULT_ADMIN_ROLE resets the balance of the user
     /// @param _user The address of the user
-    function grantRecorderRole(address _user) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function grantRecorderRole(
+        address _user
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         _grantRole(RECORDER_ROLE, _user);
     }
+
     /// @notice DEFAULT_ADMIN_ROLE releases the tokens
     function releaseTokens() external onlyRole(DEFAULT_ADMIN_ROLE) {
         tokenRelased = true;
@@ -49,10 +53,14 @@ contract TokenSeller is AccessControl {
     /// @notice RECORDER_ROLE sets the KYC status of the user
     /// @param _user The address of the user
     /// @param _status The KYC status of the user
-    function changeKYCStatus(address _user, bool _status) public onlyRole(RECORDER_ROLE) {
+    function changeKYCStatus(
+        address _user,
+        bool _status
+    ) public onlyRole(RECORDER_ROLE) {
         KYCList[_user] = _status;
         emit KYCStatusChanged(_user, _status);
     }
+
     /// @notice RECORDER_ROLE creates records of the balances of the users
     /// @param _user The address of the user
     /// @param _amount The amount of tokens to be added to the user's balance
@@ -73,7 +81,10 @@ contract TokenSeller is AccessControl {
         address[] calldata _users,
         uint256[] calldata _amounts
     ) external onlyRole(RECORDER_ROLE) {
-        require(_users.length == _amounts.length, "Arrays must be the same length!");
+        require(
+            _users.length == _amounts.length,
+            "Arrays must be the same length!"
+        );
         for (uint256 i = 0; i < _users.length; i++) {
             balances[_users[i]] += _amounts[i];
             changeKYCStatus(_users[i], true);

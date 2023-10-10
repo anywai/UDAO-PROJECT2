@@ -163,10 +163,7 @@ contract Supervision is Pausable, RoleNames {
     uint256 maxObjection = 3;
 
     /// @dev Constructor
-    constructor(
-        address rmAddress,
-        address udaocAddress 
-    ) {
+    constructor(address rmAddress, address udaocAddress) {
         roleManager = IRoleManager(rmAddress);
         udaoc = IUDAOC(udaocAddress);
         /* @dev disputes start from 1, meaning that the first dispute will have id 1.
