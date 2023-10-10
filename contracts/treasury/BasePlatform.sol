@@ -9,12 +9,14 @@ import "../interfaces/IUDAOC.sol";
 import "../interfaces/IGovernanceTreasury.sol";
 import "../interfaces/IRoleManager.sol";
 import "../RoleNames.sol";
+import "../interfaces/IVoucherVerifier.sol";
 
 abstract contract BasePlatform is Pausable, RoleNames {
     ////////////////////////////////////////////////////////
     ////////////////COMMON WİTH OLD TREASURY////////////////
     ////////////////////////////////////////////////////////
     IRoleManager roleManager;
+    IVoucherVerifier voucherVerifier;
     //ContractManager is our update contract
     ContractManager public contractManager;
 
@@ -92,13 +94,16 @@ abstract contract BasePlatform is Pausable, RoleNames {
     constructor(
         address _contractManager,
         address rmAddress,
-        address _iGovernanceTreasuryAddress
+        address _iGovernanceTreasuryAddress,
+        address _voucherVerifierAddress
     ) {
         roleManager = IRoleManager(rmAddress);
         contractManager = ContractManager(_contractManager);
         udao = IERC20(contractManager.UdaoAddress());
         udaoc = IUDAOC(contractManager.UdaocAddress());
         iGovernanceTreasury = IGovernanceTreasury(_iGovernanceTreasuryAddress);
+        voucherVerifier = IVoucherVerifier(_voucherVerifierAddress);
+        
     }
 
     // EVENTS COMMON
