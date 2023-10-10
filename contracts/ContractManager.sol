@@ -22,6 +22,7 @@ contract ContractManager is RoleNames {
 
     /// @dev unknown if before or after
     address public GovernanceTreasuryAddress; // governance treasury contract
+    address public VoucherVerifierAddress; // voucher verifier contract
 
     constructor(
         address _supAddress,
@@ -103,5 +104,15 @@ contract ContractManager is RoleNames {
             "Only backend can set irm address"
         );
         RmAddress = _rmAddress;
+    }
+
+    function setAddressVoucherVerifierAddress(
+        address _voucherVerifierAddress
+    ) external {
+        require(
+            roleManager.hasRole(BACKEND_ROLE, msg.sender),
+            "Only backend can set voucher verifier address"
+        );
+        VoucherVerifierAddress = _voucherVerifierAddress;
     }
 }
