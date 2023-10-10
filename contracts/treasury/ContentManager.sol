@@ -2,12 +2,8 @@
 /// @title Content purchasing and cut management
 pragma solidity ^0.8.4;
 import "./BasePlatform.sol";
-import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
 
-abstract contract ContentManager is EIP712, BasePlatform {
-    string private constant SIGNING_DOMAIN = "ContentManager";
-    string private constant SIGNATURE_VERSION = "1";
+abstract contract ContentManager is BasePlatform {
 
     /// @notice Emitted when a content is bought
     event ContentBought(
@@ -16,44 +12,6 @@ abstract contract ContentManager is EIP712, BasePlatform {
         uint256 pricePaid,
         address buyer
     );
-
-    /// @notice struct to hold content discount voucher information
-    /// @param tokenId id of the content
-    /// @param fullContentPurchase is full content purchased
-    /// @param purchasedParts parts of the content purchased
-    /// @param priceToPay price to pay
-    /// @param validUntil date until the voucher is valid
-    /// @param redeemer address of the redeemer
-    /// @param giftReceiver address of the gift receiver if purchase is a gift
-    /// @param signature the EIP-712 signature of all other fields in the ContentDiscountVoucher struct.
-    struct ContentDiscountVoucher {
-        uint256 tokenId;
-        bool fullContentPurchase;
-        uint256[] purchasedParts;
-        uint256 priceToPay;
-        uint256 validUntil;
-        address redeemer;
-        address giftReceiver;
-        bytes signature;
-    }
-
-    /// @notice Represents a refund voucher for a coaching
-    struct RefundVoucher {
-        uint256 saleID;
-        address instructor;
-        uint256[] finalParts;
-        uint256 validUntil;
-        bytes signature;
-    }
-
-    /// @notice struct to hold coaching voucher information
-    struct CoachingVoucher {
-        address coach;
-        uint256 priceToPay;
-        uint256 coachingDate;
-        address learner;
-        bytes signature;
-    }
 
     using Counters for Counters.Counter;
     /// @notice Used to generate unique ids for content sales
@@ -88,41 +46,17 @@ abstract contract ContentManager is EIP712, BasePlatform {
 
     // wallet => content token Ids
     mapping(address => uint256[][]) ownedContents;
-    // tokenId => student addresses (Coaching Related)
-    mapping(uint256 => address[]) public studentList;
 
-    /// @notice struct to hold coaching information
-    /// @param coach address of the coach
-    /// @param learner address of the learner
-    /// @param moneyLockDeadline deadline of the money locked
-    /// @param coachingPaymentAmount amount of token that coach is going to get
-    /// @param isDone status of the coaching
-    /// @param totalPaymentAmount total payment amount to buy coaching (includes cuts for platform)
-    /// @param isRefundable is coaching refundable
-    struct CoachingStructOld {
-        address coach;
-        address learner;
-        uint256 moneyLockDeadline;
-        uint256 coachingPaymentAmount;
-        uint8 isDone; // 0 not done, 1 done, 2 refunded
-        uint256 totalPaymentAmount;
-        bool isRefundable;
-    }
-
-    // tokenId => coachingId[]  which tokens have which coachings
-    mapping(uint256 => uint256[]) coachingIdsOfToken;
-    // coachinId => coachingStruct  Coaching details
-    mapping(uint256 => CoachingStructOld) public coachingStructs;
     uint256 private coachingIndex;
 
-    constructor() EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION) {}
+    constructor() {}
 
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@//
 
     /// @notice Allows users to buy content with discount voucher
     /// @param voucher discount vouchers
     function buyContentWithDiscount(
-        ContentDiscountVoucher[] calldata voucher
+        IVoucherVerifier.ContentDiscountVoucher[] calldata voucher
     ) external whenNotPaused {
         /// @dev Determine the number of items in the cart
         uint256 voucherIdsLength = voucher.length;
@@ -148,11 +82,7 @@ abstract contract ContentManager is EIP712, BasePlatform {
         /// @dev Loop through the cart
         for (uint256 i; i < voucherIdsLength; i++) {
             // make sure signature is valid and get the address of the signer
-            address signer = _verifyDiscountVoucher(voucher[i]);
-            require(
-                roleManager.hasRole(BACKEND_ROLE, signer),
-                "Signature invalid or unauthorized"
-            );
+            voucherVerifier.verifyDiscountVoucher(voucher[i]);
             require(
                 voucher[i].validUntil >= block.timestamp,
                 "Voucher has expired."
@@ -231,15 +161,15 @@ abstract contract ContentManager is EIP712, BasePlatform {
 
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@//
     function buyCoaching(
-        CoachingVoucher calldata voucher
+        IVoucherVerifier.CoachingVoucher calldata voucher
     ) external whenNotPaused {
         uint256 totalCut;
         uint256 instrShare;
         address learner;
         bool isFiatPurchase;
 
-        address signer = _verifyCoachingVoucher(voucher);
-        require(signer == voucher.coach, "Signature invalid or unauthorized");
+        voucherVerifier.verifyCoachingVoucher(voucher);
+
         require(
             voucher.coachingDate >= block.timestamp + epochOneDay * 1,
             "Coaching date must be at least 1 day before."
@@ -295,18 +225,18 @@ abstract contract ContentManager is EIP712, BasePlatform {
             transactionFuIndex
         );
 
-        _saveTheSaleOnAListForRefund(
-            msg.sender,
-            learner,
-            voucher.coach,
-            instrShare,
-            totalCut,
-            0, //empty tokenId
-            new uint256[](0), //empty purchased parts
-            voucher.coachingDate,
-            transactionTime + refundWindow,
-            false
-        );
+        //Save the sale on a refund list
+        coachSales[coachingSaleID.current()] = CoachingSale({
+            payee: msg.sender,
+            contentReceiver: learner,
+            instructor: voucher.coach,
+            instrShare: instrShare,
+            totalCut: totalCut,
+            isRefunded: false,
+            coachingDate: voucher.coachingDate,
+            refundablePeriod: transactionTime + refundWindow
+        });
+        coachingSaleID.increment();
 
         _sendCurrentGlobalCutsToGovernanceTreasury();
     }
@@ -461,25 +391,31 @@ abstract contract ContentManager is EIP712, BasePlatform {
             transactionFuIndex
         );
 
-        // give the content to the receiver
-        _updateOwnedContentOrPart(
-            tokenId,
-            fullContentPurchase,
-            purchasedParts,
-            contentReceiver
-        );
-        _saveTheSaleOnAListForRefund(
-            msg.sender,
-            contentReceiver,
-            instructor,
-            instrShare,
-            totalCut,
-            tokenId,
-            purchasedParts,
-            0, //coachingdate
-            transactionTime + refundWindow,
-            true
-        );
+        // Update owned contert or part
+        if (fullContentPurchase) {
+            isTokenBought[contentReceiver][tokenId][0] = true;
+            ownedContents[contentReceiver].push([tokenId, 0]);
+        } else {
+            for (uint256 j; j < purchasedParts.length; j++) {
+                uint part = purchasedParts[j];
+                isTokenBought[contentReceiver][tokenId][part] = true;
+                ownedContents[contentReceiver].push([tokenId, part]);
+            }
+        }
+
+        //Save the sale on a refund list
+        sales[saleID.current()] = ContentSale({
+            payee: msg.sender,
+            contentReceiver: contentReceiver,
+            instructor: instructor,
+            instrShare: instrShare,
+            totalCut: totalCut,
+            tokenId: tokenId,
+            purchasedParts: purchasedParts,
+            isRefunded: false,
+            refundablePeriod: transactionTime + refundWindow
+        });
+        saleID.increment();
 
         emit ContentBought(
             tokenId,
@@ -749,24 +685,6 @@ abstract contract ContentManager is EIP712, BasePlatform {
         }
     }
 
-    function _updateOwnedContentOrPart(
-        uint256 tokenId,
-        bool fullContentPurchase,
-        uint256[] calldata purchasedParts,
-        address contentReceiver
-    ) internal {
-        if (fullContentPurchase) {
-            isTokenBought[contentReceiver][tokenId][0] = true;
-            ownedContents[contentReceiver].push([tokenId, 0]);
-        } else {
-            for (uint256 j; j < purchasedParts.length; j++) {
-                uint part = purchasedParts[j];
-                isTokenBought[contentReceiver][tokenId][part] = true;
-                ownedContents[contentReceiver].push([tokenId, part]);
-            }
-        }
-    }
-
     function _sendCurrentGlobalCutsToGovernanceTreasury() internal {
         uint foundTempBalance;
         uint goverTempBalance;
@@ -836,46 +754,6 @@ abstract contract ContentManager is EIP712, BasePlatform {
         }
     }
 
-    function _saveTheSaleOnAListForRefund(
-        address _payee,
-        address _contentReceiver,
-        address _instructor,
-        uint256 _instrShare,
-        uint256 _totalCut,
-        uint256 _tokenId,
-        uint256[] memory _purchasedParts,
-        uint256 _coachingDate,
-        uint256 _refundablePeriod,
-        bool isContentSale
-    ) internal {
-        if (isContentSale) {
-            sales[saleID.current()] = ContentSale({
-                payee: _payee,
-                contentReceiver: _contentReceiver,
-                instructor: _instructor,
-                instrShare: _instrShare,
-                totalCut: _totalCut,
-                tokenId: _tokenId,
-                purchasedParts: _purchasedParts,
-                isRefunded: false,
-                refundablePeriod: _refundablePeriod
-            });
-            saleID.increment();
-        } else {
-            coachSales[coachingSaleID.current()] = CoachingSale({
-                payee: _payee,
-                contentReceiver: _contentReceiver,
-                instructor: _instructor,
-                instrShare: _instrShare,
-                totalCut: _totalCut,
-                isRefunded: false,
-                coachingDate: _coachingDate,
-                refundablePeriod: _refundablePeriod
-            });
-            coachingSaleID.increment();
-        }
-    }
-
     /// @notice Allows learner to get refund of coaching 1 day prior to coaching date or instructor to refund anytime
     /// @param _saleID id of the coaching sale
     function refundCoachingByInstructorOrLearner(uint256 _saleID) external {
@@ -904,12 +782,10 @@ abstract contract ContentManager is EIP712, BasePlatform {
 
     /// @notice Allows refund of coaching with a voucher
     /// @param voucher A RefundVoucher
-    function newRefundCoaching(RefundVoucher calldata voucher) external {
-        address signer = _verifyRefundVoucher(voucher);
-        require(
-            roleManager.hasRole(BACKEND_ROLE, signer),
-            "Signature invalid or unauthorized"
-        );
+    function newRefundCoaching(
+        IVoucherVerifier.RefundVoucher calldata voucher
+    ) external {
+        voucherVerifier.verifyRefundVoucher(voucher);
 
         CoachingSale storage refundItem = coachSales[voucher.saleID];
         require(
@@ -931,12 +807,10 @@ abstract contract ContentManager is EIP712, BasePlatform {
 
     /// @notice Allows refund of a content with a voucher
     /// @param voucher A RefundVoucher
-    function newRefundContent(RefundVoucher calldata voucher) external {
-        address signer = _verifyRefundVoucher(voucher);
-        require(
-            roleManager.hasRole(BACKEND_ROLE, signer),
-            "Signature invalid or unauthorized"
-        );
+    function newRefundContent(
+        IVoucherVerifier.RefundVoucher calldata voucher
+    ) external {
+        voucherVerifier.verifyRefundVoucher(voucher);
 
         ContentSale storage refundItem = sales[voucher.saleID];
 
@@ -978,28 +852,12 @@ abstract contract ContentManager is EIP712, BasePlatform {
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@//
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@//
 
-    /// @notice returns coaching informations of token
-    /// @param _tokenId id of token that coaching will be returned
-    function getCoachings(
-        uint256 _tokenId
-    ) external view returns (uint256[] memory) {
-        return coachingIdsOfToken[_tokenId];
-    }
-
     /// @notice returns owned contents of the _owner
     /// @param _owner address of the user that will owned contents be returned
     function getOwnedContent(
         address _owner
     ) public view returns (uint256[][] memory) {
         return (ownedContents[_owner]);
-    }
-
-    /// @notice Returns the buyers of a coaching service for a token
-    /// @param tokenId The token ID of a course of a coaching service
-    function getStudentListOfToken(
-        uint256 tokenId
-    ) public view returns (address[] memory) {
-        return studentList[tokenId];
     }
 
     /// @notice Returns the chain id of the current blockchain.
@@ -1011,102 +869,6 @@ abstract contract ContentManager is EIP712, BasePlatform {
             id := chainid()
         }
         return id;
-    }
-
-    /// @notice Returns a hash of the given ContentDiscountVoucher, prepared using EIP712 typed data hashing rules.
-    /// @param voucher A ContentDiscountVoucher to hash.
-    function _hashDiscountVoucher(
-        ContentDiscountVoucher calldata voucher
-    ) internal view returns (bytes32) {
-        return
-            _hashTypedDataV4(
-                keccak256(
-                    abi.encode(
-                        keccak256(
-                            "ContentDiscountVoucher(uint256 tokenId,bool fullContentPurchase,uint256[] purchasedParts,uint256 priceToPay,uint256 validUntil,address redeemer,address giftReceiver)"
-                        ),
-                        voucher.tokenId,
-                        voucher.fullContentPurchase,
-                        keccak256(abi.encodePacked(voucher.purchasedParts)),
-                        voucher.priceToPay,
-                        voucher.validUntil,
-                        voucher.redeemer,
-                        voucher.giftReceiver
-                    )
-                )
-            );
-    }
-
-    /// @notice Returns a hash of the given RefundVoucher, prepared using EIP712 typed data hashing rules.
-    /// @param voucher A RefundVoucher to hash.
-    function _hashRefundVoucher(
-        RefundVoucher calldata voucher
-    ) internal view returns (bytes32) {
-        return
-            _hashTypedDataV4(
-                keccak256(
-                    abi.encode(
-                        keccak256(
-                            "RefundVoucher(uint256 saleID,address instructor,uint256[] finalParts,uint256 validUntil)"
-                        ),
-                        voucher.saleID,
-                        voucher.instructor,
-                        keccak256(abi.encodePacked(voucher.finalParts)),
-                        voucher.validUntil
-                    )
-                )
-            );
-    }
-
-    /// @notice Returns a hash of the given CoachingVoucher, prepared using EIP712 typed data hashing rules.
-    /// @param voucher A CoachingVoucher to hash.
-    function _hashCoachingVoucher(
-        CoachingVoucher calldata voucher
-    ) internal view returns (bytes32) {
-        return
-            _hashTypedDataV4(
-                keccak256(
-                    abi.encode(
-                        keccak256(
-                            "CoachingVoucher(address coach,uint256 priceToPay,uint256 coachingDate,address learner)"
-                        ),
-                        voucher.coach,
-                        voucher.priceToPay,
-                        voucher.coachingDate,
-                        voucher.learner
-                    )
-                )
-            );
-    }
-
-    /// @notice Verifies the signature for a given ContentDiscountVoucher, returning the address of the signer.
-    /// @dev Will revert if the signature is invalid.
-    /// @param voucher A ContentDiscountVoucher describing a content access rights.
-    function _verifyDiscountVoucher(
-        ContentDiscountVoucher calldata voucher
-    ) internal view returns (address) {
-        bytes32 digest = _hashDiscountVoucher(voucher);
-        return ECDSA.recover(digest, voucher.signature);
-    }
-
-    /// @notice Verifies the signature for a given ContentDiscountVoucher, returning the address of the signer.
-    /// @dev Will revert if the signature is invalid.
-    /// @param voucher A ContentDiscountVoucher describing a content access rights.
-    function _verifyRefundVoucher(
-        RefundVoucher calldata voucher
-    ) internal view returns (address) {
-        bytes32 digest = _hashRefundVoucher(voucher);
-        return ECDSA.recover(digest, voucher.signature);
-    }
-
-    /// @notice Verifies the signature for a given CoachingVoucher, returning the address of the signer.
-    /// @dev Will revert if the signature is invalid.
-    /// @param voucher A CoachingVoucher describing a content access rights.
-    function _verifyCoachingVoucher(
-        CoachingVoucher calldata voucher
-    ) internal view returns (address) {
-        bytes32 digest = _hashCoachingVoucher(voucher);
-        return ECDSA.recover(digest, voucher.signature);
     }
 }
 
