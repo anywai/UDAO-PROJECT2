@@ -8,16 +8,15 @@ const { LazyRole } = require("../lib/LazyRole");
 const { deploy } = require("../lib/deployments");
 const { Redeem } = require("../lib/Redeem");
 
-const {
-  WMATIC_ABI,
-  NonFunbiblePositionABI,
-  NonFunbiblePositionAddress,
-  WMATICAddress,
-} = require("../lib/abis");
+require("dotenv").config();
+
+const TEST_VERSION = process.env.TEST_VERSION;
+
 /// HELPERS---------------------------------------------------------------------
 /// @dev Deploy contracts and assign them
 async function reDeploy(reApplyRolesViaVoucher = true, isDexRequired = false) {
   const replace = await deploy(isDexRequired);
+
   backend = replace.backend;
   contentCreator = replace.contentCreator;
   contentBuyer = replace.contentBuyer;
@@ -423,6 +422,10 @@ describe("UDAOC Contract", function () {
 
   it("Should fail to transfer token if sender is not KYCed", async function () {
     await reDeploy();
+    if(TEST_VERSION == 1){
+      this.skip();
+    }
+    console.log(TEST_VERSION)
     await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
@@ -462,6 +465,9 @@ describe("UDAOC Contract", function () {
 
   it("Should fail to transfer token if sender is banned", async function () {
     await reDeploy();
+    if(TEST_VERSION == 1){
+      this.skip();
+    }
     await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
@@ -501,6 +507,9 @@ describe("UDAOC Contract", function () {
 
   it("Should fail to transfer token if receiver is banned", async function () {
     await reDeploy();
+    if(TEST_VERSION == 1){
+      this.skip();
+    }
     await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer.address, true);
     await contractRoleManager.setBan(contentBuyer.address, true);
@@ -539,6 +548,9 @@ describe("UDAOC Contract", function () {
 
   it("Should fail to transfer token if sender is not KYCed", async function () {
     await reDeploy();
+    if(TEST_VERSION == 1){
+      this.skip();
+    }
     await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
@@ -1380,6 +1392,9 @@ describe("UDAOC Contract", function () {
       account3,
       contractPriceGetter,
     } = await deploy(true);
+    if(TEST_VERSION == 1){
+      this.skip();
+    }
     await contractRoleManager.setKYC(contentCreator.address, true);
     /// part prices must be determined before creating content
     const partPricesArray = [
@@ -1475,6 +1490,9 @@ describe("UDAOC Contract", function () {
       account3,
       contractPriceGetter,
     } = await deploy(true);
+    if(TEST_VERSION == 1){
+      this.skip();
+    }
     await contractRoleManager.setKYC(contentCreator.address, true);
 
     /// part prices must be determined before creating content
