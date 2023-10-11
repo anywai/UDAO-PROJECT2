@@ -61,7 +61,7 @@ contract UDAOStaker is RoleNames, EIP712, Pausable {
     event SetPlatformTreasuryAddress(address _newAddress);
     /// @notice Triggered when any role is applied, roleId: 0 validator, 1 juror
     event RoleApplied(uint256 _roleId, address _user, uint256 _lockAmount);
-    /// @notice Triggered when any role is approved, roleId: 0 validator, 1 juror, 2 corporate
+    /// @notice Triggered when any role is approved, roleId: 0 validator, 1 juror
     event RoleApproved(uint256 _roleId, address _user);
     /// @notice Triggered when any role is rejected, roleId: 0 validator, 1 juror
     event RoleRejected(uint256 _roleId, address _user);
@@ -69,14 +69,6 @@ contract UDAOStaker is RoleNames, EIP712, Pausable {
     event ValidatorStakeWithdrawn(address _validator, uint256 _amount);
     /// @notice Triggered when juror stake is withdrawn
     event JurorStakeWithdrawn(address _juror, uint256 _amount);
-    /// @notice Triggered when a new job listing is registered
-    event JobListingRegistered(address corporate, uint amountPerListing);
-    /// @notice Triggered when a job listing is unregistered
-    event JobListingUnregistered(
-        address corporate,
-        uint[] listingId,
-        uint amount
-    );
     /// @notice Triggered when governance stake is added
     event GovernanceStake(
         address _member,
@@ -112,17 +104,6 @@ contract UDAOStaker is RoleNames, EIP712, Pausable {
     mapping(address => bool) public activeApplicationForValidator;
     /// @notice if user has an active application for juror role
     mapping(address => bool) public activeApplicationForJuror;
-    /// @notice Amount of UDAO staked by corporates for job listings
-    uint256 public corporateStakePerListing = 500 ether;
-    /* TODO These were never used, why?
-    mapping(address => uint) corporateStakedUDAO;
-    mapping(address => uint) corporateLockedUDAO;
-    mapping(address => uint) corporateActiveListingAmount;
-    */
-    /// @notice Job listing id for each corporate
-    mapping(address => mapping(uint => uint)) corporateListingId;
-    /// @notice Simple counter for job listing ids
-    mapping(address => uint) corporateLatestListingId;
     /// @notice Governance lock struct for each governance member
     struct GovernanceLock {
         uint256 expire;
@@ -317,7 +298,7 @@ contract UDAOStaker is RoleNames, EIP712, Pausable {
         address redeemer;
         /// @notice The date until the voucher is valid
         uint256 validUntil;
-        /// @notice 0 validator, 1 juror, 2 corporate
+        /// @notice 0 validator, 1 juror
         uint256 roleId;
         /// @notice the EIP-712 signature of all other fields in the RoleVoucher struct.
         bytes signature;
@@ -431,8 +412,6 @@ contract UDAOStaker is RoleNames, EIP712, Pausable {
             jurorApplication.expire = block.timestamp + jurorLockTime;
             roleManager.grantRoleStaker(JUROR_ROLE, voucher.redeemer);
             activeApplicationForJuror[voucher.redeemer] = false;
-        } else if (roleId == 2) {
-            roleManager.grantRoleStaker(CORPORATE_ROLE, voucher.redeemer);
         } else {
             revert("Undefined role ID!");
         }
@@ -718,64 +697,6 @@ contract UDAOStaker is RoleNames, EIP712, Pausable {
             voteRewards
         );
         emit VoteRewardsWithdrawn(msg.sender, voteRewards);
-    }
-
-    /// @notice Allows admins to set corporateStakePerListing
-    /// @param _corporateStakePerListing the new corporateStakePerListing
-    function setCorporateStakePerListing(
-        uint256 _corporateStakePerListing
-    ) external {
-        require(
-            roleManager.hasRoles(administrator_roles, msg.sender),
-            "Only admins can set corporateStakePerListing"
-        );
-        corporateStakePerListing = _corporateStakePerListing;
-    }
-
-    /// @notice Allows corporate to register job listings
-    /// @param jobListingCount the number of job listings to register
-    function registerJobListing(uint jobListingCount) external {
-        require(
-            roleManager.hasRole(CORPORATE_ROLE, msg.sender),
-            "Only corporate can register job listings"
-        );
-        //make sure juror is kyced and not banned
-        require(roleManager.isKYCed(msg.sender, 9), "You are not KYCed");
-        require(!roleManager.isBanned(msg.sender, 9), "You were banned");
-        require(jobListingCount > 0, "Zero job listing count is not allowed");
-        udao.transferFrom(
-            msg.sender,
-            address(this),
-            jobListingCount * corporateStakePerListing
-        );
-        for (uint i = 0; i < jobListingCount; i++) {
-            corporateListingId[msg.sender][
-                corporateLatestListingId[msg.sender]
-            ] = corporateStakePerListing;
-            corporateLatestListingId[msg.sender]++;
-        }
-        emit JobListingRegistered(
-            msg.sender,
-            jobListingCount * corporateStakePerListing
-        );
-    }
-
-    /// @notice Allows corporate to unregister job listings
-    /// @param listingIds the ids of the job listings to unregister
-    /// TODO Waiting ofr issue 54
-    function unregisterJobListing(uint[] calldata listingIds) external {
-        require(
-            roleManager.hasRole(CORPORATE_ROLE, msg.sender),
-            "Only corporate can unregister job listings"
-        );
-        uint totalUnstakeAmount;
-        for (uint i = 0; i < listingIds.length; i++) {
-            totalUnstakeAmount += corporateListingId[msg.sender][listingIds[i]];
-            corporateListingId[msg.sender][listingIds[i]] = 0;
-        }
-        require(totalUnstakeAmount > 0, "Cannot unstake zero tokens");
-        udao.transfer(msg.sender, totalUnstakeAmount);
-        emit JobListingUnregistered(msg.sender, listingIds, totalUnstakeAmount);
     }
 
     /// @notice Returns a hash of the given ContentVoucher, prepared using EIP712 typed data hashing rules.
