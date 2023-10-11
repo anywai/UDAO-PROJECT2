@@ -42,6 +42,7 @@ contract UDAOContent is
         roleManager = IRoleManager(rmAddress);
     }
 
+    mapping(uint256 => bool) public isSellable;
     // tokenId => (partId => price), first part is the full price
     mapping(uint => mapping(uint => uint)) public contentPrice;
     // tokenId => number of Parts
@@ -72,6 +73,17 @@ contract UDAOContent is
         uint256 validationScore;
         /// @notice the EIP-712 signature of all other fields in the CertificateVoucher struct.
         bytes signature;
+    }
+
+    /// @notice Allows sale controller to set sellable status of a content
+    /// @param _tokenId id of the content
+    /// @param _isSellable is content sellable
+    function setSellable(uint _tokenId, bool _isSellable) external {
+        require(
+            roleManager.hasRole(SALE_CONTROLLER, msg.sender),
+            "Only sale controller can set sellable"
+        );
+        isSellable[_tokenId] = _isSellable;
     }
 
     /// @notice Allows backend to set the contract manager address
@@ -141,6 +153,7 @@ contract UDAOContent is
         _mint(voucher._redeemer, tokenId);
         _setTokenURI(tokenId, voucher._uri);
         _tokenIds.increment();
+        isSellable[tokenId] = true;
 
         ISupVis.createValidation(tokenId, voucher.validationScore);
     }

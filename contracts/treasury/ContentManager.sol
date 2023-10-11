@@ -2,6 +2,7 @@
 /// @title Content purchasing and cut management
 pragma solidity ^0.8.4;
 import "./BasePlatform.sol";
+import "hardhat/console.sol";
 
 abstract contract ContentManager is BasePlatform {
     /// @notice Emitted when a content is bought
@@ -42,23 +43,11 @@ abstract contract ContentManager is BasePlatform {
 
     mapping(uint256 => ContentSale) public sales;
     mapping(uint256 => CoachingSale) public coachSales;
-    mapping(uint256 => bool) public isSellable;
 
     // wallet => content token Ids
     mapping(address => uint256[][]) ownedContents;
 
     uint256 private coachingIndex;
-
-    /// @notice Allows sale controller to set sellable status of a content
-    /// @param _tokenId id of the content
-    /// @param _isSellable is content sellable
-    function setSellable(uint _tokenId, bool _isSellable) external {
-        require(
-            roleManager.hasRole(SALE_CONTROLLER, msg.sender),
-            "Only sale controller can set sellable"
-        );
-        isSellable[_tokenId] = _isSellable;
-    }
 
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@//
 
@@ -90,7 +79,10 @@ abstract contract ContentManager is BasePlatform {
 
         /// @dev Loop through the cart
         for (uint256 i; i < voucherIdsLength; i++) {
-            require(isSellable[voucher[i].tokenId] == true, "Not sellable");
+            require(
+                udaoc.isSellable(voucher[i].tokenId) == true,
+                "Not sellable"
+            );
             // make sure signature is valid and get the address of the signer
             voucherVerifier.verifyDiscountVoucher(voucher[i]);
             require(

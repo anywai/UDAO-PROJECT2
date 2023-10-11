@@ -13,4 +13,6 @@ interface IUDAOC is IERC721 {
     ) external view returns (uint256);
 
     function getPartNumberOfContent(uint tokenId) external view returns (uint);
+
+    function isSellable(uint tokenId) external view returns (bool);
 }
