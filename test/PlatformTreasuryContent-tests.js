@@ -10,12 +10,7 @@ const helpers = require("@nomicfoundation/hardhat-network-helpers");
 const { deploy } = require("../lib/deployments");
 const { anyValue } = require("@nomicfoundation/hardhat-chai-matchers/withArgs");
 
-const {
-  WMATIC_ABI,
-  NonFunbiblePositionABI,
-  NonFunbiblePositionAddress,
-  WMATICAddress,
-} = require("../lib/abis");
+const { WMATIC_ABI, NonFunbiblePositionABI, NonFunbiblePositionAddress, WMATICAddress } = require("../lib/abis");
 
 // Enable and inject BN dependency
 chai.use(require("chai-bn")(BN));
@@ -67,39 +62,16 @@ async function reDeploy(reApplyRolesViaVoucher = true, isDexRequired = false) {
   account2 = replace.account2;
   account3 = replace.account3;
   contractPriceGetter = replace.contractPriceGetter;
-  const reApplyValidatorRoles = [
-    validator,
-    validator1,
-    validator2,
-    validator3,
-    validator4,
-    validator5,
-  ];
-  const reApplyJurorRoles = [
-    jurorMember,
-    jurorMember1,
-    jurorMember2,
-    jurorMember3,
-    jurorMember4,
-  ];
-  const VALIDATOR_ROLE = ethers.utils.keccak256(
-    ethers.utils.toUtf8Bytes("VALIDATOR_ROLE")
-  );
-  const JUROR_ROLE = ethers.utils.keccak256(
-    ethers.utils.toUtf8Bytes("JUROR_ROLE")
-  );
+  const reApplyValidatorRoles = [validator, validator1, validator2, validator3, validator4, validator5];
+  const reApplyJurorRoles = [jurorMember, jurorMember1, jurorMember2, jurorMember3, jurorMember4];
+  const VALIDATOR_ROLE = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("VALIDATOR_ROLE"));
+  const JUROR_ROLE = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("JUROR_ROLE"));
   if (reApplyRolesViaVoucher) {
     for (let i = 0; i < reApplyValidatorRoles.length; i++) {
-      await contractRoleManager.revokeRole(
-        VALIDATOR_ROLE,
-        reApplyValidatorRoles[i].address
-      );
+      await contractRoleManager.revokeRole(VALIDATOR_ROLE, reApplyValidatorRoles[i].address);
     }
     for (let i = 0; i < reApplyJurorRoles.length; i++) {
-      await contractRoleManager.revokeRole(
-        JUROR_ROLE,
-        reApplyJurorRoles[i].address
-      );
+      await contractRoleManager.revokeRole(JUROR_ROLE, reApplyJurorRoles[i].address);
     }
     for (let i = 0; i < reApplyValidatorRoles.length; i++) {
       await grantValidatorRole(
@@ -111,87 +83,41 @@ async function reDeploy(reApplyRolesViaVoucher = true, isDexRequired = false) {
       );
     }
     for (let i = 0; i < reApplyJurorRoles.length; i++) {
-      await grantJurorRole(
-        reApplyJurorRoles[i],
-        contractRoleManager,
-        contractUDAO,
-        contractUDAOStaker,
-        backend
-      );
+      await grantJurorRole(reApplyJurorRoles[i], contractRoleManager, contractUDAO, contractUDAOStaker, backend);
     }
   }
 }
-async function grantValidatorRole(
-  account,
-  contractRoleManager,
-  contractUDAO,
-  contractUDAOStaker,
-  backend
-) {
+async function grantValidatorRole(account, contractRoleManager, contractUDAO, contractUDAOStaker, backend) {
   await contractRoleManager.setKYC(account.address, true);
-  await contractUDAO.transfer(
-    account.address,
-    ethers.utils.parseEther("100.0")
-  );
-  await contractUDAO
-    .connect(account)
-    .approve(
-      contractUDAOStaker.address,
-      ethers.utils.parseEther("999999999999.0")
-    );
+  await contractUDAO.transfer(account.address, ethers.utils.parseEther("100.0"));
+  await contractUDAO.connect(account).approve(contractUDAOStaker.address, ethers.utils.parseEther("999999999999.0"));
 
   // Staking
-  await contractUDAOStaker
-    .connect(account)
-    .stakeForGovernance(ethers.utils.parseEther("10"), 30);
+  await contractUDAOStaker.connect(account).stakeForGovernance(ethers.utils.parseEther("10"), 30);
   await contractUDAOStaker.connect(account).applyForValidator();
   const lazyRole = new LazyRole({
     contract: contractUDAOStaker,
     signer: backend,
   });
-  const role_voucher = await lazyRole.createVoucher(
-    account.address,
-    Date.now() + 999999999,
-    0
-  );
+  const role_voucher = await lazyRole.createVoucher(account.address, Date.now() + 999999999, 0);
   await contractUDAOStaker.connect(account).getApproved(role_voucher);
 }
 
-async function grantJurorRole(
-  account,
-  contractRoleManager,
-  contractUDAO,
-  contractUDAOStaker,
-  backend
-) {
+async function grantJurorRole(account, contractRoleManager, contractUDAO, contractUDAOStaker, backend) {
   await contractRoleManager.setKYC(account.address, true);
-  await contractUDAO.transfer(
-    account.address,
-    ethers.utils.parseEther("100.0")
-  );
+  await contractUDAO.transfer(account.address, ethers.utils.parseEther("100.0"));
 
-  await contractUDAO
-    .connect(account)
-    .approve(
-      contractUDAOStaker.address,
-      ethers.utils.parseEther("999999999999.0")
-    );
+  await contractUDAO.connect(account).approve(contractUDAOStaker.address, ethers.utils.parseEther("999999999999.0"));
 
   // Staking
 
-  await contractUDAOStaker
-    .connect(account)
-    .stakeForGovernance(ethers.utils.parseEther("10"), 30);
+  await contractUDAOStaker.connect(account).stakeForGovernance(ethers.utils.parseEther("10"), 30);
   await contractUDAOStaker.connect(account).applyForJuror();
   const lazyRole = new LazyRole({
     contract: contractUDAOStaker,
     signer: backend,
   });
-  const role_voucher = await lazyRole.createVoucher(
-    account.address,
-    Date.now() + 999999999,
-    1
-  );
+  const role_voucher = await lazyRole.createVoucher(account.address, Date.now() + 999999999, 1);
   await contractUDAOStaker.connect(account).getApproved(role_voucher);
 }
 async function runValidation(
@@ -206,111 +132,40 @@ async function runValidation(
   tokenId = 0,
   validationId = 1
 ) {
-  await expect(
-    contractSupervision.connect(validator1).assignValidation(validationId)
-  )
+  await expect(contractSupervision.connect(validator1).assignValidation(validationId))
     .to.emit(contractSupervision, "ValidationAssigned")
-    .withArgs(
-      ethers.BigNumber.from(tokenId),
-      ethers.BigNumber.from(validationId),
-      validator1.address
-    );
-  await expect(
-    contractSupervision.connect(validator2).assignValidation(validationId)
-  )
+    .withArgs(ethers.BigNumber.from(tokenId), ethers.BigNumber.from(validationId), validator1.address);
+  await expect(contractSupervision.connect(validator2).assignValidation(validationId))
     .to.emit(contractSupervision, "ValidationAssigned")
-    .withArgs(
-      ethers.BigNumber.from(tokenId),
-      ethers.BigNumber.from(validationId),
-      validator2.address
-    );
-  await expect(
-    contractSupervision.connect(validator3).assignValidation(validationId)
-  )
+    .withArgs(ethers.BigNumber.from(tokenId), ethers.BigNumber.from(validationId), validator2.address);
+  await expect(contractSupervision.connect(validator3).assignValidation(validationId))
     .to.emit(contractSupervision, "ValidationAssigned")
-    .withArgs(
-      ethers.BigNumber.from(tokenId),
-      ethers.BigNumber.from(validationId),
-      validator3.address
-    );
-  await expect(
-    contractSupervision.connect(validator4).assignValidation(validationId)
-  )
+    .withArgs(ethers.BigNumber.from(tokenId), ethers.BigNumber.from(validationId), validator3.address);
+  await expect(contractSupervision.connect(validator4).assignValidation(validationId))
     .to.emit(contractSupervision, "ValidationAssigned")
-    .withArgs(
-      ethers.BigNumber.from(tokenId),
-      ethers.BigNumber.from(validationId),
-      validator4.address
-    );
-  await expect(
-    contractSupervision.connect(validator5).assignValidation(validationId)
-  )
+    .withArgs(ethers.BigNumber.from(tokenId), ethers.BigNumber.from(validationId), validator4.address);
+  await expect(contractSupervision.connect(validator5).assignValidation(validationId))
     .to.emit(contractSupervision, "ValidationAssigned")
-    .withArgs(
-      ethers.BigNumber.from(tokenId),
-      ethers.BigNumber.from(validationId),
-      validator5.address
-    );
+    .withArgs(ethers.BigNumber.from(tokenId), ethers.BigNumber.from(validationId), validator5.address);
 
-  await expect(
-    contractSupervision.connect(validator1).sendValidation(validationId, true)
-  )
+  await expect(contractSupervision.connect(validator1).sendValidation(validationId, true))
     .to.emit(contractSupervision, "ValidationResultSent")
-    .withArgs(
-      ethers.BigNumber.from(tokenId),
-      ethers.BigNumber.from(validationId),
-      validator1.address,
-      true
-    );
-  await expect(
-    contractSupervision.connect(validator2).sendValidation(validationId, true)
-  )
+    .withArgs(ethers.BigNumber.from(tokenId), ethers.BigNumber.from(validationId), validator1.address, true);
+  await expect(contractSupervision.connect(validator2).sendValidation(validationId, true))
     .to.emit(contractSupervision, "ValidationResultSent")
-    .withArgs(
-      ethers.BigNumber.from(tokenId),
-      ethers.BigNumber.from(validationId),
-      validator2.address,
-      true
-    );
-  await expect(
-    contractSupervision.connect(validator3).sendValidation(validationId, true)
-  )
+    .withArgs(ethers.BigNumber.from(tokenId), ethers.BigNumber.from(validationId), validator2.address, true);
+  await expect(contractSupervision.connect(validator3).sendValidation(validationId, true))
     .to.emit(contractSupervision, "ValidationResultSent")
-    .withArgs(
-      ethers.BigNumber.from(tokenId),
-      ethers.BigNumber.from(validationId),
-      validator3.address,
-      true
-    );
-  await expect(
-    contractSupervision.connect(validator4).sendValidation(validationId, true)
-  )
+    .withArgs(ethers.BigNumber.from(tokenId), ethers.BigNumber.from(validationId), validator3.address, true);
+  await expect(contractSupervision.connect(validator4).sendValidation(validationId, true))
     .to.emit(contractSupervision, "ValidationResultSent")
-    .withArgs(
-      ethers.BigNumber.from(tokenId),
-      ethers.BigNumber.from(validationId),
-      validator4.address,
-      true
-    );
-  await expect(
-    contractSupervision.connect(validator5).sendValidation(validationId, false)
-  )
+    .withArgs(ethers.BigNumber.from(tokenId), ethers.BigNumber.from(validationId), validator4.address, true);
+  await expect(contractSupervision.connect(validator5).sendValidation(validationId, false))
     .to.emit(contractSupervision, "ValidationResultSent")
-    .withArgs(
-      ethers.BigNumber.from(tokenId),
-      ethers.BigNumber.from(validationId),
-      validator5.address,
-      false
-    );
-  await expect(
-    contractSupervision.connect(contentCreator).finalizeValidation(validationId)
-  )
+    .withArgs(ethers.BigNumber.from(tokenId), ethers.BigNumber.from(validationId), validator5.address, false);
+  await expect(contractSupervision.connect(contentCreator).finalizeValidation(validationId))
     .to.emit(contractSupervision, "ValidationEnded")
-    .withArgs(
-      ethers.BigNumber.from(tokenId),
-      ethers.BigNumber.from(validationId),
-      true
-    );
+    .withArgs(ethers.BigNumber.from(tokenId), ethers.BigNumber.from(validationId), true);
 }
 
 async function createContentVoucher(
@@ -358,15 +213,8 @@ describe("Platform Treasury Contract - Content", function () {
     // Get updated address
     await expect(contractPlatformTreasury.connect(backend).updateAddresses())
       .to.emit(contractPlatformTreasury, "AddressesUpdated")
-      .withArgs(
-        anyValue,
-        anyValue,
-        "0x5B38Da6a701c568545dCfcB03FcB875f56beddC4",
-        anyValue
-      );
-    await contractContractManager
-      .connect(backend)
-      .setAddressISupVisAddress(contractSupervision.address);
+      .withArgs(anyValue, anyValue, "0x5B38Da6a701c568545dCfcB03FcB875f56beddC4", anyValue);
+    await contractContractManager.connect(backend).setAddressISupVisAddress(contractSupervision.address);
     // Get updated address
     await expect(contractPlatformTreasury.connect(backend).updateAddresses())
       .to.emit(contractPlatformTreasury, "AddressesUpdated")
@@ -376,9 +224,7 @@ describe("Platform Treasury Contract - Content", function () {
   it("Should fail to set validation manager if not FOUNDATION", async function () {
     await reDeploy();
 
-    await expect(
-      contractPlatformTreasury.connect(foundation).updateAddresses()
-    ).to.revertedWith(
+    await expect(contractPlatformTreasury.connect(foundation).updateAddresses()).to.revertedWith(
       "Only backend can update addresses"
     );
   });
@@ -391,10 +237,7 @@ describe("Platform Treasury Contract - Content", function () {
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
     /// part prices must be determined before creating content
-    const partPricesArray = [
-      ethers.utils.parseEther("1"),
-      ethers.utils.parseEther("1"),
-    ];
+    const partPricesArray = [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")];
 
     /// Create Voucher from redeem.js and use it for creating content
     const createContentVoucherSample = await createContentVoucher(
@@ -405,17 +248,9 @@ describe("Platform Treasury Contract - Content", function () {
     );
 
     /// Create content
-    await expect(
-      contractUDAOContent
-        .connect(contentCreator)
-        .createContent(createContentVoucherSample)
-    )
+    await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample))
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
-      .withArgs(
-        "0x0000000000000000000000000000000000000000",
-        contentCreator.address,
-        0
-      );
+      .withArgs("0x0000000000000000000000000000000000000000", contentCreator.address, 0);
 
     /// Start validation and finalize it
     await runValidation(
@@ -430,24 +265,14 @@ describe("Platform Treasury Contract - Content", function () {
     );
 
     /// Send UDAO to the buyer's wallet
-    await contractUDAO.transfer(
-      contentBuyer.address,
-      ethers.utils.parseEther("100.0")
-    );
+    await contractUDAO.transfer(contentBuyer.address, ethers.utils.parseEther("100.0"));
     /// Content buyer needs to give approval to the platformtreasury
     await contractUDAO
       .connect(contentBuyer)
-      .approve(
-        contractPlatformTreasury.address,
-        ethers.utils.parseEther("999999999999.0")
-      );
+      .approve(contractPlatformTreasury.address, ethers.utils.parseEther("999999999999.0"));
 
-    await contractPlatformTreasury
-      .connect(contentBuyer)
-      .buyContent([0], [true], [[1]], [ethers.constants.AddressZero]);
-    const result = await contractPlatformTreasury
-      .connect(contentBuyer)
-      .getOwnedContent(contentBuyer.address);
+    await contractPlatformTreasury.connect(contentBuyer).buyContent([0], [true], [[1]], [ethers.constants.AddressZero]);
+    const result = await contractPlatformTreasury.connect(contentBuyer).getOwnedContent(contentBuyer.address);
 
     const numArray = result.map((x) => x.map((y) => y.toNumber()));
     expect(numArray).to.eql([[0, 0]]);
@@ -477,17 +302,9 @@ describe("Platform Treasury Contract - Content", function () {
     );
 
     /// Create content
-    await expect(
-      contractUDAOContent
-        .connect(contentCreator)
-        .createContent(createContentVoucherSample)
-    )
+    await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample))
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
-      .withArgs(
-        "0x0000000000000000000000000000000000000000",
-        contentCreator.address,
-        0
-      );
+      .withArgs("0x0000000000000000000000000000000000000000", contentCreator.address, 0);
     /// Start validation and finalize it
     await runValidation(
       contractSupervision,
@@ -501,24 +318,14 @@ describe("Platform Treasury Contract - Content", function () {
     );
 
     /// Send UDAO to the buyer's wallet
-    await contractUDAO.transfer(
-      contentBuyer.address,
-      ethers.utils.parseEther("100.0")
-    );
+    await contractUDAO.transfer(contentBuyer.address, ethers.utils.parseEther("100.0"));
     /// Content buyer needs to give approval to the platformtreasury
     await contractUDAO
       .connect(contentBuyer)
-      .approve(
-        contractPlatformTreasury.address,
-        ethers.utils.parseEther("999999999999.0")
-      );
+      .approve(contractPlatformTreasury.address, ethers.utils.parseEther("999999999999.0"));
 
-    await contractPlatformTreasury
-      .connect(contentBuyer)
-      .buyContent([0], [false], [[1, 2, 3]], [contentBuyer.address]);
-    const result = await contractPlatformTreasury
-      .connect(contentBuyer)
-      .getOwnedContent(contentBuyer.address);
+    await contractPlatformTreasury.connect(contentBuyer).buyContent([0], [false], [[1, 2, 3]], [contentBuyer.address]);
+    const result = await contractPlatformTreasury.connect(contentBuyer).getOwnedContent(contentBuyer.address);
     const numArray = result.map((x) => x.map((y) => y.toNumber()));
     expect(numArray).to.eql([
       [0, 1],
@@ -551,17 +358,9 @@ describe("Platform Treasury Contract - Content", function () {
     );
 
     /// create content
-    await expect(
-      contractUDAOContent
-        .connect(contentCreator)
-        .createContent(createContentVoucherSample)
-    )
+    await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample))
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
-      .withArgs(
-        "0x0000000000000000000000000000000000000000",
-        contentCreator.address,
-        0
-      );
+      .withArgs("0x0000000000000000000000000000000000000000", contentCreator.address, 0);
     /// Start validation and finalize it
     await runValidation(
       contractSupervision,
@@ -575,26 +374,16 @@ describe("Platform Treasury Contract - Content", function () {
     );
 
     /// Send UDAO to the buyer's wallet
-    await contractUDAO.transfer(
-      contentBuyer.address,
-      ethers.utils.parseEther("100.0")
-    );
+    await contractUDAO.transfer(contentBuyer.address, ethers.utils.parseEther("100.0"));
     /// Content buyer needs to give approval to the platformtreasury
     await contractUDAO
       .connect(contentBuyer)
-      .approve(
-        contractPlatformTreasury.address,
-        ethers.utils.parseEther("999999999999.0")
-      );
+      .approve(contractPlatformTreasury.address, ethers.utils.parseEther("999999999999.0"));
 
-    await contractPlatformTreasury
-      .connect(contentBuyer)
-      .buyContent([0], [false], [[2]], [contentBuyer.address]);
+    await contractPlatformTreasury.connect(contentBuyer).buyContent([0], [false], [[2]], [contentBuyer.address]);
 
     await expect(
-      contractPlatformTreasury
-        .connect(contentBuyer)
-        .buyContent([0], [false], [[2]], [contentBuyer.address])
+      contractPlatformTreasury.connect(contentBuyer).buyContent([0], [false], [[2]], [contentBuyer.address])
     ).to.revertedWith("Content part is already bought");
   });
 
@@ -608,15 +397,10 @@ describe("Platform Treasury Contract - Content", function () {
     /// Content buyer needs to give approval to the platformtreasury
     await contractUDAO
       .connect(contentBuyer)
-      .approve(
-        contractPlatformTreasury.address,
-        ethers.utils.parseEther("999999999999.0")
-      );
+      .approve(contractPlatformTreasury.address, ethers.utils.parseEther("999999999999.0"));
 
     await expect(
-      contractPlatformTreasury
-        .connect(contentBuyer)
-        .buyContent([0], [true], [[1]], [ethers.constants.AddressZero])
+      contractPlatformTreasury.connect(contentBuyer).buyContent([0], [true], [[1]], [ethers.constants.AddressZero])
     ).to.revertedWith("Content does not exist!");
   });
 
@@ -631,10 +415,7 @@ describe("Platform Treasury Contract - Content", function () {
     await contractRoleManager.setBan(contentBuyer.address, true);
 
     /// part prices must be determined before creating content
-    const partPricesArray = [
-      ethers.utils.parseEther("1"),
-      ethers.utils.parseEther("1"),
-    ];
+    const partPricesArray = [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")];
 
     /// Create voucher from redeem.js and use it for creating content
     const createContentVoucherSample = await createContentVoucher(
@@ -645,17 +426,9 @@ describe("Platform Treasury Contract - Content", function () {
     );
 
     /// Create content
-    await expect(
-      contractUDAOContent
-        .connect(contentCreator)
-        .createContent(createContentVoucherSample)
-    )
+    await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample))
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
-      .withArgs(
-        "0x0000000000000000000000000000000000000000",
-        contentCreator.address,
-        0
-      );
+      .withArgs("0x0000000000000000000000000000000000000000", contentCreator.address, 0);
     /// Start validation and finalize it
     await runValidation(
       contractSupervision,
@@ -669,22 +442,14 @@ describe("Platform Treasury Contract - Content", function () {
     );
 
     /// Send UDAO to the buyer's wallet
-    await contractUDAO.transfer(
-      contentBuyer.address,
-      ethers.utils.parseEther("100.0")
-    );
+    await contractUDAO.transfer(contentBuyer.address, ethers.utils.parseEther("100.0"));
     /// Content buyer needs to give approval to the platformtreasury
     await contractUDAO
       .connect(contentBuyer)
-      .approve(
-        contractPlatformTreasury.address,
-        ethers.utils.parseEther("999999999999.0")
-      );
+      .approve(contractPlatformTreasury.address, ethers.utils.parseEther("999999999999.0"));
 
     await expect(
-      contractPlatformTreasury
-        .connect(contentBuyer)
-        .buyContent([0], [true], [[1]], [ethers.constants.AddressZero])
+      contractPlatformTreasury.connect(contentBuyer).buyContent([0], [true], [[1]], [ethers.constants.AddressZero])
     ).to.revertedWith("You are banned");
   });
 
@@ -696,10 +461,7 @@ describe("Platform Treasury Contract - Content", function () {
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
     /// part prices must be determined before creating content
-    const partPricesArray = [
-      ethers.utils.parseEther("1"),
-      ethers.utils.parseEther("1"),
-    ];
+    const partPricesArray = [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")];
 
     /// Create voucher from redeem.js and use it for creating content
     const createContentVoucherSample = await createContentVoucher(
@@ -710,17 +472,9 @@ describe("Platform Treasury Contract - Content", function () {
     );
 
     /// Create content
-    await expect(
-      contractUDAOContent
-        .connect(contentCreator)
-        .createContent(createContentVoucherSample)
-    )
+    await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample))
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
-      .withArgs(
-        "0x0000000000000000000000000000000000000000",
-        contentCreator.address,
-        0
-      );
+      .withArgs("0x0000000000000000000000000000000000000000", contentCreator.address, 0);
     /// Start validation and finalize it
     await runValidation(
       contractSupervision,
@@ -734,25 +488,17 @@ describe("Platform Treasury Contract - Content", function () {
     );
 
     /// Send UDAO to the buyer's wallet
-    await contractUDAO.transfer(
-      contentBuyer.address,
-      ethers.utils.parseEther("100.0")
-    );
+    await contractUDAO.transfer(contentBuyer.address, ethers.utils.parseEther("100.0"));
     /// Content buyer needs to give approval to the platformtreasury
     await contractUDAO
       .connect(contentBuyer)
-      .approve(
-        contractPlatformTreasury.address,
-        ethers.utils.parseEther("999999999999.0")
-      );
+      .approve(contractPlatformTreasury.address, ethers.utils.parseEther("999999999999.0"));
 
     /// Set BAN
     await contractRoleManager.setBan(contentCreator.address, true);
 
     await expect(
-      contractPlatformTreasury
-        .connect(contentBuyer)
-        .buyContent([0], [true], [[1]], [ethers.constants.AddressZero])
+      contractPlatformTreasury.connect(contentBuyer).buyContent([0], [true], [[1]], [ethers.constants.AddressZero])
     ).to.revertedWith("Instructor is banned");
   });
 
@@ -780,17 +526,9 @@ describe("Platform Treasury Contract - Content", function () {
     );
 
     /// Create content
-    await expect(
-      contractUDAOContent
-        .connect(contentCreator)
-        .createContent(createContentVoucherSample)
-    )
+    await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample))
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
-      .withArgs(
-        "0x0000000000000000000000000000000000000000",
-        contentCreator.address,
-        0
-      );
+      .withArgs("0x0000000000000000000000000000000000000000", contentCreator.address, 0);
     /// Start validation and finalize it
     await runValidation(
       contractSupervision,
@@ -804,26 +542,16 @@ describe("Platform Treasury Contract - Content", function () {
     );
 
     /// Send UDAO to the buyer's wallet
-    await contractUDAO.transfer(
-      contentBuyer.address,
-      ethers.utils.parseEther("100.0")
-    );
+    await contractUDAO.transfer(contentBuyer.address, ethers.utils.parseEther("100.0"));
     /// Content buyer needs to give approval to the platformtreasury
     await contractUDAO
       .connect(contentBuyer)
-      .approve(
-        contractPlatformTreasury.address,
-        ethers.utils.parseEther("999999999999.0")
-      );
+      .approve(contractPlatformTreasury.address, ethers.utils.parseEther("999999999999.0"));
 
-    await contractPlatformTreasury
-      .connect(contentBuyer)
-      .buyContent([0], [true], [[1]], [ethers.constants.AddressZero]);
+    await contractPlatformTreasury.connect(contentBuyer).buyContent([0], [true], [[1]], [ethers.constants.AddressZero]);
 
     await expect(
-      contractPlatformTreasury
-        .connect(contentBuyer)
-        .buyContent([0], [false], [[3]], [contentBuyer.address])
+      contractPlatformTreasury.connect(contentBuyer).buyContent([0], [false], [[3]], [contentBuyer.address])
     ).to.revertedWith("Full content is already bought");
   });
 
@@ -851,129 +579,54 @@ describe("Platform Treasury Contract - Content", function () {
     );
 
     /// Create content
-    await expect(
-      contractUDAOContent
-        .connect(contentCreator)
-        .createContent(createContentVoucherSample)
-    )
+    await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample))
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
-      .withArgs(
-        "0x0000000000000000000000000000000000000000",
-        contentCreator.address,
-        0
-      );
+      .withArgs("0x0000000000000000000000000000000000000000", contentCreator.address, 0);
     await expect(contractSupervision.connect(validator1).assignValidation(1))
       .to.emit(contractSupervision, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator1.address
-      );
+      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), validator1.address);
     await expect(contractSupervision.connect(validator2).assignValidation(1))
       .to.emit(contractSupervision, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator2.address
-      );
+      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), validator2.address);
     await expect(contractSupervision.connect(validator3).assignValidation(1))
       .to.emit(contractSupervision, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator3.address
-      );
+      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), validator3.address);
     await expect(contractSupervision.connect(validator4).assignValidation(1))
       .to.emit(contractSupervision, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator4.address
-      );
+      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), validator4.address);
     await expect(contractSupervision.connect(validator5).assignValidation(1))
       .to.emit(contractSupervision, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator5.address
-      );
+      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), validator5.address);
 
-    await expect(
-      contractSupervision.connect(validator1).sendValidation(1, true)
-    )
+    await expect(contractSupervision.connect(validator1).sendValidation(1, true))
       .to.emit(contractSupervision, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator1.address,
-        true
-      );
-    await expect(
-      contractSupervision.connect(validator2).sendValidation(1, true)
-    )
+      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), validator1.address, true);
+    await expect(contractSupervision.connect(validator2).sendValidation(1, true))
       .to.emit(contractSupervision, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator2.address,
-        true
-      );
-    await expect(
-      contractSupervision.connect(validator3).sendValidation(1, true)
-    )
+      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), validator2.address, true);
+    await expect(contractSupervision.connect(validator3).sendValidation(1, true))
       .to.emit(contractSupervision, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator3.address,
-        true
-      );
-    await expect(
-      contractSupervision.connect(validator4).sendValidation(1, false)
-    )
+      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), validator3.address, true);
+    await expect(contractSupervision.connect(validator4).sendValidation(1, false))
       .to.emit(contractSupervision, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator4.address,
-        false
-      );
-    await expect(
-      contractSupervision.connect(validator5).sendValidation(1, false)
-    )
+      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), validator4.address, false);
+    await expect(contractSupervision.connect(validator5).sendValidation(1, false))
       .to.emit(contractSupervision, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator5.address,
-        false
-      );
-    await expect(
-      contractSupervision.connect(contentCreator).finalizeValidation(1)
-    )
+      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), validator5.address, false);
+    await expect(contractSupervision.connect(contentCreator).finalizeValidation(1))
       .to.emit(contractSupervision, "ValidationEnded")
       .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), true);
 
     /// Send UDAO to the buyer's wallet
-    await contractUDAO.transfer(
-      contentBuyer.address,
-      ethers.utils.parseEther("100.0")
-    );
+    await contractUDAO.transfer(contentBuyer.address, ethers.utils.parseEther("100.0"));
     /// Content buyer needs to give approval to the platformtreasury
     await contractUDAO
       .connect(contentBuyer)
-      .approve(
-        contractPlatformTreasury.address,
-        ethers.utils.parseEther("999999999999.0")
-      );
+      .approve(contractPlatformTreasury.address, ethers.utils.parseEther("999999999999.0"));
 
     await expect(
-      contractPlatformTreasury
-        .connect(contentBuyer)
-        .buyContent([0], [false], [[0]], [ethers.constants.AddressZero])
-    ).to.revertedWith(
-      "Purchased parts says 0, but fullContentPurchase is false!"
-    );
+      contractPlatformTreasury.connect(contentBuyer).buyContent([0], [false], [[0]], [ethers.constants.AddressZero])
+    ).to.revertedWith("Purchased parts says 0, but fullContentPurchase is false!");
   });
 
   it("Should fail to buy a content part if the part does not exist", async function () {
@@ -1000,126 +653,53 @@ describe("Platform Treasury Contract - Content", function () {
     );
 
     /// Create content
-    await expect(
-      contractUDAOContent
-        .connect(contentCreator)
-        .createContent(createContentVoucherSample)
-    )
+    await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample))
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
-      .withArgs(
-        "0x0000000000000000000000000000000000000000",
-        contentCreator.address,
-        0
-      );
+      .withArgs("0x0000000000000000000000000000000000000000", contentCreator.address, 0);
     await expect(contractSupervision.connect(validator1).assignValidation(1))
       .to.emit(contractSupervision, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator1.address
-      );
+      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), validator1.address);
     await expect(contractSupervision.connect(validator2).assignValidation(1))
       .to.emit(contractSupervision, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator2.address
-      );
+      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), validator2.address);
     await expect(contractSupervision.connect(validator3).assignValidation(1))
       .to.emit(contractSupervision, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator3.address
-      );
+      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), validator3.address);
     await expect(contractSupervision.connect(validator4).assignValidation(1))
       .to.emit(contractSupervision, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator4.address
-      );
+      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), validator4.address);
     await expect(contractSupervision.connect(validator5).assignValidation(1))
       .to.emit(contractSupervision, "ValidationAssigned")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator5.address
-      );
+      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), validator5.address);
 
-    await expect(
-      contractSupervision.connect(validator1).sendValidation(1, true)
-    )
+    await expect(contractSupervision.connect(validator1).sendValidation(1, true))
       .to.emit(contractSupervision, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator1.address,
-        true
-      );
-    await expect(
-      contractSupervision.connect(validator2).sendValidation(1, true)
-    )
+      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), validator1.address, true);
+    await expect(contractSupervision.connect(validator2).sendValidation(1, true))
       .to.emit(contractSupervision, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator2.address,
-        true
-      );
-    await expect(
-      contractSupervision.connect(validator3).sendValidation(1, true)
-    )
+      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), validator2.address, true);
+    await expect(contractSupervision.connect(validator3).sendValidation(1, true))
       .to.emit(contractSupervision, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator3.address,
-        true
-      );
-    await expect(
-      contractSupervision.connect(validator4).sendValidation(1, false)
-    )
+      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), validator3.address, true);
+    await expect(contractSupervision.connect(validator4).sendValidation(1, false))
       .to.emit(contractSupervision, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator4.address,
-        false
-      );
-    await expect(
-      contractSupervision.connect(validator5).sendValidation(1, false)
-    )
+      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), validator4.address, false);
+    await expect(contractSupervision.connect(validator5).sendValidation(1, false))
       .to.emit(contractSupervision, "ValidationResultSent")
-      .withArgs(
-        ethers.BigNumber.from(0),
-        ethers.BigNumber.from(1),
-        validator5.address,
-        false
-      );
-    await expect(
-      contractSupervision.connect(contentCreator).finalizeValidation(1)
-    )
+      .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), validator5.address, false);
+    await expect(contractSupervision.connect(contentCreator).finalizeValidation(1))
       .to.emit(contractSupervision, "ValidationEnded")
       .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), true);
 
     /// Send UDAO to the buyer's wallet
-    await contractUDAO.transfer(
-      contentBuyer.address,
-      ethers.utils.parseEther("100.0")
-    );
+    await contractUDAO.transfer(contentBuyer.address, ethers.utils.parseEther("100.0"));
     /// Content buyer needs to give approval to the platformtreasury
     await contractUDAO
       .connect(contentBuyer)
-      .approve(
-        contractPlatformTreasury.address,
-        ethers.utils.parseEther("999999999999.0")
-      );
+      .approve(contractPlatformTreasury.address, ethers.utils.parseEther("999999999999.0"));
 
     await expect(
-      contractPlatformTreasury
-        .connect(contentBuyer)
-        .buyContent([0], [false], [[20]], [ethers.constants.AddressZero])
+      contractPlatformTreasury.connect(contentBuyer).buyContent([0], [false], [[20]], [ethers.constants.AddressZero])
     ).to.revertedWith("Part does not exist!");
   });
 
@@ -1132,10 +712,7 @@ describe("Platform Treasury Contract - Content", function () {
     await contractRoleManager.setKYC(validator1.address, true);
 
     /// part prices must be determined before creating content
-    const partPricesArray = [
-      ethers.utils.parseEther("1"),
-      ethers.utils.parseEther("1"),
-    ];
+    const partPricesArray = [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")];
 
     ///Create Voucher from redeem.js and use it for creating content
     const createContentVoucherSample = await createContentVoucher(
@@ -1146,17 +723,9 @@ describe("Platform Treasury Contract - Content", function () {
     );
 
     /// Create content
-    await expect(
-      contractUDAOContent
-        .connect(contentCreator)
-        .createContent(createContentVoucherSample)
-    )
+    await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample))
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
-      .withArgs(
-        "0x0000000000000000000000000000000000000000",
-        contentCreator.address,
-        0
-      );
+      .withArgs("0x0000000000000000000000000000000000000000", contentCreator.address, 0);
     /// Start validation and finalize it
     await runValidation(
       contractSupervision,
@@ -1170,24 +739,14 @@ describe("Platform Treasury Contract - Content", function () {
     );
 
     /// Send UDAO to the buyer's wallet
-    await contractUDAO.transfer(
-      contentBuyer.address,
-      ethers.utils.parseEther("100.0")
-    );
+    await contractUDAO.transfer(contentBuyer.address, ethers.utils.parseEther("100.0"));
     /// Content buyer needs to give approval to the platformtreasury
     await contractUDAO
       .connect(contentBuyer)
-      .approve(
-        contractPlatformTreasury.address,
-        ethers.utils.parseEther("999999999999.0")
-      );
+      .approve(contractPlatformTreasury.address, ethers.utils.parseEther("999999999999.0"));
 
-    await contractPlatformTreasury
-      .connect(contentBuyer)
-      .buyContent([0], [true], [[1]], [validator1.address]);
-    const result = await contractPlatformTreasury
-      .connect(contentBuyer)
-      .getOwnedContent(validator1.address);
+    await contractPlatformTreasury.connect(contentBuyer).buyContent([0], [true], [[1]], [validator1.address]);
+    const result = await contractPlatformTreasury.connect(contentBuyer).getOwnedContent(validator1.address);
 
     const numArray = result.map((x) => x.map((y) => y.toNumber()));
     expect(numArray).to.eql([[0, 0]]);
@@ -1202,11 +761,7 @@ describe("Platform Treasury Contract - Content", function () {
     await contractRoleManager.setKYC(validator1.address, true);
 
     /// part prices must be determined before creating content
-    const partPricesArray = [
-      ethers.utils.parseEther("1"),
-      ethers.utils.parseEther("1"),
-      ethers.utils.parseEther("1"),
-    ];
+    const partPricesArray = [ethers.utils.parseEther("1"), ethers.utils.parseEther("1"), ethers.utils.parseEther("1")];
 
     ///Create Voucher from redeem.js and use it for creating content
     const createContentVoucherSample = await createContentVoucher(
@@ -1217,17 +772,9 @@ describe("Platform Treasury Contract - Content", function () {
     );
 
     /// Create content
-    await expect(
-      contractUDAOContent
-        .connect(contentCreator)
-        .createContent(createContentVoucherSample)
-    )
+    await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample))
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
-      .withArgs(
-        "0x0000000000000000000000000000000000000000",
-        contentCreator.address,
-        0
-      );
+      .withArgs("0x0000000000000000000000000000000000000000", contentCreator.address, 0);
     /// Start validation and finalize it
     await runValidation(
       contractSupervision,
@@ -1241,24 +788,14 @@ describe("Platform Treasury Contract - Content", function () {
     );
 
     /// Send UDAO to the buyer's wallet
-    await contractUDAO.transfer(
-      contentBuyer.address,
-      ethers.utils.parseEther("100.0")
-    );
+    await contractUDAO.transfer(contentBuyer.address, ethers.utils.parseEther("100.0"));
     /// Content buyer needs to give approval to the platformtreasury
     await contractUDAO
       .connect(contentBuyer)
-      .approve(
-        contractPlatformTreasury.address,
-        ethers.utils.parseEther("999999999999.0")
-      );
+      .approve(contractPlatformTreasury.address, ethers.utils.parseEther("999999999999.0"));
 
-    await contractPlatformTreasury
-      .connect(contentBuyer)
-      .buyContent([0], [false], [[1, 2]], [validator1.address]);
-    const result = await contractPlatformTreasury
-      .connect(contentBuyer)
-      .getOwnedContent(validator1.address);
+    await contractPlatformTreasury.connect(contentBuyer).buyContent([0], [false], [[1, 2]], [validator1.address]);
+    const result = await contractPlatformTreasury.connect(contentBuyer).getOwnedContent(validator1.address);
 
     const numArray = result.map((x) => x.map((y) => y.toNumber()));
     expect(numArray).to.eql([
@@ -1275,10 +812,7 @@ describe("Platform Treasury Contract - Content", function () {
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
     /// part prices must be determined before creating content
-    const partPricesArray = [
-      ethers.utils.parseEther("1"),
-      ethers.utils.parseEther("1"),
-    ];
+    const partPricesArray = [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")];
 
     ///Create Voucher from redeem.js and use it for creating content
     const createContentVoucherSample = await createContentVoucher(
@@ -1289,17 +823,9 @@ describe("Platform Treasury Contract - Content", function () {
     );
 
     /// Create content
-    await expect(
-      contractUDAOContent
-        .connect(contentCreator)
-        .createContent(createContentVoucherSample)
-    )
+    await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample))
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
-      .withArgs(
-        "0x0000000000000000000000000000000000000000",
-        contentCreator.address,
-        0
-      );
+      .withArgs("0x0000000000000000000000000000000000000000", contentCreator.address, 0);
     /// Start validation and finalize it
     await runValidation(
       contractSupervision,
@@ -1312,24 +838,16 @@ describe("Platform Treasury Contract - Content", function () {
       contentCreator
     );
     /// Send UDAO to the buyer's wallet
-    await contractUDAO.transfer(
-      contentBuyer.address,
-      ethers.utils.parseEther("100.0")
-    );
+    await contractUDAO.transfer(contentBuyer.address, ethers.utils.parseEther("100.0"));
     /// Content buyer needs to give approval to the platformtreasury
     await contractUDAO
       .connect(contentBuyer)
-      .approve(
-        contractPlatformTreasury.address,
-        ethers.utils.parseEther("999999999999.0")
-      );
+      .approve(contractPlatformTreasury.address, ethers.utils.parseEther("999999999999.0"));
     // Set Ban the gift receiver
     await contractRoleManager.setBan(validator1.address, true);
     // Buy Content
     await expect(
-      contractPlatformTreasury
-        .connect(contentBuyer)
-        .buyContent([0], [true], [[1]], [validator1.address])
+      contractPlatformTreasury.connect(contentBuyer).buyContent([0], [true], [[1]], [validator1.address])
     ).to.revertedWith("Gift receiver is banned");
   });
 
@@ -1341,10 +859,7 @@ describe("Platform Treasury Contract - Content", function () {
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
     /// part prices must be determined before creating content
-    const partPricesArray = [
-      ethers.utils.parseEther("1"),
-      ethers.utils.parseEther("1"),
-    ];
+    const partPricesArray = [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")];
 
     ///Create Voucher from redeem.js and use it for creating content
     const createContentVoucherSample = await createContentVoucher(
@@ -1355,17 +870,9 @@ describe("Platform Treasury Contract - Content", function () {
     );
 
     /// Create content
-    await expect(
-      contractUDAOContent
-        .connect(contentCreator)
-        .createContent(createContentVoucherSample)
-    )
+    await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample))
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
-      .withArgs(
-        "0x0000000000000000000000000000000000000000",
-        contentCreator.address,
-        0
-      );
+      .withArgs("0x0000000000000000000000000000000000000000", contentCreator.address, 0);
     /// Start validation and finalize it
     await runValidation(
       contractSupervision,
@@ -1379,17 +886,11 @@ describe("Platform Treasury Contract - Content", function () {
     );
 
     /// Send UDAO to the buyer's wallet
-    await contractUDAO.transfer(
-      contentBuyer.address,
-      ethers.utils.parseEther("100.0")
-    );
+    await contractUDAO.transfer(contentBuyer.address, ethers.utils.parseEther("100.0"));
     /// Content buyer needs to give approval to the platformtreasury
     await contractUDAO
       .connect(contentBuyer)
-      .approve(
-        contractPlatformTreasury.address,
-        ethers.utils.parseEther("999999999999.0")
-      );
+      .approve(contractPlatformTreasury.address, ethers.utils.parseEther("999999999999.0"));
 
     const discountedPurchase = new DiscountedPurchase({
       contract: contractPlatformTreasury,
@@ -1405,12 +906,8 @@ describe("Platform Treasury Contract - Content", function () {
       ethers.constants.AddressZero
     );
 
-    await contractPlatformTreasury
-      .connect(contentBuyer)
-      .buyDiscountedContent(coaching_voucher);
-    const result = await contractPlatformTreasury
-      .connect(contentBuyer)
-      .getOwnedContent(contentBuyer.address);
+    await contractPlatformTreasury.connect(contentBuyer).buyDiscountedContent(coaching_voucher);
+    const result = await contractPlatformTreasury.connect(contentBuyer).getOwnedContent(contentBuyer.address);
 
     const numArray = result.map((x) => x.map((y) => y.toNumber()));
     expect(numArray).to.eql([[0, 0]]);
@@ -1429,10 +926,7 @@ describe("Platform Treasury Contract - Content", function () {
       ethers.utils.parseEther("1"),
       ethers.utils.parseEther("1"),
     ];
-    const partPricesArray2ndContent = [
-      ethers.utils.parseEther("3"),
-      ethers.utils.parseEther("2"),
-    ];
+    const partPricesArray2ndContent = [ethers.utils.parseEther("3"), ethers.utils.parseEther("2")];
     const partPricesArray3rdContent = [
       ethers.utils.parseEther("5"),
       ethers.utils.parseEther("1"),
@@ -1461,41 +955,17 @@ describe("Platform Treasury Contract - Content", function () {
 
     /// Create content
     //1st content
-    await expect(
-      contractUDAOContent
-        .connect(contentCreator)
-        .createContent(createContentVoucherSample1stContent)
-    )
+    await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample1stContent))
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
-      .withArgs(
-        "0x0000000000000000000000000000000000000000",
-        contentCreator.address,
-        0
-      );
+      .withArgs("0x0000000000000000000000000000000000000000", contentCreator.address, 0);
     //2nd content
-    await expect(
-      contractUDAOContent
-        .connect(contentCreator)
-        .createContent(createContentVoucherSample2ndContent)
-    )
+    await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample2ndContent))
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
-      .withArgs(
-        "0x0000000000000000000000000000000000000000",
-        contentCreator.address,
-        1
-      );
+      .withArgs("0x0000000000000000000000000000000000000000", contentCreator.address, 1);
     //3rd content
-    await expect(
-      contractUDAOContent
-        .connect(contentCreator)
-        .createContent(createContentVoucherSample3rdContent)
-    )
+    await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample3rdContent))
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
-      .withArgs(
-        "0x0000000000000000000000000000000000000000",
-        contentCreator.address,
-        2
-      );
+      .withArgs("0x0000000000000000000000000000000000000000", contentCreator.address, 2);
 
     /// Start validation and finalize it for 1st content
     await runValidation(
@@ -1536,17 +1006,11 @@ describe("Platform Treasury Contract - Content", function () {
     );
 
     /// Send UDAO to the buyer's wallet
-    await contractUDAO.transfer(
-      contentBuyer.address,
-      ethers.utils.parseEther("100.0")
-    );
+    await contractUDAO.transfer(contentBuyer.address, ethers.utils.parseEther("100.0"));
     /// Content buyer needs to give approval to the platformtreasury
     await contractUDAO
       .connect(contentBuyer)
-      .approve(
-        contractPlatformTreasury.address,
-        ethers.utils.parseEther("999999999999.0")
-      );
+      .approve(contractPlatformTreasury.address, ethers.utils.parseEther("999999999999.0"));
 
     await contractPlatformTreasury
       .connect(contentBuyer)
@@ -1554,19 +1018,11 @@ describe("Platform Treasury Contract - Content", function () {
         [0, 1, 2],
         [true, true, false],
         [[1], [1], [1, 2]],
-        [
-          ethers.constants.AddressZero,
-          validator1.address,
-          ethers.constants.AddressZero,
-        ]
+        [ethers.constants.AddressZero, validator1.address, ethers.constants.AddressZero]
       );
-    const resultForBuyer = await contractPlatformTreasury
-      .connect(contentBuyer)
-      .getOwnedContent(contentBuyer.address);
+    const resultForBuyer = await contractPlatformTreasury.connect(contentBuyer).getOwnedContent(contentBuyer.address);
 
-    const numArrayForBuyer = resultForBuyer.map((x) =>
-      x.map((y) => y.toNumber())
-    );
+    const numArrayForBuyer = resultForBuyer.map((x) => x.map((y) => y.toNumber()));
     expect(numArrayForBuyer).to.eql([
       [0, 0], // 1st content, part 0 (Full Content)
       //[1, 0], // 2nd content, part 0 (Full Content) but it is a gift
@@ -1578,9 +1034,7 @@ describe("Platform Treasury Contract - Content", function () {
       .connect(contentBuyer)
       .getOwnedContent(validator1.address);
 
-    const numArrayForGiftReceiver = resultForGiftReceiver.map((x) =>
-      x.map((y) => y.toNumber())
-    );
+    const numArrayForGiftReceiver = resultForGiftReceiver.map((x) => x.map((y) => y.toNumber()));
     expect(numArrayForGiftReceiver).to.eql([[1, 0]]);
   });
 });
