@@ -251,27 +251,6 @@ abstract contract ContentManager is BasePlatform {
         _sendCurrentGlobalCutsToGovernanceTreasury();
     }
 
-    /// @dev This struct was needed to overcome the stack too deep error
-    struct buyContentSpecs {
-        /// @dev Determine the number of items in the cart
-        uint256 tokenIdsLength;
-        /// @dev Determine the RECEIVER of each item in the cart
-        address[] contentReceiver;
-        /// @dev Used for recording the price to pay for each item in the cart
-        uint256[] priceToPay;
-        /// @dev Used for recording the all roles cut for each item in the cart
-        uint256[] totalCut;
-        /// @dev Used for recording the instructor share for each item in the cart
-        uint256[] instrShare;
-        /// @dev Used for recording the total roles cut for all items in the cart
-        uint256 totalTotalCut;
-        /// @dev Used for recording the total instructor share for all items in the cart
-        uint256 totalInstrShare;
-        /// @dev Boolean flag to determine if the purchase is made by a backend role
-        /// if so then this purchase is a fiat purchase
-        bool isFiatPurchase;
-    }
-
     /// @notice Allows multiple content purchases using buyContent
     /// @param tokenIds ids of the content
     /// @param fullContentPurchases is full content purchased
@@ -281,35 +260,44 @@ abstract contract ContentManager is BasePlatform {
         uint256[] calldata tokenIds,
         bool[] calldata fullContentPurchases,
         uint256[][] calldata purchasedParts,
-        address[] calldata giftReceivers
+        address[] memory giftReceivers
     ) external whenNotPaused {
-        buyContentSpecs memory specs;
-        specs.tokenIdsLength = tokenIds.length;
+        /// @dev Used for recording the price to pay for each item in the cart
+        uint256[] memory priceToPay = new uint[](tokenIds.length);
+        /// @dev Used for recording the all roles cut for each item in the cart
+        uint256[] memory totalCut = new uint[](tokenIds.length);
+        /// @dev Used for recording the instructor share for each item in the cart
+        uint256[] memory instrShare = new uint[](tokenIds.length);
+        /// @dev Used for recording the total roles cut for all items in the cart
+        uint256 totalRequiredUdao;
+        /// @dev Boolean flag to determine if the purchase is made by a backend role
+        /// if so then this purchase is a fiat purchase
+        bool isFiatPurchase;
 
         if (roleManager.hasRole(BACKEND_ROLE, msg.sender)) {
-            specs.isFiatPurchase = true;
+            isFiatPurchase = true;
         }
         /// @dev The function arguments must have equal size
         require(
-            specs.tokenIdsLength == fullContentPurchases.length &&
-                specs.tokenIdsLength == purchasedParts.length &&
-                specs.tokenIdsLength == giftReceivers.length,
+            tokenIds.length == fullContentPurchases.length &&
+                tokenIds.length == purchasedParts.length &&
+                tokenIds.length == giftReceivers.length,
             "Array lengths are not equal!"
         );
 
-        for (uint256 i; i < specs.tokenIdsLength; i++) {
-            require(isSellable[tokenIds[i]] == true, "Not sellable");
+        for (uint256 i; i < tokenIds.length; i++) {
+            require(udaoc.isSellable(tokenIds[i]) == true, "Not sellable");
             /// @dev Check the existance of content for each item in the cart
             require(udaoc.exists(tokenIds[i]) == true, "Content not exist!");
             /// @dev Determine the RECEIVER of each item in cart, address(0) means RECEIVER is BUYER
             if (giftReceivers[i] != address(0)) {
-                specs.contentReceiver[i] = giftReceivers[i];
+                giftReceivers[i];
             } else {
                 require(
-                    !specs.isFiatPurchase,
+                    !isFiatPurchase,
                     "Fiat purchase requires a gift receiver!"
                 );
-                specs.contentReceiver[i] = msg.sender;
+                giftReceivers[i] = msg.sender;
             }
             /// @dev The RECEIVER cannot already own the content or parts which in the cart.
             require(
@@ -317,52 +305,47 @@ abstract contract ContentManager is BasePlatform {
                     tokenIds[i],
                     fullContentPurchases[i],
                     purchasedParts[i],
-                    specs.contentReceiver[i]
+                    giftReceivers[i]
                 ) == false,
                 "Content or part's is already bought"
             );
             /// @dev Calculate the BUYER's, how much will pay to each item
-            specs.priceToPay[i] = calculatePriceToPay(
+            priceToPay[i] = calculatePriceToPay(
                 tokenIds[i],
                 fullContentPurchases[i],
                 purchasedParts[i]
             );
-            specs.totalCut[i] = calculateContentSaleTotalCut(
-                specs.priceToPay[i]
-            );
+            totalCut[i] = calculateContentSaleTotalCut(priceToPay[i]);
 
-            if (specs.isFiatPurchase) {
-                specs.instrShare[i] = 0;
+            if (isFiatPurchase) {
+                instrShare[i] = 0;
             } else {
-                specs.instrShare[i] = specs.priceToPay[i] - specs.totalCut[i];
+                instrShare[i] = priceToPay[i] - totalCut[i];
             }
 
-            specs.totalTotalCut += specs.totalCut[i];
-            specs.totalInstrShare += specs.instrShare[i];
+            totalRequiredUdao += totalCut[i] + instrShare[i];
         }
 
         /// @dev The BUYER should have enough UDAO to pay for the cart
         require(
-            udao.balanceOf(msg.sender) >=
-                specs.totalTotalCut + specs.totalInstrShare,
+            udao.balanceOf(msg.sender) >= totalRequiredUdao,
             "Not enough UDAO sent!"
         );
 
         /// @dev The BUYER should approve the contract for the amount they will pay
         require(
-            udao.allowance(msg.sender, address(this)) >=
-                specs.totalTotalCut + specs.totalInstrShare,
+            udao.allowance(msg.sender, address(this)) >= totalRequiredUdao,
             "Not enough allowance!"
         );
 
-        for (uint256 i; i < specs.tokenIdsLength; i++) {
+        for (uint256 i; i < tokenIds.length; i++) {
             _buyContentwithUDAO(
                 tokenIds[i],
                 fullContentPurchases[i],
                 purchasedParts[i],
-                specs.contentReceiver[i],
-                specs.totalCut[i],
-                specs.instrShare[i]
+                giftReceivers[i],
+                totalCut[i],
+                instrShare[i]
             );
         }
         _sendCurrentGlobalCutsToGovernanceTreasury();
