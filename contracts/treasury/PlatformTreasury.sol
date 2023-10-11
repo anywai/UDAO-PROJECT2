@@ -44,6 +44,13 @@ contract PlatformTreasury is ContentManager {
             roleManager.hasRole(FOUNDATION_ROLE, msg.sender),
             "Only foundation can withdraw"
         );
+
+        uint256 transactionTime = (block.timestamp / epochOneDay);
+        uint256 transactionFuIndex = transactionTime % refundWindow;
+        _updateGlobalContentBalances(0, transactionTime, transactionFuIndex);
+        _updateGlobalCoachingBalances(0, transactionTime, transactionFuIndex);
+        _sendCurrentGlobalCutsToGovernanceTreasury();
+
         uint withdrawableBalance = foundationBalance;
         foundationBalance = 0; /// @dev zeroing before the actual withdraw
         udao.transfer(foundationWallet, withdrawableBalance);
@@ -56,6 +63,18 @@ contract PlatformTreasury is ContentManager {
             instBalance[msg.sender] >= instRefundedBalance[msg.sender],
             "Debt is larger than balance"
         );
+        uint256 transactionTime = (block.timestamp / epochOneDay);
+        uint256 transactionFuIndex = transactionTime % refundWindow;
+        _updateGlobalContentBalances(0, transactionTime, transactionFuIndex);
+        _updateGlobalCoachingBalances(0, transactionTime, transactionFuIndex);
+        _updateInstructorBalances(
+            0,
+            msg.sender,
+            transactionTime,
+            transactionFuIndex
+        );
+        _sendCurrentGlobalCutsToGovernanceTreasury();
+
         uint debtAmount = instRefundedBalance[msg.sender];
         uint withdrawableBalance = instBalance[msg.sender] - debtAmount;
         instBalance[msg.sender] = 0;
