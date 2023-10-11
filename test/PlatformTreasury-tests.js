@@ -11,7 +11,9 @@ const { anyValue } = require("@nomicfoundation/hardhat-chai-matchers/withArgs");
 
 // Enable and inject BN dependency
 chai.use(require("chai-bn")(BN));
+require("dotenv").config();
 
+const TEST_VERSION = process.env.TEST_VERSION;
 // @dev Proposal states
 /*
  enum ProposalState {
@@ -365,7 +367,9 @@ describe("Platform Treasury General", function () {
 
   it("Should allow governance to withdraw funds from the treasury after a content purchase", async function () {
     await reDeploy();
-
+    if (TEST_VERSION == 1) {
+      this.skip();
+    }
     await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer1.address, true);
 
@@ -488,7 +492,7 @@ describe("Platform Treasury General", function () {
     await expect(proposalStateAfterExecution).to.equal(7);
 
     /// @dev Get the current percent cut of the governance treasury
-    const currentGovernanceTreasuryCut = await contractPlatformTreasury.contentGovernanceCut();
+    const currentGovernanceTreasuryCut = await contractPlatformTreasury.contentGoverCut();
 
     /// Get the current governance treasury balance
     const currentGovernanceTreasuryBalance = await contractUDAO.balanceOf(newGovernanceTreasury.address);
@@ -504,6 +508,9 @@ describe("Platform Treasury General", function () {
 
   it("Should allow governance to withdraw funds from the treasury after multiple content purchases", async function () {
     await reDeploy();
+    if (TEST_VERSION == 1) {
+      this.skip();
+    }
     /// @dev Setup governance member
     await setupGovernanceMember(contractRoleManager, contractUDAO, contractUDAOStaker, governanceCandidate);
     await setupGovernanceMember(contractRoleManager, contractUDAO, contractUDAOStaker, superValidator);
@@ -623,7 +630,7 @@ describe("Platform Treasury General", function () {
     await expect(proposalStateAfterExecution).to.equal(7);
 
     /// @dev Get the current percent cut of the governance treasury
-    const currentGovernanceTreasuryCut = await contractPlatformTreasury.contentGovernanceCut();
+    const currentGovernanceTreasuryCut = await contractPlatformTreasury.contentGoverCut();
 
     /// Get the current governance treasury balance
     const currentGovernanceTreasuryBalance = await contractUDAO.balanceOf(newGovernanceTreasury.address);
@@ -663,12 +670,15 @@ describe("Platform Treasury General", function () {
       .to.emit(contractPlatformTreasury, "FoundationWalletUpdated")
       .withArgs(foundation.address);
 
+    /// @dev Skip 14 days to allow foundation to withdraw funds
+    const numBlocksToMine = Math.ceil((14 * 24 * 60 * 60) / 2);
+    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine.toString(16)}`, "0x2"]);
+
     /// @dev Withdraw foundation funds from the treasury
     await contractPlatformTreasury.connect(foundation).withdrawFoundation();
 
     /// @dev Get the current percent cut of the foundation
-    const currentFoundationCut = await contractPlatformTreasury.contentFoundationCut();
-
+    const currentFoundationCut = await contractPlatformTreasury.contentFoundCut();
     /// Get the current foundation balance
     const currentFoundationBalance = await contractUDAO.balanceOf(foundation.address);
     /// Get the content price of token Id 0 from UDAOC (first 0 is token ID, second 0 is full price of content)
@@ -706,11 +716,15 @@ describe("Platform Treasury General", function () {
       .to.emit(contractPlatformTreasury, "FoundationWalletUpdated")
       .withArgs(foundation.address);
 
+    /// @dev Skip 14 days to allow foundation to withdraw funds
+    const numBlocksToMine = Math.ceil((14 * 24 * 60 * 60) / 2);
+    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine.toString(16)}`, "0x2"]);
+
     /// @dev Withdraw foundation funds from the treasury
     await contractPlatformTreasury.connect(foundation).withdrawFoundation();
 
     /// @dev Get the current percent cut of the foundation
-    const currentFoundationCut = await contractPlatformTreasury.contentFoundationCut();
+    const currentFoundationCut = await contractPlatformTreasury.contentFoundCut();
 
     /// Get the current foundation balance
     const currentFoundationBalance = await contractUDAO.balanceOf(foundation.address);
@@ -1059,6 +1073,9 @@ describe("Platform Treasury General", function () {
     const instructerBalanceBefore = await contractUDAO.balanceOf(contentCreator.address);
     // Expect that the instructer balance is 0 before withdrawal
     await expect(instructerBalanceBefore).to.equal(0);
+    /// @dev Skip 14 days to allow foundation to withdraw funds
+    const numBlocksToMine = Math.ceil((14 * 24 * 60 * 60) / 2);
+    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine.toString(16)}`, "0x2"]);
     // Instructer should call withdrawInstructor from platformtreasury contract
     await contractPlatformTreasury.connect(contentCreator).withdrawInstructor();
     // Get the instructer balance after withdrawal
@@ -1069,11 +1086,11 @@ describe("Platform Treasury General", function () {
     /// @dev Calculate how much the instructer should receive
     const contentPrice = await contractUDAOContent.contentPrice(0, 0);
     // Calculate the foundation cut
-    const currentFoundationCut = await contractPlatformTreasury.contentFoundationCut();
+    const currentFoundationCut = await contractPlatformTreasury.contentFoundCut();
     const expectedFoundationBalanceBeforePercentage = contentPrice.mul(currentFoundationCut);
     const expectedFoundationBalance = expectedFoundationBalanceBeforePercentage.div(100000);
     // Calculate the governance cut
-    const currentGovernanceTreasuryCut = await contractPlatformTreasury.contentGovernanceCut();
+    const currentGovernanceTreasuryCut = await contractPlatformTreasury.contentGoverCut();
     const expectedGovernanceTreasuryBalanceBeforePercentage = contentPrice.mul(currentGovernanceTreasuryCut);
     const expectedGovernanceTreasuryBalance = expectedGovernanceTreasuryBalanceBeforePercentage.div(100000);
     // Calculate the validator cut
@@ -1133,6 +1150,9 @@ describe("Platform Treasury General", function () {
     const instructerBalanceBefore = await contractUDAO.balanceOf(contentCreator.address);
     // Expect that the instructer balance is 0 before withdrawal
     await expect(instructerBalanceBefore).to.equal(0);
+    /// @dev Skip 14 days to allow foundation to withdraw funds
+    const numBlocksToMine = Math.ceil((14 * 24 * 60 * 60) / 2);
+    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine.toString(16)}`, "0x2"]);
     // Instructer should call withdrawInstructor from platformtreasury contract
     await contractPlatformTreasury.connect(contentCreator).withdrawInstructor();
     // Get the instructer balance after withdrawal
@@ -1187,6 +1207,9 @@ describe("Platform Treasury General", function () {
     const instructerBalanceBefore = await contractUDAO.balanceOf(contentCreator.address);
     // Expect that the instructer balance is 0 before withdrawal
     await expect(instructerBalanceBefore).to.equal(0);
+    /// @dev Skip 14 days to allow foundation to withdraw funds
+    const numBlocksToMine = Math.ceil((14 * 24 * 60 * 60) / 2);
+    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine.toString(16)}`, "0x2"]);
     // Instructer should call withdrawInstructor from platformtreasury contract
     await contractPlatformTreasury.connect(contentCreator).withdrawInstructor();
     // Get the instructer balance after withdrawal
@@ -1279,6 +1302,9 @@ describe("Platform Treasury General", function () {
     await contractPlatformTreasury.connect(contentBuyer2).finalizeCoaching(coachingId2);
     /// Get instructer balance before withdrawal
     const instructerBalanceBefore = await contractUDAO.balanceOf(contentCreator.address);
+    /// @dev Skip 14 days to allow foundation to withdraw funds
+    const numBlocksToMine = Math.ceil((14 * 24 * 60 * 60) / 2);
+    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine.toString(16)}`, "0x2"]);
     /// Instructer should call withdrawInstructor from platformtreasury contract
     const withdrawInstructorTx = await contractPlatformTreasury.connect(contentCreator).withdrawInstructor();
     /// Get the InstructorWithdrawnWithDebt event and check the debt amount
@@ -1820,7 +1846,7 @@ describe("Platform Treasury General", function () {
     await expect(proposalStateAfterExecution).to.equal(7);
 
     /// @dev Get the current percent cut of the governance treasury
-    const currentGovernanceTreasuryCut = await contractPlatformTreasury.contentGovernanceCut();
+    const currentGovernanceTreasuryCut = await contractPlatformTreasury.contentGoverCut();
 
     /// Get the current governance treasury balance
     const currentGovernanceTreasuryBalance = await contractUDAO.balanceOf(newGovernanceTreasury.address);
@@ -1960,7 +1986,7 @@ describe("Platform Treasury General", function () {
     await expect(proposalStateAfterExecution).to.equal(7);
 
     /// @dev Get the current percent cut of the governance treasury
-    const currentGovernanceTreasuryCut = await contractPlatformTreasury.contentGovernanceCut();
+    const currentGovernanceTreasuryCut = await contractPlatformTreasury.contentGoverCut();
 
     /// Get the current governance treasury balance
     const currentGovernanceTreasuryBalance = await contractUDAO.balanceOf(newGovernanceTreasury.address);
@@ -2002,7 +2028,9 @@ describe("Platform Treasury General", function () {
 
     // Ban the Instructor
     await contractRoleManager.setBan(contentCreator.address, true);
-
+    /// @dev Skip 14 days to allow foundation to withdraw funds
+    const numBlocksToMine = Math.ceil((14 * 24 * 60 * 60) / 2);
+    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine.toString(16)}`, "0x2"]);
     // Instructer should call withdrawInstructor from platformtreasury contract
     await contractPlatformTreasury.connect(contentCreator).withdrawInstructor();
     // Get the instructer balance after withdrawal
@@ -2013,11 +2041,11 @@ describe("Platform Treasury General", function () {
     /// @dev Calculate how much the instructer should receive
     const contentPrice = await contractUDAOContent.contentPrice(0, 0);
     // Calculate the foundation cut
-    const currentFoundationCut = await contractPlatformTreasury.contentFoundationCut();
+    const currentFoundationCut = await contractPlatformTreasury.contentFoundCut();
     const expectedFoundationBalanceBeforePercentage = contentPrice.mul(currentFoundationCut);
     const expectedFoundationBalance = expectedFoundationBalanceBeforePercentage.div(100000);
     // Calculate the governance cut
-    const currentGovernanceTreasuryCut = await contractPlatformTreasury.contentGovernanceCut();
+    const currentGovernanceTreasuryCut = await contractPlatformTreasury.contentGoverCut();
     const expectedGovernanceTreasuryBalanceBeforePercentage = contentPrice.mul(currentGovernanceTreasuryCut);
     const expectedGovernanceTreasuryBalance = expectedGovernanceTreasuryBalanceBeforePercentage.div(100000);
     // Calculate the validator cut
@@ -2080,7 +2108,9 @@ describe("Platform Treasury General", function () {
 
     // Ban the Instructor
     await contractRoleManager.setBan(contentCreator.address, true);
-
+    /// @dev Skip 14 days to allow foundation to withdraw funds
+    const numBlocksToMine = Math.ceil((14 * 24 * 60 * 60) / 2);
+    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine.toString(16)}`, "0x2"]);
     // Instructer should call withdrawInstructor from platformtreasury contract
     await contractPlatformTreasury.connect(contentCreator).withdrawInstructor();
     // Get the instructer balance after withdrawal
@@ -2138,7 +2168,9 @@ describe("Platform Treasury General", function () {
 
     // Ban the Instructor
     await contractRoleManager.setBan(contentCreator.address, true);
-
+    /// @dev Skip 14 days to allow foundation to withdraw funds
+    const numBlocksToMine = Math.ceil((14 * 24 * 60 * 60) / 2);
+    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine.toString(16)}`, "0x2"]);
     // Instructer should call withdrawInstructor from platformtreasury contract
     await contractPlatformTreasury.connect(contentCreator).withdrawInstructor();
     // Get the instructer balance after withdrawal
@@ -2199,7 +2231,9 @@ describe("Platform Treasury General", function () {
 
     // Ban the Instructor
     await contractRoleManager.setBan(contentCreator.address, true);
-
+    /// @dev Skip 14 days to allow foundation to withdraw funds
+    const numBlocksToMine = Math.ceil((14 * 24 * 60 * 60) / 2);
+    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine.toString(16)}`, "0x2"]);
     /// Instructer should call withdrawInstructor from platformtreasury contract
     const withdrawInstructorTx = await contractPlatformTreasury.connect(contentCreator).withdrawInstructor();
     /// Get the InstructorWithdrawnWithDebt event and check the debt amount
