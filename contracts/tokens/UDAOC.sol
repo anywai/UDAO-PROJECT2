@@ -44,20 +44,8 @@ contract UDAOContent is
 
     // tokenId => (partId => price), first part is the full price
     mapping(uint => mapping(uint => uint)) public contentPrice;
-    // tokenId => currency name
-    mapping(uint => bytes32) currencyName;
     // tokenId => number of Parts
     mapping(uint => uint) private partNumberOfContent;
-    // tokenId => is coaching service buyable
-    mapping(uint => bool) public coachingEnabled;
-    // tokenId => coaching price
-    mapping(uint => uint) coachingPrice;
-    // tokenId => coaching currency
-    mapping(uint => bytes32) coachingCurrency;
-    // tokenId => is coaching refundable
-    mapping(uint => bool) public coachingRefundable;
-    // KYC requirement for creating and modifying content
-    bool isKYCRequiredToCreateContent = false;
 
     /// @notice This event is triggered when a new part is added to a content
     event newPartAdded(uint tokenId, uint newPartId, uint newPartPrice);
@@ -74,20 +62,10 @@ contract UDAOContent is
         uint256[] _contentPrice;
         /// @notice Token id of the content, not used if new content creation
         uint256 tokenId;
-        /// @notice Name of the selling currency
-        string _currencyName;
         /// @notice The metadata URI to associate with this token.
         string _uri;
         /// @notice Address of the redeemer
         address _redeemer;
-        /// @notice The price of the coaching service
-        uint256 _coachingPrice;
-        /// @notice Name of the coaching currency
-        string _coachingCurrencyName;
-        /// @notice Whether learner can buy coaching or not
-        bool _isCoachingEnabled;
-        /// @notice Whether coaching is refundable or not
-        bool _isCoachingRefundable;
         /// @notice Whether new content or modification, 0 undefined, 1 new content, 2 modification
         uint256 redeemType;
         /// @notice validaton score of the content
@@ -118,17 +96,6 @@ contract UDAOContent is
         emit AddressesUpdated(contractManager.ISupVisAddress());
     }
 
-    /// @notice Allows backend to set the KYC requirement for creating content
-    /// @param _status The status of the KYC requirement
-    function setKYCRequirementForCreateContent(bool _status) external {
-        require(
-            roleManager.hasRole(BACKEND_ROLE, msg.sender),
-            "Only backend can set KYC requirement for creating content"
-        );
-        isKYCRequiredToCreateContent = _status;
-        emit KYCRequirementForCreateContentChanged(_status);
-    }
-
     /// @notice Redeems a RedeemVoucher for an actual NFT, creating it in the process.
     /// @param voucher A RedeemVoucher describing an unminted NFT.
     function createContent(
@@ -146,11 +113,8 @@ contract UDAOContent is
         uint tokenId = _tokenIds.current();
         // make sure redeemer is redeeming
         require(voucher._redeemer == msg.sender, "You are not the redeemer");
-        // KYC requirement is predetermined by admin roles.
-        if (isKYCRequiredToCreateContent) {
-            //make sure redeemer is kyced
-            require(roleManager.isKYCed(msg.sender, 13), "You are not KYCed");
-        }
+        //make sure redeemer is kyced
+        require(roleManager.isKYCed(msg.sender, 13), "You are not KYCed");
         //make sure redeemer is not banned
         require(!roleManager.isBanned(msg.sender, 13), "Redeemer is banned!");
         require(voucher.validationScore != 0, "Validation score cannot be 0");
@@ -159,40 +123,15 @@ contract UDAOContent is
             voucher._contentPrice[0] != 0,
             "Full content price cannot be 0"
         );
-        // make sure the coaching price is not 0
-        require(voucher._coachingPrice != 0, "Coaching price cannot be 0");
-
-        require(
-            !isCalldataStringEmpty(voucher._coachingCurrencyName),
-            "Coaching currency cannot be empty"
-        );
-        require(
-            !isCalldataStringEmpty(voucher._currencyName),
-            "Content currency cannot be empty"
-        );
 
         require(
             !isCalldataStringEmpty(voucher._uri),
             "Content URI cannot be empty"
         );
 
-        // TODO Below two lines will probably be removed
-        coachingEnabled[tokenId] = voucher._isCoachingEnabled;
-        coachingRefundable[tokenId] = voucher._isCoachingRefundable;
-
         // save the content price (it should test removing for partLength)
         uint partLength = voucher._contentPrice.length;
         partNumberOfContent[tokenId] = partLength;
-
-        currencyName[tokenId] = keccak256(
-            abi.encodePacked(voucher._currencyName)
-        );
-
-        // TODO Below two lines will probably be removed
-        coachingPrice[tokenId] = voucher._coachingPrice;
-        coachingCurrency[tokenId] = keccak256(
-            abi.encodePacked(voucher._coachingCurrencyName)
-        );
 
         /// @dev First index is the full price for the content
         for (uint i = 0; i < partLength; i++) {
@@ -235,11 +174,10 @@ contract UDAOContent is
             ownerOf(voucher.tokenId) == msg.sender,
             "You are not the owner of token"
         );
-        // KYC requirement is predetermined by admin roles.
-        if (isKYCRequiredToCreateContent) {
-            //make sure redeemer is kyced
-            require(roleManager.isKYCed(msg.sender, 14), "You are not KYCed");
-        }
+
+        //make sure redeemer is kyced
+        require(roleManager.isKYCed(msg.sender, 14), "You are not KYCed");
+
         // make sure caller is not banned
         require(!roleManager.isBanned(msg.sender, 14), "You are banned");
         // A content can be modified only if it is not in validation
@@ -255,9 +193,6 @@ contract UDAOContent is
         uint partLength = voucher._contentPrice.length;
         partNumberOfContent[voucher.tokenId] = partLength;
 
-        currencyName[voucher.tokenId] = keccak256(
-            abi.encodePacked(voucher._currencyName)
-        );
         /// @dev First index is the full price for the content
         for (uint i = 0; i < partLength; i++) {
             contentPrice[voucher.tokenId][i] = voucher._contentPrice[i];
@@ -269,166 +204,10 @@ contract UDAOContent is
         }
     }
 
-    /// @dev Allows content owners to insert new parts
-    /// @param tokenId The id of the token
-    /// @param newPartId The id of the new part
-    /// @param newPartPrice The price of the new part
-    function addNewPart(
-        uint tokenId,
-        uint newPartId,
-        uint newPartPrice,
-        string calldata _currencyName
-    ) external whenNotPaused {
-        require(
-            ownerOf(tokenId) == msg.sender,
-            "You are not the owner of token"
-        );
-        // KYC requirement is predetermined by admin roles.
-        if (isKYCRequiredToCreateContent) {
-            //make sure redeemer is kyced
-            require(roleManager.isKYCed(msg.sender, 15), "You are not KYCed");
-        }
-        //make sure caller is not banned
-        require(!roleManager.isBanned(msg.sender, 15), "You are banned");
-        // make sure currency name is the same
-        require(
-            keccak256(abi.encodePacked(_currencyName)) == currencyName[tokenId],
-            "Original currency name is not the same as the new currency name"
-        );
-        // make sure new part id is not bigger than the number of parts
-        require(
-            newPartId <= partNumberOfContent[tokenId],
-            "Part id is bigger than the total number of parts"
-        );
-        // make sure new part is not the zero part since it is the full price
-        require(newPartId != 0, "0 sent as new part id, parts starts from 1");
-        // if new part is the last part, just push it
-        if (newPartId == partNumberOfContent[tokenId]) {
-            contentPrice[tokenId][newPartId] = newPartPrice;
-            partNumberOfContent[tokenId]++;
-        } else {
-            // if new part is not the last part, shift the parts
-            _insertNewPart(tokenId, newPartId, newPartPrice);
-        }
-        emit newPartAdded(tokenId, newPartId, newPartPrice);
-    }
-
-    /// @dev Internal function to insert a new part in between existing parts
-    /// @param tokenId The id of the token
-    /// @param newPartId The id of the new part
-    /// @param newPartPrice The price of the new part
-    function _insertNewPart(
-        uint tokenId,
-        uint newPartId,
-        uint newPartPrice
-    ) internal {
-        require(newPartId <= partNumberOfContent[tokenId], "Invalid index");
-        uint256[] memory prices = new uint256[](3); // Change to dynamic memory array
-
-        for (uint i = 0; i < 3; i++) {
-            prices[i] = contentPrice[tokenId][i];
-        }
-
-        // Create a new array with an increased length
-        uint[] memory newArray = new uint[](prices.length + 1);
-
-        // Copy the elements before the desired index
-        for (uint i = 0; i < newPartId; i++) {
-            newArray[i] = prices[i];
-        }
-
-        // Insert the new value at the desired index
-        newArray[newPartId] = newPartPrice;
-
-        // Copy the remaining elements from the original array
-        for (uint i = newPartId; i < prices.length; i++) {
-            newArray[i + 1] = prices[i];
-        }
-
-        // Replace the original array with the new array
-        prices = newArray;
-
-        // replace content price mapping
-        for (uint i = 0; i < prices.length; i++) {
-            contentPrice[tokenId][i] = prices[i];
-        }
-
-        // save the content price
-        uint partLength = prices.length;
-        partNumberOfContent[tokenId] = partLength;
-    }
-
-    /// @notice Allows instructers' to enable coaching for a specific content
-    /// @param tokenId The content id
-    function enableCoaching(uint tokenId) external whenNotPaused {
-        require(
-            ownerOf(tokenId) == msg.sender,
-            "You are not the owner of token"
-        );
-        //make sure caller is not banned
-        require(!roleManager.isBanned(msg.sender, 22), "You were banned!");
-
-        coachingEnabled[tokenId] = true;
-    }
-
-    /// @notice Allows instructers' to disable coaching for a specific content
-    /// @param tokenId tokenId of the content that will be not coached
-    function disableCoaching(uint tokenId) external whenNotPaused {
-        require(
-            ownerOf(tokenId) == msg.sender,
-            "You are not the owner of token"
-        );
-        //make sure caller is not banned
-        require(!roleManager.isBanned(msg.sender, 23), "You were banned!");
-        coachingEnabled[tokenId] = false;
-    }
-
-    /// @notice Returns if a coaching enabled for a token or not
-    /// @param tokenId the content ID of the token
-    function isCoachingEnabled(uint tokenId) external view returns (bool) {
-        return coachingEnabled[tokenId];
-    }
-
-    /// @notice sets the coaching price and currency of a specific content
-    /// @param tokenId the content ID of the token
-    /// @param price the price of the coaching
-    /// @param currency the currency of the coaching
-    function setCoachingPriceAndCurrency(
-        uint tokenId,
-        uint price,
-        bytes32 currency
-    ) external whenNotPaused {
-        require(
-            ownerOf(tokenId) == msg.sender,
-            "You are not the owner of token"
-        );
-        //make sure caller is kyced
-        require(roleManager.isKYCed(msg.sender, 16), "You are not KYCed");
-        //make sure caller is not banned
-        require(!roleManager.isBanned(msg.sender, 16), "You were banned!");
-        coachingPrice[tokenId] = price;
-        coachingCurrency[tokenId] = currency;
-    }
-
-    /// @notice returns the coaching price and currency of a specific content
-    /// @param tokenId the content ID of the token
-    function getCoachingPriceAndCurrency(
-        uint tokenId
-    ) external view returns (uint256, bytes32) {
-        return (coachingPrice[tokenId], coachingCurrency[tokenId]);
-    }
-
     /// @notice returns the price of a specific content
     /// @param tokenId the content ID of the token
     /// @param partId the part ID of the token (microlearning), full content price if 0
     function getContentPriceAndCurrency(
-        uint tokenId,
-        uint partId
-    ) external view returns (uint256, bytes32) {
-        return (contentPrice[tokenId][partId], currencyName[tokenId]);
-    }
-
-    function getContentPrice(
         uint tokenId,
         uint partId
     ) external view returns (uint256) {
@@ -532,23 +311,13 @@ contract UDAOContent is
         return partNumberOfContent[tokenId];
     }
 
-    /// @notice A content can be completely removed by the owner
-    /// @param tokenId The token ID of a content
-    function burn(uint256 tokenId) external whenNotPaused {
-        require(
-            ownerOf(tokenId) == msg.sender,
-            "You are not the owner of token"
-        );
-        //make sure caller is kyced
-        require(roleManager.isKYCed(msg.sender, 17), "You are not KYCed");
-        //make sure caller is not banned
-        require(!roleManager.isBanned(msg.sender, 17), "You were banned!");
-        _burn(tokenId);
-    }
-
     function _burn(
         uint256 tokenId
     ) internal override(ERC721, ERC721URIStorage) {
+        require(
+            roleManager.hasRole(BACKEND_ROLE, msg.sender),
+            "Only backend can burn a content"
+        );
         super._burn(tokenId);
     }
 
@@ -602,18 +371,13 @@ contract UDAOContent is
                 keccak256(
                     abi.encode(
                         keccak256(
-                            "RedeemVoucher(uint256 validUntil,uint256[] _contentPrice,uint256 tokenId,string _currencyName,string _uri,address _redeemer,uint256 _coachingPrice,string _coachingCurrencyName,bool _isCoachingEnabled,bool _isCoachingRefundable,uint256 redeemType,uint256 validationScore)"
+                            "RedeemVoucher(uint256 validUntil,uint256[] _contentPrice,uint256 tokenId,string _uri,address _redeemer,uint256 redeemType,uint256 validationScore)"
                         ),
                         voucher.validUntil,
                         keccak256(abi.encodePacked(voucher._contentPrice)),
                         voucher.tokenId,
-                        keccak256(bytes(voucher._currencyName)),
                         keccak256(bytes(voucher._uri)),
                         voucher._redeemer,
-                        voucher._coachingPrice,
-                        keccak256(bytes(voucher._coachingCurrencyName)),
-                        voucher._isCoachingEnabled,
-                        voucher._isCoachingRefundable,
                         voucher.redeemType,
                         voucher.validationScore
                     )

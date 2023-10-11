@@ -32,7 +32,7 @@ abstract contract ContentManager is BasePlatform {
     struct CoachingSale {
         address payee;
         address contentReceiver;
-        address instructor;
+        address coach;
         uint256 instrShare;
         uint256 totalCut;
         bool isRefunded;
@@ -239,7 +239,7 @@ abstract contract ContentManager is BasePlatform {
         coachSales[coachingSaleID.current()] = CoachingSale({
             payee: msg.sender,
             contentReceiver: learner,
-            instructor: voucher.coach,
+            coach: voucher.coach,
             instrShare: instrShare,
             totalCut: totalCut,
             isRefunded: false,
@@ -251,6 +251,7 @@ abstract contract ContentManager is BasePlatform {
         _sendCurrentGlobalCutsToGovernanceTreasury();
     }
 
+    /// @dev This struct was needed to overcome the stack too deep error
     struct buyContentSpecs {
         /// @dev Determine the number of items in the cart
         uint256 tokenIdsLength;
@@ -496,7 +497,7 @@ abstract contract ContentManager is BasePlatform {
 
         /// @dev Get the total payment amount first
         if (_fullContentPurchase) {
-            _priceToPay = udaoc.getContentPrice(_tokenId, 0);
+            _priceToPay = udaoc.getContentPriceAndCurrency(_tokenId, 0);
         } else {
             require(
                 _purchasedParts[0] != 0,
@@ -508,7 +509,7 @@ abstract contract ContentManager is BasePlatform {
                     _purchasedParts[j] < udaoc.getPartNumberOfContent(_tokenId),
                     "Part does not exist!"
                 );
-                _pricePerPart = udaoc.getContentPrice(
+                _pricePerPart = udaoc.getContentPriceAndCurrency(
                     _tokenId,
                     _purchasedParts[j]
                 );
@@ -767,14 +768,14 @@ abstract contract ContentManager is BasePlatform {
         );
         if (msg.sender == refundItem.payee) {
             require(refundItem.coachingDate >= block.timestamp + 1 days);
-        } else if (msg.sender != refundItem.instructor) {
+        } else if (msg.sender != refundItem.coach) {
             revert("You are not the payee or instructor");
         }
 
         require(refundItem.isRefunded == false, "Already refunded!");
         coachSales[_saleID].isRefunded = true;
 
-        instRefundedBalance[refundItem.instructor] += refundItem.instrShare;
+        instRefundedBalance[refundItem.coach] += refundItem.instrShare;
         coachingCutRefundedBalance += refundItem.totalCut;
 
         udao.transfer(
@@ -799,7 +800,7 @@ abstract contract ContentManager is BasePlatform {
         require(refundItem.isRefunded == false, "Already refunded!");
         coachSales[voucher.saleID].isRefunded = true;
 
-        instRefundedBalance[refundItem.instructor] += refundItem.instrShare;
+        instRefundedBalance[refundItem.coach] += refundItem.instrShare;
         coachingCutRefundedBalance += refundItem.totalCut;
 
         udao.transfer(
@@ -842,8 +843,7 @@ abstract contract ContentManager is BasePlatform {
         ownedContents[refundItem.contentReceiver][refundItem.tokenId] = voucher
             .finalParts;
 
-        address instructor = udaoc.ownerOf(refundItem.tokenId);
-        instRefundedBalance[instructor] += refundItem.instrShare;
+        instRefundedBalance[refundItem.instructor] += refundItem.instrShare;
         contentCutRefundedBalance += refundItem.totalCut;
 
         udao.transfer(

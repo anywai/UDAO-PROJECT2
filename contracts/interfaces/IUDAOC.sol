@@ -7,23 +7,10 @@ import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 interface IUDAOC is IERC721 {
     function exists(uint tokenId) external view returns (bool);
 
-    function coachingEnabled(uint tokenId) external view returns (bool);
-
-    function coachingRefundable(uint tokenId) external view returns (bool);
-
     function getContentPriceAndCurrency(
         uint tokenId,
         uint partId
-    ) external view returns (uint256, bytes32);
-
-    function getContentPrice(
-        uint tokenId,
-        uint partId
     ) external view returns (uint256);
-
-    function getCoachingPriceAndCurrency(
-        uint tokenId
-    ) external view returns (uint256, bytes32);
 
     function getPartNumberOfContent(uint tokenId) external view returns (uint);
 }
