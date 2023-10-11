@@ -131,14 +131,13 @@ abstract contract BasePlatform is Pausable, RoleNames {
 
     // Instructor => current balance & future balances of instructor
     mapping(address => uint) public instBalance;
-    mapping(address => uint[]) public instLockedBalance;
-
+    mapping(address => uint[61]) public instLockedBalance;
     // Current balance & future balances of total contract pool for content sale
     uint256 public contentCutPool;
-    uint256[] public contentCutLockedPool;
+    uint256[61] public contentCutLockedPool; //= new uint[](refundWindow);
     // Current balance & future balances of total contract pool for coaching sale
     uint256 public coachingCutPool;
-    uint256[] public coachingCutLockedPool;
+    uint256[61] public coachingCutLockedPool; // = new uint[](refundWindow);
 
     // Current balance of foundation/governance/juror/validator pool
     uint public foundationBalance;
