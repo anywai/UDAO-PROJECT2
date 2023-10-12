@@ -136,7 +136,7 @@ contract VoucherVerifier is EIP712, RoleNames {
         // make sure signature is valid and get the address of the signer
         address signer = ECDSA.recover(digest, voucher.signature);
         require(
-            roleManager.hasRole(BACKEND_ROLE, signer),
+            roleManager.hasRole(VOUCHER_VERIFIER, signer),
             "Signature invalid or unauthorized"
         );
     }
@@ -148,7 +148,7 @@ contract VoucherVerifier is EIP712, RoleNames {
         bytes32 digest = _hashRefundVoucher(voucher);
         address signer = ECDSA.recover(digest, voucher.signature);
         require(
-            roleManager.hasRole(BACKEND_ROLE, signer),
+            roleManager.hasRole(VOUCHER_VERIFIER, signer),
             "Signature invalid or unauthorized"
         );
     }
@@ -161,7 +161,7 @@ contract VoucherVerifier is EIP712, RoleNames {
     ) external view {
         bytes32 digest = _hashCoachingVoucher(voucher);
         address signer = ECDSA.recover(digest, voucher.signature);
-        if (!roleManager.hasRole(BACKEND_ROLE, signer)) {
+        if (!roleManager.hasRole(VOUCHER_VERIFIER, signer)) {
             require(
                 signer == voucher.coach,
                 "Signature invalid or unauthorized"

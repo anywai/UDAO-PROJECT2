@@ -374,7 +374,7 @@ contract UDAOStaker is RoleNames, EIP712, Pausable {
         address signer = _verifyRole(voucher);
         require(voucher.validUntil >= block.timestamp, "Voucher has expired.");
         require(
-            roleManager.hasRole(BACKEND_ROLE, signer),
+            roleManager.hasRole(VOUCHER_VERIFIER, signer),
             "Signature invalid or unauthorized"
         );
 

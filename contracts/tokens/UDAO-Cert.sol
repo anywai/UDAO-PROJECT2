@@ -65,7 +65,7 @@ contract UDAOCertificate is
         // make sure signature is valid and get the address of the signer
         address signer = _verify(voucher);
         require(
-            roleManager.hasRole(BACKEND_ROLE, signer),
+            roleManager.hasRole(VOUCHER_VERIFIER, signer),
             "Signature invalid or unauthorized"
         );
 

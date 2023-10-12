@@ -116,7 +116,7 @@ contract UDAOContent is
         // make sure signature is valid and get the address of the signer
         address signer = _verify(voucher);
         require(
-            roleManager.hasRole(BACKEND_ROLE, signer),
+            roleManager.hasRole(VOUCHER_VERIFIER, signer),
             "Signature invalid or unauthorized"
         );
         require(voucher.validUntil >= block.timestamp, "Voucher has expired.");
@@ -177,7 +177,7 @@ contract UDAOContent is
         // make sure signature is valid and get the address of the signer
         address signer = _verify(voucher);
         require(
-            roleManager.hasRole(BACKEND_ROLE, signer),
+            roleManager.hasRole(VOUCHER_VERIFIER, signer),
             "Signature invalid or unauthorized"
         );
         require(voucher.validUntil >= block.timestamp, "Voucher has expired.");
