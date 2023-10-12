@@ -13,9 +13,7 @@ abstract contract ContentManager is BasePlatform {
         address buyer
     );
 
-    event CoachingBought(
-        uint256 coachingSaleID
-    );
+    event CoachingBought(uint256 coachingSaleID);
 
     using Counters for Counters.Counter;
     /// @notice Used to generate unique ids for content sales
@@ -244,7 +242,7 @@ abstract contract ContentManager is BasePlatform {
         coachingSaleID.increment();
         _sendCurrentGlobalCutsToGovernanceTreasury();
 
-        emit CoachingBought(coachingSaleID.current()-1);
+        emit CoachingBought(coachingSaleID.current() - 1);
     }
 
     /// @notice Allows multiple content purchases using buyContent
@@ -614,55 +612,68 @@ abstract contract ContentManager is BasePlatform {
         }
     }
 
+    /** @notice Updates the instructor balances and locked balances according to the refund window. ...
+    ... New payments are added to the locked balances and if there any payments that should be paid to the instructor, ...
+    ... they are removed from locked balances and added to the instructor balance.
+    **/
+    /// @param _instrShare amount of UDAO to be paid to the instructor, it revenue of instructor after the content sale
+    /// @param _inst address of the instructor
+    /// @param _transactionTime indicates the day of the transaction (how many days passed since 1Jan1970-0:0:0)
+    /// @param _transactionLBIndex determines the payment will be added to which position in the insLockedBalance array.
     function _updateInstructorBalances(
         uint256 _instrShare,
         address _inst,
         uint256 _transactionTime,
-        uint256 _transactionFuIndex
+        uint256 _transactionLBIndex
     ) internal {
-        //how many day passed since last update of instructor balance
+        // how many day passed since last update of instructor balance
         uint256 dayPassedInst = _transactionTime - instLockTime[_inst];
-        uint256 tempSafetyBalance; // for reentrancy check
+        // safety variable for eliminate reentrancy attacks
+        uint256 tempSafetyBalance;
+        // "if/else": is there any payment in insLockedBalance array that should be paid to the instructor ...
         if (dayPassedInst < refundWindow) {
-            // if(true):There is no payment yet to be paid to the seller in the future balance array.
-            // add new payment to instructor futureBalanceArray
-            instLockedBalance[_inst][_transactionFuIndex] += _instrShare;
+            // if(TRUE): there is no payment yet to be paid to the seller in the insLockedBalance array.
+            // add the "new payment" to instructor futureBalanceArray
+            instLockedBalance[_inst][_transactionLBIndex] += _instrShare;
         } else {
-            // if(else): The future balance array contains values that must be paid to the user.
+            // if(FALSE): the instLockedBalance array contains payments that must be paid to the user.
+            // "if/else": how many elements of the insLockedBalance array must be paid to the instructor ...
             if (dayPassedInst >= (refundWindow * 2)) {
-                //Whole Future Balance Array must paid to user (Because (refundWindow x2)28 day passed)
+                // if(TRUE): every element insLockedBalance array completed the refund window period.
+                // 'for' loop will iterate through all the elements of the insLockedBalance array ...
+                // ... The loop add them to the instructor balance and remove them from the insLockedBalance array.
                 for (uint256 i = 0; i < refundWindow; i++) {
                     tempSafetyBalance = instLockedBalance[_inst][i];
                     instLockedBalance[_inst][i] = 0;
                     instBalance[_inst] += tempSafetyBalance;
                 }
-                // add new payment to instructor futureBalanceArray
-                instLockedBalance[_inst][_transactionFuIndex] += _instrShare;
-
-                // you updated instructor currentBalance of instructorso declare a new time to instLockTime
-                // why (-refundWindow + 1)? This will sustain today will be no more update on balances...
-                // ...but tomarrow a transaction will produce new update.
+                // add the "new payment" to instructor futureBalanceArray
+                instLockedBalance[_inst][_transactionLBIndex] += _instrShare;
+                // instLockTime holds the date of the oldest element in the insLockedBalance that hasn't paid to the user yet. ...
+                // ... As of Today, all payments that have completed the refund window have been paid to the user. ...
+                // ... "The oldest day which the payment has not been paid to instructor yet" is (today-refundWindow)+1.
                 instLockTime[_inst] = (_transactionTime - refundWindow) + 1;
             } else {
-                //Just some part of Future Balance Array must paid to instructor
+                // ...if(FALSE): some elements of the insLockedBalance array must be paid to the instructor
+                // how many elements completed the refund window period
                 uint256 dayPassedInstMod = dayPassedInst % refundWindow;
-                //minimum dayPassedInst=14 so Mod 0, maximum dayPassedInst=27 so Mod 13
-                //if Mod 0 for loop works for today, if Mod 2 it works for today+ yesterday,,, if it 13
+                // so 'for'loop will iterate for the number of elements that completed the refund window period. ...
+                // ... The loop add them to the instructor balance and remove them from the insLockedBalance array.
                 for (uint256 i = 0; i <= dayPassedInstMod; i++) {
-                    //Index of the day to be payout to instructor.
-                    uint256 indexOfPayout = ((_transactionFuIndex +
+                    // indexOfPayout determines which element of the insLockedBalance array will be paid to the instructor. ...
+                    // ... it start from today(i=0) and goes to past during for loop iterations. ...
+                    // ... add and mod operation with refundWindow is for make it a circular array.
+                    uint256 indexOfPayout = ((_transactionLBIndex +
                         refundWindow) - i) % refundWindow;
                     tempSafetyBalance = instLockedBalance[_inst][indexOfPayout];
                     instLockedBalance[_inst][indexOfPayout] = 0;
                     instBalance[_inst] += tempSafetyBalance;
                 }
-
-                // add new payment to instructor futureBalanceArray
-                instLockedBalance[_inst][_transactionFuIndex] += _instrShare;
-
-                // you updated instructor currentBalance of instructorso declare a new time to instLockTime
-                // why (-refundWindow + 1)? This will sustain today will be no more update on balances...
-                // ...but tomarrow a transaction will produce new update.
+                // add the "new payment" to instructor futureBalanceArray
+                instLockedBalance[_inst][_transactionLBIndex] += _instrShare;
+                // instLockTime holds the date of the oldest element in the insLockedBalance that hasn't paid to the user yet. ...
+                // ... As of Today, all payments that have completed the refund window have been paid to the user. ...
+                // ... "The oldest day which the payment has not been paid to instructor yet" is (today-refundWindow)+1.
                 instLockTime[_inst] = (_transactionTime - refundWindow) + 1;
             }
         }
@@ -739,7 +750,9 @@ abstract contract ContentManager is BasePlatform {
 
     /// @notice Allows learner to get refund of coaching 1 day prior to coaching date or coach to refund anytime
     /// @param _saleID id of the coaching sale
-    function refundCoachingByInstructorOrLearner(uint256 _saleID) external whenNotPaused{
+    function refundCoachingByInstructorOrLearner(
+        uint256 _saleID
+    ) external whenNotPaused {
         CoachingSale storage refundItem = coachSales[_saleID];
         require(
             refundItem.refundablePeriod >= (block.timestamp / epochOneDay),
@@ -767,7 +780,7 @@ abstract contract ContentManager is BasePlatform {
     /// @param voucher A RefundVoucher
     function newRefundCoaching(
         IVoucherVerifier.RefundVoucher calldata voucher
-    ) external whenNotPaused{
+    ) external whenNotPaused {
         voucherVerifier.verifyRefundVoucher(voucher);
 
         CoachingSale storage refundItem = coachSales[voucher.saleID];
@@ -792,7 +805,7 @@ abstract contract ContentManager is BasePlatform {
     /// @param voucher A RefundVoucher
     function newRefundContent(
         IVoucherVerifier.RefundVoucher calldata voucher
-    ) external whenNotPaused{
+    ) external whenNotPaused {
         voucherVerifier.verifyRefundVoucher(voucher);
 
         ContentSale storage refundItem = sales[voucher.saleID];
