@@ -6,7 +6,7 @@ import "../interfaces/IRoleManager.sol";
 import "../ContractManager.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
-
+import "hardhat/console.sol";
 contract VoucherVerifier is EIP712, RoleNames {
     string private constant SIGNING_DOMAIN = "TreasuryVouchers";
     string private constant SIGNATURE_VERSION = "1";
@@ -161,6 +161,22 @@ contract VoucherVerifier is EIP712, RoleNames {
     ) external view {
         bytes32 digest = _hashCoachingVoucher(voucher);
         address signer = ECDSA.recover(digest, voucher.signature);
-        require(signer == voucher.coach, "Signature invalid or unauthorized");
+        if (!roleManager.hasRole(BACKEND_ROLE, signer)) {
+            require(
+                signer == voucher.coach,
+                "Signature invalid or unauthorized"
+            );
+        }
+    }
+
+    /// @notice Returns the chain id of the current blockchain.
+    /// @dev This is used to workaround an issue with ganache returning different values from the on-chain chainid() function and
+    ///  the eth_chainId RPC method. See https://github.com/protocol/nft-website/issues/121 for context.
+    function getChainID() external view returns (uint256) {
+        uint256 id;
+        assembly {
+            id := chainid()
+        }
+        return id;
     }
 }
