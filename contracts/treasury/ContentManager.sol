@@ -737,9 +737,9 @@ abstract contract ContentManager is BasePlatform {
         }
     }
 
-    /// @notice Allows learner to get refund of coaching 1 day prior to coaching date or instructor to refund anytime
+    /// @notice Allows learner to get refund of coaching 1 day prior to coaching date or coach to refund anytime
     /// @param _saleID id of the coaching sale
-    function refundCoachingByInstructorOrLearner(uint256 _saleID) external {
+    function refundCoachingByInstructorOrLearner(uint256 _saleID) external whenNotPaused{
         CoachingSale storage refundItem = coachSales[_saleID];
         require(
             refundItem.refundablePeriod >= (block.timestamp / epochOneDay),
@@ -748,7 +748,7 @@ abstract contract ContentManager is BasePlatform {
         if (msg.sender == refundItem.payee) {
             require(refundItem.coachingDate >= block.timestamp + 1 days);
         } else if (msg.sender != refundItem.coach) {
-            revert("You are not the payee or instructor");
+            revert("You are not the payee or coach");
         }
 
         require(refundItem.isRefunded == false, "Already refunded!");
@@ -767,7 +767,7 @@ abstract contract ContentManager is BasePlatform {
     /// @param voucher A RefundVoucher
     function newRefundCoaching(
         IVoucherVerifier.RefundVoucher calldata voucher
-    ) external {
+    ) external whenNotPaused{
         voucherVerifier.verifyRefundVoucher(voucher);
 
         CoachingSale storage refundItem = coachSales[voucher.saleID];
@@ -792,7 +792,7 @@ abstract contract ContentManager is BasePlatform {
     /// @param voucher A RefundVoucher
     function newRefundContent(
         IVoucherVerifier.RefundVoucher calldata voucher
-    ) external {
+    ) external whenNotPaused{
         voucherVerifier.verifyRefundVoucher(voucher);
 
         ContentSale storage refundItem = sales[voucher.saleID];
@@ -855,7 +855,7 @@ abstract contract ContentManager is BasePlatform {
 }
 
 //TODO we need to check functions visibility(view/pure/public) and behaviour (external/internal)
-//TODO Refund voucher icin backend disinda farkli bir wallet kullanilsin.
+//TODO Refund voucher icin backend disinda farkli bir wallet kullanilsin. DONE
 //TODO event ler eksik
 //TODO pnly Role ler eksik
 //TODO ban -kyc checklerde eksik var
