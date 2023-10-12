@@ -13,6 +13,10 @@ abstract contract ContentManager is BasePlatform {
         address buyer
     );
 
+    event CoachingBought(
+        uint256 coachingSaleID
+    );
+
     using Counters for Counters.Counter;
     /// @notice Used to generate unique ids for content sales
     Counters.Counter private saleID;
@@ -171,7 +175,6 @@ abstract contract ContentManager is BasePlatform {
         bool isFiatPurchase;
 
         voucherVerifier.verifyCoachingVoucher(voucher);
-
         require(
             voucher.coachingDate >= block.timestamp + epochOneDay * 1,
             "Coaching date must be at least 1 day before."
@@ -239,8 +242,9 @@ abstract contract ContentManager is BasePlatform {
             refundablePeriod: transactionTime + refundWindow
         });
         coachingSaleID.increment();
-
         _sendCurrentGlobalCutsToGovernanceTreasury();
+
+        emit CoachingBought(coachingSaleID.current()-1);
     }
 
     /// @notice Allows multiple content purchases using buyContent
@@ -854,6 +858,7 @@ abstract contract ContentManager is BasePlatform {
 //TODO Refund voucher icin backend disinda farkli bir wallet kullanilsin.
 //TODO event ler eksik
 //TODO pnly Role ler eksik
+//TODO ban -kyc checklerde eksik var
 //TODO create content srasında instructor ıpdate time 'ı başlatman gerek!
 //TODO instructorWitdrawableBalance view fonksiyonu eksik
 //TODO set new refundWindow algoritması implemente edilmesi gerekiyor!
