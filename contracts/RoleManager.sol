@@ -69,7 +69,7 @@ contract RoleManager is AccessControl, RoleNames {
     /// @param _address address that will be KYCed
     /// @param _isKYCed result of KYC
     function setKYC(address _address, bool _isKYCed) external {
-        require(hasRole(BACKEND_ROLE, msg.sender), "deneme");
+        require(hasRole(BACKEND_ROLE, msg.sender), "Only backend can set KYC");
         KYCList[_address] = _isKYCed;
         emit SetKYC(_address, _isKYCed);
 
