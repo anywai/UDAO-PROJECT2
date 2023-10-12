@@ -3,6 +3,7 @@ pragma solidity ^0.8.4;
 
 import "./ContentManager.sol";
 import "hardhat/console.sol";
+
 contract PlatformTreasury is ContentManager {
     string private constant SIGNING_DOMAIN = "ValidationScore";
     string private constant SIGNATURE_VERSION = "1";
@@ -84,5 +85,34 @@ contract PlatformTreasury is ContentManager {
         udao.transfer(msg.sender, withdrawableBalance);
 
         emit InstructorWithdrawn(msg.sender, withdrawableBalance, debtAmount);
+    }
+
+    /// @notice returns the withdrawable balance of the instructor
+    /// @param _inst The address of the instructor
+    /// @return withdrawableBalance The withdrawable balance of the given instructor
+    function getWithdrawableBalanceInstructor(
+        address _inst
+    ) public view returns (uint) {
+        uint256 transactionTime = (block.timestamp / epochOneDay);
+        //transactionFuIndex determines which position it will be added to in the FutureBalances array.
+        uint256 transactionFuIndex = transactionTime % refundWindow;
+
+        uint instPositiveBalance;
+
+        uint256 dayPassedInst = transactionTime - instLockTime[_inst];
+        if (dayPassedInst >= (refundWindow * 2)) {
+            for (uint256 i = 0; i < refundWindow; i++) {
+                instPositiveBalance += instLockedBalance[_inst][i];
+            }
+        } else {
+            uint256 dayPassedInstMod = dayPassedInst % refundWindow;
+            for (uint256 i = 0; i <= dayPassedInstMod; i++) {
+                //Index of the day to be payout to instructor.
+                uint256 indexOfPayout = ((transactionFuIndex + refundWindow) -
+                    i) % refundWindow;
+                instPositiveBalance += instLockedBalance[_inst][indexOfPayout];
+            }
+        }
+        return instPositiveBalance - instRefundedBalance[_inst];
     }
 }
