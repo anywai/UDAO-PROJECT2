@@ -2,7 +2,7 @@
 pragma solidity ^0.8.4;
 
 import "./ContentManager.sol";
-
+import "hardhat/console.sol";
 contract PlatformTreasury is ContentManager {
     string private constant SIGNING_DOMAIN = "ValidationScore";
     string private constant SIGNATURE_VERSION = "1";
@@ -59,10 +59,7 @@ contract PlatformTreasury is ContentManager {
 
     /// @notice Allows instructers to withdraw individually.
     function withdrawInstructor() external whenNotPaused {
-        require(
-            instBalance[msg.sender] >= instRefundedBalance[msg.sender],
-            "Debt is larger than balance"
-        );
+        // TODO instructorWitdrawableBalance view function
         uint256 transactionTime = (block.timestamp / epochOneDay);
         uint256 transactionFuIndex = transactionTime % refundWindow;
         _updateGlobalContentBalances(0, transactionTime, transactionFuIndex);
@@ -72,6 +69,11 @@ contract PlatformTreasury is ContentManager {
             msg.sender,
             transactionTime,
             transactionFuIndex
+        );
+
+        require(
+            instBalance[msg.sender] >= instRefundedBalance[msg.sender],
+            "Debt is larger than balance"
         );
         _sendCurrentGlobalCutsToGovernanceTreasury();
 
