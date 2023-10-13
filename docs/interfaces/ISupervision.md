@@ -5,13 +5,19 @@
 ### getIsValidated
 
 ```solidity
-function getIsValidated(uint256 tokenId) external view returns (bool)
+function getIsValidated(uint256 tokenId) external view returns (uint256)
 ```
 
 ### getValidatorScore
 
 ```solidity
 function getValidatorScore(address _validator, uint256 _round) external view returns (uint256)
+```
+
+### setValidationStatus
+
+```solidity
+function setValidationStatus(uint256 tokenId, uint256 status) external
 ```
 
 ### getTotalValidationScore
@@ -44,9 +50,27 @@ function getJurorScore(address _juror, uint256 _round) external view returns (ui
 function getTotalJurorScore() external view returns (uint256)
 ```
 
+### createValidation
+
+```solidity
+function createValidation(uint256 tokenId, uint256 score) external
+```
+
 ### nextRound
 
 ```solidity
 function nextRound() external
+```
+
+### dismissValidation
+
+```solidity
+function dismissValidation(address demissionAdress) external
+```
+
+### dismissDispute
+
+```solidity
+function dismissDispute(address demissionAdress) external
 ```
 

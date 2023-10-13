@@ -2,6 +2,12 @@
 
 ## ContractManager
 
+### roleManager
+
+```solidity
+contract IRoleManager roleManager
+```
+
 ### StakingContractAddress
 
 ```solidity
@@ -22,25 +28,13 @@ address PlatformTreasuryAddress
 address UdaoVpAddress
 ```
 
-### IVMAddress
+### ISupVisAddress
 
 ```solidity
-address IVMAddress
+address ISupVisAddress
 ```
 
 _Below needs to be set during deployment_
-
-### IJMAddress
-
-```solidity
-address IJMAddress
-```
-
-### ISupervision
-
-```solidity
-address ISupervision
-```
 
 ### UdaoAddress
 
@@ -54,28 +48,42 @@ address UdaoAddress
 address UdaocAddress
 ```
 
-### IrmAddress
+### RmAddress
 
 ```solidity
-address IrmAddress
+address RmAddress
+```
+
+### GovernanceTreasuryAddress
+
+```solidity
+address GovernanceTreasuryAddress
+```
+
+_unknown if before or after_
+
+### VoucherVerifierAddress
+
+```solidity
+address VoucherVerifierAddress
 ```
 
 ### constructor
 
 ```solidity
-constructor(address _vmAddress, address _jmAddress, address _supAddress, address _udaoAddress, address _udaocAddress, address _irmAddress) public
+constructor(address _supAddress, address _udaoAddress, address _udaocAddress, address _rmAddress) public
+```
+
+### setGovernanceTreasuryAddress
+
+```solidity
+function setGovernanceTreasuryAddress(address _governanceTreasuryAddress) external
 ```
 
 ### setPlatformTreasuryAddress
 
 ```solidity
 function setPlatformTreasuryAddress(address _platformTreasuryAddress) external
-```
-
-### setAddressIVM
-
-```solidity
-function setAddressIVM(address _vmAddress) external
 ```
 
 ### setAddressStaking
@@ -90,16 +98,10 @@ function setAddressStaking(address _stakingAddress) external
 function setAddressUdaoVp(address _udaoVpAddress) external
 ```
 
-### setAddressIJMAddress
+### setAddressISupVisAddress
 
 ```solidity
-function setAddressIJMAddress(address _jmAddress) external
-```
-
-### setAddressISupervision
-
-```solidity
-function setAddressISupervision(address _supAddress) external
+function setAddressISupVisAddress(address _supAddress) external
 ```
 
 ### setAddressUdaoAddress
@@ -117,6 +119,12 @@ function setAddressUdaocAddress(address _udaocAddress) external
 ### setAddressIrmAddress
 
 ```solidity
-function setAddressIrmAddress(address _irmAddress) external
+function setAddressIrmAddress(address _rmAddress) external
+```
+
+### setAddressVoucherVerifierAddress
+
+```solidity
+function setAddressVoucherVerifierAddress(address _voucherVerifierAddress) external
 ```
 

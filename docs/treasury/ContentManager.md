@@ -2,79 +2,77 @@
 
 ## ContentManager
 
-### SIGNING_DOMAIN
-
-```solidity
-string SIGNING_DOMAIN
-```
-
-### SIGNATURE_VERSION
-
-```solidity
-string SIGNATURE_VERSION
-```
-
-### ForcedPayment
-
-```solidity
-event ForcedPayment(uint256 _coachingId, address forcedBy)
-```
-
-triggered if coaching service payment to the instructor is forced
-
-### Refund
-
-```solidity
-event Refund(uint256 _coachingId, address forcedBy, uint256 totalPaymentAmount)
-```
-
-triggered when any kind of refund is done
-
-### CoachingBought
-
-```solidity
-event CoachingBought(address learner, uint256 tokenId, uint256 coachingId)
-```
-
-triggered when coaching bought
-
-### CoachingFinalized
-
-```solidity
-event CoachingFinalized(uint256 coachingId, address coach, address learner)
-```
-
-triggered when coaching finalized
-
-### DeadlineDelayed
-
-```solidity
-event DeadlineDelayed(uint256 coachingId, uint256 newDeadline)
-```
-
-triggered when coaching deadline delayed
-
 ### ContentBought
 
 ```solidity
 event ContentBought(uint256 tokenId, uint256[] parts, uint256 pricePaid, address buyer)
 ```
 
-triggered when content bought
+Emitted when a content is bought
 
-### ContentDiscountVoucher
+### CoachingBought
 
 ```solidity
-struct ContentDiscountVoucher {
+event CoachingBought(uint256 coachingSaleID)
+```
+
+### saleID
+
+```solidity
+struct Counters.Counter saleID
+```
+
+Used to generate unique ids for content sales
+
+### coachingSaleID
+
+```solidity
+struct Counters.Counter coachingSaleID
+```
+
+Used to generate unique ids for coaching sales
+
+### ContentSale
+
+```solidity
+struct ContentSale {
+  address payee;
+  address contentReceiver;
+  address instructor;
+  uint256 instrShare;
+  uint256 totalCut;
   uint256 tokenId;
-  bool fullContentPurchase;
   uint256[] purchasedParts;
-  uint256 priceToPay;
-  uint256 validUntil;
-  address redeemer;
-  address giftReceiver;
-  bytes signature;
+  bool isRefunded;
+  uint256 refundablePeriod;
 }
+```
+
+### CoachingSale
+
+```solidity
+struct CoachingSale {
+  address payee;
+  address contentReceiver;
+  address coach;
+  uint256 instrShare;
+  uint256 totalCut;
+  bool isRefunded;
+  uint256 coachingDate;
+  uint256 refundablePeriod;
+}
+```
+
+### sales
+
+```solidity
+mapping(uint256 => struct ContentManager.ContentSale) sales
+```
+
+### coachSales
+
+```solidity
+mapping(uint256 => struct ContentManager.CoachingSale) coachSales
 ```
 
 ### ownedContents
@@ -83,235 +81,167 @@ struct ContentDiscountVoucher {
 mapping(address => uint256[][]) ownedContents
 ```
 
-### studentList
-
-```solidity
-mapping(uint256 => address[]) studentList
-```
-
-### CoachingStruct
-
-```solidity
-struct CoachingStruct {
-  address coach;
-  address learner;
-  uint256 moneyLockDeadline;
-  uint256 coachingPaymentAmount;
-  uint8 isDone;
-  uint256 totalPaymentAmount;
-  bool isRefundable;
-}
-```
-
-### coachingIdsOfToken
-
-```solidity
-mapping(uint256 => uint256[]) coachingIdsOfToken
-```
-
-### coachingStructs
-
-```solidity
-mapping(uint256 => struct ContentManager.CoachingStruct) coachingStructs
-```
-
 ### coachingIndex
 
 ```solidity
 uint256 coachingIndex
 ```
 
-### priceGetter
+### buyContentWithDiscount
 
 ```solidity
-contract IPriceGetter priceGetter
+function buyContentWithDiscount(struct IVoucherVerifier.ContentDiscountVoucher[] voucher) external
 ```
 
-### constructor
+Allows users to buy content with discount voucher
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| voucher | struct IVoucherVerifier.ContentDiscountVoucher[] | discount vouchers |
+
+### buyCoaching
 
 ```solidity
-constructor(address priceGetterAddress) internal
+function buyCoaching(struct IVoucherVerifier.CoachingVoucher voucher) external
 ```
 
 ### buyContent
 
 ```solidity
-function buyContent(uint256 tokenId, bool fullContentPurchase, uint256[] purchasedParts, address giftReceiver) external
+function buyContent(uint256[] tokenIds, bool[] fullContentPurchases, uint256[][] purchasedParts, address[] giftReceivers) external
 ```
 
-allows users to purchase a content
+Allows multiple content purchases using buyContent
 
 #### Parameters
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| tokenId | uint256 | id of the content |
-| fullContentPurchase | bool | is full content purchased |
-| purchasedParts | uint256[] | parts of the content purchased |
-| giftReceiver | address | address of the gift receiver if purchase is a gift |
+| tokenIds | uint256[] | ids of the content |
+| fullContentPurchases | bool[] | is full content purchased |
+| purchasedParts | uint256[][] | parts of the content purchased |
+| giftReceivers | address[] | address of the gift receiver if purchase is a gift |
 
-### buyDiscountedContent
+### _buyContentwithUDAO
 
 ```solidity
-function buyDiscountedContent(struct ContentManager.ContentDiscountVoucher voucher) external
+function _buyContentwithUDAO(uint256 tokenId, bool fullContentPurchase, uint256[] purchasedParts, address contentReceiver, uint256 totalCut, uint256 instrShare) internal
 ```
 
-allows users to purchase a content. Notice that there is no price conversion
-since the total payment amount is coming from backend with voucher where
-the total amount of payment in UDAO is calculated.
+### _doReceiverHaveContentOrPart
+
+```solidity
+function _doReceiverHaveContentOrPart(uint256 tokenId, bool fullContentPurchase, uint256[] purchasedParts, address contentReceiver) internal view returns (bool)
+```
+
+### calculatePriceToPayInTotal
+
+```solidity
+function calculatePriceToPayInTotal(uint256[] tokenIds, bool[] fullContentPurchases, uint256[][] purchasedParts) external view returns (uint256)
+```
+
+Calculates total amount to pay for a cart purchase
 
 #### Parameters
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| voucher | struct ContentManager.ContentDiscountVoucher | voucher for the content purchase |
+| tokenIds | uint256[] | ids of the contents |
+| fullContentPurchases | bool[] | is full content purchased |
+| purchasedParts | uint256[][] | parts of the content purchased |
 
-### _updateBalancesContent
+### calculatePriceToPay
 
 ```solidity
-function _updateBalancesContent(uint256 priceToPay, address instructor) internal
+function calculatePriceToPay(uint256 _tokenId, bool _fullContentPurchase, uint256[] _purchasedParts) public view returns (uint256)
 ```
 
-allows users to purchase a content
+Calculates price to pay for a purchase
 
 #### Parameters
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| priceToPay | uint256 | price to pay for the content |
-| instructor | address | instructor of the content |
+| _tokenId | uint256 | id of the content |
+| _fullContentPurchase | bool | is full content purchased |
+| _purchasedParts | uint256[] | parts of the content purchased |
 
-### _updateOwned
+### _updateGlobalContentBalances
 
 ```solidity
-function _updateOwned(uint256 tokenId, uint256 purchasedPart, address contentReceiver) internal
+function _updateGlobalContentBalances(uint256 totalCutContentShare, uint256 _transactionTime, uint256 _transactionFuIndex) internal
 ```
 
-an internal function to update owned contents of the user
+### _updateGlobalCoachingBalances
+
+```solidity
+function _updateGlobalCoachingBalances(uint256 totalCutCoachingShare, uint256 _transactionTime, uint256 _transactionFuIndex) internal
+```
+
+### _updateInstructorBalances
+
+```solidity
+function _updateInstructorBalances(uint256 _instrShare, address _inst, uint256 _transactionTime, uint256 _transactionLBIndex) internal
+```
 
 #### Parameters
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| tokenId | uint256 | id of the token that bought (completely of partially) |
-| purchasedPart | uint256 | purchased part of the content (all of the content if 0) |
-| contentReceiver | address | content receiver |
+| _instrShare | uint256 | amount of UDAO to be paid to the instructor, it revenue of instructor after the content sale |
+| _inst | address | address of the instructor |
+| _transactionTime | uint256 | indicates the day of the transaction (how many days passed since 1Jan1970-0:0:0) |
+| _transactionLBIndex | uint256 | determines the payment will be added to which position in the insLockedBalance array. |
 
-### buyCoaching
-
-```solidity
-function buyCoaching(uint256 tokenId) external
-```
-
-Allows users to buy coaching service.
-
-### finalizeCoaching
+### _sendCurrentGlobalCutsToGovernanceTreasury
 
 ```solidity
-function finalizeCoaching(uint256 _coachingId) external
+function _sendCurrentGlobalCutsToGovernanceTreasury() internal
 ```
 
-Allows both parties to finalize coaching service.
+### refundCoachingByInstructorOrLearner
+
+```solidity
+function refundCoachingByInstructorOrLearner(uint256 _saleID) external
+```
+
+Allows learner to get refund of coaching 1 day prior to coaching date or coach to refund anytime
 
 #### Parameters
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| _coachingId | uint256 | The ID of the coaching service |
+| _saleID | uint256 | id of the coaching sale |
 
-### delayDeadline
-
-```solidity
-function delayDeadline(uint256 _coachingId) external
-```
-
-@notice The learner or the coach could delay the service payment
- deadline in the last 3 days of the deadline
- @param _coachingId id of the coaching service
-
-### forcedPayment
+### newRefundCoaching
 
 ```solidity
-function forcedPayment(uint256 _coachingId) external
+function newRefundCoaching(struct IVoucherVerifier.RefundVoucher voucher) external
 ```
 
-Payment and coaching service can be forcefully done by administrator_roles
+Allows refund of coaching with a voucher
 
 #### Parameters
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| _coachingId | uint256 | id of the coaching service |
+| voucher | struct IVoucherVerifier.RefundVoucher | A RefundVoucher |
 
-### forcedPaymentJuror
+### newRefundContent
 
 ```solidity
-function forcedPaymentJuror(uint256 _coachingId) external
+function newRefundContent(struct IVoucherVerifier.RefundVoucher voucher) external
 ```
 
-Payment and coaching service can be forcefully done by jurors
+Allows refund of a content with a voucher
 
 #### Parameters
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| _coachingId | uint256 | id of the coaching service |
-
-### refund
-
-```solidity
-function refund(uint256 _coachingId) external
-```
-
-refunds the coaching service callable by coach
-
-#### Parameters
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _coachingId | uint256 | id of the coaching service |
-
-### forcedRefundAdmin
-
-```solidity
-function forcedRefundAdmin(uint256 _coachingId) external
-```
-
-forces refund of coaching service only be callable by administrator_role (FOUNDATION_ROLE, GOVERNANCE_ROLE)
-
-#### Parameters
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _coachingId | uint256 | id of the coaching service |
-
-### forcedRefundJuror
-
-```solidity
-function forcedRefundJuror(uint256 _coachingId) external
-```
-
-Jurors can force refund of a coaching service
-
-#### Parameters
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _coachingId | uint256 | The ID of the coaching service |
-
-### getCoachings
-
-```solidity
-function getCoachings(uint256 _tokenId) external view returns (uint256[])
-```
-
-returns coaching informations of token
-
-#### Parameters
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _tokenId | uint256 | id of token that coaching will be returned |
+| voucher | struct IVoucherVerifier.RefundVoucher | A RefundVoucher |
 
 ### getOwnedContent
 
@@ -327,20 +257,6 @@ returns owned contents of the _owner
 | ---- | ---- | ----------- |
 | _owner | address | address of the user that will owned contents be returned |
 
-### getStudentListOfToken
-
-```solidity
-function getStudentListOfToken(uint256 tokenId) public view returns (address[])
-```
-
-Returns the buyers of a coaching service for a token
-
-#### Parameters
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| tokenId | uint256 | The token ID of a course of a coaching service |
-
 ### getChainID
 
 ```solidity
@@ -351,34 +267,4 @@ Returns the chain id of the current blockchain.
 
 _This is used to workaround an issue with ganache returning different values from the on-chain chainid() function and
  the eth_chainId RPC method. See https://github.com/protocol/nft-website/issues/121 for context._
-
-### _hash
-
-```solidity
-function _hash(struct ContentManager.ContentDiscountVoucher voucher) internal view returns (bytes32)
-```
-
-Returns a hash of the given ContentDiscountVoucher, prepared using EIP712 typed data hashing rules.
-
-#### Parameters
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| voucher | struct ContentManager.ContentDiscountVoucher | A ContentDiscountVoucher to hash. |
-
-### _verify
-
-```solidity
-function _verify(struct ContentManager.ContentDiscountVoucher voucher) internal view returns (address)
-```
-
-Verifies the signature for a given ContentDiscountVoucher, returning the address of the signer.
-
-_Will revert if the signature is invalid._
-
-#### Parameters
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| voucher | struct ContentManager.ContentDiscountVoucher | A ContentDiscountVoucher describing a content access rights. |
 

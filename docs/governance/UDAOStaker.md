@@ -52,6 +52,12 @@ contract ContractManager contractManager
 address platformTreasuryAddress
 ```
 
+### roleManager
+
+```solidity
+contract IRoleManager roleManager
+```
+
 ### jurorLockTime
 
 ```solidity
@@ -114,11 +120,15 @@ the maximum duration for governance stake
 event SetValidatorLockAmount(uint256 _newAmount)
 ```
 
+Triggered when validator lock amount is updated
+
 ### SetJurorLockAmount
 
 ```solidity
 event SetJurorLockAmount(uint256 _newAmount)
 ```
+
+Triggered when juror lock amount is updated
 
 ### SetValidatorLockTime
 
@@ -126,11 +136,23 @@ event SetJurorLockAmount(uint256 _newAmount)
 event SetValidatorLockTime(uint256 _newLockTime)
 ```
 
+Triggered when validator lock time is updated
+
 ### SetJurorLockTime
 
 ```solidity
 event SetJurorLockTime(uint256 _newLockTime)
 ```
+
+Triggered when juror lock time is updated
+
+### SetApplicationLockTime
+
+```solidity
+event SetApplicationLockTime(uint256 _newLockTime)
+```
+
+Triggered when application lock time is updated
 
 ### SetVoteReward
 
@@ -138,17 +160,23 @@ event SetJurorLockTime(uint256 _newLockTime)
 event SetVoteReward(uint256 _newAmount)
 ```
 
+Triggered when vote reward is updated
+
 ### SetPlatformTreasuryAddress
 
 ```solidity
 event SetPlatformTreasuryAddress(address _newAddress)
 ```
 
+Triggered when platform treasury address is updated
+
 ### RoleApplied
 
 ```solidity
-event RoleApplied(uint256 _roleId, address _user, uint256 _jobAmount)
+event RoleApplied(uint256 _roleId, address _user, uint256 _lockAmount)
 ```
+
+Triggered when any role is applied, roleId: 0 validator, 1 juror
 
 ### RoleApproved
 
@@ -156,23 +184,15 @@ event RoleApplied(uint256 _roleId, address _user, uint256 _jobAmount)
 event RoleApproved(uint256 _roleId, address _user)
 ```
 
+Triggered when any role is approved, roleId: 0 validator, 1 juror
+
 ### RoleRejected
 
 ```solidity
 event RoleRejected(uint256 _roleId, address _user)
 ```
 
-### ValidationAdded
-
-```solidity
-event ValidationAdded(uint256 _amount)
-```
-
-### ValidationRegistered
-
-```solidity
-event ValidationRegistered(address _validator, uint256 _validationId)
-```
+Triggered when any role is rejected, roleId: 0 validator, 1 juror
 
 ### ValidatorStakeWithdrawn
 
@@ -180,17 +200,7 @@ event ValidationRegistered(address _validator, uint256 _validationId)
 event ValidatorStakeWithdrawn(address _validator, uint256 _amount)
 ```
 
-### JobListingRegistered
-
-```solidity
-event JobListingRegistered(address corporate, uint256 amountPerListing)
-```
-
-### JobListingUnregistered
-
-```solidity
-event JobListingUnregistered(address corporate, uint256[] listingId, uint256 amount)
-```
+Triggered when validator stake is withdrawn
 
 ### JurorStakeWithdrawn
 
@@ -198,11 +208,15 @@ event JobListingUnregistered(address corporate, uint256[] listingId, uint256 amo
 event JurorStakeWithdrawn(address _juror, uint256 _amount)
 ```
 
+Triggered when juror stake is withdrawn
+
 ### GovernanceStake
 
 ```solidity
 event GovernanceStake(address _member, uint256 _stakeAmount, uint256 _vpAmount)
 ```
+
+Triggered when governance stake is added
 
 ### GovernanceStakeWithdraw
 
@@ -210,11 +224,15 @@ event GovernanceStake(address _member, uint256 _stakeAmount, uint256 _vpAmount)
 event GovernanceStakeWithdraw(address _member, uint256 _unstakeAmount, uint256 _vpAmount)
 ```
 
+Triggered when governance stake is withdrawn
+
 ### VoteRewardAdded
 
 ```solidity
 event VoteRewardAdded(address _rewardee, uint256 _amount)
 ```
+
+Triggered when vote reward is added to voters reward balance
 
 ### VoteRewardsWithdrawn
 
@@ -222,11 +240,15 @@ event VoteRewardAdded(address _rewardee, uint256 _amount)
 event VoteRewardsWithdrawn(address _rewardee, uint256 _amount)
 ```
 
+Triggered when vote reward is withdrawn
+
 ### SetMaximumStakeDays
 
 ```solidity
 event SetMaximumStakeDays(uint256 _newAmount)
 ```
+
+Triggered when governance maximum stake days is updated
 
 ### SetMinimumStakeDays
 
@@ -234,11 +256,15 @@ event SetMaximumStakeDays(uint256 _newAmount)
 event SetMinimumStakeDays(uint256 _newAmount)
 ```
 
-### validationBalanceOf
+Triggered when governance minimum stake days is updated
+
+### validatorBalanceOf
 
 ```solidity
-mapping(address => uint256) validationBalanceOf
+mapping(address => uint256) validatorBalanceOf
 ```
+
+the balance of the validator
 
 ### jurorBalanceOf
 
@@ -246,23 +272,7 @@ mapping(address => uint256) validationBalanceOf
 mapping(address => uint256) jurorBalanceOf
 ```
 
-### latestValidatorStakeId
-
-```solidity
-mapping(address => uint256) latestValidatorStakeId
-```
-
-### latestJurorStakeId
-
-```solidity
-mapping(address => uint256) latestJurorStakeId
-```
-
-### latestValidationLockId
-
-```solidity
-mapping(address => uint256) latestValidationLockId
-```
+the balance of the juror
 
 ### activeApplicationForValidator
 
@@ -270,35 +280,15 @@ mapping(address => uint256) latestValidationLockId
 mapping(address => bool) activeApplicationForValidator
 ```
 
+if user has an active application for validator role
+
 ### activeApplicationForJuror
 
 ```solidity
 mapping(address => bool) activeApplicationForJuror
 ```
 
-### corporateStakePerListing
-
-```solidity
-uint256 corporateStakePerListing
-```
-
-### corporateStakedUDAO
-
-```solidity
-mapping(address => uint256) corporateStakedUDAO
-```
-
-### corporateLockedUDAO
-
-```solidity
-mapping(address => uint256) corporateLockedUDAO
-```
-
-### corporateActiveListingAmount
-
-```solidity
-mapping(address => uint256) corporateActiveListingAmount
-```
+if user has an active application for juror role
 
 ### GovernanceLock
 
@@ -316,11 +306,15 @@ struct GovernanceLock {
 mapping(address => struct UDAOStaker.GovernanceLock[]) governanceStakes
 ```
 
+Governance lock array for each governance member
+
 ### rewardBalanceOf
 
 ```solidity
 mapping(address => uint256) rewardBalanceOf
 ```
+
+Reward balance of each governance member
 
 ### lastRewardBlock
 
@@ -328,16 +322,20 @@ mapping(address => uint256) rewardBalanceOf
 mapping(address => uint256) lastRewardBlock
 ```
 
+Last reward block of each governance member TODO This is not used??
+
 ### voteReward
 
 ```solidity
 uint256 voteReward
 ```
 
-### ValidationApplication
+Reward given to each voter for each vote with respect to their voting power
+
+### ValidatiorApplication
 
 ```solidity
-struct ValidationApplication {
+struct ValidatiorApplication {
   address applicant;
   bool isFinished;
   uint256 expire;
@@ -347,8 +345,18 @@ struct ValidationApplication {
 ### validatorApplications
 
 ```solidity
-struct UDAOStaker.ValidationApplication[] validatorApplications
+struct UDAOStaker.ValidatiorApplication[] validatorApplications
 ```
+
+Array of validator applications
+
+### validatiorApplicationIndex
+
+```solidity
+uint256 validatiorApplicationIndex
+```
+
+Validator application index, a simple counter
 
 ### validatorApplicationId
 
@@ -356,11 +364,7 @@ struct UDAOStaker.ValidationApplication[] validatorApplications
 mapping(address => uint256) validatorApplicationId
 ```
 
-### validationApplicationIndex
-
-```solidity
-uint256 validationApplicationIndex
-```
+Validator application id for each validator
 
 ### JurorApplication
 
@@ -378,11 +382,15 @@ struct JurorApplication {
 struct UDAOStaker.JurorApplication[] jurorApplications
 ```
 
+Array of juror applications
+
 ### jurorApplicationId
 
 ```solidity
 mapping(address => uint256) jurorApplicationId
 ```
+
+Juror application id for each juror
 
 ### caseApplicationIndex
 
@@ -390,11 +398,15 @@ mapping(address => uint256) jurorApplicationId
 uint256 caseApplicationIndex
 ```
 
+Juror application index, a simple counter
+
 ### totalVotingPower
 
 ```solidity
 uint256 totalVotingPower
 ```
+
+The total voting power of all governance members
 
 ### constructor
 
@@ -408,7 +420,7 @@ constructor(address _platformTreasuryAddress, address rmAddress, address udaoVpA
 | ---- | ---- | ----------- |
 | _platformTreasuryAddress | address | address of the platform treasury contract |
 | rmAddress | address | address of the role manager contract |
-| udaoVpAddress | address |  |
+| udaoVpAddress | address | address of the udao voting power token contract |
 | _contractManager | address | address of the contract manager |
 
 ### updateAddresses
@@ -425,7 +437,7 @@ Get the updated addresses from contract manager
 function setValidatorLockAmount(uint256 _amount) external
 ```
 
-set the required lock amount for validators
+Allows admins to set validator lock amount
 
 #### Parameters
 
@@ -439,7 +451,7 @@ set the required lock amount for validators
 function setJurorLockAmount(uint256 _amount) external
 ```
 
-set the required lock amount for jurors
+Allows admins to set juror lock amount
 
 #### Parameters
 
@@ -453,7 +465,7 @@ set the required lock amount for jurors
 function setValidatorLockTime(uint256 _lockTime) external
 ```
 
-set the required lock time for validators
+Allows admins to set validator lock time
 
 #### Parameters
 
@@ -467,13 +479,27 @@ set the required lock time for validators
 function setJurorLockTime(uint256 _lockTime) external
 ```
 
-set the required lock time for jurors
+Allows admins to set juror lock time
 
 #### Parameters
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | _lockTime | uint256 | is new lock time for jurors |
+
+### setApplicationLockTime
+
+```solidity
+function setApplicationLockTime(uint256 _lockTime) external
+```
+
+Allows admins to set application lock time for role applications
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _lockTime | uint256 | is new lock time for role applications |
 
 ### setVoteReward
 
@@ -549,14 +575,6 @@ function applyForValidator() external
 ```
 
 allows users to apply for validator role
-
-### applyForSuperValidator
-
-```solidity
-function applyForSuperValidator() external
-```
-
-Allows validators to apply for super validator role
 
 ### applyForJuror
 
@@ -722,30 +740,6 @@ function withdrawRewards() external
 
 withdraws reward earned from voting
 
-### corporateListingId
-
-```solidity
-mapping(address => mapping(uint256 => uint256)) corporateListingId
-```
-
-### corporateLatestListingId
-
-```solidity
-mapping(address => uint256) corporateLatestListingId
-```
-
-### registerJobListing
-
-```solidity
-function registerJobListing(uint256 jobListingCount) external
-```
-
-### unregisterJobListing
-
-```solidity
-function unregisterJobListing(uint256[] listingIds) external
-```
-
 ### _hashRole
 
 ```solidity
@@ -786,4 +780,16 @@ _Will revert if the signature is invalid. Does not verify that the signer is aut
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | voucher | struct UDAOStaker.RoleVoucher | A ContentVoucher describing an unminted NFT. |
+
+### pause
+
+```solidity
+function pause() external
+```
+
+### unpause
+
+```solidity
+function unpause() external
+```
 

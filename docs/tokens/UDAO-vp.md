@@ -14,6 +14,12 @@ address stakingContractAddress
 contract ContractManager contractManager
 ```
 
+### roleManager
+
+```solidity
+contract IRoleManager roleManager
+```
+
 ### constructor
 
 ```solidity
@@ -81,5 +87,17 @@ function _mint(address to, uint256 amount) internal
 
 ```solidity
 function _burn(address account, uint256 amount) internal
+```
+
+### pause
+
+```solidity
+function pause() external
+```
+
+### unpause
+
+```solidity
+function unpause() external
 ```
 

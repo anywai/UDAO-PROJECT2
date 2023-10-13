@@ -20,10 +20,16 @@ string SIGNATURE_VERSION
 struct Counters.Counter _tokenIdCounter
 ```
 
+### roleManager
+
+```solidity
+contract IRoleManager roleManager
+```
+
 ### constructor
 
 ```solidity
-constructor(address irmAdress) public
+constructor(address rmAddress) public
 ```
 
 ### CertificateVoucher
@@ -150,5 +156,17 @@ function _burn(uint256 tokenId) internal
 
 ```solidity
 function tokenURI(uint256 tokenId) public view returns (string)
+```
+
+### pause
+
+```solidity
+function pause() external
+```
+
+### unpause
+
+```solidity
+function unpause() external
 ```
 

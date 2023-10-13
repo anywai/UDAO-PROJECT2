@@ -2,100 +2,28 @@
 
 ## BasePlatform
 
+### roleManager
+
+```solidity
+contract IRoleManager roleManager
+```
+
+### voucherVerifier
+
+```solidity
+contract IVoucherVerifier voucherVerifier
+```
+
 ### contractManager
 
 ```solidity
 contract ContractManager contractManager
 ```
 
-### instructorBalance
+### iGovernanceTreasury
 
 ```solidity
-mapping(address => uint256) instructorBalance
-```
-
-### instructorDebt
-
-```solidity
-mapping(address => uint256) instructorDebt
-```
-
-### isTokenBought
-
-```solidity
-mapping(address => mapping(uint256 => mapping(uint256 => bool))) isTokenBought
-```
-
-### foundationBalance
-
-```solidity
-uint256 foundationBalance
-```
-
-### governanceBalance
-
-```solidity
-uint256 governanceBalance
-```
-
-### stakingBalance
-
-```solidity
-uint256 stakingBalance
-```
-
-### jurorBalance
-
-```solidity
-uint256 jurorBalance
-```
-
-### jurorBalanceForRound
-
-```solidity
-uint256 jurorBalanceForRound
-```
-
-### validatorBalance
-
-```solidity
-uint256 validatorBalance
-```
-
-### validatorBalanceForRound
-
-```solidity
-uint256 validatorBalanceForRound
-```
-
-### distributionRound
-
-```solidity
-uint256 distributionRound
-```
-
-### payPerValidationScore
-
-```solidity
-mapping(uint256 => uint256) payPerValidationScore
-```
-
-### payPerJuror
-
-```solidity
-mapping(uint256 => uint256) payPerJuror
-```
-
-### lastValidatorClaim
-
-```solidity
-mapping(address => uint256) lastValidatorClaim
-```
-
-### lastJurorClaim
-
-```solidity
-mapping(address => uint256) lastJurorClaim
+contract IGovernanceTreasury iGovernanceTreasury
 ```
 
 ### udao
@@ -110,42 +38,6 @@ contract IERC20 udao
 contract IUDAOC udaoc
 ```
 
-### coachingFoundationCut
-
-```solidity
-uint256 coachingFoundationCut
-```
-
-### coachingGovernanceCut
-
-```solidity
-uint256 coachingGovernanceCut
-```
-
-### contentFoundationCut
-
-```solidity
-uint256 contentFoundationCut
-```
-
-### contentGovernanceCut
-
-```solidity
-uint256 contentGovernanceCut
-```
-
-### contentJurorCut
-
-```solidity
-uint256 contentJurorCut
-```
-
-### contentValidatorCut
-
-```solidity
-uint256 contentValidatorCut
-```
-
 ### governanceTreasury
 
 ```solidity
@@ -158,70 +50,10 @@ address governanceTreasury
 address foundationWallet
 ```
 
-### IVM
+### isTokenBought
 
 ```solidity
-contract IValidationManager IVM
-```
-
-### IJM
-
-```solidity
-contract IJurorManager IJM
-```
-
-### RewardsDistributed
-
-```solidity
-event RewardsDistributed(uint256 payPerValidationScore, uint256 payPerJurorPoint, uint256 newRoundId)
-```
-
-Triggered after every round is finalized and rewards are distributed
-
-### CutsUpdated
-
-```solidity
-event CutsUpdated(uint256 coachFnd, uint256 coachGov, uint256 contentFnd, uint256 contentGov, uint256 contentJuror, uint256 contentValid)
-```
-
-This event is triggered if a cut is updated.
-
-### GovernanceTreasuryUpdated
-
-```solidity
-event GovernanceTreasuryUpdated(address newAddress)
-```
-
-This event is triggered if the governance treasury address is updated.
-
-### FoundationWalletUpdated
-
-```solidity
-event FoundationWalletUpdated(address newAddress)
-```
-
-This event is triggered if the foundation wallet address is updated.
-
-### ContractManagerUpdated
-
-```solidity
-event ContractManagerUpdated(address newAddress)
-```
-
-This event is triggered if the contract manager address is updated.
-
-### AddressesUpdated
-
-```solidity
-event AddressesUpdated(address udao, address udaoc, address ivm, address ijm, address irm)
-```
-
-This event is triggered if the contract manager updates the addresses.
-
-### constructor
-
-```solidity
-constructor(address _contractManager, address _rmAddress) internal
+mapping(address => mapping(uint256 => mapping(uint256 => bool))) isTokenBought
 ```
 
 ### setGovernanceTreasuryAddress
@@ -274,98 +106,281 @@ function updateAddresses() external
 
 Get the updated addresses from contract manager
 
-### setCoachingFoundationCut
+### constructor
 
 ```solidity
-function setCoachingFoundationCut(uint256 _cut) external
+constructor(address _contractManager, address rmAddress, address _iGovernanceTreasuryAddress, address _voucherVerifierAddress) internal
 ```
 
-changes cut from coaching for foundation
+### GovernanceTreasuryUpdated
+
+```solidity
+event GovernanceTreasuryUpdated(address newAddress)
+```
+
+This event is triggered if the governance treasury address is updated.
+
+### FoundationWalletUpdated
+
+```solidity
+event FoundationWalletUpdated(address newAddress)
+```
+
+This event is triggered if the foundation wallet address is updated.
+
+### ContractManagerUpdated
+
+```solidity
+event ContractManagerUpdated(address newAddress)
+```
+
+This event is triggered if the contract manager address is updated.
+
+### AddressesUpdated
+
+```solidity
+event AddressesUpdated(address udao, address udaoc, address isupvis, address irm, address voucherVerifier)
+```
+
+This event is triggered if the contract manager updates the addresses.
+
+### refundWindow
+
+```solidity
+uint256 refundWindow
+```
+
+### epochOneDay
+
+```solidity
+uint256 epochOneDay
+```
+
+### instBalance
+
+```solidity
+mapping(address => uint256) instBalance
+```
+
+### instLockedBalance
+
+```solidity
+mapping(address => uint256[61]) instLockedBalance
+```
+
+### contentCutPool
+
+```solidity
+uint256 contentCutPool
+```
+
+### contentCutLockedPool
+
+```solidity
+uint256[61] contentCutLockedPool
+```
+
+### coachingCutPool
+
+```solidity
+uint256 coachingCutPool
+```
+
+### coachingCutLockedPool
+
+```solidity
+uint256[61] coachingCutLockedPool
+```
+
+### foundationBalance
+
+```solidity
+uint256 foundationBalance
+```
+
+### governanceBalance
+
+```solidity
+uint256 governanceBalance
+```
+
+### jurorBalance
+
+```solidity
+uint256 jurorBalance
+```
+
+### validatorsBalance
+
+```solidity
+uint256 validatorsBalance
+```
+
+### instLockTime
+
+```solidity
+mapping(address => uint256) instLockTime
+```
+
+### contentLockTime
+
+```solidity
+uint256 contentLockTime
+```
+
+### coachingLockTime
+
+```solidity
+uint256 coachingLockTime
+```
+
+### instRefundedBalance
+
+```solidity
+mapping(address => uint256) instRefundedBalance
+```
+
+### contentCutRefundedBalance
+
+```solidity
+uint256 contentCutRefundedBalance
+```
+
+### coachingCutRefundedBalance
+
+```solidity
+uint256 coachingCutRefundedBalance
+```
+
+### coachFoundCut
+
+```solidity
+uint256 coachFoundCut
+```
+
+### coachGoverCut
+
+```solidity
+uint256 coachGoverCut
+```
+
+### coachJurorCut
+
+```solidity
+uint256 coachJurorCut
+```
+
+### coachValidCut
+
+```solidity
+uint256 coachValidCut
+```
+
+### contentFoundCut
+
+```solidity
+uint256 contentFoundCut
+```
+
+### contentGoverCut
+
+```solidity
+uint256 contentGoverCut
+```
+
+### contentJurorCut
+
+```solidity
+uint256 contentJurorCut
+```
+
+### contentValidCut
+
+```solidity
+uint256 contentValidCut
+```
+
+### contentTotalCut
+
+```solidity
+uint256 contentTotalCut
+```
+
+### coachTotalCut
+
+```solidity
+uint256 coachTotalCut
+```
+
+### isGovernanceTreasuryOnline
+
+```solidity
+bool isGovernanceTreasuryOnline
+```
+
+### PlatformCutsUpdated
+
+```solidity
+event PlatformCutsUpdated(uint256 coachFoundCut, uint256 coachGoverCut, uint256 coachJurorCut, uint256 coachValidCut, uint256 contentFoundCut, uint256 contentGoverCut, uint256 contentJurorCut, uint256 contentValidCut)
+```
+
+This event is triggered if a cut is updated.
+
+### calculateContentCutShares
+
+```solidity
+function calculateContentCutShares(uint256 _revenue) public view returns (uint256 foundationShare, uint256 governanceShare, uint256 jurorShare, uint256 validatorShare)
+```
+
+### calculateContentSaleTotalCut
+
+```solidity
+function calculateContentSaleTotalCut(uint256 _priceOf) public view returns (uint256)
+```
+
+### calculateCoachingCutShares
+
+```solidity
+function calculateCoachingCutShares(uint256 _revenue) public view returns (uint256 foundationShare, uint256 governanceShare, uint256 jurorShare, uint256 validatorShare)
+```
+
+### calculateCoachingSaleTotalCut
+
+```solidity
+function calculateCoachingSaleTotalCut(uint256 _priceOf) public view returns (uint256)
+```
+
+### setCoachCuts
+
+```solidity
+function setCoachCuts(uint256 _coachFoundCut, uint256 _coachGoverCut, uint256 _coachJurorCut, uint256 _coachValidCut) external
+```
+
+sets the cut for foundation/governance/juror/validator for a coaching sale
 
 #### Parameters
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| _cut | uint256 | new cut (100000 -> 100% | 5000 -> 5%) |
+| _coachFoundCut | uint256 | new cut for foundation |
+| _coachGoverCut | uint256 | new cut for governance |
+| _coachJurorCut | uint256 | new cut for juror pool |
+| _coachValidCut | uint256 | new cut for validator pool |
 
-### setCoachingGovernanceCut
+### setContentCuts
 
 ```solidity
-function setCoachingGovernanceCut(uint256 _cut) external
+function setContentCuts(uint256 _contentFoundCut, uint256 _contentGoverCut, uint256 _contentJurorCut, uint256 _contentValidCut) external
 ```
 
-changes cut from coaching for governance
+sets the cut for foundation/governance/juror/validator for a content sale
 
 #### Parameters
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| _cut | uint256 | new cut (100000 -> 100% | 5000 -> 5%) |
-
-### setContentFoundationCut
-
-```solidity
-function setContentFoundationCut(uint256 _cut) external
-```
-
-changes cut from content for foundation
-
-#### Parameters
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _cut | uint256 | new cut (100000 -> 100% | 5000 -> 5%) |
-
-### setContentGovernanceCut
-
-```solidity
-function setContentGovernanceCut(uint256 _cut) external
-```
-
-changes cut from content for governance
-
-#### Parameters
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _cut | uint256 | new cut (100000 -> 100% | 5000 -> 5%) |
-
-### setContentJurorCut
-
-```solidity
-function setContentJurorCut(uint256 _cut) external
-```
-
-changes cut from content for juror pool
-
-#### Parameters
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _cut | uint256 | new cut (100000 -> 100% | 5000 -> 5%) |
-
-### setContentValidatorCut
-
-```solidity
-function setContentValidatorCut(uint256 _cut) external
-```
-
-changes cut from content for validator pool
-
-#### Parameters
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _cut | uint256 | new cut (100000 -> 100% | 5000 -> 5%) |
-
-### distributeRewards
-
-```solidity
-function distributeRewards() external
-```
-
-distributes rewards for round
-Gets balance accumulated this round and distributes it per point
-for validators to claim it later.
-TODO Automate this process with sentinels?
+| _contentFoundCut | uint256 | new cut for foundation |
+| _contentGoverCut | uint256 | new cut for governance |
+| _contentJurorCut | uint256 | new cut for juror pool |
+| _contentValidCut | uint256 | new cut for validator pool |
 

@@ -16,6 +16,12 @@ function addVoteRewards(address voter) external
 contract IUDAOStaker stakingContract
 ```
 
+### roleManager
+
+```solidity
+contract IRoleManager roleManager
+```
+
 ### constructor
 
 ```solidity

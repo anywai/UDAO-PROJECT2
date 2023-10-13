@@ -34,6 +34,12 @@ contract IPlatformTreasury PT
 contract IStakingContract staker
 ```
 
+### roleManager
+
+```solidity
+contract IRoleManager roleManager
+```
+
 ### contractManager
 
 ```solidity
@@ -108,6 +114,18 @@ event ValidationAssigned(uint256 tokenId, uint256 validationId, address validato
 event ValidationResultSent(uint256 tokenId, uint256 validationId, address validator, bool result)
 ```
 
+### ValidatorRemovedFromValidation
+
+```solidity
+event ValidatorRemovedFromValidation(uint256 tokenId, address validator, uint256 validationId)
+```
+
+### JurorRemovedFromDispute
+
+```solidity
+event JurorRemovedFromDispute(uint256 caseId, address juror, uint256 disputeId)
+```
+
 ### ValidationEnded
 
 ```solidity
@@ -120,7 +138,7 @@ event ValidationEnded(uint256 tokenId, uint256 validationId, bool result)
 mapping(address => mapping(uint256 => uint256)) jurorScorePerRound
 ```
 
-_Mappings_
+_MAPPINGS_
 
 ### activeDispute
 
@@ -143,7 +161,7 @@ mapping(address => uint256) unsuccessfulDispute
 ### isValidated
 
 ```solidity
-mapping(uint256 => bool) isValidated
+mapping(uint256 => uint256) isValidated
 ```
 
 ### latestValidationOfToken
@@ -186,6 +204,12 @@ mapping(address => uint256) successfulValidation
 
 ```solidity
 mapping(address => uint256) unsuccessfulValidation
+```
+
+### objectionCount
+
+```solidity
+mapping(uint256 => uint256) objectionCount
 ```
 
 ### Dispute
@@ -234,6 +258,7 @@ struct Validation {
   uint256 resultDate;
   uint256 validationScore;
   uint256 validatorScore;
+  bool isFinalized;
 }
 ```
 
@@ -294,6 +319,12 @@ uint256 totalValidationScore
 ```
 
 _is used during the calculation of a validator score_
+
+### maxObjection
+
+```solidity
+uint256 maxObjection
+```
 
 ### constructor
 
@@ -372,6 +403,20 @@ sets required validator vote count per content
 | ---- | ---- | ----------- |
 | _requiredValidators | uint128 | new required vote count |
 
+### setMaxObjectionCount
+
+```solidity
+function setMaxObjectionCount(uint256 _maxObjection) external
+```
+
+sets maximum objection count per latest validation
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _maxObjection | uint256 | new objection count |
+
 ### getCaseResults
 
 ```solidity
@@ -433,7 +478,7 @@ returns total successful validation count
 ### getIsValidated
 
 ```solidity
-function getIsValidated(uint256 tokenId) external view returns (bool)
+function getIsValidated(uint256 tokenId) external view returns (uint256)
 ```
 
 Returns the validation result of a token
@@ -616,11 +661,69 @@ Sends validation result of validator to blockchain
 function finalizeValidation(uint256 validationId) external
 ```
 
+finalizes validation if enough validation is sent
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| validationId | uint256 | id of the validation |
+
 ### dismissValidation
 
 ```solidity
-function dismissValidation(uint256 validationId) external
+function dismissValidation(address demissionAddress) external
 ```
+
+allows validators to be fired or resigned
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| demissionAddress | address | is the address that will be revoked from validator role |
+
+### removeValidatorFromValidation
+
+```solidity
+function removeValidatorFromValidation(address demissionAddress) internal
+```
+
+allows validators to dismiss a validation assignment
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| demissionAddress | address | id of the content that will be dismissed |
+
+### dismissDispute
+
+```solidity
+function dismissDispute(address demissionAddress) external
+```
+
+allows validators to dismiss a validation assignment
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| demissionAddress | address | id of the content that will be dismissed |
+
+### removeJurorFromDispute
+
+```solidity
+function removeJurorFromDispute(address demissionAddress) internal
+```
+
+allows validators to dismiss a validation assignment
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| demissionAddress | address | id of the content that will be dismissed |
 
 ### createValidation
 
@@ -637,6 +740,14 @@ starts new validation for content
 | tokenId | uint256 | id of the content that will be validated |
 | score | uint256 | validation score of the content |
 
+### objectToLatestValidation
+
+```solidity
+function objectToLatestValidation(uint256 tokenId) external
+```
+
+re-creates validation for unchanged content if it is invalidated for no valid reason
+
 ### assignValidation
 
 ```solidity
@@ -650,6 +761,12 @@ assign validation to self
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | validationId | uint256 | id of the validation |
+
+### setValidationStatus
+
+```solidity
+function setValidationStatus(uint256 tokenId, uint256 status) external
+```
 
 ### nextRound
 
@@ -669,4 +786,16 @@ function updateAddresses() external
 
 Get the updated addresses from contract manager
 TODO is this correct?
+
+### pause
+
+```solidity
+function pause() external
+```
+
+### unpause
+
+```solidity
+function unpause() external
+```
 

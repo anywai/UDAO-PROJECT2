@@ -2,34 +2,34 @@
 
 ## RoleManager
 
-### VALIDATOR_ROLE
+### contractManager
 
 ```solidity
-bytes32 VALIDATOR_ROLE
+contract ContractManager contractManager
 ```
 
-### SUPER_VALIDATOR_ROLE
+### ISupVis
 
 ```solidity
-bytes32 SUPER_VALIDATOR_ROLE
+contract ISupervision ISupVis
 ```
 
-### JUROR_ROLE
+### activeKYCFunctions
 
 ```solidity
-bytes32 JUROR_ROLE
+mapping(uint256 => bool) activeKYCFunctions
 ```
 
-### BACKEND_ROLE
+### activeBanFunctions
 
 ```solidity
-bytes32 BACKEND_ROLE
+mapping(uint256 => bool) activeBanFunctions
 ```
 
-### STAKING_CONTRACT
+### AddressesUpdated
 
 ```solidity
-bytes32 STAKING_CONTRACT
+event AddressesUpdated(address ContractManagerAddress)
 ```
 
 ### KYCList
@@ -66,40 +66,24 @@ constructor() public
 
 Deployer gets the admin role.
 
-### checkRole
+### setContractManager
 
 ```solidity
-function checkRole(bytes32 role, address account) external view
+function setContractManager(address _contractManager) external
 ```
 
-Used for checking if the given account has the asked role
-
-#### Parameters
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| role | bytes32 | The name of the role to check |
-| account | address | The address of the account to check |
-
-### checkRoles
+### updateAddresses
 
 ```solidity
-function checkRoles(bytes32[] roles, address account) external view
+function updateAddresses() external
 ```
 
-Used for checking if given account has given multiple roles
+Get the updated addresses from contract manager
 
-#### Parameters
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| roles | bytes32[] | The name of the roles to check |
-| account | address | The address of the account to check |
-
-### _checkRoles
+### hasRoles
 
 ```solidity
-function _checkRoles(bytes32[] roles, address account) internal view virtual
+function hasRoles(bytes32[] roles, address account) public view returns (bool)
 ```
 
 Modified AccessControl checkRoles for multiple role check
@@ -109,7 +93,7 @@ Modified AccessControl checkRoles for multiple role check
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | roles | bytes32[] | The name of the roles to check |
-| account | address | The address of the account to check |
+| account | address |  |
 
 ### setKYC
 
@@ -141,10 +125,40 @@ set ban for an account address
 | _address | address | address that will be ban set |
 | _isBanned | bool | ban set result |
 
+### setActiveKYCFunctions
+
+```solidity
+function setActiveKYCFunctions(uint256 functionId, bool status) external
+```
+
+Setter function of activeKYCFunctions
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| functionId | uint256 | function id of the function |
+| status | bool | KYC status of the function |
+
+### setActiveBanFunctions
+
+```solidity
+function setActiveBanFunctions(uint256 functionId, bool status) external
+```
+
+Setter function of activeBanFunctions
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| functionId | uint256 | function id of the function |
+| status | bool | Ban status of the function |
+
 ### isKYCed
 
 ```solidity
-function isKYCed(address _address) external view returns (bool)
+function isKYCed(address _address, uint256 functionId) external view returns (bool)
 ```
 
 gets KYC result of the address
@@ -154,11 +168,12 @@ gets KYC result of the address
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | _address | address | wallet that KYC result will be sent |
+| functionId | uint256 |  |
 
 ### isBanned
 
 ```solidity
-function isBanned(address _address) external view returns (bool)
+function isBanned(address _address, uint256 functionId) external view returns (bool)
 ```
 
 gets ban result of the address
@@ -168,6 +183,7 @@ gets ban result of the address
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | _address | address | wallet that ban result will be sent |
+| functionId | uint256 |  |
 
 ### grantRoleStaker
 
@@ -175,9 +191,55 @@ gets ban result of the address
 function grantRoleStaker(bytes32 role, address user) external
 ```
 
+grants a role to an account
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| role | bytes32 | The name of the role to grant |
+| user | address | The address of the account to grant the role to |
+
 ### revokeRoleStaker
 
 ```solidity
 function revokeRoleStaker(bytes32 role, address user) external
 ```
+
+revokes a role from an account
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| role | bytes32 | The name of the role to revoke |
+| user | address | The address of the account to revoke the role from |
+
+### grantBackend
+
+```solidity
+function grantBackend(address backendAddress) external
+```
+
+grants BACKEND_ROLE to a new address
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| backendAddress | address | The address of the backend to grant |
+
+### revokeBackend
+
+```solidity
+function revokeBackend(address backendAddress) external
+```
+
+revokes BACKEND_ROLE and bans the backend address
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| backendAddress | address | The address of the backend to revoke |
 

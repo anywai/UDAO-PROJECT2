@@ -49,23 +49,15 @@ this event gets triggered when a juror withdraw tokens
 ### InstructorWithdrawn
 
 ```solidity
-event InstructorWithdrawn(address instructor, uint256 amount)
+event InstructorWithdrawn(address instructor, uint256 amount, uint256 debt)
 ```
 
 this event gets triggered when a instructor withdraw tokens
 
-### InstructorWithdrawnWithDebt
-
-```solidity
-event InstructorWithdrawnWithDebt(address instructor, uint256 amount, uint256 debtAmount)
-```
-
-this event gets triggered when a instructor withdraw tokens and if has debt
-
 ### constructor
 
 ```solidity
-constructor(address _contractManagerAddress, address _rmAddress, address priceGetterAddress) public
+constructor(address _contractManagerAddress, address _rmAddress, address _iGovernanceTreasuryAddress, address voucherVerifierAddress) public
 ```
 
 #### Parameters
@@ -74,15 +66,8 @@ constructor(address _contractManagerAddress, address _rmAddress, address priceGe
 | ---- | ---- | ----------- |
 | _contractManagerAddress | address | The address of the deployed role manager |
 | _rmAddress | address | The address of the deployed role manager |
-| priceGetterAddress | address |  |
-
-### withdrawGovernance
-
-```solidity
-function withdrawGovernance() external
-```
-
-withdraws governance balance to governance treasury
+| _iGovernanceTreasuryAddress | address |  |
+| voucherVerifierAddress | address |  |
 
 ### withdrawFoundation
 
@@ -92,22 +77,6 @@ function withdrawFoundation() external
 
 withdraws foundation balance to foundation wallet
 
-### withdrawValidator
-
-```solidity
-function withdrawValidator() external
-```
-
-calculates validator earnings and withdraws calculated earning to validator's wallet
-
-### withdrawJuror
-
-```solidity
-function withdrawJuror() external
-```
-
-calculates juror earnings and withdraws calculated earning to juror's wallet
-
 ### withdrawInstructor
 
 ```solidity
@@ -116,9 +85,23 @@ function withdrawInstructor() external
 
 Allows instructers to withdraw individually.
 
-### transferGovernanceRewards
+### getWithdrawableBalanceInstructor
 
 ```solidity
-function transferGovernanceRewards(address _to, uint256 _amount) external
+function getWithdrawableBalanceInstructor(address _inst) public view returns (uint256)
 ```
+
+returns the withdrawable balance of the instructor
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _inst | address | The address of the instructor |
+
+#### Return Values
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [0] | uint256 | withdrawableBalance The withdrawable balance of the given instructor |
 
