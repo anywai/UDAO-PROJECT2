@@ -680,11 +680,6 @@ abstract contract ContentManager is BasePlatform {
     }
 
     function _sendCurrentGlobalCutsToGovernanceTreasury() internal {
-        uint foundTempBalance;
-        uint goverTempBalance;
-        uint jurorTempBalance;
-        uint validTempBalance;
-
         if (contentCutPool > contentCutRefundedBalance) {
             uint withdrawableContentShare = contentCutPool -
                 contentCutRefundedBalance;
