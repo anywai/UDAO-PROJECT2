@@ -691,36 +691,16 @@ abstract contract ContentManager is BasePlatform {
             contentCutPool = 0;
             contentCutRefundedBalance = 0;
 
-            (
-                foundTempBalance,
-                goverTempBalance,
-                jurorTempBalance,
-                validTempBalance
-            ) = calculateContentCutShares(withdrawableContentShare);
-
-            foundationBalance += foundTempBalance;
-            governanceBalance += goverTempBalance;
-            jurorBalance += jurorTempBalance;
-            validatorsBalance += validTempBalance;
+            distributeContentCutShares(withdrawableContentShare);
         }
 
         if (coachingCutPool > coachingCutRefundedBalance) {
-            uint withdrawableContentShare = coachingCutPool -
+            uint withdrawableCoachingShare = coachingCutPool -
                 coachingCutRefundedBalance;
             coachingCutPool = 0;
             coachingCutRefundedBalance = 0;
 
-            (
-                foundTempBalance,
-                goverTempBalance,
-                jurorTempBalance,
-                validTempBalance
-            ) = calculateCoachingCutShares(withdrawableContentShare);
-
-            foundationBalance += foundTempBalance;
-            governanceBalance += goverTempBalance;
-            jurorBalance += jurorTempBalance;
-            validatorsBalance += validTempBalance;
+            distributeCoachingCutShares(withdrawableCoachingShare);
         }
         if (isGovernanceTreasuryOnline == true) {
             if (jurorBalance > 0) {

@@ -190,22 +190,22 @@ abstract contract BasePlatform is Pausable, RoleNames {
         uint256 contentValidCut
     );
 
-    function calculateContentCutShares(
-        uint256 _revenue
-    )
-        public
-        view
-        returns (
-            uint256 foundationShare,
-            uint256 governanceShare,
-            uint256 jurorShare,
-            uint256 validatorShare
-        )
-    {
-        foundationShare = ((_revenue * contentFoundCut) / contentTotalCut);
-        governanceShare = ((_revenue * contentGoverCut) / contentTotalCut);
-        jurorShare = ((_revenue * contentJurorCut) / contentTotalCut);
-        validatorShare = ((_revenue * contentValidCut) / contentTotalCut);
+    /// @notice distribute the shares of foundation and governance/juror/validator pools from a platform's content sale revenue
+    /// @param _revenue is the content sale revenue to be shared
+    function distributeContentCutShares(uint256 _revenue) internal {
+        foundationBalance += ((_revenue * contentFoundCut) / contentTotalCut);
+        governanceBalance += ((_revenue * contentGoverCut) / contentTotalCut);
+        jurorBalance += ((_revenue * contentJurorCut) / contentTotalCut);
+        validatorsBalance += ((_revenue * contentValidCut) / contentTotalCut);
+    }
+
+    /// @notice distribute the shares of foundation and governance/juror/validator pools from a platform's coaching sale revenue
+    /// @param _revenue is the coaching sale revenue to be shared
+    function distributeCoachingCutShares(uint256 _revenue) internal {
+        foundationBalance += ((_revenue * coachFoundCut) / coachTotalCut);
+        governanceBalance += ((_revenue * coachGoverCut) / coachTotalCut);
+        jurorBalance += ((_revenue * coachJurorCut) / coachTotalCut);
+        validatorsBalance += ((_revenue * coachValidCut) / coachTotalCut);
     }
 
     function calculateContentSaleTotalCut(
