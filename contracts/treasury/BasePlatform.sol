@@ -1,6 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.4;
 
+/// @title BasePlatform - PlatformTreasury
+/// @author anywaiTR: Bugrahan Duran, Batuhan Darcin
+/// @notice Contains key definitions for a platform treasury.
+/// @dev This contract is inherited by ContentManager contract.
+
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
@@ -12,27 +17,24 @@ import "../RoleNames.sol";
 import "../interfaces/IVoucherVerifier.sol";
 
 abstract contract BasePlatform is Pausable, RoleNames {
-    // roleManager is project role manager contract
+    /// @notice RoleManager contract is used to check roles of users and KYC/Ban status
     IRoleManager roleManager;
-    // VoucherVerifier is platform treasury voucher/verifier contract
+    /// @notice VoucherVerifier contract is defines the vouchers of PlatformTreasury and used to verify vouchers
     IVoucherVerifier voucherVerifier;
-    // ContractManager is project update address contract
+    /// @notice ContractManager contract is used to update contract addresses of project
     ContractManager public contractManager;
-    // GovernanceTreasury is platforms governance related funds treasury contract
+    /// @notice GovernanceTreasury contract is platforms governance related funds treasury contract
     IGovernanceTreasury public iGovernanceTreasury;
 
-    // UDAO (ERC20) Token interface
+    /// @notice UDAO (ERC20) Token is main token of the platform and used for payments
     IERC20 udao;
-    // UDAO (ERC721) Token interface
+    /// @notice UDAOC (ERC721) Token is defines contents and used for content ownership
     IUDAOC udaoc;
 
-    // Address of governanceTreasury
+    /// @notice Address of governanceTreasury
     address governanceTreasury;
-    // Address of foundation wallet
+    /// @notice Address of foundation wallet
     address foundationWallet;
-
-    // user address => (content id => (content part id => owned/not owned by the user))
-    mapping(address => mapping(uint => mapping(uint => bool))) isTokenBought;
 
     /// @notice Sets the address of the governance treasury
     /// @param _newAddress New address of the governance treasury
@@ -92,6 +94,91 @@ abstract contract BasePlatform is Pausable, RoleNames {
         );
     }
 
+    /// @notice user address => (content id => (content part id => part owned/not owned by the user))
+    mapping(address => mapping(uint => mapping(uint => bool))) isTokenBought;
+    /// @notice during refund windows all payments locked on contract and users can request refund
+    /// @dev instLockedBalance and coaching/contentCutLockedPool arrays's size defines the maximum setable refund window
+    uint256 refundWindow = 14;
+    /// @notice one day equals to 86400 second in epoch time
+    uint256 epochOneDay = 86400;
+
+    /// @notice instructor address => instructor's balance
+    mapping(address => uint) public instBalance;
+    /// @notice instructor address => instructor's locked balances
+    mapping(address => uint[61]) public instLockedBalance;
+    /// @notice content cut pool for content sales
+    uint256 public contentCutPool;
+    /// @notice content cut locked pool for content sales (locked revenues during refund window)
+    uint256[61] public contentCutLockedPool;
+    /// @notice coaching cut pool for coaching sales
+    uint256 public coachingCutPool;
+    /// @notice coaching cut locked pool for coaching sales (locked revenues during refund window)
+    uint256[61] public coachingCutLockedPool;
+
+    /// @notice foundation balance
+    uint public foundationBalance;
+    /// @notice governance pool balance
+    uint public governanceBalance;
+    /// @notice juror pool balance
+    uint public jurorBalance;
+    /// @notice validator pool balance
+    uint public validatorsBalance;
+
+    /// @notice instructor address => the date of the oldest locked payment of instructor.
+    mapping(address => uint256) public instLockTime;
+    /// @notice the date of the oldest locked payment in contentCutLockedPool
+    uint public contentLockTime;
+    /// @notice the date of the oldest locked payment in coachingCutLockedPool
+    uint public coachingLockTime;
+
+    /// @notice instructor address => instructor's refunded balance to users
+    mapping(address => uint) public instRefundedBalance;
+    /// @notice content cut pool's refunded cuts to users
+    uint256 contentCutRefundedBalance;
+    /// @notice coaching cut pool's refunded cuts to users
+    uint256 coachingCutRefundedBalance;
+
+    /// @notice The allocated cut for foundation from content sales
+    /// @dev initiated as (4000/100000 = 4%)
+    uint public contentFoundCut = 4000;
+    /// @notice The allocated cut for governance pool from content sales
+    /// @dev initiated as 0% and planned to be (700/100000 = 0.7%) after governance release
+    uint public contentGoverCut = 0;
+    /// @notice The allocated cut for juror pool from content sales
+    /// @dev initiated as 0% and planned to be (100/100000 = 0.1%) after governance release
+    uint public contentJurorCut = 0;
+    /// @notice The allocated cut for validator pool from content sales
+    /// @dev initiated as 0% and planned to be (200/100000 = 0.2%) after governance release
+    uint public contentValidCut = 0;
+
+    /// @notice The allocated cut for foundation from coaching sales
+    /// @dev initiated as (4000/100000 = 4%)
+    uint public coachFoundCut = 4000;
+    /// @notice The allocated cut for governance pool from coaching sales
+    /// @dev initiated as 0% and planned to be (700/100000 = 0.7%) after governance release
+    uint public coachGoverCut = 0;
+    /// @notice The allocated cut for juror pool from coaching sales
+    /// @dev initiated as 0% and planned to be (100/100000 = 0.1%) after governance release
+    uint public coachJurorCut = 0;
+    /// @notice The allocated cut for validator pool from coaching sales
+    /// @dev initiated as 0% and there is no use case
+    uint public coachValidCut = 0;
+
+    /// @notice allocated total cut for foundation, governance, juror and validator from content sales
+    uint256 contentTotalCut =
+        contentFoundCut + contentGoverCut + contentJurorCut + contentValidCut;
+    /// @notice allocated total cut for foundation, governance, juror and validator from coaching sales
+    uint256 coachTotalCut =
+        coachFoundCut + coachGoverCut + coachJurorCut + coachValidCut;
+
+    /// @notice is governance part of platform released
+    bool isGovernanceTreasuryOnline = false;
+
+    /// @notice constructor of BasePlatform
+    /// @param _contractManager is address of ContractManager contract
+    /// @param rmAddress is address of RoleManager contract
+    /// @param _iGovernanceTreasuryAddress is address of GovernanceTreasury contract
+    /// @param _voucherVerifierAddress is address of VoucherVerifier contract
     constructor(
         address _contractManager,
         address rmAddress,
@@ -124,60 +211,6 @@ abstract contract BasePlatform is Pausable, RoleNames {
         address voucherVerifier
     );
 
-    // Accepted refund period by platform
-    uint256 refundWindow = 14;
-    // Constant: one day equals that in epoch time
-    uint256 epochOneDay = 86400;
-
-    // Instructor => current balance & future balances of instructor
-    mapping(address => uint) public instBalance;
-    mapping(address => uint[61]) public instLockedBalance;
-    // Current balance & future balances of total contract pool for content sale
-    uint256 public contentCutPool;
-    uint256[61] public contentCutLockedPool; //= new uint[](refundWindow);
-    // Current balance & future balances of total contract pool for coaching sale
-    uint256 public coachingCutPool;
-    uint256[61] public coachingCutLockedPool; // = new uint[](refundWindow);
-
-    // Current balance of foundation/governance/juror/validator pool
-    uint public foundationBalance;
-    uint public governanceBalance;
-    uint public jurorBalance;
-    uint public validatorsBalance;
-
-    // Instructor => last update time of instructor's current balance
-    mapping(address => uint256) public instLockTime;
-    // Last update time of current balances
-    uint public contentLockTime;
-    uint public coachingLockTime;
-
-    // Instructor => instructor debt amount (debt occured due to refund)
-    mapping(address => uint) public instRefundedBalance;
-    // Global balances debt amount (debt occured due to refund)
-    uint256 contentCutRefundedBalance;
-    uint256 coachingCutRefundedBalance;
-
-    // 100000 -> 100% | 5000 -> 5%
-    // Cuts for foundation/governance/juror/validator for a coaching sale
-    uint public coachFoundCut = 4000;
-    uint public coachGoverCut = 0; //700;
-    uint public coachJurorCut = 0; //new!!
-    uint public coachValidCut = 0; //new!!ButNoUseArea
-    // Cuts for foundation/governance/juror/validator for a content sale
-    uint public contentFoundCut = 4000;
-    uint public contentGoverCut = 0; //700;
-    uint public contentJurorCut = 0; //100;
-    uint public contentValidCut = 0; //200;
-
-    // Total cuts for content&coaching sale
-    uint256 contentTotalCut =
-        contentFoundCut + contentGoverCut + contentJurorCut + contentValidCut;
-    uint256 coachTotalCut =
-        coachFoundCut + coachGoverCut + coachJurorCut + coachValidCut;
-
-    // There is no GovernanceTreasury in MVP, after governance release will be set
-    bool isGovernanceTreasuryOnline = false;
-
     /// @notice This event is triggered if a cut is updated.
     event PlatformCutsUpdated(
         uint256 coachFoundCut,
@@ -208,37 +241,21 @@ abstract contract BasePlatform is Pausable, RoleNames {
         validatorsBalance += ((_revenue * coachValidCut) / coachTotalCut);
     }
 
+    /// @notice calculates the total cut to be applied by the platform in a content purchase.
+    /// @param _priceOf is the price of the content
     function calculateContentSaleTotalCut(
         uint256 _priceOf
     ) public view returns (uint256) {
         return ((_priceOf * contentTotalCut) / 100000);
     }
 
-    function calculateCoachingCutShares(
-        uint256 _revenue
-    )
-        public
-        view
-        returns (
-            uint256 foundationShare,
-            uint256 governanceShare,
-            uint256 jurorShare,
-            uint256 validatorShare
-        )
-    {
-        foundationShare = ((_revenue * coachFoundCut) / coachTotalCut);
-        governanceShare = ((_revenue * coachGoverCut) / coachTotalCut);
-        jurorShare = ((_revenue * coachJurorCut) / coachTotalCut);
-        validatorShare = ((_revenue * coachValidCut) / coachTotalCut);
-    }
-
+    /// @notice calculates the total cut to be applied by the platform in a coaching purchase.
+    /// @param _priceOf is the price of the coaching
     function calculateCoachingSaleTotalCut(
         uint256 _priceOf
     ) public view returns (uint256) {
         return ((_priceOf * coachTotalCut) / 100000);
     }
-
-    // SETTERS
 
     /// @notice sets the cut for foundation/governance/juror/validator for a coaching sale
     /// @param _coachFoundCut new cut for foundation
