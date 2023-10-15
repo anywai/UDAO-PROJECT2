@@ -17,7 +17,7 @@ abstract contract ContentManager is BasePlatform {
 
     using Counters for Counters.Counter;
     /// @notice Used to generate unique ids for content sales
-    Counters.Counter private saleID;
+    Counters.Counter private contentSaleID;
     /// @notice Used to generate unique ids for coaching sales
     Counters.Counter private coachingSaleID;
 
@@ -393,7 +393,7 @@ abstract contract ContentManager is BasePlatform {
         }
 
         //Save the sale on a refund list
-        sales[saleID.current()] = ContentSale({
+        sales[contentSaleID.current()] = ContentSale({
             payee: msg.sender,
             contentReceiver: contentReceiver,
             instructor: instructor,
@@ -404,7 +404,7 @@ abstract contract ContentManager is BasePlatform {
             isRefunded: false,
             refundablePeriod: transactionTime + refundWindow
         });
-        saleID.increment();
+        contentSaleID.increment();
 
         emit ContentBought(
             tokenId,
@@ -740,11 +740,11 @@ abstract contract ContentManager is BasePlatform {
     }
 
     /// @notice Allows learner to get refund of coaching 1 day prior to coaching date or coach to refund anytime
-    /// @param _saleID id of the coaching sale
+    /// @param _refCoachSaleID id of the coaching sale
     function refundCoachingByInstructorOrLearner(
-        uint256 _saleID
+        uint256 _refCoachSaleID
     ) external whenNotPaused {
-        CoachingSale storage refundItem = coachSales[_saleID];
+        CoachingSale storage refundItem = coachSales[_refCoachSaleID];
         require(
             refundItem.refundablePeriod >= (block.timestamp / epochOneDay),
             "Refund period over you cant refund"
@@ -756,7 +756,7 @@ abstract contract ContentManager is BasePlatform {
         }
 
         require(refundItem.isRefunded == false, "Already refunded!");
-        coachSales[_saleID].isRefunded = true;
+        coachSales[_refCoachSaleID].isRefunded = true;
 
         instRefundedBalance[refundItem.coach] += refundItem.instrShare;
         coachingCutRefundedBalance += refundItem.totalCut;
