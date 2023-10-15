@@ -21,6 +21,7 @@ abstract contract ContentManager is BasePlatform {
     /// @notice Used to generate unique ids for coaching sales
     Counters.Counter private coachingSaleID;
 
+    /// @notice Used to store the content sales
     struct ContentSale {
         address payee;
         address contentReceiver;
@@ -32,6 +33,7 @@ abstract contract ContentManager is BasePlatform {
         bool isRefunded;
         uint256 refundablePeriod;
     }
+    /// @notice Used to store the coaching sales
     struct CoachingSale {
         address payee;
         address contentReceiver;
@@ -43,18 +45,15 @@ abstract contract ContentManager is BasePlatform {
         uint256 refundablePeriod;
     }
 
+    /// @notice content sale id => the content sale
     mapping(uint256 => ContentSale) public sales;
+    /// @notice coaching sale id => the coaching sale
     mapping(uint256 => CoachingSale) public coachSales;
-
-    // wallet => content token Ids
+    /// @notice user address => users owned [content token Ids]-[content part Ids]
     mapping(address => uint256[][]) ownedContents;
 
-    uint256 private coachingIndex;
-
-    //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@//
-
-    /// @notice Allows users to buy content with discount voucher
-    /// @param voucher discount vouchers
+    /// @notice Allows users to purchase multiple contents for the caller or gift receiver with discount voucher
+    /// @param voucher buy discount content voucher
     function buyContentWithDiscount(
         IVoucherVerifier.ContentDiscountVoucher[] calldata voucher
     ) external whenNotPaused {
@@ -163,7 +162,8 @@ abstract contract ContentManager is BasePlatform {
         _sendCurrentGlobalCutsToGovernanceTreasury();
     }
 
-    //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@//
+    /// @notice Allows users to buy coaching with a voucher created by instructor
+    /// @param voucher buy coaching voucher
     function buyCoaching(
         IVoucherVerifier.CoachingVoucher calldata voucher
     ) external whenNotPaused {
@@ -216,7 +216,8 @@ abstract contract ContentManager is BasePlatform {
 
         //transactionFuIndex determines which position it will be added to in the FutureBalances array.
         uint256 transactionFuIndex = transactionTime % refundWindow;
-        _updateGlobalCoachingBalances(
+        _updatePlatformCutBalances(
+            0, //contentCut=0
             totalCut,
             transactionTime,
             transactionFuIndex
@@ -245,11 +246,11 @@ abstract contract ContentManager is BasePlatform {
         emit CoachingBought(coachingSaleID.current() - 1);
     }
 
-    /// @notice Allows multiple content purchases using buyContent
-    /// @param tokenIds ids of the content
-    /// @param fullContentPurchases is full content purchased
-    /// @param purchasedParts parts of the content purchased
-    /// @param giftReceivers address of the gift receiver if purchase is a gift
+    /// @notice Allows users to purchase multiple content for the caller or gift receiver.
+    /// @param tokenIds An array of token IDs representing the contents in the cart.
+    /// @param fullContentPurchases An array indicating whether each purchase is for full content.
+    /// @param purchasedParts An array of arrays representing the content parts to be purchased.
+    /// @param giftReceivers An array of addresses of the gift receivers if the purchase is a gift.
     function buyContent(
         uint256[] calldata tokenIds,
         bool[] calldata fullContentPurchases,
@@ -345,6 +346,13 @@ abstract contract ContentManager is BasePlatform {
         _sendCurrentGlobalCutsToGovernanceTreasury();
     }
 
+    /// @notice Used by buy content functions to receive payment from user and deliver the content to user
+    /// @param tokenId The token ID of the content.
+    /// @param fullContentPurchase A boolean indicating whether it's a full content purchase.
+    /// @param purchasedParts An array representing the parts of the content purchased.
+    /// @param contentReceiver The address of the content receiver.
+    /// @param totalCut The total platform cut applied to the content sale.
+    /// @param instrShare The instructor's share from the the content sale.
     function _buyContentwithUDAO(
         uint256 tokenId,
         bool fullContentPurchase,
@@ -368,8 +376,9 @@ abstract contract ContentManager is BasePlatform {
 
         //transactionFuIndex determines which position it will be added to in the FutureBalances array.
         uint256 transactionFuIndex = transactionTime % refundWindow;
-        _updateGlobalContentBalances(
+        _updatePlatformCutBalances(
             totalCut,
+            0, //coachingCut=0
             transactionTime,
             transactionFuIndex
         );
@@ -414,7 +423,11 @@ abstract contract ContentManager is BasePlatform {
         );
     }
 
-    // NEW CONTENT SALE HELPER FUNCTIONS
+    /// @notice Checks does the receiver already own the content or content part
+    /// @param tokenId The token ID of the content.
+    /// @param fullContentPurchase A boolean indicating whether it's a full content purchase.
+    /// @param purchasedParts An array representing the parts of the content purchased.
+    /// @param contentReceiver The address of the content receiver.
     function _doReceiverHaveContentOrPart(
         uint256 tokenId,
         bool fullContentPurchase,
@@ -439,9 +452,9 @@ abstract contract ContentManager is BasePlatform {
     }
 
     /// @notice Calculates total amount to pay for a cart purchase
-    /// @param tokenIds ids of the contents
-    /// @param fullContentPurchases is full content purchased
-    /// @param purchasedParts parts of the content purchased
+    /// @param tokenIds An array of token IDs representing the contents in the cart.
+    /// @param fullContentPurchases An array indicating whether each purchase is for full content.
+    /// @param purchasedParts An array of arrays representing the content parts to be purchased.
     function calculatePriceToPayInTotal(
         uint256[] calldata tokenIds,
         bool[] calldata fullContentPurchases,
@@ -460,10 +473,10 @@ abstract contract ContentManager is BasePlatform {
         return (totalPriceToPayUdao);
     }
 
-    /// @notice Calculates price to pay for a purchase
-    /// @param _tokenId id of the content
-    /// @param _fullContentPurchase is full content purchased
-    /// @param _purchasedParts parts of the content purchased
+    /// @notice Calculates price to pay for a content purchase
+    /// @param _tokenId The token ID of the content.
+    /// @param _fullContentPurchase A boolean indicating whether it's a full content purchase.
+    /// @param _purchasedParts An array representing the parts of the content purchased.
     function calculatePriceToPay(
         uint256 _tokenId,
         bool _fullContentPurchase,
@@ -496,109 +509,64 @@ abstract contract ContentManager is BasePlatform {
         return _priceToPay;
     }
 
-    function _updateGlobalContentBalances(
+    /// @notice Update content and coaching CutPools and handle locked payments during the refund window.
+    /// @param totalCutContentShare amount of UDAO to be paid to the platform, it is revenue of platform from content sales.
+    /// @param totalCutCoachingShare amount of UDAO to be paid to the platform, it is revenue of platform from coaching sales.
+    /// @param _transactionTime indicates the day of the transaction (number of days passed since 1Jan1970-0:0:0)
+    /// @param _transactionLBIndex determines the payment will be added to which position in the CutLockedPool arrays.
+    function _updatePlatformCutBalances(
         uint256 totalCutContentShare,
-        uint256 _transactionTime,
-        uint256 _transactionLBIndex
-    ) internal {
-        // safety variable for eliminate reentrancy attacks
-        uint256 tempSafetyBalance;
-        // how many day passed since last update of instructor balance
-        uint256 dayPassedContent = _transactionTime - contentLockTime;
-        // "if/else": is there any payment in insLockedBalance array that should be paid to the instructor
-        if (dayPassedContent >= refundWindow) {
-            // if(TRUE): the instLockedBalance array contains payments that must be paid to the user.
-            // how many elements completed the refund window period
-            uint256 dayPassedContentMod;
-            // "if/else": determine how many elements of the insLockedBalance array must be paid to the instructor. ...
-            // ... the instLockedBalance array holds payments within the range [0, refundWindow-1]!
-            if (dayPassedContent >= (refundWindow * 2)) {
-                // if(TRUE): every element insLockedBalance array completed the refund window period. ...
-                // ... 'for' loop will iterate through all the elements of the insLockedBalance array.
-                dayPassedContentMod = refundWindow - 1;
-            } else {
-                // if(FALSE): some elements of the insLockedBalance array must be paid to the instructor. ...
-                // ... 'for'loop will iterate for the number of elements that completed the refund window period.
-                dayPassedContentMod = dayPassedContent % refundWindow;
-            }
-            // The loop will add "refund window completed payments" to the tempSafetyBalance ...
-            // ... and remove them from the insLockedBalance array.
-            for (uint256 i = 0; i <= dayPassedContentMod; i++) {
-                // indexOfPayout determines which element of the insLockedBalance array will be paid to the instructor. ...
-                // ... it start from today(i=0) and goes to past during for loop iterations. ...
-                // ... add and mod operation with refundWindow is for make it a circular array.
-                uint256 indexOfPayout = ((_transactionLBIndex + refundWindow) -
-                    i) % refundWindow;
-                tempSafetyBalance += contentCutLockedPool[indexOfPayout];
-                contentCutLockedPool[indexOfPayout] = 0;
-            }
-            // tempSafetyBalance holds the sum of payments that completed the refund window, add it to the instructor balance.
-            contentCutPool += tempSafetyBalance;
-            // instLockTime holds the date of the oldest element in the insLockedBalance that hasn't paid to the user yet. ...
-            // ... As of Today, all payments that have completed the refund window have been paid to the user. ...
-            // ... "The oldest day which the payment has not been paid to instructor yet" is (today-refundWindow)+1.
-            contentLockTime = (_transactionTime - refundWindow) + 1;
-        }
-
-        // add the "new payment" to instructor insLockedBalance
-        contentCutLockedPool[_transactionLBIndex] += totalCutContentShare;
-    }
-
-    function _updateGlobalCoachingBalances(
         uint256 totalCutCoachingShare,
         uint256 _transactionTime,
         uint256 _transactionLBIndex
     ) internal {
-        // safety variable for eliminate reentrancy attacks
-        uint256 tempSafetyBalance;
-        // how many day passed since last update of instructor balance
-        uint256 dayPassedCoaching = _transactionTime - coachingLockTime;
-        // "if/else": is there any payment in insLockedBalance array that should be paid to the instructor
-        if (dayPassedCoaching >= refundWindow) {
-            // if(TRUE): the instLockedBalance array contains payments that must be paid to the user.
-            // how many elements completed the refund window period
-            uint256 dayPassedCoachingMod;
-            // "if/else": determine how many elements of the insLockedBalance array must be paid to the instructor. ...
-            // ... the instLockedBalance array holds payments within the range [0, refundWindow-1]!
-            if (dayPassedCoaching >= (refundWindow * 2)) {
-                // if(TRUE): every element insLockedBalance array completed the refund window period. ...
-                // ... 'for' loop will iterate through all the elements of the insLockedBalance array.
-                dayPassedCoachingMod = refundWindow - 1;
+        /// @dev Safety variables to prevent reentrancy attacks.
+        uint256 tempSafetyContent;
+        uint256 tempSafetyCoaching;
+        /// @dev Calculate the number of days that have passed since the last update of CutPools.
+        uint256 dayPassedPlatform = _transactionTime - platformLockTime;
+        /// @dev Check if there are any payments in the CutLockedPool arrays that need to be transferred to CutPools.
+        if (dayPassedPlatform >= refundWindow) {
+            /// @dev CutLockedPool arrays contain payments that need be transferred to CutPools.
+            /// @dev Defines how many elements of CutLockedPool arrays have completed the refund window period.
+            uint256 dayPassedPlatformMod;
+            /// @dev Check if all elements in the CutLockedPool arrays have completed the refund window period.
+            if (dayPassedPlatform >= (refundWindow * 2)) {
+                /// @dev All elements, CutLockedPool arrays holds payments within the range [0, refundWindow-1].
+                dayPassedPlatformMod = refundWindow - 1;
             } else {
-                // if(FALSE): some elements of the insLockedBalance array must be paid to the instructor. ...
-                // ... 'for'loop will iterate for the number of elements that completed the refund window period.
-                dayPassedCoachingMod = dayPassedCoaching % refundWindow;
+                /// @dev Not all, but some, elements of the CutLockedPool arrays have completed the refund window period.
+                dayPassedPlatformMod = dayPassedPlatform % refundWindow;
             }
-            // The loop will add "refund window completed payments" to the tempSafetyBalance ...
-            // ... and remove them from the insLockedBalance array.
-            for (uint256 i = 0; i <= dayPassedCoachingMod; i++) {
-                // indexOfPayout determines which element of the insLockedBalance array will be paid to the instructor. ...
-                // ... it start from today(i=0) and goes to past during for loop iterations. ...
-                // ... add and mod operation with refundWindow is for make it a circular array.
+            /// @dev Iterate the loop through elements that completed the refund window period.
+            /// @dev Adding completed payments to tempSafetyContent/Coaching, and remove them from the CutLockedPool arrays.
+            for (uint256 i = 0; i <= dayPassedPlatformMod; i++) {
+                /// @dev The indexOfPayout determines which element of the CutLockedPool arrays will be transferred to the CutPools.
+                /// @dev It start from today(i=0) and goes to past during the loop iterations.
+                /// @dev Circular array indexing prevents negative indexes using addition and modulo operations with refundWindow.
                 uint256 indexOfPayout = ((_transactionLBIndex + refundWindow) -
                     i) % refundWindow;
-                tempSafetyBalance += coachingCutLockedPool[indexOfPayout];
+                tempSafetyContent += contentCutLockedPool[indexOfPayout];
+                contentCutLockedPool[indexOfPayout] = 0;
+                tempSafetyCoaching += coachingCutLockedPool[indexOfPayout];
                 coachingCutLockedPool[indexOfPayout] = 0;
             }
-            // tempSafetyBalance holds the sum of payments that completed the refund window, add it to the instructor balance.
-            coachingCutPool += tempSafetyBalance;
-            // instLockTime holds the date of the oldest element in the insLockedBalance that hasn't paid to the user yet. ...
-            // ... As of Today, all payments that have completed the refund window have been paid to the user. ...
-            // ... "The oldest day which the payment has not been paid to instructor yet" is (today-refundWindow)+1.
-            coachingLockTime = (_transactionTime - refundWindow) + 1;
+            /// @dev Add the sum of refund window's completed payments to CutPools.
+            contentCutPool += tempSafetyContent;
+            coachingCutPool += tempSafetyCoaching;
+            /// @dev Update platformLockTime to the oldest day where payments have not been transferred to CutPools yet.
+            /// @dev It is "(today-refundWindow)+1" so as of today, all refund window completed payments have been transfered.
+            platformLockTime = (_transactionTime - refundWindow) + 1;
         }
-
-        // add the "new payment" to instructor insLockedBalance
+        /// @dev Add the "new payment" to CutLockedPools.
+        contentCutLockedPool[_transactionLBIndex] += totalCutContentShare;
         coachingCutLockedPool[_transactionLBIndex] += totalCutCoachingShare;
     }
 
-    /** @notice Updates the instructor balances and locked balances according to the refund window. ...
-    ... New payments are added to the locked balances and if there any payments that should be paid to the instructor, ...
-    ... they are removed from locked balances and added to the instructor balance.
-    **/
-    /// @param _instrShare amount of UDAO to be paid to the instructor, it revenue of instructor after the content sale
-    /// @param _inst address of the instructor
-    /// @param _transactionTime indicates the day of the transaction (how many days passed since 1Jan1970-0:0:0)
+    /// @notice Updates instructor balances and handle locked payments during the refund window.
+    /// @param _instrShare amount of UDAO to be paid to the instructor, it is revenue of instructor from content sales.
+    /// @param _inst address of the instructor.
+    /// @param _transactionTime indicates the day of the transaction (number of days passed since 1Jan1970-0:0:0)
     /// @param _transactionLBIndex determines the payment will be added to which position in the insLockedBalance array.
     function _updateInstructorBalances(
         uint256 _instrShare,
@@ -606,60 +574,56 @@ abstract contract ContentManager is BasePlatform {
         uint256 _transactionTime,
         uint256 _transactionLBIndex
     ) internal {
-        // safety variable for eliminate reentrancy attacks
+        /// @dev Safety variable to prevent reentrancy attacks.
         uint256 tempSafetyBalance;
-        // "if/else": is there any change on the refund window? Or, is it the instructor's first sale?
+        /// @dev "if/else": is there any change on the refund window? Or, is it the instructor's first sale?
         if (prevInstRefundWindow[_inst] != refundWindow) {
-            // 'for' loop will iterate during the old refund window period if it is bot equal to '0' ...
-            // ... The loop collects instructor locked balances and removes them from the insLockedBalance array.
+            /// @dev 'for' loop will iterate during the old refund window period if it is bot equal to '0' ...
+            /// @dev ... The loop collects instructor locked balances and removes them from the insLockedBalance array.
             for (uint256 i = 0; i < prevInstRefundWindow[_inst]; i++) {
                 tempSafetyBalance += instLockedBalance[_inst][i];
                 instLockedBalance[_inst][i] = 0;
             }
-            // initiate or update the instructor's previous refund window with platform's refund window.
+            /// @dev initiate or update the instructor's previous refund window with platform's refund window.
             prevInstRefundWindow[_inst] = refundWindow;
-            // initiate or update the instructor lock time
+            /// @dev initiate or update the instructor lock time
             instLockTime[_inst] = _transactionTime;
-            // add the "collected old balances" to instructor locked balance according to the new refund window.
+            /// @dev add the "collected old balances" to instructor locked balance according to the new refund window.
             instLockedBalance[_inst][_transactionLBIndex] += tempSafetyBalance;
         }
-        // how many day passed since last update of instructor balance
+        /// @dev Calculate the number of days that have passed since the last update of instructor balance.
         uint256 dayPassedInst = _transactionTime - instLockTime[_inst];
-        // "if/else": is there any payment in insLockedBalance array that should be paid to the instructor
+        /// @dev Check if there are any payments in the instLockedBalance array that need to be paid to the instructor.
         if (dayPassedInst >= refundWindow) {
-            // if(TRUE): the instLockedBalance array contains payments that must be paid to the user.
-            // how many elements completed the refund window period
+            /// @dev The instLockedBalance array contains payments that need be paid to the instructor.
+            /// @dev Defines how many elements of instLockedBalance array have completed the refund window period.
             uint256 dayPassedInstMod;
-            // "if/else": determine how many elements of the insLockedBalance array must be paid to the instructor. ...
-            // ... the instLockedBalance array holds payments within the range [0, refundWindow-1]!
+            /// @dev Check if all elements in the instLockedBalance arrays have completed the refund window period.
             if (dayPassedInst >= (refundWindow * 2)) {
-                // if(TRUE): every element insLockedBalance array completed the refund window period. ...
-                // ... 'for' loop will iterate through all the elements of the insLockedBalance array.
+                /// @dev All elements, instLockedBalance array holds payments within the range [0, refundWindow-1].
                 dayPassedInstMod = refundWindow - 1;
             } else {
-                // if(FALSE): some elements of the insLockedBalance array must be paid to the instructor. ...
-                // ... 'for'loop will iterate for the number of elements that completed the refund window period.
+                /// @dev Not all, but some, elements of the instLockedBalance have completed the refund window period.
                 dayPassedInstMod = dayPassedInst % refundWindow;
             }
-            // The loop will add "refund window completed payments" to the tempSafetyBalance ...
-            // ... and remove them from the insLockedBalance array.
+            /// @dev Iterate the loop through elements that completed the refund window period.
+            /// @dev Adding completed payments to tempSafetyBalance, and remove them from the instLockedBalance array.
             for (uint256 i = 0; i <= dayPassedInstMod; i++) {
-                // indexOfPayout determines which element of the insLockedBalance array will be paid to the instructor. ...
-                // ... it start from today(i=0) and goes to past during for loop iterations. ...
-                // ... add and mod operation with refundWindow is for make it a circular array.
+                /// @dev The indexOfPayout determines which element of the instLockedBalance array will be paid to the instructor.
+                /// @dev It start from today(i=0) and goes to past during the loop iterations.
+                /// @dev Circular array indexing prevents negative indexes using addition and modulo operations with refundWindow.
                 uint256 indexOfPayout = ((_transactionLBIndex + refundWindow) -
                     i) % refundWindow;
                 tempSafetyBalance += instLockedBalance[_inst][indexOfPayout];
                 instLockedBalance[_inst][indexOfPayout] = 0;
             }
-            // tempSafetyBalance holds the sum of payments that completed the refund window, add it to the instructor balance.
+            /// @dev Add the sum of refund window's completed payments to the instructor balance.
             instBalance[_inst] += tempSafetyBalance;
-            // instLockTime holds the date of the oldest element in the insLockedBalance that hasn't paid to the user yet. ...
-            // ... As of Today, all payments that have completed the refund window have been paid to the user. ...
-            // ... "The oldest day which the payment has not been paid to instructor yet" is (today-refundWindow)+1.
+            /// @dev Update instLockTime to the oldest day where payments have not been paid to the instructor yet.
+            /// @dev It is "(today-refundWindow)+1" so as of today, all refund window completed payments have been transfered.
             instLockTime[_inst] = (_transactionTime - refundWindow) + 1;
         }
-        // add the "new payment" to instructor insLockedBalance
+        /// @dev Add the "new payment" to instLockedBalance.
         instLockedBalance[_inst][_transactionLBIndex] += _instrShare;
     }
 
@@ -735,7 +699,7 @@ abstract contract ContentManager is BasePlatform {
         );
     }
 
-    /// @notice Allows refund of coaching with a voucher
+    /// @notice Allows refund of coaching with a voucher created by platform
     /// @param voucher A RefundVoucher
     function newRefundCoaching(
         IVoucherVerifier.RefundVoucher calldata voucher
@@ -760,7 +724,7 @@ abstract contract ContentManager is BasePlatform {
         );
     }
 
-    /// @notice Allows refund of a content with a voucher
+    /// @notice Allows refund of a content with a voucher created by platform
     /// @param voucher A RefundVoucher
     function newRefundContent(
         IVoucherVerifier.RefundVoucher calldata voucher
@@ -802,9 +766,6 @@ abstract contract ContentManager is BasePlatform {
             (refundItem.instrShare + refundItem.totalCut)
         );
     }
-
-    //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@//
-    //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@//
 
     /// @notice returns owned contents of the _owner
     /// @param _owner address of the user that will owned contents be returned

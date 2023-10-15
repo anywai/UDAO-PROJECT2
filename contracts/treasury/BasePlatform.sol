@@ -126,12 +126,9 @@ abstract contract BasePlatform is Pausable, RoleNames {
 
     /// @notice instructor address => the date of the oldest locked payment of instructor.
     mapping(address => uint256) public instLockTime;
-    /// @notice the date of the oldest locked payment in contentCutLockedPool
-    /// @dev contentLockTime initialized with deployment time
-    uint public contentLockTime = (block.timestamp / epochOneDay);
-    /// @notice the date of the oldest locked payment in coachingCutLockedPool
-    /// @dev coachingLockTime initialized with deployment time
-    uint public coachingLockTime = (block.timestamp / epochOneDay);
+    /// @notice the date of the oldest locked payment in content/coaching CutLockedPool
+    /// @dev platformLockTime initialized with deployment time
+    uint public platformLockTime = (block.timestamp / epochOneDay);
 
     /// @notice instructor address => instructor's refunded balance to users
     mapping(address => uint) public instRefundedBalance;

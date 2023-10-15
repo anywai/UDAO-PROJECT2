@@ -48,8 +48,7 @@ contract PlatformTreasury is ContentManager {
 
         uint256 transactionTime = (block.timestamp / epochOneDay);
         uint256 transactionFuIndex = transactionTime % refundWindow;
-        _updateGlobalContentBalances(0, transactionTime, transactionFuIndex);
-        _updateGlobalCoachingBalances(0, transactionTime, transactionFuIndex);
+        _updatePlatformCutBalances(0, 0, transactionTime, transactionFuIndex);
         _sendCurrentGlobalCutsToGovernanceTreasury();
 
         uint withdrawableBalance = foundationBalance;
@@ -63,8 +62,7 @@ contract PlatformTreasury is ContentManager {
         // TODO instructorWitdrawableBalance view function
         uint256 transactionTime = (block.timestamp / epochOneDay);
         uint256 transactionFuIndex = transactionTime % refundWindow;
-        _updateGlobalContentBalances(0, transactionTime, transactionFuIndex);
-        _updateGlobalCoachingBalances(0, transactionTime, transactionFuIndex);
+        _updatePlatformCutBalances(0, 0, transactionTime, transactionFuIndex);
         _updateInstructorBalances(
             0,
             msg.sender,
@@ -136,12 +134,8 @@ contract PlatformTreasury is ContentManager {
         uint256 transactionTime = (block.timestamp / epochOneDay);
         uint256 transactionFuIndex = transactionTime % refundWindow;
 
-        _updateGlobalContentBalances(
+        _updatePlatformCutBalances(
             emptiedContentCutPool,
-            transactionTime,
-            transactionFuIndex
-        );
-        _updateGlobalCoachingBalances(
             emptiedCoachingCutPool,
             transactionTime,
             transactionFuIndex
