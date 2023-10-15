@@ -499,117 +499,97 @@ abstract contract ContentManager is BasePlatform {
     function _updateGlobalContentBalances(
         uint256 totalCutContentShare,
         uint256 _transactionTime,
-        uint256 _transactionFuIndex
+        uint256 _transactionLBIndex
     ) internal {
-        //how many day passed since last update of instructor balance
-        uint256 dayPassedGlo = _transactionTime - contentLockTime;
-
-        if (dayPassedGlo < refundWindow) {
-            // if(true):There is no payment yet to be paid to the seller in the future balance array.
-            // add new payment to instructor futureBalanceArray
-            contentCutLockedPool[_transactionFuIndex] += totalCutContentShare;
-        } else {
-            // if(else): The future balance array contains values that must be paid to the user.
-            if (dayPassedGlo >= (refundWindow * 2)) {
-                //Whole Future Balance Array must paid to user (Because (refundWindow x2)28 day passed)
-                for (uint256 i = 0; i < refundWindow; i++) {
-                    contentCutPool += contentCutLockedPool[i];
-
-                    contentCutLockedPool[i] = 0;
-                }
-
-                // add new payment to instructor futureBalanceArray
-                contentCutLockedPool[
-                    _transactionFuIndex
-                ] += totalCutContentShare;
-
-                // you updated instructor currentBalance of instructorso declare a new time to instLockTime
-                // why (-refundWindow + 1)? This will sustain today will be no more update on balances...
-                // ...but tomarrow a transaction will produce new update.
-                contentLockTime = (_transactionTime - refundWindow) + 1;
+        // safety variable for eliminate reentrancy attacks
+        uint256 tempSafetyBalance;
+        // how many day passed since last update of instructor balance
+        uint256 dayPassedContent = _transactionTime - contentLockTime;
+        // "if/else": is there any payment in insLockedBalance array that should be paid to the instructor
+        if (dayPassedContent >= refundWindow) {
+            // if(TRUE): the instLockedBalance array contains payments that must be paid to the user.
+            // how many elements completed the refund window period
+            uint256 dayPassedContentMod;
+            // "if/else": determine how many elements of the insLockedBalance array must be paid to the instructor. ...
+            // ... the instLockedBalance array holds payments within the range [0, refundWindow-1]!
+            if (dayPassedContent >= (refundWindow * 2)) {
+                // if(TRUE): every element insLockedBalance array completed the refund window period. ...
+                // ... 'for' loop will iterate through all the elements of the insLockedBalance array.
+                dayPassedContentMod = refundWindow - 1;
             } else {
-                //Just some part of Future Balance Array must paid to instructor
-                uint256 dayPassedGloMod = dayPassedGlo % refundWindow;
-                //minimum dayPassedInst=14 so Mod 0, maximum dayPassedInst=27 so Mod 13
-                //if Mod 0 for loop works for today, if Mod 2 it works for today+ yesterday,,, if it 13
-                for (uint256 i = 0; i <= dayPassedGloMod; i++) {
-                    //Index of the day to be payout to instructor.
-                    uint256 indexOfPayout = ((_transactionFuIndex +
-                        refundWindow) - i) % refundWindow;
-                    contentCutPool += contentCutLockedPool[indexOfPayout];
-
-                    contentCutLockedPool[indexOfPayout] = 0;
-                }
-
-                // add new payment to instructor futureBalanceArray
-                contentCutLockedPool[
-                    _transactionFuIndex
-                ] += totalCutContentShare;
-
-                // you updated instructor futureBalanceArray updated so declare a new time to instLockTime
-                // why (-refundWindow + 1)? This will sustain today will be no more update on balances...
-                // ...but tomarrow a transaction will produce new update.
-                contentLockTime = (_transactionTime - refundWindow) + 1;
+                // if(FALSE): some elements of the insLockedBalance array must be paid to the instructor. ...
+                // ... 'for'loop will iterate for the number of elements that completed the refund window period.
+                dayPassedContentMod = dayPassedContent % refundWindow;
             }
+            // The loop will add "refund window completed payments" to the tempSafetyBalance ...
+            // ... and remove them from the insLockedBalance array.
+            for (uint256 i = 0; i <= dayPassedContentMod; i++) {
+                // indexOfPayout determines which element of the insLockedBalance array will be paid to the instructor. ...
+                // ... it start from today(i=0) and goes to past during for loop iterations. ...
+                // ... add and mod operation with refundWindow is for make it a circular array.
+                uint256 indexOfPayout = ((_transactionLBIndex + refundWindow) -
+                    i) % refundWindow;
+                tempSafetyBalance += contentCutLockedPool[indexOfPayout];
+                contentCutLockedPool[indexOfPayout] = 0;
+            }
+            // tempSafetyBalance holds the sum of payments that completed the refund window, add it to the instructor balance.
+            contentCutPool += tempSafetyBalance;
+            // instLockTime holds the date of the oldest element in the insLockedBalance that hasn't paid to the user yet. ...
+            // ... As of Today, all payments that have completed the refund window have been paid to the user. ...
+            // ... "The oldest day which the payment has not been paid to instructor yet" is (today-refundWindow)+1.
+            contentLockTime = (_transactionTime - refundWindow) + 1;
         }
+
+        // add the "new payment" to instructor insLockedBalance
+        contentCutLockedPool[_transactionLBIndex] += totalCutContentShare;
     }
 
     function _updateGlobalCoachingBalances(
         uint256 totalCutCoachingShare,
         uint256 _transactionTime,
-        uint256 _transactionFuIndex
+        uint256 _transactionLBIndex
     ) internal {
-        //how many day passed since last update of instructor balance
-        uint256 dayPassedGlo = _transactionTime - coachingLockTime;
-
-        if (dayPassedGlo < refundWindow) {
-            // if(true):There is no payment yet to be paid to the seller in the future balance array.
-            // add new payment to instructor futureBalanceArray
-            coachingCutLockedPool[_transactionFuIndex] += totalCutCoachingShare;
-        } else {
-            // if(else): The future balance array contains values that must be paid to the user.
-            if (dayPassedGlo >= (refundWindow * 2)) {
-                //Whole Future Balance Array must paid to user (Because (refundWindow x2)28 day passed)
-                for (uint256 i = 0; i < refundWindow; i++) {
-                    coachingCutPool += coachingCutLockedPool[i];
-
-                    coachingCutLockedPool[i] = 0;
-                }
-
-                // add new payment to instructor futureBalanceArray
-                coachingCutLockedPool[
-                    _transactionFuIndex
-                ] += totalCutCoachingShare;
-
-                // you updated instructor currentBalance of instructorso declare a new time to instLockTime
-                // why (-refundWindow + 1)? This will sustain today will be no more update on balances...
-                // ...but tomarrow a transaction will produce new update.
-                coachingLockTime = (_transactionTime - refundWindow) + 1;
+        // safety variable for eliminate reentrancy attacks
+        uint256 tempSafetyBalance;
+        // how many day passed since last update of instructor balance
+        uint256 dayPassedCoaching = _transactionTime - coachingLockTime;
+        // "if/else": is there any payment in insLockedBalance array that should be paid to the instructor
+        if (dayPassedCoaching >= refundWindow) {
+            // if(TRUE): the instLockedBalance array contains payments that must be paid to the user.
+            // how many elements completed the refund window period
+            uint256 dayPassedCoachingMod;
+            // "if/else": determine how many elements of the insLockedBalance array must be paid to the instructor. ...
+            // ... the instLockedBalance array holds payments within the range [0, refundWindow-1]!
+            if (dayPassedCoaching >= (refundWindow * 2)) {
+                // if(TRUE): every element insLockedBalance array completed the refund window period. ...
+                // ... 'for' loop will iterate through all the elements of the insLockedBalance array.
+                dayPassedCoachingMod = refundWindow - 1;
             } else {
-                //Just some part of Future Balance Array must paid to instructor
-                uint256 dayPassedGloMod = dayPassedGlo % refundWindow;
-                //minimum dayPassedInst=14 so Mod 0, maximum dayPassedInst=27 so Mod 13
-                //if Mod 0 for loop works for today, if Mod 2 it works for today+ yesterday,,, if it 13
-                for (uint256 i = 0; i <= dayPassedGloMod; i++) {
-                    //Index of the day to be payout to instructor.
-                    uint256 indexOfPayout = ((_transactionFuIndex +
-                        refundWindow) - i) % refundWindow;
-                    coachingCutPool += coachingCutLockedPool[indexOfPayout];
-
-                    coachingCutLockedPool[indexOfPayout] = 0;
-                }
-
-                // add new payment to instructor futureBalanceArray
-                coachingCutLockedPool[
-                    _transactionFuIndex
-                ] += totalCutCoachingShare;
-
-                // you updated instructor futureBalanceArray updated so declare a new time to instLockTime
-                // why (-refundWindow + 1)? This will sustain today will be no more update on balances...
-                // ...but tomarrow a transaction will produce new update.
-                coachingLockTime = (_transactionTime - refundWindow) + 1;
+                // if(FALSE): some elements of the insLockedBalance array must be paid to the instructor. ...
+                // ... 'for'loop will iterate for the number of elements that completed the refund window period.
+                dayPassedCoachingMod = dayPassedCoaching % refundWindow;
             }
+            // The loop will add "refund window completed payments" to the tempSafetyBalance ...
+            // ... and remove them from the insLockedBalance array.
+            for (uint256 i = 0; i <= dayPassedCoachingMod; i++) {
+                // indexOfPayout determines which element of the insLockedBalance array will be paid to the instructor. ...
+                // ... it start from today(i=0) and goes to past during for loop iterations. ...
+                // ... add and mod operation with refundWindow is for make it a circular array.
+                uint256 indexOfPayout = ((_transactionLBIndex + refundWindow) -
+                    i) % refundWindow;
+                tempSafetyBalance += coachingCutLockedPool[indexOfPayout];
+                coachingCutLockedPool[indexOfPayout] = 0;
+            }
+            // tempSafetyBalance holds the sum of payments that completed the refund window, add it to the instructor balance.
+            coachingCutPool += tempSafetyBalance;
+            // instLockTime holds the date of the oldest element in the insLockedBalance that hasn't paid to the user yet. ...
+            // ... As of Today, all payments that have completed the refund window have been paid to the user. ...
+            // ... "The oldest day which the payment has not been paid to instructor yet" is (today-refundWindow)+1.
+            coachingLockTime = (_transactionTime - refundWindow) + 1;
         }
+
+        // add the "new payment" to instructor insLockedBalance
+        coachingCutLockedPool[_transactionLBIndex] += totalCutCoachingShare;
     }
 
     /** @notice Updates the instructor balances and locked balances according to the refund window. ...
@@ -628,71 +608,59 @@ abstract contract ContentManager is BasePlatform {
     ) internal {
         // safety variable for eliminate reentrancy attacks
         uint256 tempSafetyBalance;
-        // is there any change on the refund window? Or, is it the instructor's first sale?
+        // "if/else": is there any change on the refund window? Or, is it the instructor's first sale?
         if (prevInstRefundWindow[_inst] != refundWindow) {
             // 'for' loop will iterate during the old refund window period if it is bot equal to '0' ...
-            // ... The loop collect instructor locked balances and remove them from the insLockedBalance array.
+            // ... The loop collects instructor locked balances and removes them from the insLockedBalance array.
             for (uint256 i = 0; i < prevInstRefundWindow[_inst]; i++) {
                 tempSafetyBalance += instLockedBalance[_inst][i];
                 instLockedBalance[_inst][i] = 0;
             }
-            // prevInstRefundWindow holds the refund window of the instructor's last sale.
+            // initiate or update the instructor's previous refund window with platform's refund window.
             prevInstRefundWindow[_inst] = refundWindow;
-            // initiate the instructor lock time
+            // initiate or update the instructor lock time
             instLockTime[_inst] = _transactionTime;
             // add the "collected old balances" to instructor locked balance according to the new refund window.
             instLockedBalance[_inst][_transactionLBIndex] += tempSafetyBalance;
         }
         // how many day passed since last update of instructor balance
         uint256 dayPassedInst = _transactionTime - instLockTime[_inst];
-
-        // "if/else": is there any payment in insLockedBalance array that should be paid to the instructor ...
-        if (dayPassedInst < refundWindow) {
-            // if(TRUE): there is no payment yet to be paid to the seller in the insLockedBalance array.
-            // add the "new payment" to instructor insLockedBalance
-            instLockedBalance[_inst][_transactionLBIndex] += _instrShare;
-        } else {
-            // if(FALSE): the instLockedBalance array contains payments that must be paid to the user.
-            // "if/else": how many elements of the insLockedBalance array must be paid to the instructor ...
+        // "if/else": is there any payment in insLockedBalance array that should be paid to the instructor
+        if (dayPassedInst >= refundWindow) {
+            // if(TRUE): the instLockedBalance array contains payments that must be paid to the user.
+            // how many elements completed the refund window period
+            uint256 dayPassedInstMod;
+            // "if/else": determine how many elements of the insLockedBalance array must be paid to the instructor. ...
+            // ... the instLockedBalance array holds payments within the range [0, refundWindow-1]!
             if (dayPassedInst >= (refundWindow * 2)) {
-                // if(TRUE): every element insLockedBalance array completed the refund window period.
-                // 'for' loop will iterate through all the elements of the insLockedBalance array ...
-                // ... The loop add them to the instructor balance and remove them from the insLockedBalance array.
-                for (uint256 i = 0; i < refundWindow; i++) {
-                    tempSafetyBalance = instLockedBalance[_inst][i];
-                    instLockedBalance[_inst][i] = 0;
-                    instBalance[_inst] += tempSafetyBalance;
-                }
-                // instLockTime holds the date of the oldest element in the insLockedBalance that hasn't paid to the user yet. ...
-                // ... As of Today, all payments that have completed the refund window have been paid to the user. ...
-                // ... "The oldest day which the payment has not been paid to instructor yet" is (today-refundWindow)+1.
-                instLockTime[_inst] = (_transactionTime - refundWindow) + 1;
-                // add the "new payment" to instructor insLockedBalance
-                instLockedBalance[_inst][_transactionLBIndex] += _instrShare;
+                // if(TRUE): every element insLockedBalance array completed the refund window period. ...
+                // ... 'for' loop will iterate through all the elements of the insLockedBalance array.
+                dayPassedInstMod = refundWindow - 1;
             } else {
-                // ...if(FALSE): some elements of the insLockedBalance array must be paid to the instructor
-                // how many elements completed the refund window period
-                uint256 dayPassedInstMod = dayPassedInst % refundWindow;
-                // so 'for'loop will iterate for the number of elements that completed the refund window period. ...
-                // ... The loop add them to the instructor balance and remove them from the insLockedBalance array.
-                for (uint256 i = 0; i <= dayPassedInstMod; i++) {
-                    // indexOfPayout determines which element of the insLockedBalance array will be paid to the instructor. ...
-                    // ... it start from today(i=0) and goes to past during for loop iterations. ...
-                    // ... add and mod operation with refundWindow is for make it a circular array.
-                    uint256 indexOfPayout = ((_transactionLBIndex +
-                        refundWindow) - i) % refundWindow;
-                    tempSafetyBalance = instLockedBalance[_inst][indexOfPayout];
-                    instLockedBalance[_inst][indexOfPayout] = 0;
-                    instBalance[_inst] += tempSafetyBalance;
-                }
-                // instLockTime holds the date of the oldest element in the insLockedBalance that hasn't paid to the user yet. ...
-                // ... As of Today, all payments that have completed the refund window have been paid to the user. ...
-                // ... "The oldest day which the payment has not been paid to instructor yet" is (today-refundWindow)+1.
-                instLockTime[_inst] = (_transactionTime - refundWindow) + 1;
-                // add the "new payment" to instructor insLockedBalance
-                instLockedBalance[_inst][_transactionLBIndex] += _instrShare;
+                // if(FALSE): some elements of the insLockedBalance array must be paid to the instructor. ...
+                // ... 'for'loop will iterate for the number of elements that completed the refund window period.
+                dayPassedInstMod = dayPassedInst % refundWindow;
             }
+            // The loop will add "refund window completed payments" to the tempSafetyBalance ...
+            // ... and remove them from the insLockedBalance array.
+            for (uint256 i = 0; i <= dayPassedInstMod; i++) {
+                // indexOfPayout determines which element of the insLockedBalance array will be paid to the instructor. ...
+                // ... it start from today(i=0) and goes to past during for loop iterations. ...
+                // ... add and mod operation with refundWindow is for make it a circular array.
+                uint256 indexOfPayout = ((_transactionLBIndex + refundWindow) -
+                    i) % refundWindow;
+                tempSafetyBalance += instLockedBalance[_inst][indexOfPayout];
+                instLockedBalance[_inst][indexOfPayout] = 0;
+            }
+            // tempSafetyBalance holds the sum of payments that completed the refund window, add it to the instructor balance.
+            instBalance[_inst] += tempSafetyBalance;
+            // instLockTime holds the date of the oldest element in the insLockedBalance that hasn't paid to the user yet. ...
+            // ... As of Today, all payments that have completed the refund window have been paid to the user. ...
+            // ... "The oldest day which the payment has not been paid to instructor yet" is (today-refundWindow)+1.
+            instLockTime[_inst] = (_transactionTime - refundWindow) + 1;
         }
+        // add the "new payment" to instructor insLockedBalance
+        instLockedBalance[_inst][_transactionLBIndex] += _instrShare;
     }
 
     function _sendCurrentGlobalCutsToGovernanceTreasury() internal {
