@@ -626,14 +626,30 @@ abstract contract ContentManager is BasePlatform {
         uint256 _transactionTime,
         uint256 _transactionLBIndex
     ) internal {
-        // how many day passed since last update of instructor balance
-        uint256 dayPassedInst = _transactionTime - instLockTime[_inst];
         // safety variable for eliminate reentrancy attacks
         uint256 tempSafetyBalance;
+        // is there any change on the refund window? Or, is it the instructor's first sale?
+        if (prevInstRefundWindow[_inst] != refundWindow) {
+            // 'for' loop will iterate during the old refund window period if it is bot equal to '0' ...
+            // ... The loop collect instructor locked balances and remove them from the insLockedBalance array.
+            for (uint256 i = 0; i < prevInstRefundWindow[_inst]; i++) {
+                tempSafetyBalance += instLockedBalance[_inst][i];
+                instLockedBalance[_inst][i] = 0;
+            }
+            // prevInstRefundWindow holds the refund window of the instructor's last sale.
+            prevInstRefundWindow[_inst] = refundWindow;
+            // initiate the instructor lock time
+            instLockTime[_inst] = _transactionTime;
+            // add the "collected old balances" to instructor locked balance according to the new refund window.
+            instLockedBalance[_inst][_transactionLBIndex] += tempSafetyBalance;
+        }
+        // how many day passed since last update of instructor balance
+        uint256 dayPassedInst = _transactionTime - instLockTime[_inst];
+
         // "if/else": is there any payment in insLockedBalance array that should be paid to the instructor ...
         if (dayPassedInst < refundWindow) {
             // if(TRUE): there is no payment yet to be paid to the seller in the insLockedBalance array.
-            // add the "new payment" to instructor futureBalanceArray
+            // add the "new payment" to instructor insLockedBalance
             instLockedBalance[_inst][_transactionLBIndex] += _instrShare;
         } else {
             // if(FALSE): the instLockedBalance array contains payments that must be paid to the user.
@@ -647,12 +663,12 @@ abstract contract ContentManager is BasePlatform {
                     instLockedBalance[_inst][i] = 0;
                     instBalance[_inst] += tempSafetyBalance;
                 }
-                // add the "new payment" to instructor futureBalanceArray
-                instLockedBalance[_inst][_transactionLBIndex] += _instrShare;
                 // instLockTime holds the date of the oldest element in the insLockedBalance that hasn't paid to the user yet. ...
                 // ... As of Today, all payments that have completed the refund window have been paid to the user. ...
                 // ... "The oldest day which the payment has not been paid to instructor yet" is (today-refundWindow)+1.
                 instLockTime[_inst] = (_transactionTime - refundWindow) + 1;
+                // add the "new payment" to instructor insLockedBalance
+                instLockedBalance[_inst][_transactionLBIndex] += _instrShare;
             } else {
                 // ...if(FALSE): some elements of the insLockedBalance array must be paid to the instructor
                 // how many elements completed the refund window period
@@ -669,12 +685,12 @@ abstract contract ContentManager is BasePlatform {
                     instLockedBalance[_inst][indexOfPayout] = 0;
                     instBalance[_inst] += tempSafetyBalance;
                 }
-                // add the "new payment" to instructor futureBalanceArray
-                instLockedBalance[_inst][_transactionLBIndex] += _instrShare;
                 // instLockTime holds the date of the oldest element in the insLockedBalance that hasn't paid to the user yet. ...
                 // ... As of Today, all payments that have completed the refund window have been paid to the user. ...
                 // ... "The oldest day which the payment has not been paid to instructor yet" is (today-refundWindow)+1.
                 instLockTime[_inst] = (_transactionTime - refundWindow) + 1;
+                // add the "new payment" to instructor insLockedBalance
+                instLockedBalance[_inst][_transactionLBIndex] += _instrShare;
             }
         }
     }

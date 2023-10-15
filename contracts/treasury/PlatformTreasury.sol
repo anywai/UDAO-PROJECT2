@@ -115,4 +115,37 @@ contract PlatformTreasury is ContentManager {
         }
         return instPositiveBalance - instRefundedBalance[_inst];
     }
+
+    function changeRefundWindow(uint256 _newWindow) external {
+        require(
+            roleManager.hasRole(BACKEND_ROLE, msg.sender),
+            "Only backend can set refund window"
+        );
+        // locked balances will be emptied
+        uint256 emptiedContentCutPool;
+        uint256 emptiedCoachingCutPool;
+        // save the possession of locked balances and empty the locked balances
+        for (uint256 i = 0; i < refundWindow; i++) {
+            emptiedContentCutPool += contentCutLockedPool[i];
+            contentCutLockedPool[i] = 0;
+            emptiedCoachingCutPool += coachingCutLockedPool[i];
+            coachingCutLockedPool[i] = 0;
+        }
+        refundWindow = _newWindow;
+
+        uint256 transactionTime = (block.timestamp / epochOneDay);
+        uint256 transactionFuIndex = transactionTime % refundWindow;
+
+        _updateGlobalContentBalances(
+            emptiedContentCutPool,
+            transactionTime,
+            transactionFuIndex
+        );
+        _updateGlobalCoachingBalances(
+            emptiedCoachingCutPool,
+            transactionTime,
+            transactionFuIndex
+        );
+        //emit RefundWindowUpdated(_newWindow);
+    }
 }
