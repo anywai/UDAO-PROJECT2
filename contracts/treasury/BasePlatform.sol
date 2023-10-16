@@ -31,9 +31,9 @@ abstract contract BasePlatform is Pausable, RoleNames {
     /// @notice UDAOC (ERC721) Token is defines contents and used for content ownership
     IUDAOC udaoc;
 
-    /// @notice Address of governanceTreasury
+    /// @notice Address of governanceTreasury is used for sending funds to governance
     address governanceTreasury;
-    /// @notice Address of foundation wallet
+    /// @notice Address of foundation wallet is used for sending funds to foundation
     address foundationWallet;
 
     /// @notice Sets the address of the governance treasury
@@ -88,7 +88,6 @@ abstract contract BasePlatform is Pausable, RoleNames {
         emit AddressesUpdated(
             contractManager.UdaoAddress(),
             contractManager.UdaocAddress(),
-            contractManager.ISupVisAddress(),
             contractManager.RmAddress(),
             contractManager.VoucherVerifierAddress()
         );
@@ -208,7 +207,6 @@ abstract contract BasePlatform is Pausable, RoleNames {
     event AddressesUpdated(
         address udao,
         address udaoc,
-        address isupvis,
         address irm,
         address voucherVerifier
     );
@@ -227,20 +225,30 @@ abstract contract BasePlatform is Pausable, RoleNames {
 
     /// @notice distribute the shares of foundation and governance/juror/validator pools from a platform's content sale revenue
     /// @param _revenue is the content sale revenue to be shared
-    function distributeContentCutShares(uint256 _revenue) internal {
-        foundationBalance += ((_revenue * contentFoundCut) / contentTotalCut);
-        governanceBalance += ((_revenue * contentGoverCut) / contentTotalCut);
-        jurorBalance += ((_revenue * contentJurorCut) / contentTotalCut);
-        validatorsBalance += ((_revenue * contentValidCut) / contentTotalCut);
+    function _distributeContentCutShares(uint256 _revenue) internal {
+        uint256 goverShare = ((_revenue * contentGoverCut) / contentTotalCut);
+        uint256 jurorShare = ((_revenue * contentJurorCut) / contentTotalCut);
+        uint256 validShare = ((_revenue * contentValidCut) / contentTotalCut);
+        uint256 foundShare = _revenue - (goverShare + jurorShare + validShare);
+
+        foundationBalance += foundShare;
+        governanceBalance += goverShare;
+        jurorBalance += jurorShare;
+        validatorsBalance += validShare;
     }
 
     /// @notice distribute the shares of foundation and governance/juror/validator pools from a platform's coaching sale revenue
     /// @param _revenue is the coaching sale revenue to be shared
-    function distributeCoachingCutShares(uint256 _revenue) internal {
-        foundationBalance += ((_revenue * coachFoundCut) / coachTotalCut);
-        governanceBalance += ((_revenue * coachGoverCut) / coachTotalCut);
-        jurorBalance += ((_revenue * coachJurorCut) / coachTotalCut);
-        validatorsBalance += ((_revenue * coachValidCut) / coachTotalCut);
+    function _distributeCoachingCutShares(uint256 _revenue) internal {
+        uint256 goverShare = ((_revenue * coachGoverCut) / coachTotalCut);
+        uint256 jurorShare = ((_revenue * coachJurorCut) / coachTotalCut);
+        uint256 validShare = ((_revenue * coachValidCut) / coachTotalCut);
+        uint256 foundShare = _revenue - (goverShare + jurorShare + validShare);
+
+        foundationBalance += foundShare;
+        governanceBalance += goverShare;
+        jurorBalance += jurorShare;
+        validatorsBalance += validShare;
     }
 
     /// @notice calculates the total cut to be applied by the platform in a content purchase.
@@ -270,14 +278,14 @@ abstract contract BasePlatform is Pausable, RoleNames {
         uint256 _coachJurorCut,
         uint256 _coachValidCut
     ) external {
-        uint newTotal = _coachFoundCut +
-            _coachGoverCut +
-            _coachJurorCut +
-            _coachFoundCut;
         require(
             roleManager.hasRoles(administrator_roles, msg.sender),
             "Only admins can set coach cuts"
         );
+        uint newTotal = _coachFoundCut +
+            _coachGoverCut +
+            _coachJurorCut +
+            _coachFoundCut;
 
         require(newTotal < 100000, "Cuts cant be higher than %100");
 
@@ -311,15 +319,14 @@ abstract contract BasePlatform is Pausable, RoleNames {
         uint256 _contentJurorCut,
         uint256 _contentValidCut
     ) external {
-        uint newTotal = _contentFoundCut +
-            _contentGoverCut +
-            _contentJurorCut +
-            _contentFoundCut;
         require(
             roleManager.hasRoles(administrator_roles, msg.sender),
             "Only admins can set content cuts"
         );
-
+        uint newTotal = _contentFoundCut +
+            _contentGoverCut +
+            _contentJurorCut +
+            _contentFoundCut;
         require(newTotal < 100000, "Cuts cant be higher than %100");
 
         contentFoundCut = _contentFoundCut;

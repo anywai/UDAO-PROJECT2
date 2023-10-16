@@ -13,6 +13,7 @@ abstract contract ContentManager is BasePlatform {
         address buyer
     );
 
+    /// @notice Emitted when a coaching is bought
     event CoachingBought(uint256 coachingSaleID);
 
     using Counters for Counters.Counter;
@@ -46,121 +47,11 @@ abstract contract ContentManager is BasePlatform {
     }
 
     /// @notice content sale id => the content sale
-    mapping(uint256 => ContentSale) public sales;
+    mapping(uint256 => ContentSale) public contentSales;
     /// @notice coaching sale id => the coaching sale
     mapping(uint256 => CoachingSale) public coachSales;
     /// @notice user address => users owned [content token Ids]-[content part Ids]
     mapping(address => uint256[][]) ownedContents;
-
-    /// @notice Allows users to purchase multiple contents for the caller or gift receiver with discount voucher
-    /// @param voucher buy discount content voucher
-    function buyContentWithDiscount(
-        IVoucherVerifier.ContentDiscountVoucher[] calldata voucher
-    ) external whenNotPaused {
-        /// @dev Determine the number of items in the cart
-        uint256 voucherIdsLength = voucher.length;
-        /// @dev Determine the RECEIVER of each item in the cart
-        address[] memory contentReceiver;
-        /// @dev Used for recording the price to pay for each item in the cart
-        uint256[] memory priceToPay;
-        /// @dev Used for recording the all roles cut for each item in the cart
-        uint256[] memory totalCut;
-        /// @dev Used for recording the instructor share for each item in the cart
-        uint256[] memory instrShare;
-        /// @dev Used for recording the total roles cut for all items in the cart
-        uint256 totalTotalCut;
-        /// @dev Used for recording the total instructor share for all items in the cart
-        uint256 totalInstrShare;
-        /// @dev Boolean flag to determine if the purchase is made by a backend role
-        /// if so then this purchase is a fiat purchase
-        bool isFiatPurchase;
-        if (roleManager.hasRole(BACKEND_ROLE, msg.sender)) {
-            isFiatPurchase = true;
-        }
-
-        /// @dev Loop through the cart
-        for (uint256 i; i < voucherIdsLength; i++) {
-            require(
-                udaoc.isSellable(voucher[i].tokenId) == true,
-                "Not sellable"
-            );
-            // make sure signature is valid and get the address of the signer
-            voucherVerifier.verifyDiscountVoucher(voucher[i]);
-            require(
-                voucher[i].validUntil >= block.timestamp,
-                "Voucher has expired."
-            );
-            require(msg.sender == voucher[i].redeemer, "You are not redeemer.");
-            require(!roleManager.isBanned(msg.sender, 20), "You are banned");
-
-            /// @dev Check the existance of content for each item in the cart
-            require(
-                udaoc.exists(voucher[i].tokenId) == true,
-                "Content not exist!"
-            );
-            /// @dev Determine the RECEIVER of each item in cart, address(0) means RECEIVER is BUYER
-            if (voucher[i].giftReceiver != address(0)) {
-                contentReceiver[i] = voucher[i].giftReceiver;
-            } else {
-                require(
-                    !isFiatPurchase,
-                    "Fiat purchase requires a gift receiver!"
-                );
-                contentReceiver[i] = msg.sender;
-            }
-            /// @dev The RECEIVER cannot already own the content or parts which in the cart.
-            require(
-                _doReceiverHaveContentOrPart(
-                    voucher[i].tokenId,
-                    voucher[i].fullContentPurchase,
-                    voucher[i].purchasedParts,
-                    contentReceiver[i]
-                ) == false,
-                "Content or part's is already bought"
-            );
-            /// @dev Calculate the BUYER's, how much will pay to each item
-            priceToPay[i] = calculatePriceToPay(
-                voucher[i].tokenId,
-                voucher[i].fullContentPurchase,
-                voucher[i].purchasedParts
-            );
-            totalCut[i] = calculateContentSaleTotalCut(priceToPay[i]);
-
-            if (isFiatPurchase) {
-                instrShare[i] = 0;
-            } else {
-                instrShare[i] = priceToPay[i] - totalCut[i];
-            }
-
-            totalTotalCut += totalCut[i];
-            totalInstrShare += instrShare[i];
-        }
-
-        /// @dev The BUYER should have enough UDAO to pay for the cart
-        require(
-            udao.balanceOf(msg.sender) >= totalTotalCut + totalInstrShare,
-            "Not enough UDAO sent!"
-        );
-
-        /// @dev The BUYER should approve the contract for the amount they will pay
-        require(
-            udao.allowance(msg.sender, address(this)) >=
-                totalTotalCut + totalInstrShare,
-            "Not enough allowance!"
-        );
-
-        for (uint256 i; i < voucherIdsLength; i++) {
-            _buyContentwithUDAO(
-                voucher[i].tokenId,
-                voucher[i].fullContentPurchase,
-                voucher[i].purchasedParts,
-                contentReceiver[i],
-                totalCut[i],
-                instrShare[i]
-            );
-        }
-        _sendCurrentGlobalCutsToGovernanceTreasury();
-    }
 
     /// @notice Allows users to buy coaching with a voucher created by instructor
     /// @param voucher buy coaching voucher
@@ -184,11 +75,16 @@ abstract contract ContentManager is BasePlatform {
         if (roleManager.hasRole(BACKEND_ROLE, msg.sender)) {
             learner = voucher.learner;
             isFiatPurchase = true;
+            require(!roleManager.isBanned(msg.sender, 32), "Caller is banned");
+            require(roleManager.isKYCed(msg.sender, 25), "Caller is not KYCed");
         } else {
             require(msg.sender == voucher.learner, "You are not the learner.");
-            require(!roleManager.isBanned(msg.sender, 21), "You are banned");
             learner = msg.sender;
         }
+
+        require(roleManager.isKYCed(learner, 26), "Learner is not KYCed");
+
+        require(!roleManager.isBanned(learner, 33), "Learner is banned");
 
         totalCut = calculateCoachingSaleTotalCut(voucher.priceToPay);
 
@@ -241,9 +137,134 @@ abstract contract ContentManager is BasePlatform {
             refundablePeriod: transactionTime + refundWindow
         });
         coachingSaleID.increment();
-        _sendCurrentGlobalCutsToGovernanceTreasury();
+        _transferPlatformCutstoGovernance();
 
         emit CoachingBought(coachingSaleID.current() - 1);
+    }
+
+    /// @notice Allows users to purchase multiple contents for the caller or gift receiver with discount vouchers
+    /// @param vouchers buy discount content voucher array
+    function buyContentWithDiscount(
+        IVoucherVerifier.ContentDiscountVoucher[] calldata vouchers
+    ) external whenNotPaused {
+        /// @dev Determine the number of items in the cart
+        uint256 voucherIdsLength = vouchers.length;
+        /// @dev Determine the RECEIVER of each item in the cart
+        address[] memory contentReceiver;
+        /// @dev Used for recording the price to pay for each item in the cart
+        uint256[] memory priceToPay;
+        /// @dev Used for recording the all roles cut for each item in the cart
+        uint256[] memory totalCut;
+        /// @dev Used for recording the instructor share for each item in the cart
+        uint256[] memory instrShare;
+        /// @dev Used for recording the total roles cut for all items in the cart
+        uint256 totalRequiredUdao;
+        /// @dev Boolean flag to determine if the purchase is made by a backend role
+        /// if so then this purchase is a fiat purchase
+        bool isFiatPurchase;
+
+        if (roleManager.hasRole(BACKEND_ROLE, msg.sender)) {
+            isFiatPurchase = true;
+        }
+
+        require(!roleManager.isBanned(msg.sender, 20), "You are banned");
+        require(roleManager.isKYCed(msg.sender, 20), "You are not KYCed");
+        /// @dev Loop through the cart
+        for (uint256 i; i < voucherIdsLength; i++) {
+            require(
+                udaoc.isSellable(vouchers[i].tokenId) == true,
+                "Not sellable"
+            );
+            // make sure signature is valid and get the address of the signer
+            voucherVerifier.verifyDiscountVoucher(vouchers[i]);
+
+            require(
+                msg.sender == vouchers[i].redeemer,
+                "You are not redeemer."
+            );
+
+            require(
+                !roleManager.isBanned(vouchers[i].redeemer, 28),
+                "Redeemer is banned"
+            );
+            require(
+                !roleManager.isBanned(vouchers[i].giftReceiver, 29),
+                "Gift receiver is banned"
+            );
+            require(
+                roleManager.isKYCed(vouchers[i].redeemer, 21),
+                "Redeemer is not KYCed"
+            );
+            require(
+                roleManager.isKYCed(vouchers[i].giftReceiver, 22),
+                "Gift receiver is not KYCed"
+            );
+
+            /// @dev Check the existance of content for each item in the cart
+            require(
+                udaoc.exists(vouchers[i].tokenId) == true,
+                "Content not exist!"
+            );
+            /// @dev Determine the RECEIVER of each item in cart, address(0) means RECEIVER is BUYER
+            if (vouchers[i].giftReceiver != address(0)) {
+                contentReceiver[i] = vouchers[i].giftReceiver;
+            } else {
+                require(
+                    !isFiatPurchase,
+                    "Fiat purchase requires a gift receiver!"
+                );
+                contentReceiver[i] = msg.sender;
+            }
+            /// @dev The RECEIVER cannot already own the content or parts which in the cart.
+            require(
+                _doReceiverHaveContentOrPart(
+                    vouchers[i].tokenId,
+                    vouchers[i].fullContentPurchase,
+                    vouchers[i].purchasedParts,
+                    contentReceiver[i]
+                ) == false,
+                "Content or part's is already bought"
+            );
+            /// @dev Calculate the BUYER's, how much will pay to each item
+            priceToPay[i] = calculatePriceToPay(
+                vouchers[i].tokenId,
+                vouchers[i].fullContentPurchase,
+                vouchers[i].purchasedParts
+            );
+            totalCut[i] = calculateContentSaleTotalCut(priceToPay[i]);
+
+            if (isFiatPurchase) {
+                instrShare[i] = 0;
+            } else {
+                instrShare[i] = priceToPay[i] - totalCut[i];
+            }
+
+            totalRequiredUdao += (totalCut[i] + instrShare[i]);
+        }
+
+        /// @dev The BUYER should have enough UDAO to pay for the cart
+        require(
+            udao.balanceOf(msg.sender) >= totalRequiredUdao,
+            "Not enough UDAO sent!"
+        );
+
+        /// @dev The BUYER should approve the contract for the amount they will pay
+        require(
+            udao.allowance(msg.sender, address(this)) >= totalRequiredUdao,
+            "Not enough allowance!"
+        );
+
+        for (uint256 i; i < voucherIdsLength; i++) {
+            _buyContentwithUDAO(
+                vouchers[i].tokenId,
+                vouchers[i].fullContentPurchase,
+                vouchers[i].purchasedParts,
+                contentReceiver[i],
+                totalCut[i],
+                instrShare[i]
+            );
+        }
+        _transferPlatformCutstoGovernance();
     }
 
     /// @notice Allows users to purchase multiple content for the caller or gift receiver.
@@ -280,8 +301,21 @@ abstract contract ContentManager is BasePlatform {
             "Array lengths are not equal!"
         );
 
+        require(roleManager.isKYCed(msg.sender, 23), "You are not KYCed");
+        require(!roleManager.isBanned(msg.sender, 30), "You are banned");
+
         for (uint256 i; i < tokenIds.length; i++) {
             require(udaoc.isSellable(tokenIds[i]) == true, "Not sellable");
+
+            require(
+                !roleManager.isBanned(giftReceivers[i], 31),
+                "Gift receiver is banned"
+            );
+            require(
+                roleManager.isKYCed(giftReceivers[i], 24),
+                "Gift receiver is not KYCed"
+            );
+
             /// @dev Check the existance of content for each item in the cart
             require(udaoc.exists(tokenIds[i]) == true, "Content not exist!");
             /// @dev Determine the RECEIVER of each item in cart, address(0) means RECEIVER is BUYER
@@ -318,7 +352,7 @@ abstract contract ContentManager is BasePlatform {
                 instrShare[i] = priceToPay[i] - totalCut[i];
             }
 
-            totalRequiredUdao += totalCut[i] + instrShare[i];
+            totalRequiredUdao += (totalCut[i] + instrShare[i]);
         }
 
         /// @dev The BUYER should have enough UDAO to pay for the cart
@@ -343,7 +377,7 @@ abstract contract ContentManager is BasePlatform {
                 instrShare[i]
             );
         }
-        _sendCurrentGlobalCutsToGovernanceTreasury();
+        _transferPlatformCutstoGovernance();
     }
 
     /// @notice Used by buy content functions to receive payment from user and deliver the content to user
@@ -360,7 +394,7 @@ abstract contract ContentManager is BasePlatform {
         address contentReceiver,
         uint256 totalCut,
         uint256 instrShare
-    ) internal whenNotPaused {
+    ) internal {
         // Who created and own that content?
         address instructor = udaoc.ownerOf(tokenId);
 
@@ -402,7 +436,7 @@ abstract contract ContentManager is BasePlatform {
         }
 
         //Save the sale on a refund list
-        sales[contentSaleID.current()] = ContentSale({
+        contentSales[contentSaleID.current()] = ContentSale({
             payee: msg.sender,
             contentReceiver: contentReceiver,
             instructor: instructor,
@@ -627,52 +661,51 @@ abstract contract ContentManager is BasePlatform {
         instLockedBalance[_inst][_transactionLBIndex] += _instrShare;
     }
 
-    function _sendCurrentGlobalCutsToGovernanceTreasury() internal {
+    /// @notice Distributes platform revenue to platform roles and transfers governance role shares to the governance treasury.
+    function _transferPlatformCutstoGovernance() internal {
         if (contentCutPool > contentCutRefundedBalance) {
-            uint withdrawableContentShare = contentCutPool -
+            uint positiveContentCutPool = contentCutPool -
                 contentCutRefundedBalance;
             contentCutPool = 0;
             contentCutRefundedBalance = 0;
-
-            distributeContentCutShares(withdrawableContentShare);
+            _distributeContentCutShares(positiveContentCutPool);
         }
 
         if (coachingCutPool > coachingCutRefundedBalance) {
-            uint withdrawableCoachingShare = coachingCutPool -
+            uint positiveCoachingCutPool = coachingCutPool -
                 coachingCutRefundedBalance;
             coachingCutPool = 0;
             coachingCutRefundedBalance = 0;
-
-            distributeCoachingCutShares(withdrawableCoachingShare);
+            _distributeCoachingCutShares(positiveCoachingCutPool);
         }
         if (isGovernanceTreasuryOnline == true) {
             if (jurorBalance > 0) {
-                uint sendJurorShareToGovTre = jurorBalance;
+                uint transferredJurorBalance = jurorBalance;
                 jurorBalance = 0;
-                udao.transfer(governanceTreasury, sendJurorShareToGovTre);
-                iGovernanceTreasury.jurorBalanceUpdate(sendJurorShareToGovTre);
+                udao.transfer(governanceTreasury, transferredJurorBalance);
+                iGovernanceTreasury.jurorBalanceUpdate(transferredJurorBalance);
             }
             if (validatorsBalance > 0) {
-                uint sendValdtrShareToGovTre = validatorsBalance;
+                uint transferredValidatorBalance = validatorsBalance;
                 validatorsBalance = 0;
-                udao.transfer(governanceTreasury, sendValdtrShareToGovTre);
+                udao.transfer(governanceTreasury, transferredValidatorBalance);
                 iGovernanceTreasury.validatorBalanceUpdate(
-                    sendValdtrShareToGovTre
+                    transferredValidatorBalance
                 );
             }
             if (governanceBalance > 0) {
-                uint sendGoverShareToGovTre = governanceBalance;
+                uint transferredGovernanceBalance = governanceBalance;
                 governanceBalance = 0;
-                udao.transfer(governanceTreasury, sendGoverShareToGovTre);
+                udao.transfer(governanceTreasury, transferredGovernanceBalance);
                 iGovernanceTreasury.governanceBalanceUpdate(
-                    sendGoverShareToGovTre
+                    transferredGovernanceBalance
                 );
             }
         }
     }
 
-    /// @notice Allows learner to get refund of coaching 1 day prior to coaching date or coach to refund anytime
-    /// @param _refCoachSaleID id of the coaching sale
+    /// @notice Allows learner to get refund of coaching 1 day prior to coaching date, or coach to refund in refund window
+    /// @param _refCoachSaleID The ID of the coaching sale
     function refundCoachingByInstructorOrLearner(
         uint256 _refCoachSaleID
     ) external whenNotPaused {
@@ -682,7 +715,7 @@ abstract contract ContentManager is BasePlatform {
             "Refund period over you cant refund"
         );
         if (msg.sender == refundItem.payee) {
-            require(refundItem.coachingDate >= block.timestamp + 1 days);
+            require(refundItem.coachingDate >= block.timestamp + epochOneDay);
         } else if (msg.sender != refundItem.coach) {
             revert("You are not the payee or coach");
         }
@@ -731,7 +764,14 @@ abstract contract ContentManager is BasePlatform {
     ) external whenNotPaused {
         voucherVerifier.verifyRefundVoucher(voucher);
 
-        ContentSale storage refundItem = sales[voucher.saleID];
+        ContentSale storage refundItem = contentSales[voucher.saleID];
+
+        require(
+            refundItem.refundablePeriod >= (block.timestamp / epochOneDay),
+            "refund period over you cant refund"
+        );
+
+        require(refundItem.isRefunded == false, "Already refunded!");
 
         for (uint256 j; j < refundItem.purchasedParts.length; j++) {
             uint256 part = refundItem.purchasedParts[j];
@@ -742,14 +782,11 @@ abstract contract ContentManager is BasePlatform {
             ) {
                 revert("contentReceiver already refund this purchase");
             }
+            /// @dev Set the content as not bought
+            isTokenBought[refundItem.contentReceiver][refundItem.tokenId][
+                part
+            ] = false;
         }
-
-        require(
-            refundItem.refundablePeriod < (block.timestamp / epochOneDay),
-            "refund period over you cant refund"
-        );
-
-        require(refundItem.isRefunded == false, "Already refunded!");
         coachSales[voucher.saleID].isRefunded = true;
 
         /// @dev First remove specific content from the contentReceiver
@@ -786,12 +823,3 @@ abstract contract ContentManager is BasePlatform {
         return id;
     }
 }
-
-//TODO we need to check functions visibility(view/pure/public) and behaviour (external/internal)
-//TODO Refund voucher icin backend disinda farkli bir wallet kullanilsin. DONE
-//TODO event ler eksik
-//TODO pnly Role ler eksik
-//TODO ban -kyc checklerde eksik var
-//TODO create content srasında instructor ıpdate time 'ı başlatman gerek!
-//TODO instructorWitdrawableBalance view fonksiyonu eksik
-//TODO set new refundWindow algoritması implemente edilmesi gerekiyor!

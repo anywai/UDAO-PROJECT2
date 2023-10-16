@@ -7,6 +7,7 @@ import "../ContractManager.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
 import "hardhat/console.sol";
+
 contract VoucherVerifier is EIP712, RoleNames {
     string private constant SIGNING_DOMAIN = "TreasuryVouchers";
     string private constant SIGNATURE_VERSION = "1";
@@ -139,6 +140,7 @@ contract VoucherVerifier is EIP712, RoleNames {
             roleManager.hasRole(VOUCHER_VERIFIER, signer),
             "Signature invalid or unauthorized"
         );
+        require(voucher.validUntil >= block.timestamp, "Voucher has expired.");
     }
 
     /// @notice Verifies the signature for a given ContentDiscountVoucher, returning the address of the signer.

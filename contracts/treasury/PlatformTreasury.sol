@@ -5,20 +5,17 @@ import "./ContentManager.sol";
 import "hardhat/console.sol";
 
 contract PlatformTreasury is ContentManager {
-    string private constant SIGNING_DOMAIN = "ValidationScore";
-    string private constant SIGNATURE_VERSION = "1";
-
     /// this event gets triggered when governance withdraw tokens
     event GovernanceWithdrawn(uint amount);
-
-    /// this event gets triggered when founcation withdraw tokens
-    event FoundationWithdrawn(uint amount);
 
     /// this event gets triggered when a validator withdraw tokens
     event ValidatorWithdrawn(address validator, uint amount);
 
     /// this event gets triggered when a juror withdraw tokens
     event JurorWithdrawn(address juror, uint amount);
+
+    /// this event gets triggered when founcation withdraw tokens
+    event FoundationWithdrawn(uint amount);
 
     /// this event gets triggered when a instructor withdraw tokens
     event InstructorWithdrawn(address instructor, uint amount, uint debt);
@@ -39,6 +36,14 @@ contract PlatformTreasury is ContentManager {
         )
     {}
 
+    /// @notice Allows anyone to update the platform cut balances and transfer the platform cut to governance
+    function updateAndTransferPlatformBalances() external {
+        uint256 transactionTime = (block.timestamp / epochOneDay);
+        uint256 transactionFuIndex = transactionTime % refundWindow;
+        _updatePlatformCutBalances(0, 0, transactionTime, transactionFuIndex);
+        _transferPlatformCutstoGovernance();
+    }
+
     /// @notice withdraws foundation balance to foundation wallet
     function withdrawFoundation() external whenNotPaused {
         require(
@@ -49,7 +54,7 @@ contract PlatformTreasury is ContentManager {
         uint256 transactionTime = (block.timestamp / epochOneDay);
         uint256 transactionFuIndex = transactionTime % refundWindow;
         _updatePlatformCutBalances(0, 0, transactionTime, transactionFuIndex);
-        _sendCurrentGlobalCutsToGovernanceTreasury();
+        _transferPlatformCutstoGovernance();
 
         uint withdrawableBalance = foundationBalance;
         foundationBalance = 0; /// @dev zeroing before the actual withdraw
@@ -59,7 +64,11 @@ contract PlatformTreasury is ContentManager {
 
     /// @notice Allows instructers to withdraw individually.
     function withdrawInstructor() external whenNotPaused {
-        // TODO instructorWitdrawableBalance view function
+        require(
+            getWithdrawableBalanceInstructor(msg.sender) > 0,
+            "No balance to withdraw"
+        );
+
         uint256 transactionTime = (block.timestamp / epochOneDay);
         uint256 transactionFuIndex = transactionTime % refundWindow;
         _updatePlatformCutBalances(0, 0, transactionTime, transactionFuIndex);
@@ -74,7 +83,7 @@ contract PlatformTreasury is ContentManager {
             instBalance[msg.sender] >= instRefundedBalance[msg.sender],
             "Debt is larger than balance"
         );
-        _sendCurrentGlobalCutsToGovernanceTreasury();
+        _transferPlatformCutstoGovernance();
 
         uint debtAmount = instRefundedBalance[msg.sender];
         uint withdrawableBalance = instBalance[msg.sender] - debtAmount;
@@ -94,31 +103,39 @@ contract PlatformTreasury is ContentManager {
         uint256 transactionTime = (block.timestamp / epochOneDay);
         //transactionFuIndex determines which position it will be added to in the FutureBalances array.
         uint256 transactionFuIndex = transactionTime % refundWindow;
-
         uint instPositiveBalance;
 
         uint256 dayPassedInst = transactionTime - instLockTime[_inst];
+        uint256 dayPassedInstMod;
+
         if (dayPassedInst >= (refundWindow * 2)) {
-            for (uint256 i = 0; i < refundWindow; i++) {
-                instPositiveBalance += instLockedBalance[_inst][i];
-            }
+            dayPassedInstMod = refundWindow - 1;
         } else {
-            uint256 dayPassedInstMod = dayPassedInst % refundWindow;
-            for (uint256 i = 0; i <= dayPassedInstMod; i++) {
-                //Index of the day to be payout to instructor.
-                uint256 indexOfPayout = ((transactionFuIndex + refundWindow) -
-                    i) % refundWindow;
-                instPositiveBalance += instLockedBalance[_inst][indexOfPayout];
-            }
+            dayPassedInstMod = dayPassedInst % refundWindow;
         }
-        return instPositiveBalance - instRefundedBalance[_inst];
+
+        for (uint256 i = 0; i <= dayPassedInstMod; i++) {
+            //Index of the day to be payout to instructor.
+            uint256 indexOfPayout = ((transactionFuIndex + refundWindow) - i) %
+                refundWindow;
+            instPositiveBalance += instLockedBalance[_inst][indexOfPayout];
+        }
+
+        if ((instPositiveBalance - instRefundedBalance[_inst]) > 0) {
+            return instPositiveBalance - instRefundedBalance[_inst];
+        } else {
+            return 0;
+        }
     }
 
+    /// @notice Allows backend to change platform refun window period
+    /// @param _newWindow The new refund window period
     function changeRefundWindow(uint256 _newWindow) external {
         require(
             roleManager.hasRole(BACKEND_ROLE, msg.sender),
             "Only backend can set refund window"
         );
+        require(!roleManager.isBanned(msg.sender, 34), "Caller is banned");
         // locked balances will be emptied
         uint256 emptiedContentCutPool;
         uint256 emptiedCoachingCutPool;
