@@ -36,63 +36,6 @@ abstract contract BasePlatform is Pausable, RoleNames {
     /// @notice Address of foundation wallet is used for sending funds to foundation
     address foundationWallet;
 
-    /// @notice Sets the address of the governance treasury
-    /// @param _newAddress New address of the governance treasury
-    function setGovernanceTreasuryAddress(address _newAddress) external {
-        require(
-            roleManager.hasRole(BACKEND_ROLE, msg.sender),
-            "Only backend can set governance treasury address"
-        );
-        governanceTreasury = _newAddress;
-        emit GovernanceTreasuryUpdated(_newAddress);
-    }
-
-    /// @notice Sets the address of the foundation wallet
-    /// @param _newAddress New address of the foundation wallet
-    function setFoundationWalletAddress(address _newAddress) external {
-        require(
-            roleManager.hasRole(BACKEND_ROLE, msg.sender),
-            "Only backend can set foundation wallet address"
-        );
-        foundationWallet = _newAddress;
-        emit FoundationWalletUpdated(_newAddress);
-    }
-
-    /// @notice Sets the address of the contract manager
-    /// @param _newAddress New address of the contract manager
-    function setContractManagerAddress(address _newAddress) external {
-        require(
-            roleManager.hasRole(BACKEND_ROLE, msg.sender),
-            "Only backend can set contract manager address"
-        );
-        contractManager = ContractManager(_newAddress);
-        emit ContractManagerUpdated(_newAddress);
-    }
-
-    /// @notice Get the updated addresses from contract manager
-    function updateAddresses() external {
-        require(
-            roleManager.hasRole(BACKEND_ROLE, msg.sender),
-            "Only backend can update addresses"
-        );
-        udao = IERC20(contractManager.UdaoAddress());
-        udaoc = IUDAOC(contractManager.UdaocAddress());
-        roleManager = IRoleManager(contractManager.RmAddress());
-        iGovernanceTreasury = IGovernanceTreasury(
-            contractManager.GovernanceTreasuryAddress()
-        );
-        voucherVerifier = IVoucherVerifier(
-            contractManager.VoucherVerifierAddress()
-        );
-
-        emit AddressesUpdated(
-            contractManager.UdaoAddress(),
-            contractManager.UdaocAddress(),
-            contractManager.RmAddress(),
-            contractManager.VoucherVerifierAddress()
-        );
-    }
-
     /// @notice user address => (content id => (content part id => part owned/not owned by the user))
     mapping(address => mapping(uint => mapping(uint => bool))) isTokenBought;
     /// @notice during refund windows all payments locked on contract and users can request refund
@@ -222,6 +165,63 @@ abstract contract BasePlatform is Pausable, RoleNames {
         uint256 contentJurorCut,
         uint256 contentValidCut
     );
+
+    /// @notice Sets the address of the governance treasury
+    /// @param _newAddress New address of the governance treasury
+    function setGovernanceTreasuryAddress(address _newAddress) external {
+        require(
+            roleManager.hasRole(BACKEND_ROLE, msg.sender),
+            "Only backend can set governance treasury address"
+        );
+        governanceTreasury = _newAddress;
+        emit GovernanceTreasuryUpdated(_newAddress);
+    }
+
+    /// @notice Sets the address of the foundation wallet
+    /// @param _newAddress New address of the foundation wallet
+    function setFoundationWalletAddress(address _newAddress) external {
+        require(
+            roleManager.hasRole(BACKEND_ROLE, msg.sender),
+            "Only backend can set foundation wallet address"
+        );
+        foundationWallet = _newAddress;
+        emit FoundationWalletUpdated(_newAddress);
+    }
+
+    /// @notice Sets the address of the contract manager
+    /// @param _newAddress New address of the contract manager
+    function setContractManagerAddress(address _newAddress) external {
+        require(
+            roleManager.hasRole(BACKEND_ROLE, msg.sender),
+            "Only backend can set contract manager address"
+        );
+        contractManager = ContractManager(_newAddress);
+        emit ContractManagerUpdated(_newAddress);
+    }
+
+    /// @notice Get the updated addresses from contract manager
+    function updateAddresses() external {
+        require(
+            roleManager.hasRole(BACKEND_ROLE, msg.sender),
+            "Only backend can update addresses"
+        );
+        udao = IERC20(contractManager.UdaoAddress());
+        udaoc = IUDAOC(contractManager.UdaocAddress());
+        roleManager = IRoleManager(contractManager.RmAddress());
+        iGovernanceTreasury = IGovernanceTreasury(
+            contractManager.GovernanceTreasuryAddress()
+        );
+        voucherVerifier = IVoucherVerifier(
+            contractManager.VoucherVerifierAddress()
+        );
+
+        emit AddressesUpdated(
+            contractManager.UdaoAddress(),
+            contractManager.UdaocAddress(),
+            contractManager.RmAddress(),
+            contractManager.VoucherVerifierAddress()
+        );
+    }
 
     /// @notice distribute the shares of foundation and governance/juror/validator pools from a platform's content sale revenue
     /// @param _revenue is the content sale revenue to be shared
