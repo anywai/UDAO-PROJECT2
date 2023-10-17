@@ -6,21 +6,32 @@ import "hardhat/console.sol";
 
 abstract contract ContentManager is BasePlatform {
     /// @notice Emitted when a content is bought
-    event ContentBought(
-        uint256 tokenId,
-        uint256[] parts,
-        uint256 pricePaid,
-        address buyer
-    );
-
+    event ContentBought(uint256 cartSaleID, uint256 contentSaleID);
     /// @notice Emitted when a coaching is bought
     event CoachingBought(uint256 coachingSaleID);
+    /// @notice Emitted when refund is requested. saleType: 0=coaching, 1=content
+    event SaleRefunded(uint256 saleID, uint8 saleType);
+    /// @notice 
+    event ContentCutPoolUpdated(uint256 _contentCutPool);
+    event CoachingCutPoolUpdated(uint256 _coachingCutPool);
+    event ContentCutLockedPoolUpdated();
+    event CoachingCutLockedPoolUpdated();
+    event RoleBalancesUpdated(
+        uint256 foundationBalance,
+        uint256 jurorBalance,
+        uint256 validatorsBalance,
+        uint256 governanceBalance
+    );
+    event InstructorBalanceUpdated(address _instructor, uint256 _instBalance);
+    event InstructorLockedBalanceUpdated(address _instructor);
 
     using Counters for Counters.Counter;
     /// @notice Used to generate unique ids for content sales
     Counters.Counter private contentSaleID;
     /// @notice Used to generate unique ids for coaching sales
     Counters.Counter private coachingSaleID;
+    /// @notice Used to generate unique ids for cart sales
+    Counters.Counter private cartSaleID;
 
     /// @notice Used to store the content sales
     struct ContentSale {
@@ -83,8 +94,9 @@ abstract contract ContentManager is BasePlatform {
         }
 
         require(roleManager.isKYCed(learner, 26), "Learner is not KYCed");
-
         require(!roleManager.isBanned(learner, 33), "Learner is banned");
+        require(roleManager.isKYCed(voucher.coach, 27), "Coach is not KYCed");
+        require(!roleManager.isBanned(voucher.coach, 35), "Coach is banned");
 
         totalCut = calculateCoachingSaleTotalCut(voucher.priceToPay);
 
@@ -253,7 +265,7 @@ abstract contract ContentManager is BasePlatform {
             udao.allowance(msg.sender, address(this)) >= totalRequiredUdao,
             "Not enough allowance!"
         );
-
+        cartSaleID.increment();
         for (uint256 i; i < voucherIdsLength; i++) {
             _buyContentwithUDAO(
                 vouchers[i].tokenId,
@@ -261,7 +273,8 @@ abstract contract ContentManager is BasePlatform {
                 vouchers[i].purchasedParts,
                 contentReceiver[i],
                 totalCut[i],
-                instrShare[i]
+                instrShare[i],
+                cartSaleID.current() - 1
             );
         }
         _transferPlatformCutstoGovernance();
@@ -366,7 +379,7 @@ abstract contract ContentManager is BasePlatform {
             udao.allowance(msg.sender, address(this)) >= totalRequiredUdao,
             "Not enough allowance!"
         );
-
+        cartSaleID.increment();
         for (uint256 i; i < tokenIds.length; i++) {
             _buyContentwithUDAO(
                 tokenIds[i],
@@ -374,9 +387,11 @@ abstract contract ContentManager is BasePlatform {
                 purchasedParts[i],
                 giftReceivers[i],
                 totalCut[i],
-                instrShare[i]
+                instrShare[i],
+                cartSaleID.current() - 1
             );
         }
+
         _transferPlatformCutstoGovernance();
     }
 
@@ -387,13 +402,15 @@ abstract contract ContentManager is BasePlatform {
     /// @param contentReceiver The address of the content receiver.
     /// @param totalCut The total platform cut applied to the content sale.
     /// @param instrShare The instructor's share from the the content sale.
+    /// @param _cartSaleID The ID of the cart sale.
     function _buyContentwithUDAO(
         uint256 tokenId,
         bool fullContentPurchase,
         uint256[] calldata purchasedParts,
         address contentReceiver,
         uint256 totalCut,
-        uint256 instrShare
+        uint256 instrShare,
+        uint256 _cartSaleID
     ) internal {
         // Who created and own that content?
         address instructor = udaoc.ownerOf(tokenId);
@@ -449,12 +466,7 @@ abstract contract ContentManager is BasePlatform {
         });
         contentSaleID.increment();
 
-        emit ContentBought(
-            tokenId,
-            purchasedParts,
-            totalCut + instrShare,
-            msg.sender
-        );
+        emit ContentBought(_cartSaleID, contentSaleID.current() - 1);
     }
 
     /// @notice Checks does the receiver already own the content or content part
@@ -591,10 +603,24 @@ abstract contract ContentManager is BasePlatform {
             /// @dev Update platformLockTime to the oldest day where payments have not been transferred to CutPools yet.
             /// @dev It is "(today-refundWindow)+1" so as of today, all refund window completed payments have been transfered.
             platformLockTime = (_transactionTime - refundWindow) + 1;
+
+            if (tempSafetyContent != 0) {
+                emit ContentCutPoolUpdated(contentCutPool);
+            }
+            if (tempSafetyCoaching != 0) {
+                emit CoachingCutPoolUpdated(coachingCutPool);
+            }
         }
         /// @dev Add the "new payment" to CutLockedPools.
         contentCutLockedPool[_transactionLBIndex] += totalCutContentShare;
         coachingCutLockedPool[_transactionLBIndex] += totalCutCoachingShare;
+
+        if ((totalCutContentShare != 0) || (tempSafetyContent != 0)) {
+            emit ContentCutLockedPoolUpdated();
+        }
+        if ((totalCutCoachingShare != 0) || (tempSafetyCoaching != 0)) {
+            emit CoachingCutLockedPoolUpdated();
+        }
     }
 
     /// @notice Updates instructor balances and handle locked payments during the refund window.
@@ -656,9 +682,17 @@ abstract contract ContentManager is BasePlatform {
             /// @dev Update instLockTime to the oldest day where payments have not been paid to the instructor yet.
             /// @dev It is "(today-refundWindow)+1" so as of today, all refund window completed payments have been transfered.
             instLockTime[_inst] = (_transactionTime - refundWindow) + 1;
+
+            if (tempSafetyBalance != 0) {
+                emit InstructorBalanceUpdated(_inst, instBalance[_inst]);
+            }
         }
         /// @dev Add the "new payment" to instLockedBalance.
         instLockedBalance[_inst][_transactionLBIndex] += _instrShare;
+
+        if ((_instrShare != 0) || (tempSafetyBalance != 0)) {
+            emit InstructorLockedBalanceUpdated(_inst);
+        }
     }
 
     /// @notice Distributes platform revenue to platform roles and transfers governance role shares to the governance treasury.
@@ -668,7 +702,15 @@ abstract contract ContentManager is BasePlatform {
                 contentCutRefundedBalance;
             contentCutPool = 0;
             contentCutRefundedBalance = 0;
+            emit ContentCutPoolUpdated(contentCutPool);
+            
             _distributeContentCutShares(positiveContentCutPool);
+            emit RoleBalancesUpdated(
+                foundationBalance,
+                jurorBalance,
+                validatorsBalance,
+                governanceBalance
+            );
         }
 
         if (coachingCutPool > coachingCutRefundedBalance) {
@@ -676,17 +718,28 @@ abstract contract ContentManager is BasePlatform {
                 coachingCutRefundedBalance;
             coachingCutPool = 0;
             coachingCutRefundedBalance = 0;
+            emit CoachingCutPoolUpdated(coachingCutPool);
+            
             _distributeCoachingCutShares(positiveCoachingCutPool);
+            emit RoleBalancesUpdated(
+                foundationBalance,
+                jurorBalance,
+                validatorsBalance,
+                governanceBalance
+            );
         }
+
         if (isGovernanceTreasuryOnline == true) {
+            uint transferredJurorBalance = jurorBalance;
+            uint transferredValidatorBalance = validatorsBalance;
+            uint transferredGovernanceBalance = governanceBalance;
+
             if (jurorBalance > 0) {
-                uint transferredJurorBalance = jurorBalance;
                 jurorBalance = 0;
                 udao.transfer(governanceTreasury, transferredJurorBalance);
                 iGovernanceTreasury.jurorBalanceUpdate(transferredJurorBalance);
             }
             if (validatorsBalance > 0) {
-                uint transferredValidatorBalance = validatorsBalance;
                 validatorsBalance = 0;
                 udao.transfer(governanceTreasury, transferredValidatorBalance);
                 iGovernanceTreasury.validatorBalanceUpdate(
@@ -694,11 +747,18 @@ abstract contract ContentManager is BasePlatform {
                 );
             }
             if (governanceBalance > 0) {
-                uint transferredGovernanceBalance = governanceBalance;
                 governanceBalance = 0;
                 udao.transfer(governanceTreasury, transferredGovernanceBalance);
                 iGovernanceTreasury.governanceBalanceUpdate(
                     transferredGovernanceBalance
+                );
+            }
+            if((transferredJurorBalance + transferredValidatorBalance + transferredGovernanceBalance) > 0 ) {
+                emit RoleBalancesUpdated(
+                    foundationBalance,
+                    jurorBalance,
+                    validatorsBalance,
+                    governanceBalance
                 );
             }
         }
@@ -715,7 +775,7 @@ abstract contract ContentManager is BasePlatform {
             "Refund period over you cant refund"
         );
         if (msg.sender == refundItem.payee) {
-            require(refundItem.coachingDate >= block.timestamp + epochOneDay);
+            require(refundItem.coachingDate >= block.timestamp + epochOneDay, "You can't refund less than 1 day prior to coaching date");
         } else if (msg.sender != refundItem.coach) {
             revert("You are not the payee or coach");
         }
@@ -730,6 +790,7 @@ abstract contract ContentManager is BasePlatform {
             refundItem.payee,
             (refundItem.instrShare + refundItem.totalCut)
         );
+        emit SaleRefunded(_refCoachSaleID, 0);
     }
 
     /// @notice Allows refund of coaching with a voucher created by platform
@@ -755,6 +816,7 @@ abstract contract ContentManager is BasePlatform {
             refundItem.payee,
             (refundItem.instrShare + refundItem.totalCut)
         );
+        emit SaleRefunded(voucher.saleID, 0);
     }
 
     /// @notice Allows refund of a content with a voucher created by platform
@@ -802,6 +864,7 @@ abstract contract ContentManager is BasePlatform {
             refundItem.payee,
             (refundItem.instrShare + refundItem.totalCut)
         );
+        emit SaleRefunded(voucher.saleID, 1);
     }
 
     /// @notice returns owned contents of the _owner

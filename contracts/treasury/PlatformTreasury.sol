@@ -5,20 +5,13 @@ import "./ContentManager.sol";
 import "hardhat/console.sol";
 
 contract PlatformTreasury is ContentManager {
-    /// this event gets triggered when governance withdraw tokens
-    event GovernanceWithdrawn(uint amount);
 
-    /// this event gets triggered when a validator withdraw tokens
-    event ValidatorWithdrawn(address validator, uint amount);
-
-    /// this event gets triggered when a juror withdraw tokens
-    event JurorWithdrawn(address juror, uint amount);
-
-    /// this event gets triggered when founcation withdraw tokens
+    ///@notice this event gets triggered when founcation withdraw tokens
     event FoundationWithdrawn(uint amount);
-
-    /// this event gets triggered when a instructor withdraw tokens
+    ///@notice this event gets triggered when a instructor withdraw tokens
     event InstructorWithdrawn(address instructor, uint amount, uint debt);
+    /// @notice this event gets triggered when the refund window is updated
+    event RefundWindowUpdated(uint newWindow);
 
     /// @param _contractManagerAddress The address of the deployed role manager
     /// @param _rmAddress The address of the deployed role manager
@@ -59,6 +52,7 @@ contract PlatformTreasury is ContentManager {
         uint withdrawableBalance = foundationBalance;
         foundationBalance = 0; /// @dev zeroing before the actual withdraw
         udao.transfer(foundationWallet, withdrawableBalance);
+
         emit FoundationWithdrawn(withdrawableBalance);
     }
 
@@ -72,6 +66,7 @@ contract PlatformTreasury is ContentManager {
         uint256 transactionTime = (block.timestamp / epochOneDay);
         uint256 transactionFuIndex = transactionTime % refundWindow;
         _updatePlatformCutBalances(0, 0, transactionTime, transactionFuIndex);
+        _transferPlatformCutstoGovernance();
         _updateInstructorBalances(
             0,
             msg.sender,
@@ -83,8 +78,6 @@ contract PlatformTreasury is ContentManager {
             instBalance[msg.sender] >= instRefundedBalance[msg.sender],
             "Debt is larger than balance"
         );
-        _transferPlatformCutstoGovernance();
-
         uint debtAmount = instRefundedBalance[msg.sender];
         uint withdrawableBalance = instBalance[msg.sender] - debtAmount;
         instBalance[msg.sender] = 0;
@@ -136,6 +129,11 @@ contract PlatformTreasury is ContentManager {
             "Only backend can set refund window"
         );
         require(!roleManager.isBanned(msg.sender, 34), "Caller is banned");
+
+        uint256 transactionTime = (block.timestamp / epochOneDay);
+        uint256 transactionFuIndex = transactionTime % refundWindow;
+
+        _updatePlatformCutBalances(0, 0, transactionTime, transactionFuIndex);
         // locked balances will be emptied
         uint256 emptiedContentCutPool;
         uint256 emptiedCoachingCutPool;
@@ -147,9 +145,7 @@ contract PlatformTreasury is ContentManager {
             coachingCutLockedPool[i] = 0;
         }
         refundWindow = _newWindow;
-
-        uint256 transactionTime = (block.timestamp / epochOneDay);
-        uint256 transactionFuIndex = transactionTime % refundWindow;
+        emit RefundWindowUpdated(_newWindow);
 
         _updatePlatformCutBalances(
             emptiedContentCutPool,
@@ -157,6 +153,7 @@ contract PlatformTreasury is ContentManager {
             transactionTime,
             transactionFuIndex
         );
-        //emit RefundWindowUpdated(_newWindow);
+        _transferPlatformCutstoGovernance();
+
     }
 }
