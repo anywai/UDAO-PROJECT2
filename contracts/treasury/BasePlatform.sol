@@ -40,9 +40,9 @@ abstract contract BasePlatform is Pausable, RoleNames {
     mapping(address => mapping(uint => mapping(uint => bool))) isTokenBought;
     /// @notice during refund windows all payments locked on contract and users can request refund
     /// @dev instLockedBalance and coaching/contentCutLockedPool arrays's size defines the maximum setable refund window
-    uint256 refundWindow = 14;
+    uint256 public refundWindow = 14;
     /// @notice one day equals to 86400 second in epoch time
-    uint256 epochOneDay = 86400;
+    uint256 public epochOneDay = 86400;
 
     /// @notice instructor address => instructor's balance
     mapping(address => uint) public instBalance;
