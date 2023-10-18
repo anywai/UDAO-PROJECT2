@@ -64,6 +64,20 @@ abstract contract ContentManager is BasePlatform {
     /// @notice user address => users owned [content token Ids]-[content part Ids]
     mapping(address => uint256[][]) ownedContents;
 
+    /* TODO New content purchase and record method
+        mapping(address => mapping(uint256 => uint256[])) ownedContentsNew;
+
+        mapping(address => mapping(uint256 => bool)) isFullyPurchased;
+
+     // tokenId => (partId => price), first part is the full price
+    // Bu orjinali burada değil mapping(uint => mapping(uint => uint)) public contentPrice;
+        // tokenId => full content price
+        mapping(uint => uint) public fullContentPrice;
+    */
+
+    
+
+
     /// @notice Allows users to buy coaching with a voucher created by instructor
     /// @param voucher buy coaching voucher
     function buyCoaching(
@@ -320,15 +334,6 @@ abstract contract ContentManager is BasePlatform {
         for (uint256 i; i < tokenIds.length; i++) {
             require(udaoc.isSellable(tokenIds[i]) == true, "Not sellable");
 
-            require(
-                !roleManager.isBanned(giftReceivers[i], 31),
-                "Gift receiver is banned"
-            );
-            require(
-                roleManager.isKYCed(giftReceivers[i], 24),
-                "Gift receiver is not KYCed"
-            );
-
             /// @dev Check the existance of content for each item in the cart
             require(udaoc.exists(tokenIds[i]) == true, "Content not exist!");
             /// @dev Determine the RECEIVER of each item in cart, address(0) means RECEIVER is BUYER
@@ -341,6 +346,16 @@ abstract contract ContentManager is BasePlatform {
                 );
                 giftReceivers[i] = msg.sender;
             }
+
+            require(
+                !roleManager.isBanned(giftReceivers[i], 31),
+                "Gift receiver is banned"
+            );
+            require(
+                roleManager.isKYCed(giftReceivers[i], 24),
+                "Gift receiver is not KYCed"
+            );
+            
             /// @dev The RECEIVER cannot already own the content or parts which in the cart.
             require(
                 _doReceiverHaveContentOrPart(
@@ -351,6 +366,7 @@ abstract contract ContentManager is BasePlatform {
                 ) == false,
                 "Content or part's is already bought"
             );
+            
             /// @dev Calculate the BUYER's, how much will pay to each item
             priceToPay[i] = calculatePriceToPay(
                 tokenIds[i],
@@ -367,7 +383,6 @@ abstract contract ContentManager is BasePlatform {
 
             totalRequiredUdao += (totalCut[i] + instrShare[i]);
         }
-
         /// @dev The BUYER should have enough UDAO to pay for the cart
         require(
             udao.balanceOf(msg.sender) >= totalRequiredUdao,
@@ -538,8 +553,7 @@ abstract contract ContentManager is BasePlatform {
             require(
                 _purchasedParts[0] != 0,
                 "Purchased parts says 0, but fullContentPurchase is false!"
-            );
-
+            ); 
             for (uint256 j; j < _purchasedParts.length; j++) {
                 require(
                     _purchasedParts[j] < udaoc.getPartNumberOfContent(_tokenId),
@@ -703,7 +717,7 @@ abstract contract ContentManager is BasePlatform {
             contentCutPool = 0;
             contentCutRefundedBalance = 0;
             emit ContentCutPoolUpdated(contentCutPool);
-            
+
             _distributeContentCutShares(positiveContentCutPool);
             emit RoleBalancesUpdated(
                 foundationBalance,
@@ -719,7 +733,7 @@ abstract contract ContentManager is BasePlatform {
             coachingCutPool = 0;
             coachingCutRefundedBalance = 0;
             emit CoachingCutPoolUpdated(coachingCutPool);
-            
+
             _distributeCoachingCutShares(positiveCoachingCutPool);
             emit RoleBalancesUpdated(
                 foundationBalance,
@@ -753,7 +767,11 @@ abstract contract ContentManager is BasePlatform {
                     transferredGovernanceBalance
                 );
             }
-            if((transferredJurorBalance + transferredValidatorBalance + transferredGovernanceBalance) > 0 ) {
+            if (
+                (transferredJurorBalance +
+                    transferredValidatorBalance +
+                    transferredGovernanceBalance) > 0
+            ) {
                 emit RoleBalancesUpdated(
                     foundationBalance,
                     jurorBalance,
@@ -775,7 +793,10 @@ abstract contract ContentManager is BasePlatform {
             "Refund period over you cant refund"
         );
         if (msg.sender == refundItem.payee) {
-            require(refundItem.coachingDate >= block.timestamp + epochOneDay, "You can't refund less than 1 day prior to coaching date");
+            require(
+                refundItem.coachingDate >= block.timestamp + epochOneDay,
+                "You can't refund less than 1 day prior to coaching date"
+            );
         } else if (msg.sender != refundItem.coach) {
             revert("You are not the payee or coach");
         }
