@@ -5,6 +5,7 @@ const chai = require("chai");
 const BN = require("bn.js");
 const { LazyCoaching } = require("../lib/LazyCoaching");
 const { LazyRole } = require("../lib/LazyRole");
+const { RefundVoucher } = require("../lib/RefundVoucher");
 const { Redeem } = require("../lib/Redeem");
 const helpers = require("@nomicfoundation/hardhat-network-helpers");
 const { deploy } = require("../lib/deployments");
@@ -302,7 +303,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     // Set BAN
     await contractRoleManager.setBan(contentCreator.address, true);
     // Buy coaching
-    await expect(contractPlatformTreasury.connect(contentBuyer).buyCoaching(role_voucher)).to.revertedWith("Coach is banned");    
+    await expect(contractPlatformTreasury.connect(contentBuyer).buyCoaching(role_voucher)).to.revertedWith("Coach is banned");
   });
 
   it("Should refund payment for coaching requested by buyer if 1 day prior to coaching date", async function () {
@@ -354,7 +355,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     // Check if correct amount of UDAO was refunded to the buyer's wallet
     expect(buyerBalanceAfterRefund.sub(buyerBalanceAfter)).to.equal(coachingPrice);
   });
-  it("Should allow coach to refund anytime before refundablePeriod", async function () {
+  it("Should allow coach to refund anytime in refundablePeriod", async function () {
     await reDeploy();
     /// Set KYC
     await contractRoleManager.setKYC(contentCreator.address, true);
@@ -443,15 +444,13 @@ describe("Platform Treasury Contract - Coaching", function () {
     expect(buyerBalance.sub(buyerBalanceAfter)).to.equal(coachingPrice);
     // Get coaching struct
     const coachingStruct = await contractPlatformTreasury.coachSales(coachingSaleID);
-    // Get refundable period
-    const refundablePeriod = coachingStruct.refundablePeriod;
     // Check if returned learner address is the same as the buyer address
     expect(coachingStruct.contentReceiver).to.equal(contentBuyer.address);
-    // Mine refundablePeriod days of blocks
-    const numBlocksToMine = Math.ceil((refundablePeriod * 86400) / 2);
+    const refundWindow = await contractPlatformTreasury.refundWindow();
+    // Mine days of blocks that bigger than refundWindow days:
+    const numBlocksToMine = Math.ceil(((refundWindow.add(1)) * 86400) / 2); 
     await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine.toString(16)}`, "0x2"]);
     // Refund coaching
-    const refundType = 0 // 0 since refund is coaching
     await expect(contractPlatformTreasury.connect(contentCreator).refundCoachingByInstructorOrLearner(coachingSaleID)).to.revertedWith(
       "Refund period over you cant refund"
     );
@@ -498,4 +497,125 @@ describe("Platform Treasury Contract - Coaching", function () {
       "You can't refund less than 1 day prior to coaching date"
     );
   });
+  it("Should refund coaching with voucher if before refundablePeriod", async function () {
+    await reDeploy();
+    /// Set KYC
+    await contractRoleManager.setKYC(contentCreator.address, true);
+    await contractRoleManager.setKYC(contentBuyer.address, true);
+
+    /// Send UDAO to the buyer's wallet
+    await contractUDAO.transfer(contentBuyer.address, ethers.utils.parseEther("100.0"));
+
+    /// Content buyer needs to give approval to the platformtreasury
+    await contractUDAO
+      .connect(contentBuyer)
+      .approve(contractPlatformTreasury.address, ethers.utils.parseEther("999999999999.0"));
+
+    // Create CoachingVoucher to be able to buy coaching
+    const lazyCoaching = new LazyCoaching({
+      contract: contractVoucherVerifier,
+      signer: backend,
+    });
+    const coachingPrice = ethers.utils.parseEther("1.0");
+    /// Get the current block timestamp
+    const currentBlockTimestamp = (await hre.ethers.provider.getBlock()).timestamp;
+    /// Coaching date is 3 days from now
+    const coachingDate = currentBlockTimestamp + 3 * 24 * 60 * 60;
+    const role_voucher = await lazyCoaching.createVoucher(contentCreator.address, coachingPrice, coachingDate, contentBuyer.address);
+    // Get buyer's UDAO balance
+    const buyerBalance = await contractUDAO.balanceOf(contentBuyer.address);
+    // Buy coaching
+    const purchaseTx = await contractPlatformTreasury.connect(contentBuyer).buyCoaching(role_voucher);
+    const queueTxReceipt = await purchaseTx.wait();
+    const queueTxEvent = queueTxReceipt.events.find((e) => e.event == "CoachingBought");
+    const coachingSaleID = queueTxEvent.args[0];
+    // Get buyer's UDAO balance after buying coaching
+    const buyerBalanceAfter = await contractUDAO.balanceOf(contentBuyer.address);
+    // Check if correct amount of UDAO was deducted from the buyer's wallet
+    expect(buyerBalance.sub(buyerBalanceAfter)).to.equal(coachingPrice);
+    // Get coaching struct
+    const coachingStruct = await contractPlatformTreasury.coachSales(coachingSaleID);
+    // Check if returned learner address is the same as the buyer address
+    expect(coachingStruct.contentReceiver).to.equal(contentBuyer.address);
+    // Mine 2 days of blocks 
+    const numBlocksToMine = Math.ceil((2 * 86400) / 2);
+    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine.toString(16)}`, "0x2"]);
+    //  Create RefundVoucher
+    const refundVoucher = new RefundVoucher({
+      contract: contractVoucherVerifier,
+      signer: backend,
+    });
+    const refundType = 0 // 0 since refund is coaching
+    // Voucher will be valid for 1 day
+    const voucherValidUntil = Date.now() + 86400;
+    const refund_voucher = await refundVoucher.createVoucher(coachingSaleID, contentCreator.address, [], voucherValidUntil);
+    // Refund coaching
+    await expect(contractPlatformTreasury.connect(contentCreator).newRefundCoaching(refund_voucher))
+      .to.emit(contractPlatformTreasury, "SaleRefunded")
+      .withArgs(coachingSaleID, refundType);
+    // Get buyer's UDAO balance after refunding coaching
+    const buyerBalanceAfterRefund = await contractUDAO.balanceOf(contentBuyer.address);
+    // Check if correct amount of UDAO was refunded to the buyer's wallet
+    expect(buyerBalanceAfterRefund.sub(buyerBalanceAfter)).to.equal(coachingPrice);
+  });
+  it("Should fail to refund coaching with voucher if after refundablePeriod", async function () {
+    await reDeploy();
+    /// Set KYC
+    await contractRoleManager.setKYC(contentCreator.address, true);
+    await contractRoleManager.setKYC(contentBuyer.address, true);
+
+    /// Send UDAO to the buyer's wallet
+    await contractUDAO.transfer(contentBuyer.address, ethers.utils.parseEther("100.0"));
+
+    /// Content buyer needs to give approval to the platformtreasury
+    await contractUDAO
+      .connect(contentBuyer)
+      .approve(contractPlatformTreasury.address, ethers.utils.parseEther("999999999999.0"));
+
+    // Create CoachingVoucher to be able to buy coaching
+    const lazyCoaching = new LazyCoaching({
+      contract: contractVoucherVerifier,
+      signer: backend,
+    });
+    const coachingPrice = ethers.utils.parseEther("1.0");
+    /// Get the current block timestamp
+    const currentBlockTimestamp = (await hre.ethers.provider.getBlock()).timestamp;
+    /// Coaching date is 3 days from now
+    const coachingDate = currentBlockTimestamp + 3 * 24 * 60 * 60;
+    const role_voucher = await lazyCoaching.createVoucher(contentCreator.address, coachingPrice, coachingDate, contentBuyer.address);
+    // Get buyer's UDAO balance
+    const buyerBalance = await contractUDAO.balanceOf(contentBuyer.address);
+    // Buy coaching
+    const purchaseTx = await contractPlatformTreasury.connect(contentBuyer).buyCoaching(role_voucher);
+    const queueTxReceipt = await purchaseTx.wait();
+    const queueTxEvent = queueTxReceipt.events.find((e) => e.event == "CoachingBought");
+    const coachingSaleID = queueTxEvent.args[0];
+    // Get buyer's UDAO balance after buying coaching
+    const buyerBalanceAfter = await contractUDAO.balanceOf(contentBuyer.address);
+    // Check if correct amount of UDAO was deducted from the buyer's wallet
+    expect(buyerBalance.sub(buyerBalanceAfter)).to.equal(coachingPrice);
+    // Get coaching struct
+    const coachingStruct = await contractPlatformTreasury.coachSales(coachingSaleID);
+    // Check if returned learner address is the same as the buyer address
+    expect(coachingStruct.contentReceiver).to.equal(contentBuyer.address);
+    // Mine more than refund period
+    const refundWindow = await contractPlatformTreasury.refundWindow();
+    // Mine days of blocks that bigger than refundWindow days:
+    const numBlocksToMine = Math.ceil(((refundWindow.add(1)) * 86400) / 2);
+    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine.toString(16)}`, "0x2"]);
+    //  Create RefundVoucher
+    const refundVoucher = new RefundVoucher({
+      contract: contractVoucherVerifier,
+      signer: backend,
+    });
+    const refundType = 0 // 0 since refund is coaching
+    // Voucher will be valid for 1 day
+    const voucherValidUntil = Date.now() + 86400;
+    const refund_voucher = await refundVoucher.createVoucher(coachingSaleID, contentCreator.address, [], voucherValidUntil);
+    // Refund coaching
+    await expect(contractPlatformTreasury.connect(contentCreator).newRefundCoaching(refund_voucher)).to.revertedWith(
+      "Refund period over you cant refund"
+    );
+  });
+
 });
