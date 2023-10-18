@@ -5,12 +5,11 @@ const chai = require("chai");
 const BN = require("bn.js");
 const { DiscountedPurchase } = require("../lib/DiscountedPurchase");
 const { LazyRole } = require("../lib/LazyRole");
+const { RefundVoucher } = require("../lib/RefundVoucher");
 const { Redeem } = require("../lib/Redeem");
 const helpers = require("@nomicfoundation/hardhat-network-helpers");
 const { deploy } = require("../lib/deployments");
 const { anyValue } = require("@nomicfoundation/hardhat-chai-matchers/withArgs");
-
-const { WMATIC_ABI, NonFunbiblePositionABI, NonFunbiblePositionAddress, WMATICAddress } = require("../lib/abis");
 
 // Enable and inject BN dependency
 chai.use(require("chai-bn")(BN));
@@ -55,13 +54,13 @@ async function reDeploy(reApplyRolesViaVoucher = true, isDexRequired = false) {
   contractUDAOTimelockController = replace.contractUDAOTimelockController;
   contractUDAOGovernor = replace.contractUDAOGovernor;
   contractSupervision = replace.contractSupervision;
+  contractVoucherVerifier = replace.contractVoucherVerifier;
   GOVERNANCE_ROLE = replace.GOVERNANCE_ROLE;
   BACKEND_ROLE = replace.BACKEND_ROLE;
   contractContractManager = replace.contractContractManager;
   account1 = replace.account1;
   account2 = replace.account2;
   account3 = replace.account3;
-  contractPriceGetter = replace.contractPriceGetter;
   const reApplyValidatorRoles = [validator, validator1, validator2, validator3, validator4, validator5];
   const reApplyJurorRoles = [jurorMember, jurorMember1, jurorMember2, jurorMember3, jurorMember4];
   const VALIDATOR_ROLE = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("VALIDATOR_ROLE"));
@@ -173,8 +172,6 @@ async function createContentVoucher(
   backend,
   contentCreator,
   partPrices,
-  coachingEnabled = true,
-  coachingRefundable = true,
   redeemType = 1,
   validationScore = 1
 ) {
@@ -184,7 +181,6 @@ async function createContentVoucher(
   const futureBlock = block.timestamp + 1000;
   // convert it to a BigNumber
   const futureBlockBigNumber = ethers.BigNumber.from(futureBlock);
-
   return await new Redeem({
     contract: contractUDAOContent,
     signer: backend,
@@ -192,13 +188,8 @@ async function createContentVoucher(
     futureBlockBigNumber,
     partPrices,
     0,
-    "udao",
     "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
     contentCreator.address,
-    ethers.utils.parseEther("1"),
-    "udao",
-    coachingEnabled,
-    coachingRefundable,
     redeemType,
     validationScore
   );
@@ -231,14 +222,11 @@ describe("Platform Treasury Contract - Content", function () {
   //!!Bu dünkü test
   it("Should a user able to buy the full content", async function () {
     await reDeploy();
-
     /// Set KYC
     await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer.address, true);
-
     /// part prices must be determined before creating content
     const partPricesArray = [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")];
-
     /// Create Voucher from redeem.js and use it for creating content
     const createContentVoucherSample = await createContentVoucher(
       contractUDAOContent,
@@ -246,12 +234,10 @@ describe("Platform Treasury Contract - Content", function () {
       contentCreator,
       partPricesArray
     );
-
     /// Create content
     await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample))
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs("0x0000000000000000000000000000000000000000", contentCreator.address, 0);
-
     /// Start validation and finalize it
     await runValidation(
       contractSupervision,
@@ -263,16 +249,22 @@ describe("Platform Treasury Contract - Content", function () {
       validator5,
       contentCreator
     );
-
     /// Send UDAO to the buyer's wallet
     await contractUDAO.transfer(contentBuyer.address, ethers.utils.parseEther("100.0"));
+    /// Get current UDAO balance of the buyer
+    const balanceBefore = await contractUDAO.balanceOf(contentBuyer.address);
     /// Content buyer needs to give approval to the platformtreasury
     await contractUDAO
       .connect(contentBuyer)
       .approve(contractPlatformTreasury.address, ethers.utils.parseEther("999999999999.0"));
-
     await contractPlatformTreasury.connect(contentBuyer).buyContent([0], [true], [[1]], [ethers.constants.AddressZero]);
     const result = await contractPlatformTreasury.connect(contentBuyer).getOwnedContent(contentBuyer.address);
+    /// Get current UDAO balance of the buyer
+    const balanceAfter = await contractUDAO.balanceOf(contentBuyer.address);
+    /// Get tokenId 0 price with calculatePriceToPay function
+    const priceToPay = await contractPlatformTreasury.calculatePriceToPay(0, true, [1]);
+    
+    /// Check if the buyer's balance is decreased
 
     const numArray = result.map((x) => x.map((y) => y.toNumber()));
     expect(numArray).to.eql([[0, 0]]);
