@@ -2,7 +2,6 @@
 /// @title Content purchasing and cut management
 pragma solidity ^0.8.4;
 import "./BasePlatform.sol";
-import "hardhat/console.sol";
 
 abstract contract ContentManager is BasePlatform {
     /// @notice Emitted when a content is bought
@@ -68,16 +67,6 @@ abstract contract ContentManager is BasePlatform {
     mapping(address => mapping(uint256 => uint256[])) ownedContents;
     /// @notice user address => content token Id => is full content purchase
     mapping(address => mapping(uint256 => bool)) isFullyPurchased;
-
-    /* TODO New content purchase and record method
-    /// @notice user address => users owned [content token Ids]-[content part Ids]
-    //mapping(address => uint256[][]) ownedContents; //reworked by BUGRAHAN (ownedContentsNew)       
-
-    // tokenId => (partId => price), first part is the full price
-    mapping(uint => mapping(uint => uint)) public contentPrice; //fiyatlar
-    // tokenId => full content price
-    mapping(uint => uint) public fullContentPrice; //fiyatlar
-    */
 
     /// @notice Allows users to buy coaching with a voucher created by instructor
     /// @param voucher buy coaching voucher
