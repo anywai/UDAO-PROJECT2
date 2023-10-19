@@ -2,7 +2,6 @@
 pragma solidity ^0.8.4;
 
 import "./ContentManager.sol";
-import "hardhat/console.sol";
 
 contract PlatformTreasury is ContentManager {
 
