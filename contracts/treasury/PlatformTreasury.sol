@@ -5,7 +5,6 @@ import "./ContentManager.sol";
 import "hardhat/console.sol";
 
 contract PlatformTreasury is ContentManager {
-
     ///@notice this event gets triggered when founcation withdraw tokens
     event FoundationWithdrawn(uint amount);
     ///@notice this event gets triggered when a instructor withdraw tokens
@@ -13,16 +12,17 @@ contract PlatformTreasury is ContentManager {
     /// @notice this event gets triggered when the refund window is updated
     event RefundWindowUpdated(uint newWindow);
 
-    /// @param _contractManagerAddress The address of the deployed role manager
     /// @param _rmAddress The address of the deployed role manager
     constructor(
-        address _contractManagerAddress,
+        address _udaoAddress,
+        address _udaocAddress,
         address _rmAddress,
         address _iGovernanceTreasuryAddress,
         address voucherVerifierAddress
     )
         BasePlatform(
-            _contractManagerAddress,
+            _udaoAddress,
+            _udaocAddress,
             _rmAddress,
             _iGovernanceTreasuryAddress,
             voucherVerifierAddress
@@ -40,7 +40,7 @@ contract PlatformTreasury is ContentManager {
     /// @notice withdraws foundation balance to foundation wallet
     function withdrawFoundation() external whenNotPaused {
         require(
-            roleManager.hasRole(FOUNDATION_ROLE, msg.sender),
+            hasRole(FOUNDATION_ROLE, msg.sender),
             "Only foundation can withdraw"
         );
 
@@ -125,10 +125,10 @@ contract PlatformTreasury is ContentManager {
     /// @param _newWindow The new refund window period
     function changeRefundWindow(uint256 _newWindow) external {
         require(
-            roleManager.hasRole(BACKEND_ROLE, msg.sender),
+            hasRole(BACKEND_ROLE, msg.sender),
             "Only backend can set refund window"
         );
-        require(!roleManager.isBanned(msg.sender, 34), "Caller is banned");
+        require(notBanned(msg.sender, 34), "Caller is banned");
 
         uint256 transactionTime = (block.timestamp / epochOneDay);
         uint256 transactionFuIndex = transactionTime % refundWindow;
@@ -154,6 +154,5 @@ contract PlatformTreasury is ContentManager {
             transactionFuIndex
         );
         _transferPlatformCutstoGovernance();
-
     }
 }

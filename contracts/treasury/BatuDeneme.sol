@@ -792,20 +792,29 @@ abstract contract BatuDeneme is BasePlatform {
 
             if (jurorBalance > 0) {
                 jurorBalance = 0;
-                udao.transfer(governanceTreasury, transferredJurorBalance);
-                iGovernanceTreasury.jurorBalanceUpdate(transferredJurorBalance);
+                udao.transfer(
+                    address(governanceTreasury),
+                    transferredJurorBalance
+                );
+                governanceTreasury.jurorBalanceUpdate(transferredJurorBalance);
             }
             if (validatorsBalance > 0) {
                 validatorsBalance = 0;
-                udao.transfer(governanceTreasury, transferredValidatorBalance);
-                iGovernanceTreasury.validatorBalanceUpdate(
+                udao.transfer(
+                    address(governanceTreasury),
+                    transferredValidatorBalance
+                );
+                governanceTreasury.validatorBalanceUpdate(
                     transferredValidatorBalance
                 );
             }
             if (governanceBalance > 0) {
                 governanceBalance = 0;
-                udao.transfer(governanceTreasury, transferredGovernanceBalance);
-                iGovernanceTreasury.governanceBalanceUpdate(
+                udao.transfer(
+                    address(governanceTreasury),
+                    transferredGovernanceBalance
+                );
+                governanceTreasury.governanceBalanceUpdate(
                     transferredGovernanceBalance
                 );
             }
