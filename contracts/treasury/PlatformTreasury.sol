@@ -30,7 +30,7 @@ contract PlatformTreasury is ContentManager {
 
     /// @notice Allows anyone to update the platform cut balances and transfer the platform cut to governance
     function updateAndTransferPlatformBalances() external {
-        uint256 transactionTime = (block.timestamp / epochOneDay);
+        uint256 transactionTime = (block.timestamp / 86400);
         uint256 transactionFuIndex = transactionTime % refundWindow;
         _updatePlatformCutBalances(0, 0, transactionTime, transactionFuIndex);
         _transferPlatformCutstoGovernance();
@@ -43,7 +43,7 @@ contract PlatformTreasury is ContentManager {
             "Only foundation can withdraw"
         );
 
-        uint256 transactionTime = (block.timestamp / epochOneDay);
+        uint256 transactionTime = (block.timestamp / 86400);
         uint256 transactionFuIndex = transactionTime % refundWindow;
         _updatePlatformCutBalances(0, 0, transactionTime, transactionFuIndex);
         _transferPlatformCutstoGovernance();
@@ -62,7 +62,7 @@ contract PlatformTreasury is ContentManager {
             "No balance to withdraw"
         );
 
-        uint256 transactionTime = (block.timestamp / epochOneDay);
+        uint256 transactionTime = (block.timestamp / 86400);
         uint256 transactionFuIndex = transactionTime % refundWindow;
         _updatePlatformCutBalances(0, 0, transactionTime, transactionFuIndex);
         _transferPlatformCutstoGovernance();
@@ -92,7 +92,7 @@ contract PlatformTreasury is ContentManager {
     function getWithdrawableBalanceInstructor(
         address _inst
     ) public view returns (uint) {
-        uint256 transactionTime = (block.timestamp / epochOneDay);
+        uint256 transactionTime = (block.timestamp / 86400);
         //transactionFuIndex determines which position it will be added to in the FutureBalances array.
         uint256 transactionFuIndex = transactionTime % refundWindow;
         uint instPositiveBalance;
@@ -129,7 +129,7 @@ contract PlatformTreasury is ContentManager {
         );
         require(!roleManager.isBanned(msg.sender, 34), "Caller is banned");
 
-        uint256 transactionTime = (block.timestamp / epochOneDay);
+        uint256 transactionTime = (block.timestamp / 86400);
         uint256 transactionFuIndex = transactionTime % refundWindow;
 
         _updatePlatformCutBalances(0, 0, transactionTime, transactionFuIndex);

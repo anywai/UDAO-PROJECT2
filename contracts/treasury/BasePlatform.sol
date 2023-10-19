@@ -39,8 +39,6 @@ abstract contract BasePlatform is Pausable, RoleNames {
     /// @notice during refund windows all payments locked on contract and users can request refund
     /// @dev instLockedBalance and coaching/contentCutLockedPool arrays's size defines the maximum setable refund window
     uint256 public refundWindow = 14;
-    /// @notice one day equals to 86400 second in epoch time
-    uint256 public epochOneDay = 86400;
 
     /// @notice instructor address => instructor's balance
     mapping(address => uint) public instBalance;
@@ -68,7 +66,7 @@ abstract contract BasePlatform is Pausable, RoleNames {
     mapping(address => uint256) public instLockTime;
     /// @notice the date of the oldest locked payment in content/coaching CutLockedPool
     /// @dev platformLockTime initialized with deployment time
-    uint public platformLockTime = (block.timestamp / epochOneDay);
+    uint public platformLockTime = (block.timestamp / 86400);
 
     /// @notice instructor address => instructor's refunded balance to users
     mapping(address => uint) public instRefundedBalance;

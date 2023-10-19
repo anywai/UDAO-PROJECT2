@@ -80,11 +80,11 @@ abstract contract ContentManager is BasePlatform {
 
         voucherVerifier.verifyCoachingVoucher(voucher);
         require(
-            voucher.coachingDate >= block.timestamp + epochOneDay * 1,
+            voucher.coachingDate >= block.timestamp + 86400 * 1,
             "Coaching date must be at least 1 day before."
         );
         require(
-            voucher.coachingDate <= block.timestamp + epochOneDay * 7,
+            voucher.coachingDate <= block.timestamp + 86400 * 7,
             "Coaching date must be at most 7 days before."
         );
         if (roleManager.hasRole(BACKEND_ROLE, msg.sender)) {
@@ -124,7 +124,7 @@ abstract contract ContentManager is BasePlatform {
 
         udao.transferFrom(msg.sender, address(this), totalCut + instrShare);
 
-        uint256 transactionTime = (block.timestamp / epochOneDay);
+        uint256 transactionTime = (block.timestamp / 86400);
 
         //transactionFuIndex determines which position it will be added to in the FutureBalances array.
         uint256 transactionFuIndex = transactionTime % refundWindow;
@@ -436,7 +436,7 @@ abstract contract ContentManager is BasePlatform {
         //timestamp returns 1694513188: 12Sep2023-10:06:28 so buyerTransactionTime is 19612.42
         //this means 19612.42 day passed since 1Jan1970-0:0:0
         //There is no fractional number in solidity so that buyerTransactionTime is 19612
-        uint256 transactionTime = (block.timestamp / epochOneDay);
+        uint256 transactionTime = (block.timestamp / 86400);
 
         //transactionFuIndex determines which position it will be added to in the FutureBalances array.
         uint256 transactionFuIndex = transactionTime % refundWindow;
@@ -802,12 +802,12 @@ abstract contract ContentManager is BasePlatform {
     ) external whenNotPaused {
         CoachingSale storage refundItem = coachSales[_refCoachSaleID];
         require(
-            refundItem.refundablePeriod >= (block.timestamp / epochOneDay),
+            refundItem.refundablePeriod >= (block.timestamp / 86400),
             "Refund period over you cant refund"
         );
         if (msg.sender == refundItem.payee) {
             require(
-                refundItem.coachingDate >= block.timestamp + epochOneDay,
+                refundItem.coachingDate >= block.timestamp + 86400,
                 "You can't refund less than 1 day prior to coaching date"
             );
         } else if (msg.sender != refundItem.coach) {
@@ -836,7 +836,7 @@ abstract contract ContentManager is BasePlatform {
 
         CoachingSale storage refundItem = coachSales[voucher.saleID];
         require(
-            refundItem.refundablePeriod >= (block.timestamp / epochOneDay),
+            refundItem.refundablePeriod >= (block.timestamp / 86400),
             "Refund period over you cant refund"
         );
 
@@ -863,7 +863,7 @@ abstract contract ContentManager is BasePlatform {
         ContentSale storage refundItem = contentSales[voucher.saleID];
 
         require(
-            refundItem.refundablePeriod >= (block.timestamp / epochOneDay),
+            refundItem.refundablePeriod >= (block.timestamp / 86400),
             "refund period over you cant refund"
         );
 
