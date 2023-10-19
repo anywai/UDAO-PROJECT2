@@ -36,8 +36,6 @@ abstract contract BasePlatform is Pausable, RoleNames {
     /// @notice Address of foundation wallet is used for sending funds to foundation
     address foundationWallet;
 
-    /// @notice user address => (content id => (content part id => part owned/not owned by the user))
-    mapping(address => mapping(uint => mapping(uint => bool))) isTokenBought;
     /// @notice during refund windows all payments locked on contract and users can request refund
     /// @dev instLockedBalance and coaching/contentCutLockedPool arrays's size defines the maximum setable refund window
     uint256 public refundWindow = 14;

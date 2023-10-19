@@ -62,22 +62,22 @@ abstract contract ContentManager is BasePlatform {
     mapping(uint256 => ContentSale) public contentSales;
     /// @notice coaching sale id => the coaching sale
     mapping(uint256 => CoachingSale) public coachSales;
-    /// @notice user address => users owned [content token Ids]-[content part Ids]
-    //mapping(address => uint256[][]) ownedContents;
+    /// @notice user address => (content id => (content part id => part owned/not owned by the user))
+    mapping(address => mapping(uint => mapping(uint => bool))) isTokenBought;
+
     /// @notice user address => content token Id => content part Id
     mapping(address => mapping(uint256 => uint256[])) ownedContents;
     /// @notice user address => content token Id => is full content purchase
     mapping(address => mapping(uint256 => bool)) isFullyPurchased;
 
     /* TODO New content purchase and record method
-        mapping(address => mapping(uint256 => uint256[])) ownedContentsNew;
+    /// @notice user address => users owned [content token Ids]-[content part Ids]
+    //mapping(address => uint256[][]) ownedContents; //reworked by BUGRAHAN (ownedContentsNew)       
 
-        
-
-     // tokenId => (partId => price), first part is the full price
-    // Bu orjinali burada değil mapping(uint => mapping(uint => uint)) public contentPrice;
-        // tokenId => full content price
-        mapping(uint => uint) public fullContentPrice;
+    // tokenId => (partId => price), first part is the full price
+    mapping(uint => mapping(uint => uint)) public contentPrice; //fiyatlar
+    // tokenId => full content price
+    mapping(uint => uint) public fullContentPrice; //fiyatlar
     */
 
     /// @notice Allows users to buy coaching with a voucher created by instructor
@@ -323,7 +323,7 @@ abstract contract ContentManager is BasePlatform {
         }
         /// @dev The function arguments must have equal size
         require(
-                tokenIds.length == purchasedParts.length &&
+            tokenIds.length == purchasedParts.length &&
                 tokenIds.length == giftReceivers.length,
             "Array lengths are not equal!"
         );
@@ -367,7 +367,11 @@ abstract contract ContentManager is BasePlatform {
             );
 
             // Check if this is a full content purchase or not
-            if(ownedContents[giftReceivers[i]][tokenIds[i]].length + purchasedParts[i].length == udaoc.getPartNumberOfContent(tokenIds[i])){
+            if (
+                ownedContents[giftReceivers[i]][tokenIds[i]].length +
+                    purchasedParts[i].length ==
+                udaoc.getPartNumberOfContent(tokenIds[i])
+            ) {
                 fullContentPurchases[i] = true;
             } else {
                 fullContentPurchases[i] = false;
