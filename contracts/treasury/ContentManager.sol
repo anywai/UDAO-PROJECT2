@@ -64,7 +64,6 @@ abstract contract ContentManager is BasePlatform {
     mapping(uint256 => CoachingSale) public coachSales;
     /// @notice user address => (content id => (content part id => part owned/not owned by the user))
     mapping(address => mapping(uint => mapping(uint => bool))) isTokenBought;
-
     /// @notice user address => content token Id => content part Id
     mapping(address => mapping(uint256 => uint256[])) ownedContents;
     /// @notice user address => content token Id => is full content purchase
@@ -468,12 +467,18 @@ abstract contract ContentManager is BasePlatform {
         // Update owned contert or part
         if (fullContentPurchase) {
             isTokenBought[contentReceiver][tokenId][0] = true;
-            ownedContents[contentReceiver][tokenId] = [0];
+            ownedContents[contentReceiver][tokenId] = udaoc.getContentParts(
+                tokenId
+            );
             isFullyPurchased[contentReceiver][tokenId] = true;
         } else {
             for (uint256 j; j < purchasedParts.length; j++) {
                 uint part = purchasedParts[j];
                 isTokenBought[contentReceiver][tokenId][part] = true;
+                /// @dev If the user has not bought any part of the content before, initialize the array
+                if (ownedContents[contentReceiver][tokenId].length == 0) {
+                    ownedContents[contentReceiver][tokenId] = new uint[](0);
+                }
                 ownedContents[contentReceiver][tokenId].push(part);
             }
             isFullyPurchased[contentReceiver][tokenId] = false;
@@ -567,7 +572,7 @@ abstract contract ContentManager is BasePlatform {
             _fullContentPurchase == true &&
             ownedContents[contentReceiver][_tokenId].length == 0
         ) {
-            _priceToPay = udaoc.getContentPriceAndCurrency(_tokenId, 0);
+            _priceToPay = udaoc.getContentPrice(_tokenId);
         } else {
             require(
                 _purchasedParts[0] != 0,
@@ -578,7 +583,7 @@ abstract contract ContentManager is BasePlatform {
                     _purchasedParts[j] < udaoc.getPartNumberOfContent(_tokenId),
                     "Part does not exist!"
                 );
-                _pricePerPart = udaoc.getContentPriceAndCurrency(
+                _pricePerPart = udaoc.getContentPartPrice(
                     _tokenId,
                     _purchasedParts[j]
                 );
