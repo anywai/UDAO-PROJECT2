@@ -43,7 +43,6 @@ abstract contract BatuDeneme is BasePlatform {
         uint256[] purchasedParts;
         bool isRefunded;
         uint256 refundablePeriod;
-        bool fullPurchase;
     }
     /// @notice Used to store the coaching sales
     struct CoachingSale {
@@ -64,8 +63,23 @@ abstract contract BatuDeneme is BasePlatform {
     /// @notice user address => (content id => (content part id => part owned/not owned by the user))
     mapping(address => mapping(uint => mapping(uint => bool))) isTokenBought;
 
+    // tokenID=0 partID=0 iade edilmiş içeriklere ayrılmıştır.
+    // ownedContents ve ownedParts dizilerinin ilk elemanı kullanılamaz. Bu sahip olunmayan içerik indisi olarak kullanılır.
+    // owned Parts ilk eleman "part sayılarının" toplamıdır.
+
+    // Array boşşa veya sadece 0 tutuyorsa--> HİÇ BİR PARTA SAHİP DEĞİL, eğer değer varsa sahip olunan partlar
     /// @notice user address => content token Id => content part Id
-    mapping(address => mapping(uint256 => uint256[])) ownedContents;
+    mapping(address => mapping(uint256 => uint256[])) ownedParts; // ilk değeri 0 olmalı!
+    // Değer sıfırsa o parta sahip değil, tuttuğu değer sadece refundun konusu
+    /// @notice user address => (content id => (content part id => part index))
+    mapping(address => mapping(uint => mapping(uint => uint))) ownedPartIndex;
+    // Array boşsa veya sadece 0 tutuyorsa--> KULLANICI HİÇ BİR CONTENTE SAHİP DEĞİL, eğer değer varsa sahip olunan contentler
+    /// @notice user address => content token Ids
+    mapping(address => uint256[]) ownedContents; //ilk değeri 0 olmalı!
+    // Değer sıfırsa o contente sahip değil, tuttuğu değer sadece refundun konusu
+    /// @notice user address => content token index
+    mapping(address => mapping(uint256 => uint256)) ownedContentIndex;
+    // Değer true ise contente tamamen sahip
     /// @notice user address => content token Id => is full content purchase
     mapping(address => mapping(uint256 => bool)) isFullyPurchased;
 
@@ -159,6 +173,7 @@ abstract contract BatuDeneme is BasePlatform {
         emit CoachingBought(coachingSaleID.current() - 1);
     }
 
+    /*
     /// @notice Allows users to purchase multiple contents for the caller or gift receiver with discount vouchers
     /// @param vouchers buy discount content voucher array
     function buyContentWithDiscount(
@@ -284,7 +299,7 @@ abstract contract BatuDeneme is BasePlatform {
         }
         _transferPlatformCutstoGovernance();
     }
-
+*/
     /// @notice Allows users to purchase multiple content for the caller or gift receiver.
     /// @param tokenIds An array of token IDs representing the contents in the cart.
     /// @param purchasedParts An array of arrays representing the content parts to be purchased.
@@ -305,7 +320,7 @@ abstract contract BatuDeneme is BasePlatform {
         /// @dev Boolean flag to determine if the purchase is made by a backend role
         /// if so then this purchase is a fiat purchase
         bool isFiatPurchase;
-        bool[] memory fullContentPurchases;
+        uint[] memory paritySum = new uint[](tokenIds.length);
 
         if (roleManager.hasRole(BACKEND_ROLE, msg.sender)) {
             isFiatPurchase = true;
@@ -326,52 +341,29 @@ abstract contract BatuDeneme is BasePlatform {
             /// @dev Check the existance of content for each item in the cart
             require(udaoc.exists(tokenIds[i]) == true, "Content not exist!");
             /// @dev Determine the RECEIVER of each item in cart, address(0) means RECEIVER is BUYER
-            if (giftReceivers[i] != address(0)) {
-                giftReceivers[i];
-            } else {
+            if (giftReceivers[i] == address(0)) {
                 require(
                     !isFiatPurchase,
                     "Fiat purchase requires a gift receiver!"
                 );
                 giftReceivers[i] = msg.sender;
-            }
-
-            require(
-                !roleManager.isBanned(giftReceivers[i], 31),
-                "Gift receiver is banned"
-            );
-            require(
-                roleManager.isKYCed(giftReceivers[i], 24),
-                "Gift receiver is not KYCed"
-            );
-
-            /// @dev The RECEIVER cannot already own the content or parts which in the cart.
-            require(
-                _doReceiverHaveContentOrPart(
-                    tokenIds[i],
-                    purchasedParts[i],
-                    giftReceivers[i]
-                ) == false,
-                "Content or part's is already bought"
-            );
-
-            // Check if this is a full content purchase or not
-            if (
-                ownedContents[giftReceivers[i]][tokenIds[i]].length +
-                    purchasedParts[i].length ==
-                udaoc.getPartNumberOfContent(tokenIds[i])
-            ) {
-                fullContentPurchases[i] = true;
             } else {
-                fullContentPurchases[i] = false;
+                require(
+                    !roleManager.isBanned(giftReceivers[i], 31),
+                    "Gift receiver is banned"
+                );
+                require(
+                    roleManager.isKYCed(giftReceivers[i], 24),
+                    "Gift receiver is not KYCed"
+                );
             }
-            /// @dev Calculate the BUYER's, how much will pay to each item
-            priceToPay[i] = calculatePriceToPay(
+
+            (priceToPay[i], paritySum[i]) = _ifNotOwnedReturnPriceAndSum(
                 tokenIds[i],
-                fullContentPurchases[i],
                 purchasedParts[i],
                 giftReceivers[i]
             );
+
             totalCut[i] = calculateContentSaleTotalCut(priceToPay[i]);
 
             if (isFiatPurchase) {
@@ -382,6 +374,7 @@ abstract contract BatuDeneme is BasePlatform {
 
             totalRequiredUdao += (totalCut[i] + instrShare[i]);
         }
+
         /// @dev The BUYER should have enough UDAO to pay for the cart
         require(
             udao.balanceOf(msg.sender) >= totalRequiredUdao,
@@ -393,11 +386,12 @@ abstract contract BatuDeneme is BasePlatform {
             udao.allowance(msg.sender, address(this)) >= totalRequiredUdao,
             "Not enough allowance!"
         );
+
         cartSaleID.increment();
         for (uint256 i; i < tokenIds.length; i++) {
             _buyContentwithUDAO(
                 tokenIds[i],
-                fullContentPurchases[i],
+                paritySum[i],
                 purchasedParts[i],
                 giftReceivers[i],
                 totalCut[i],
@@ -405,13 +399,47 @@ abstract contract BatuDeneme is BasePlatform {
                 cartSaleID.current() - 1
             );
         }
-
         _transferPlatformCutstoGovernance();
+    }
+
+    function _ifNotOwnedReturnPriceAndSum(
+        uint256 _tokenId,
+        uint256[] calldata _purchasedParts,
+        address _contentReceiver
+    ) internal returns (uint256, uint256) {
+        require(
+            isFullyPurchased[_contentReceiver][_tokenId] == false,
+            "Content is already fully purchased!"
+        );
+        uint maxPart = udaoc.getPartNumberOfContent(_tokenId);
+
+        uint256 _priceToPay;
+        uint256 _sumOfParts;
+        if (ownedParts[_contentReceiver][_tokenId].length == 0) {
+            ownedParts[_contentReceiver][_tokenId] = new uint256[](0);
+            ownedParts[_contentReceiver][_tokenId].push(0);
+        }
+        uint sizeOf = ownedParts[_contentReceiver][_tokenId].length;
+        for (uint256 j; j < _purchasedParts.length; j++) {
+            uint256 thePart = _purchasedParts[j];
+            require(thePart < maxPart, "Part does not exist!");
+            require(
+                ownedPartIndex[_contentReceiver][_tokenId][thePart] == 0,
+                "Part is already owned!"
+            );
+            ownedPartIndex[_contentReceiver][_tokenId][thePart] = sizeOf;
+            sizeOf++;
+            _sumOfParts += _purchasedParts[j];
+            _priceToPay += udaoc.getContentPriceAndCurrency(
+                _tokenId,
+                _purchasedParts[j]
+            );
+        }
+        return (_priceToPay, _sumOfParts);
     }
 
     /// @notice Used by buy content functions to receive payment from user and deliver the content to user
     /// @param tokenId The token ID of the content.
-    /// @param fullContentPurchase A boolean indicating whether it's a full content purchase.
     /// @param purchasedParts An array representing the parts of the content purchased.
     /// @param contentReceiver The address of the content receiver.
     /// @param totalCut The total platform cut applied to the content sale.
@@ -419,7 +447,7 @@ abstract contract BatuDeneme is BasePlatform {
     /// @param _cartSaleID The ID of the cart sale.
     function _buyContentwithUDAO(
         uint256 tokenId,
-        bool fullContentPurchase,
+        uint256 paritySum,
         uint256[] calldata purchasedParts,
         address contentReceiver,
         uint256 totalCut,
@@ -455,17 +483,31 @@ abstract contract BatuDeneme is BasePlatform {
         );
 
         // Update owned contert or part
-        if (fullContentPurchase) {
-            isTokenBought[contentReceiver][tokenId][0] = true;
-            ownedContents[contentReceiver][tokenId] = [0];
+        ownedParts[contentReceiver][tokenId][0] += paritySum;
+        uint n = udaoc.getPartNumberOfContent(tokenId) - 1;
+        if (ownedParts[contentReceiver][tokenId][0] == (n * (n + 1)) / 2) {
             isFullyPurchased[contentReceiver][tokenId] = true;
-        } else {
-            for (uint256 j; j < purchasedParts.length; j++) {
-                uint part = purchasedParts[j];
-                isTokenBought[contentReceiver][tokenId][part] = true;
-                ownedContents[contentReceiver][tokenId].push(part);
-            }
-            isFullyPurchased[contentReceiver][tokenId] = false;
+        }
+
+        for (uint256 j; j < purchasedParts.length; j++) {
+            uint thePart = purchasedParts[j];
+            // check if
+            ownedPartIndex[contentReceiver][tokenId][thePart] = (
+                ownedParts[contentReceiver][tokenId].length
+            );
+            ownedParts[contentReceiver][tokenId].push(thePart);
+        }
+
+        if (ownedContents[contentReceiver].length == 0) {
+            ownedContents[contentReceiver] = new uint256[](0);
+            ownedContents[contentReceiver].push(0);
+        }
+
+        if (ownedContentIndex[contentReceiver][tokenId] == 0) {
+            ownedContentIndex[contentReceiver][tokenId] = (
+                ownedContents[contentReceiver].length
+            );
+            ownedContents[contentReceiver].push(tokenId);
         }
 
         //Save the sale on a refund list
@@ -478,14 +520,14 @@ abstract contract BatuDeneme is BasePlatform {
             tokenId: tokenId,
             purchasedParts: purchasedParts,
             isRefunded: false,
-            refundablePeriod: transactionTime + refundWindow,
-            fullPurchase: fullContentPurchase
+            refundablePeriod: transactionTime + refundWindow
         });
         contentSaleID.increment();
 
         emit ContentBought(_cartSaleID, contentSaleID.current() - 1);
     }
 
+    /*
     /// @notice Checks does the receiver already own the content or content part
     /// @param tokenId The token ID of the content.
     /// @param purchasedParts An array representing the parts of the content purchased.
@@ -495,13 +537,15 @@ abstract contract BatuDeneme is BasePlatform {
         uint256[] calldata purchasedParts,
         address contentReceiver
     ) internal view returns (bool) {
+        if (isFullyPurchased[contentReceiver][tokenId] == true) {
+            return true;
+        }
         for (uint256 j; j < purchasedParts.length; j++) {
             uint256 part = purchasedParts[j];
-            if (isTokenBought[contentReceiver][tokenId][part] == true) {
+            if (ownedPartIndex[contentReceiver][tokenId][part] != 0) {
                 return true;
             }
         }
-
         return false;
     }
 
@@ -526,16 +570,6 @@ abstract contract BatuDeneme is BasePlatform {
             );
         }
         return (totalPriceToPayUdao);
-    }
-
-    /// @notice Returns the parts owned by buyer if buyer has bought any parts in the past
-    /// @param _buyer The address of the buyer.
-    /// @param _tokenId The token ID of the content.
-    function getOwnedParts(
-        address _buyer,
-        uint256 _tokenId
-    ) external view returns (uint256[] memory) {
-        return ownedContents[_buyer][_tokenId];
     }
 
     /// @notice Calculates price to pay for a content purchase
@@ -576,7 +610,7 @@ abstract contract BatuDeneme is BasePlatform {
         }
         return _priceToPay;
     }
-
+*/
     /// @notice Update content and coaching CutPools and handle locked payments during the refund window.
     /// @param totalCutContentShare amount of UDAO to be paid to the platform, it is revenue of platform from content sales.
     /// @param totalCutCoachingShare amount of UDAO to be paid to the platform, it is revenue of platform from coaching sales.
@@ -863,30 +897,46 @@ abstract contract BatuDeneme is BasePlatform {
         );
 
         require(refundItem.isRefunded == false, "Already refunded!");
+        contentSales[voucher.saleID].isRefunded = true;
 
         for (uint256 j; j < refundItem.purchasedParts.length; j++) {
             uint256 part = refundItem.purchasedParts[j];
-            /// @dev Set the content as not bought
-            isTokenBought[refundItem.contentReceiver][refundItem.tokenId][
+            uint256 index = ownedPartIndex[refundItem.contentReceiver][
+                refundItem.tokenId
+            ][part];
+
+            ownedPartIndex[refundItem.contentReceiver][refundItem.tokenId][
                 part
-            ] = false;
+            ] = 0;
+
+            ownedParts[refundItem.contentReceiver][refundItem.tokenId][
+                0
+            ] -= part;
+
+            ownedParts[refundItem.contentReceiver][refundItem.tokenId][
+                index
+            ] = 0;
         }
         /// @dev If the sale was a full content purchase...
-        if (refundItem.fullPurchase == true) {
+        if (
+            isFullyPurchased[refundItem.contentReceiver][refundItem.tokenId] ==
+            true
+        ) {
             isFullyPurchased[refundItem.contentReceiver][
                 refundItem.tokenId
             ] = false;
         }
 
-        contentSales[voucher.saleID].isRefunded = true;
-        /// @dev First remove specific content from the contentReceiver
-        delete ownedContents[refundItem.contentReceiver][refundItem.tokenId];
-
-        /// @dev Then add the content to the contentReceiver if voucher.finalParts exists;
-        if (voucher.finalParts.length > 0) {
-            ownedContents[refundItem.contentReceiver][
+        if (
+            ownedParts[refundItem.contentReceiver][refundItem.tokenId][0] == 0
+        ) {
+            uint index = ownedContentIndex[refundItem.contentReceiver][
                 refundItem.tokenId
-            ] = voucher.finalParts;
+            ];
+            ownedContentIndex[refundItem.contentReceiver][
+                refundItem.tokenId
+            ] = 0;
+            ownedContents[refundItem.contentReceiver][index] = 0;
         }
 
         instRefundedBalance[refundItem.instructor] += refundItem.instrShare;
