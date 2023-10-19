@@ -163,38 +163,25 @@ abstract contract BasePlatform is Pausable, RoleNames {
         uint256 contentJurorCut,
         uint256 contentValidCut
     );
-
-    /// @notice Sets the address of the governance treasury
-    /// @param _newAddress New address of the governance treasury
-    function setGovernanceTreasuryAddress(address _newAddress) external {
+    
+    /// @notice sets governance, foundation, or contract manager addresses
+    /// @param _newAddress new address of the contract
+    /// @param _type type of the contract
+    function setContractAddress(address _newAddress, uint _type) external {
         require(
             roleManager.hasRole(BACKEND_ROLE, msg.sender),
-            "Only backend can set governance treasury address"
+            "Only backend can set contract address"
         );
-        governanceTreasury = _newAddress;
-        emit GovernanceTreasuryUpdated(_newAddress);
-    }
-
-    /// @notice Sets the address of the foundation wallet
-    /// @param _newAddress New address of the foundation wallet
-    function setFoundationWalletAddress(address _newAddress) external {
-        require(
-            roleManager.hasRole(BACKEND_ROLE, msg.sender),
-            "Only backend can set foundation wallet address"
-        );
-        foundationWallet = _newAddress;
-        emit FoundationWalletUpdated(_newAddress);
-    }
-
-    /// @notice Sets the address of the contract manager
-    /// @param _newAddress New address of the contract manager
-    function setContractManagerAddress(address _newAddress) external {
-        require(
-            roleManager.hasRole(BACKEND_ROLE, msg.sender),
-            "Only backend can set contract manager address"
-        );
-        contractManager = ContractManager(_newAddress);
-        emit ContractManagerUpdated(_newAddress);
+        if (_type == 0) {
+            governanceTreasury = _newAddress;
+            emit GovernanceTreasuryUpdated(_newAddress);
+        } else if (_type == 1) {
+            foundationWallet = _newAddress;
+            emit FoundationWalletUpdated(_newAddress);
+        } else if (_type == 2) {
+            contractManager = ContractManager(_newAddress);
+            emit ContractManagerUpdated(_newAddress);
+        }
     }
 
     /// @notice Get the updated addresses from contract manager
