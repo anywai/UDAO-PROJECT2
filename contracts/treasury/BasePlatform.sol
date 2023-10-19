@@ -151,16 +151,7 @@ abstract contract BasePlatform is Pausable, RoleNames {
     );
 
     /// @notice This event is triggered if a cut is updated.
-    event PlatformCutsUpdated(
-        uint256 coachFoundCut,
-        uint256 coachGoverCut,
-        uint256 coachJurorCut,
-        uint256 coachValidCut,
-        uint256 contentFoundCut,
-        uint256 contentGoverCut,
-        uint256 contentJurorCut,
-        uint256 contentValidCut
-    );
+    event PlatformCutsUpdated();
     
     /// @notice sets governance, foundation, or contract manager addresses
     /// @param _newAddress new address of the contract
@@ -279,16 +270,7 @@ abstract contract BasePlatform is Pausable, RoleNames {
 
         coachTotalCut = newTotal;
 
-        emit PlatformCutsUpdated(
-            coachFoundCut,
-            coachGoverCut,
-            coachJurorCut,
-            coachValidCut,
-            contentFoundCut,
-            contentGoverCut,
-            contentJurorCut,
-            contentValidCut
-        );
+        emit PlatformCutsUpdated();
     }
 
     /// @notice sets the cut for foundation/governance/juror/validator for a content sale
@@ -319,15 +301,6 @@ abstract contract BasePlatform is Pausable, RoleNames {
 
         contentTotalCut = newTotal;
 
-        emit PlatformCutsUpdated(
-            coachFoundCut,
-            coachGoverCut,
-            coachJurorCut,
-            coachValidCut,
-            contentFoundCut,
-            contentGoverCut,
-            contentJurorCut,
-            contentValidCut
-        );
+        emit PlatformCutsUpdated();
     }
 }
