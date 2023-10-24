@@ -6,13 +6,9 @@ require("hardhat-gas-reporter");
 require("dotenv").config();
 require("@nomiclabs/hardhat-ethers");
 require("@nomiclabs/hardhat-etherscan");
+require("hardhat-contract-sizer");
 
-const {
-  POLYGON_MUMBAI_RPC_PROVIDER,
-  PRIVATE_KEY,
-  POLYGON_RPC_PROVIDER,
-  POLYGONSCAN_API_KEY,
-} = process.env;
+const { POLYGON_MUMBAI_RPC_PROVIDER, PRIVATE_KEY, POLYGON_RPC_PROVIDER, POLYGONSCAN_API_KEY } = process.env;
 
 // This is a sample Hardhat task. To learn how to create your own go to
 // https://hardhat.org/guides/create-task.html
@@ -55,8 +51,7 @@ module.exports = {
     currency: "EUR",
     coinmarketcap: "9b067bab-555e-4a2e-8b46-3ddbf5254166",
     token: "MATIC",
-    gasPriceApi:
-      "https://api.polygonscan.com/api?module=proxy&action=eth_gasPrice",
+    gasPriceApi: "https://api.polygonscan.com/api?module=proxy&action=eth_gasPrice",
   },
   solidity: {
     version: "0.8.17",
