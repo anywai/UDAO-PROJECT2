@@ -123,9 +123,8 @@ async function createContentVoucher(
   contractUDAOContent,
   backend,
   contentCreator,
+  contentPrice,
   partPrices,
-  coachingEnabled = true,
-  coachingRefundable = true,
   redeemType = 1,
   validationScore = 1
 ) {
@@ -141,15 +140,11 @@ async function createContentVoucher(
     signer: backend,
   }).createVoucher(
     futureBlockBigNumber,
+    contentPrice,
     partPrices,
     0,
-    "udao",
     "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
     contentCreator.address,
-    ethers.utils.parseEther("1"),
-    "udao",
-    coachingEnabled,
-    coachingRefundable,
     redeemType,
     validationScore
   );
@@ -185,18 +180,22 @@ describe("UDAOC Contract", function () {
 
     /// part prices must be determined before creating content
     const partPricesArray = [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")];
-
+    const contentPrice = ethers.utils.parseEther("2");
     /// Create Voucher from redeem.js and use it for creating content
+    
     const createContentVoucherSample = await createContentVoucher(
       contractUDAOContent,
       backend,
       contentCreator,
-      partPricesArray
+      contentPrice,
+      partPricesArray,
+      redeemType = 1,
+      validationScore = 1
     );
-
     await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample))
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs("0x0000000000000000000000000000000000000000", contentCreator.address, 0);
+    
   });
 
   it("Should fail to create Content if wrong redeemer", async function () {
