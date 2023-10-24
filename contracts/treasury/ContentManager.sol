@@ -114,15 +114,15 @@ abstract contract ContentManager is BasePlatform {
             learner = voucher.learner;
             isFiatPurchase = true;
             require(notBanned(msg.sender, 32), "Caller is banned");
-            require(roleManager.isKYCed(msg.sender, 25), "Caller is not KYCed");
+            require(isKYCed(msg.sender, 25), "Caller is not KYCed");
         } else {
             require(msg.sender == voucher.learner, "You are not the learner.");
             learner = msg.sender;
         }
 
-        require(roleManager.isKYCed(learner, 26), "Learner is not KYCed");
+        require(isKYCed(learner, 26), "Learner is not KYCed");
         require(notBanned(learner, 33), "Learner is banned");
-        require(roleManager.isKYCed(voucher.coach, 27), "Coach is not KYCed");
+        require(isKYCed(voucher.coach, 27), "Coach is not KYCed");
         require(notBanned(voucher.coach, 35), "Coach is banned");
 
         totalCut = calculateCoachingSaleTotalCut(voucher.priceToPay);
@@ -208,7 +208,7 @@ abstract contract ContentManager is BasePlatform {
         }
 
         require(notBanned(msg.sender, 20), "You are banned");
-        require(roleManager.isKYCed(msg.sender, 20), "You are not KYCed");
+        require(isKYCed(msg.sender, 20), "You are not KYCed");
         /// @dev Loop through the cart
         for (uint256 i; i < voucherIdsLength; i++) {
             require(
@@ -228,12 +228,9 @@ abstract contract ContentManager is BasePlatform {
                 notBanned(vouchers[i].giftReceiver, 29),
                 "Gift receiver is banned"
             );
+            require(isKYCed(vouchers[i].redeemer, 21), "Redeemer is not KYCed");
             require(
-                roleManager.isKYCed(vouchers[i].redeemer, 21),
-                "Redeemer is not KYCed"
-            );
-            require(
-                roleManager.isKYCed(vouchers[i].giftReceiver, 22),
+                isKYCed(vouchers[i].giftReceiver, 22),
                 "Gift receiver is not KYCed"
             );
 
@@ -329,7 +326,7 @@ abstract contract ContentManager is BasePlatform {
             "Array lengths are not equal!"
         );
 
-        require(roleManager.isKYCed(msg.sender, 23), "You are not KYCed");
+        require(isKYCed(msg.sender, 23), "You are not KYCed");
         require(notBanned(msg.sender, 30), "You are banned");
 
         for (uint256 i; i < tokenIds.length; i++) {
@@ -350,7 +347,7 @@ abstract contract ContentManager is BasePlatform {
                     "Gift receiver is banned"
                 );
                 require(
-                    roleManager.isKYCed(giftReceivers[i], 24),
+                    isKYCed(giftReceivers[i], 24),
                     "Gift receiver is not KYCed"
                 );
             }

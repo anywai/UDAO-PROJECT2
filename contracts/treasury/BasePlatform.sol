@@ -158,6 +158,13 @@ abstract contract BasePlatform is Pausable, RoleNames {
         return (roleManager.hasRole(_role, _account));
     }
 
+    function isKYCed(
+        address _userAddress,
+        uint _functionID
+    ) internal view returns (bool) {
+        return roleManager.isKYCed(_userAddress, _functionID);
+    }
+
     /// @notice Sets the address of the foundation wallet
     /// @param _newAddress New address of the foundation wallet
     function setFoundationWalletAddress(address _newAddress) external {
