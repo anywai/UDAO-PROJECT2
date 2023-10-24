@@ -9,20 +9,21 @@ pragma solidity ^0.8.4;
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
-import "../ContractManager.sol";
 import "../interfaces/IUDAOC.sol";
 import "../interfaces/IGovernanceTreasury.sol";
 import "../interfaces/IRoleManager.sol";
-import "../RoleNames.sol";
 import "../interfaces/IVoucherVerifier.sol";
 
-abstract contract BasePlatform is Pausable, RoleNames {
+abstract contract BasePlatform is Pausable {
+    bytes32 public constant BACKEND_ROLE = keccak256("BACKEND_ROLE");
+    bytes32 public constant FOUNDATION_ROLE = keccak256("FOUNDATION_ROLE");
+    bytes32 public constant CONTRACT_MANAGER = keccak256("CONTRACT_MANAGER");
+    bytes32 public constant GOVERNANCE_ROLE = keccak256("GOVERNANCE_ROLE");
+
     /// @notice RoleManager contract is used to check roles of users and KYC/Ban status
     IRoleManager roleManager;
     /// @notice VoucherVerifier contract is defines the vouchers of PlatformTreasury and used to verify vouchers
     IVoucherVerifier voucherVerifier;
-    /// @notice ContractManager contract is used to update contract addresses of project
-    ContractManager public contractManager;
     /// @notice GovernanceTreasury contract is platforms governance related funds treasury contract
     IGovernanceTreasury public iGovernanceTreasury;
 
@@ -115,85 +116,106 @@ abstract contract BasePlatform is Pausable, RoleNames {
     bool isGovernanceTreasuryOnline = false;
 
     /// @notice constructor of BasePlatform
-    /// @param _contractManager is address of ContractManager contract
-    /// @param rmAddress is address of RoleManager contract
-    /// @param _iGovernanceTreasuryAddress is address of GovernanceTreasury contract
+    /// @param _rmAddress is address of RoleManager contract
+    /// @param _governanceTreasuryAddress is address of GovernanceTreasury contract
     /// @param _voucherVerifierAddress is address of VoucherVerifier contract
     constructor(
-        address _contractManager,
-        address rmAddress,
-        address _iGovernanceTreasuryAddress,
+        address _rmAddress,
+        address _udaoAddress,
+        address _udaocAddress,
+        address _governanceTreasuryAddress,
         address _voucherVerifierAddress
     ) {
-        roleManager = IRoleManager(rmAddress);
-        contractManager = ContractManager(_contractManager);
-        udao = IERC20(contractManager.UdaoAddress());
-        udaoc = IUDAOC(contractManager.UdaocAddress());
-        iGovernanceTreasury = IGovernanceTreasury(_iGovernanceTreasuryAddress);
+        roleManager = IRoleManager(_rmAddress);
+        udao = IERC20(_udaoAddress);
+        udaoc = IUDAOC(_udaocAddress);
+        iGovernanceTreasury = IGovernanceTreasury(_governanceTreasuryAddress);
+        governanceTreasury = _governanceTreasuryAddress;
         voucherVerifier = IVoucherVerifier(_voucherVerifierAddress);
     }
 
-    /// @notice This event is triggered if the governance treasury address is updated.
-    event GovernanceTreasuryUpdated(address newAddress);
-
     /// @notice This event is triggered if the foundation wallet address is updated.
     event FoundationWalletUpdated(address newAddress);
-
-    /// @notice This event is triggered if the contract manager address is updated.
-    event ContractManagerUpdated(address newAddress);
 
     /// @notice This event is triggered if the contract manager updates the addresses.
     event AddressesUpdated(
         address udao,
         address udaoc,
         address irm,
+        address governanceTreasury,
         address voucherVerifier
     );
 
     /// @notice This event is triggered if a cut is updated.
     event PlatformCutsUpdated();
-    
+
+    function hasRole(
+        bytes32 _role,
+        address _account
+    ) internal view returns (bool) {
+        return (roleManager.hasRole(_role, _account));
+    }
+
+    function isNotBanned(
+        address _userAddress,
+        uint _functionID
+    ) internal view returns (bool) {
+        return !roleManager.isBanned(_userAddress, _functionID);
+    }
+
+    function isKYCed(
+        address _userAddress,
+        uint _functionID
+    ) internal view returns (bool) {
+        return roleManager.isKYCed(_userAddress, _functionID);
+    }
+
+    function activateGovernanceTreasury(bool _boolean) external {
+        require(
+            hasRole(BACKEND_ROLE, msg.sender),
+            "Only backend can activate governance treasury"
+        );
+        isGovernanceTreasuryOnline = _boolean;
+    }
+
     /// @notice sets governance, foundation, or contract manager addresses
     /// @param _newAddress new address of the contract
-    /// @param _type type of the contract
-    function setContractAddress(address _newAddress, uint _type) external {
+    function setFoundationAddress(address _newAddress) external {
         require(
-            roleManager.hasRole(BACKEND_ROLE, msg.sender),
+            hasRole(BACKEND_ROLE, msg.sender),
             "Only backend can set contract address"
         );
-        if (_type == 0) {
-            governanceTreasury = _newAddress;
-            emit GovernanceTreasuryUpdated(_newAddress);
-        } else if (_type == 1) {
-            foundationWallet = _newAddress;
-            emit FoundationWalletUpdated(_newAddress);
-        } else if (_type == 2) {
-            contractManager = ContractManager(_newAddress);
-            emit ContractManagerUpdated(_newAddress);
-        }
+        foundationWallet = _newAddress;
+        emit FoundationWalletUpdated(_newAddress);
     }
 
     /// @notice Get the updated addresses from contract manager
-    function updateAddresses() external {
+    function updateAddresses(
+        address _udaoAddress,
+        address _udaocAddress,
+        address _roleManager,
+        address _governanceAdress,
+        address _verifierAdress
+    ) public {
         require(
-            roleManager.hasRole(BACKEND_ROLE, msg.sender),
-            "Only backend can update addresses"
+            (hasRole(BACKEND_ROLE, msg.sender) ||
+                hasRole(CONTRACT_MANAGER, msg.sender) ||
+                hasRole(FOUNDATION_ROLE, msg.sender)),
+            "Only backend and contract manager can update addresses"
         );
-        udao = IERC20(contractManager.UdaoAddress());
-        udaoc = IUDAOC(contractManager.UdaocAddress());
-        roleManager = IRoleManager(contractManager.RmAddress());
-        iGovernanceTreasury = IGovernanceTreasury(
-            contractManager.GovernanceTreasuryAddress()
-        );
-        voucherVerifier = IVoucherVerifier(
-            contractManager.VoucherVerifierAddress()
-        );
+        udao = IERC20(_udaoAddress);
+        udaoc = IUDAOC(_udaocAddress);
+        roleManager = IRoleManager(_roleManager);
+        iGovernanceTreasury = IGovernanceTreasury(_governanceAdress);
+        governanceTreasury = _governanceAdress;
+        voucherVerifier = IVoucherVerifier(_verifierAdress);
 
         emit AddressesUpdated(
-            contractManager.UdaoAddress(),
-            contractManager.UdaocAddress(),
-            contractManager.RmAddress(),
-            contractManager.VoucherVerifierAddress()
+            _udaoAddress,
+            _udaocAddress,
+            _roleManager,
+            _governanceAdress,
+            _verifierAdress
         );
     }
 
@@ -253,7 +275,9 @@ abstract contract BasePlatform is Pausable, RoleNames {
         uint256 _coachValidCut
     ) external {
         require(
-            roleManager.hasRoles(administrator_roles, msg.sender),
+            (hasRole(BACKEND_ROLE, msg.sender) ||
+                hasRole(FOUNDATION_ROLE, msg.sender) ||
+                hasRole(GOVERNANCE_ROLE, msg.sender)),
             "Only admins can set coach cuts"
         );
         uint newTotal = _coachFoundCut +
@@ -285,7 +309,9 @@ abstract contract BasePlatform is Pausable, RoleNames {
         uint256 _contentValidCut
     ) external {
         require(
-            roleManager.hasRoles(administrator_roles, msg.sender),
+            (hasRole(BACKEND_ROLE, msg.sender) ||
+                hasRole(FOUNDATION_ROLE, msg.sender) ||
+                hasRole(GOVERNANCE_ROLE, msg.sender)),
             "Only admins can set content cuts"
         );
         uint newTotal = _contentFoundCut +

@@ -17,6 +17,7 @@ abstract contract RoleNames {
     bytes32 public constant TREASURY_CONTRACT = keccak256("TREASURY_CONTRACT");
     bytes32 public constant ROLEMANAGER_CONTRACT =
         keccak256("ROLEMANAGER_CONTRACT");
+    bytes32 public constant CONTRACT_MANAGER = keccak256("CONTRACT_MANAGER");
     bytes32 public constant SALE_CONTROLLER = keccak256("SALE_CONTROLLER");
     bytes32 public constant VOUCHER_VERIFIER = keccak256("VOUCHER_VERIFIER");
 

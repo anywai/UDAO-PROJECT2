@@ -87,20 +87,20 @@ abstract contract ContentManager is BasePlatform {
             voucher.coachingDate <= block.timestamp + 86400 * 7,
             "Coaching date must be at most 7 days before."
         );
-        if (roleManager.hasRole(BACKEND_ROLE, msg.sender)) {
+        if (hasRole(BACKEND_ROLE, msg.sender)) {
             learner = voucher.learner;
             isFiatPurchase = true;
-            require(!roleManager.isBanned(msg.sender, 32), "Caller is banned");
-            require(roleManager.isKYCed(msg.sender, 25), "Caller is not KYCed");
+            require(isNotBanned(msg.sender, 32), "Caller is banned");
+            require(isKYCed(msg.sender, 25), "Caller is not KYCed");
         } else {
             require(msg.sender == voucher.learner, "You are not the learner.");
             learner = msg.sender;
         }
 
-        require(roleManager.isKYCed(learner, 26), "Learner is not KYCed");
-        require(!roleManager.isBanned(learner, 33), "Learner is banned");
-        require(roleManager.isKYCed(voucher.coach, 27), "Coach is not KYCed");
-        require(!roleManager.isBanned(voucher.coach, 35), "Coach is banned");
+        require(isKYCed(learner, 26), "Learner is not KYCed");
+        require(isNotBanned(learner, 33), "Learner is banned");
+        require(isKYCed(voucher.coach, 27), "Coach is not KYCed");
+        require(isNotBanned(voucher.coach, 35), "Coach is banned");
 
         totalCut = calculateCoachingSaleTotalCut(voucher.priceToPay);
 
@@ -179,12 +179,12 @@ abstract contract ContentManager is BasePlatform {
         /// if so then this purchase is a fiat purchase
         bool isFiatPurchase;
 
-        if (roleManager.hasRole(BACKEND_ROLE, msg.sender)) {
+        if (hasRole(BACKEND_ROLE, msg.sender)) {
             isFiatPurchase = true;
         }
 
-        require(!roleManager.isBanned(msg.sender, 20), "You are banned");
-        require(roleManager.isKYCed(msg.sender, 20), "You are not KYCed");
+        require(isNotBanned(msg.sender, 20), "You are banned");
+        require(isKYCed(msg.sender, 20), "You are not KYCed");
         /// @dev Loop through the cart
         for (uint256 i; i < voucherIdsLength; i++) {
             require(
@@ -200,19 +200,16 @@ abstract contract ContentManager is BasePlatform {
             );
 
             require(
-                !roleManager.isBanned(vouchers[i].redeemer, 28),
+                isNotBanned(vouchers[i].redeemer, 28),
                 "Redeemer is banned"
             );
             require(
-                !roleManager.isBanned(vouchers[i].giftReceiver, 29),
+                isNotBanned(vouchers[i].giftReceiver, 29),
                 "Gift receiver is banned"
             );
+            require(isKYCed(vouchers[i].redeemer, 21), "Redeemer is not KYCed");
             require(
-                roleManager.isKYCed(vouchers[i].redeemer, 21),
-                "Redeemer is not KYCed"
-            );
-            require(
-                roleManager.isKYCed(vouchers[i].giftReceiver, 22),
+                isKYCed(vouchers[i].giftReceiver, 22),
                 "Gift receiver is not KYCed"
             );
 
@@ -306,7 +303,7 @@ abstract contract ContentManager is BasePlatform {
         bool isFiatPurchase;
         bool[] memory fullContentPurchases;
 
-        if (roleManager.hasRole(BACKEND_ROLE, msg.sender)) {
+        if (hasRole(BACKEND_ROLE, msg.sender)) {
             isFiatPurchase = true;
         }
         /// @dev The function arguments must have equal size
@@ -316,8 +313,8 @@ abstract contract ContentManager is BasePlatform {
             "Array lengths are not equal!"
         );
 
-        require(roleManager.isKYCed(msg.sender, 23), "You are not KYCed");
-        require(!roleManager.isBanned(msg.sender, 30), "You are banned");
+        require(isKYCed(msg.sender, 23), "You are not KYCed");
+        require(isNotBanned(msg.sender, 30), "You are banned");
 
         for (uint256 i; i < tokenIds.length; i++) {
             require(udaoc.isSellable(tokenIds[i]) == true, "Not sellable");
@@ -336,11 +333,11 @@ abstract contract ContentManager is BasePlatform {
             }
 
             require(
-                !roleManager.isBanned(giftReceivers[i], 31),
+                isNotBanned(giftReceivers[i], 31),
                 "Gift receiver is banned"
             );
             require(
-                roleManager.isKYCed(giftReceivers[i], 24),
+                isKYCed(giftReceivers[i], 24),
                 "Gift receiver is not KYCed"
             );
 
@@ -763,7 +760,10 @@ abstract contract ContentManager is BasePlatform {
 
             if (jurorBalance > 0) {
                 jurorBalance = 0;
-                udao.transfer(governanceTreasury, transferredJurorBalance);
+                udao.transfer(
+                    address(iGovernanceTreasury),
+                    transferredJurorBalance
+                );
                 iGovernanceTreasury.jurorBalanceUpdate(transferredJurorBalance);
             }
             if (validatorsBalance > 0) {
