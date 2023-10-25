@@ -259,7 +259,7 @@ contract UDAOContent is
         contentPrices[tokenId] = _contentPrice;
     }
 
-    /// @notice allows content owners to set price for a part in a content (microlearning)
+    /// @notice allows content owners to set price for single part in a content 
     /// @param tokenId the content ID of the token
     /// @param _partPrice the price to set
     function setPartialContent(
@@ -269,10 +269,6 @@ contract UDAOContent is
     ) external {
         require(ownerOf(tokenId) == msg.sender, "You are not the owner");
         require(
-            partId != 0,
-            "Full content price is set with setFullPriceContent"
-        );
-        require(
             partId < _getPartNumberOfContent(tokenId),
             "Part does not exist!"
         );
@@ -281,54 +277,52 @@ contract UDAOContent is
         partPrices[tokenId][partId] = _partPrice;
     }
 
-    /// @notice allows content owners to set price for multiple parts in a content (microlearning)
+    /// @notice allows content owners to set price for multiple parts in a content 
     /// @param tokenId the content ID of the token
-    /// @param _partPrice the price to set
+    /// @param _partIds the part IDs of the token
+    /// @param _partPrices the price to set
     function setBatchPartialContent(
         uint tokenId,
-        uint[] calldata partId,
-        uint[] calldata _partPrice
+        uint[] calldata _partIds,
+        uint[] calldata _partPrices
     ) external {
         require(ownerOf(tokenId) == msg.sender, "You are not the owner");
         //make sure caller is not banned
         require(!roleManager.isBanned(msg.sender, 26), "You were banned!");
-        uint partLength = partId.length;
+        uint partLength = _partIds.length;
         for (uint i = 0; i < partLength; i++) {
             require(
-                partId[i] < _getPartNumberOfContent(tokenId),
+                _partIds[i] < _getPartNumberOfContent(tokenId),
                 "Part does not exist!"
             );
-            require(
-                partId[i] != 0,
-                "Full content price is set with setBatchFullContent"
-            );
-            partPrices[tokenId][partId[i]] = _partPrice[i];
+            partPrices[tokenId][_partIds[i]] = _partPrices[i];
         }
     }
 
     /// @notice allows content owners to set price for full content and multiple parts in a content
     /// @param tokenId the content ID of the token
+    /// @param _partIds the part IDs of the token 
+    /// @param _partPrices the prices to set
     /// @param _contentPrice the price to set, first price is for full content price
     function setBatchFullContent(
         uint tokenId,
-        uint[] calldata partId,
-        uint[] calldata _contentPrice
+        uint[] calldata _partIds,
+        uint[] calldata _partPrices,
+        uint _contentPrice
     ) external {
         require(ownerOf(tokenId) == msg.sender, "You are not the owner");
         //make sure caller is not banned
         require(!roleManager.isBanned(msg.sender, 27), "You were banned!");
-        uint partLength = partId.length;
-        require(
-            partId[0] == 0,
-            "First index of partId should be zero to set the full content price. Use setBatchPartialContent if you don't want to set the full content price"
-        );
+        uint partLength = _partIds.length;
+
         for (uint i = 0; i < partLength; i++) {
             require(
-                partId[i] < _getPartNumberOfContent(tokenId),
+                _partIds[i] < _getPartNumberOfContent(tokenId),
                 "Part does not exist!"
             );
-            contentPrices[tokenId] = _contentPrice[i];
+            partPrices[tokenId][_partIds[i]] = _partPrices[i];
         }
+        contentPrices[tokenId] = _contentPrice;
     }
 
     /// @notice Returns the part numbers that a content has
