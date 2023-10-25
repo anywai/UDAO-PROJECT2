@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
+import "../ContractManager.sol";
 import "../interfaces/IUDAOC.sol";
 import "../interfaces/ISupervision.sol";
 import "../interfaces/IRoleManager.sol";
@@ -21,6 +22,7 @@ contract UDAOContent is
     EIP712,
     ERC721URIStorage
 {
+    ContractManager public contractManager;
     using Counters for Counters.Counter;
     Counters.Counter private _tokenIds;
 
@@ -51,7 +53,7 @@ contract UDAOContent is
     /// @notice This event is triggered when a new part is added to a content
     event newPartAdded(uint tokenId, uint newPartId, uint newPartPrice);
     /// @notice This event is triggered if the contract manager updates the addresses.
-    event AddressesUpdated(address supervisionAddress);
+    event AddressesUpdated(address isupvis);
     /// @notice Triggered when KYC requirement for content creating is changed
     event KYCRequirementForCreateContentChanged(bool status);
 
@@ -88,15 +90,26 @@ contract UDAOContent is
         isSellable[_tokenId] = _isSellable;
     }
 
+    /// @notice Allows backend to set the contract manager address
+    /// @dev This function is needed because the contract manager address is not known at compile time.
+    /// @param _contractManager The address of the contract manager
+    function setContractManager(address _contractManager) external {
+        require(
+            roleManager.hasRole(BACKEND_ROLE, msg.sender),
+            "Only backend can set contract manager"
+        );
+        contractManager = ContractManager(_contractManager);
+    }
+
     /// @notice Get the updated addresses from contract manager
-    function updateAddresses(address supervisionAddress) external {
+    function updateAddresses() external {
         require(
             roleManager.hasRole(BACKEND_ROLE, msg.sender),
             "Only backend can update addresses"
         );
-        ISupVis = ISupervision(supervisionAddress);
+        ISupVis = ISupervision(contractManager.ISupVisAddress());
 
-        emit AddressesUpdated(supervisionAddress);
+        emit AddressesUpdated(contractManager.ISupVisAddress());
     }
 
     /// @notice Redeems a RedeemVoucher for an actual NFT, creating it in the process.

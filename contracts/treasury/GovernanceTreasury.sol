@@ -6,23 +6,30 @@
 /// @title Dummy version of the governance treasury contract.
 pragma solidity ^0.8.4;
 
+import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/utils/Counters.sol";
+import "../ContractManager.sol";
+import "../interfaces/IUDAOC.sol";
+import "../interfaces/ISupervision.sol";
 
 contract GovernanceTreasury {
     // UDAO (ERC20) Token interface
-    IERC20 udao;
+    //IERC20 udao;
+
+    // UDAO (ERC721) Token interface
+    //IUDAOC udaoc;
 
     uint jurorBalance;
     uint validatorBalance;
     uint governanceBalance;
 
-    address ownerOfDummy;
-    
-    constructor(address _udao) {
+    /*
+    constructor(address _udao, address _udaoc) {
         udao = IERC20(_udao);
-        ownerOfDummy = msg.sender;
+        udaoc = IUDAOC(_udaoc);
     }
-    
+    */
 
     function jurorBalanceUpdate(uint _balance) external {
         jurorBalance += _balance;
@@ -34,13 +41,5 @@ contract GovernanceTreasury {
 
     function governanceBalanceUpdate(uint _balance) external {
         governanceBalance += _balance;
-    }
-
-    function emergencyWithdraw() external {
-        require(msg.sender == ownerOfDummy, "you are not owner of dummy contract");
-        udao.transfer(msg.sender, jurorBalance + validatorBalance + governanceBalance);
-        validatorBalance = 0;
-        jurorBalance = 0;
-        governanceBalance = 0;
     }
 }
