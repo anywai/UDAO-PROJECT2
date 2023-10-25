@@ -3,7 +3,6 @@ pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
-import "../ContractManager.sol";
 import "../interfaces/IUDAOC.sol";
 import "../interfaces/IPlatformTreasury.sol";
 import "../interfaces/IRoleManager.sol";
@@ -179,7 +178,6 @@ contract Supervision is Pausable, RoleNames {
     }
 
     /// @notice Get the updated addresses from contract manager
-    /// TODO is this correct?
     function updateAddresses(
         address roleManagerAddress,
         address udaocAddress,

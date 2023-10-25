@@ -8,7 +8,6 @@ import "@openzeppelin/contracts/governance/utils/IVotes.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
-import "../ContractManager.sol";
 import "../interfaces/IPlatformTreasury.sol";
 import "../interfaces/IRoleManager.sol";
 import "../RoleNames.sol";
@@ -26,8 +25,7 @@ contract UDAOStaker is RoleNames, EIP712, Pausable {
 
     IERC20 udao;
     IUDAOVP udaovp;
-    ContractManager contractManager;
-    address platformTreasuryAddress;
+    IPlatformTreasury platformTreasury;
     IRoleManager roleManager;
 
     /// @notice the required duration to be a validator
@@ -145,32 +143,52 @@ contract UDAOStaker is RoleNames, EIP712, Pausable {
     /// @notice The total voting power of all governance members
     uint256 totalVotingPower;
 
-    /// @param _platformTreasuryAddress address of the platform treasury contract
-    /// @param rmAddress address of the role manager contract
+    /// @param roleManagerAddress address of the role manager contract
+    /// @param udaoAddress address of the udao token contract
+    /// @param platformTreasuryAddress address of the platform treasury contract
     /// @param udaoVpAddress address of the udao voting power token contract
-    /// @param _contractManager address of the contract manager
     constructor(
-        address _platformTreasuryAddress,
-        address rmAddress,
-        address udaoVpAddress,
-        address _contractManager
+        address roleManagerAddress,
+        address udaoAddress,
+        address platformTreasuryAddress,
+        address udaoVpAddress
     ) EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION) {
-        contractManager = ContractManager(_contractManager);
-        udao = IERC20(contractManager.UdaoAddress());
+        roleManager = IRoleManager(roleManagerAddress);
+        udao = IERC20(udaoAddress);
+        platformTreasury = IPlatformTreasury(platformTreasuryAddress);
         udaovp = IUDAOVP(udaoVpAddress);
-        platformTreasuryAddress = _platformTreasuryAddress;
-        roleManager = IRoleManager(rmAddress);
     }
 
+    event AddressesUpdated(
+        address RoleManagerAddress,
+        address UdaoAddress,
+        address PlatformTreasuryAddress,
+        address UdaoVpAddress
+    );
+
     /// @notice Get the updated addresses from contract manager
-    function updateAddresses() external {
+    function updateAddresses(
+        address roleManagerAddress,
+        address udaoAddress,
+        address platformTreasuryAddress,
+        address udaoVpAddress
+    ) external {
         require(
-            roleManager.hasRole(BACKEND_ROLE, msg.sender),
-            "Only backend can update addresses"
+            (roleManager.hasRole(BACKEND_ROLE, msg.sender) ||
+                roleManager.hasRole(CONTRACT_MANAGER, msg.sender)),
+            "Only backend and contract manager can update addresses"
         );
-        platformTreasuryAddress = contractManager.PlatformTreasuryAddress();
-        udao = IERC20(contractManager.UdaoAddress());
-        udaovp = IUDAOVP(contractManager.UdaoVpAddress());
+        roleManager = IRoleManager(roleManagerAddress);
+        udao = IERC20(udaoAddress);
+        platformTreasury = IPlatformTreasury(platformTreasuryAddress);
+        udaovp = IUDAOVP(udaoVpAddress);
+
+        emit AddressesUpdated(
+            roleManagerAddress,
+            udaoAddress,
+            platformTreasuryAddress,
+            udaoVpAddress
+        );
     }
 
     /// @notice Allows admins to set validator lock amount
@@ -246,16 +264,17 @@ contract UDAOStaker is RoleNames, EIP712, Pausable {
     }
 
     /// @notice sets the platform treasury address
-    /// @param _platformTreasuryAddress the address of the new platform treasury
+    /// @param platformTreasuryAddress the address of the new platform treasury
+    /// TODO remove this function and use updateAddresses instead
     function setPlatformTreasuryAddress(
-        address _platformTreasuryAddress
+        address platformTreasuryAddress
     ) external {
         require(
             roleManager.hasRoles(administrator_roles, msg.sender),
             "Only admins can set platform treasury address"
         );
-        platformTreasuryAddress = _platformTreasuryAddress;
-        emit SetPlatformTreasuryAddress(_platformTreasuryAddress);
+        platformTreasury = IPlatformTreasury(platformTreasuryAddress);
+        emit SetPlatformTreasuryAddress(platformTreasuryAddress);
     }
 
     /// @notice sets the maximum stake days for governance members
@@ -692,10 +711,7 @@ contract UDAOStaker is RoleNames, EIP712, Pausable {
         );
         uint256 voteRewards = rewardBalanceOf[msg.sender];
         rewardBalanceOf[msg.sender] = 0;
-        IPlatformTreasury(platformTreasuryAddress).transferGovernanceRewards(
-            msg.sender,
-            voteRewards
-        );
+        platformTreasury.transferGovernanceRewards(msg.sender, voteRewards);
         emit VoteRewardsWithdrawn(msg.sender, voteRewards);
     }
 

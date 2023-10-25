@@ -21,14 +21,14 @@ contract UDAOGovernor is
     GovernorTimelockControl,
     RoleNames
 {
-    IUDAOStaker stakingContract;
+    IUDAOStaker udaoStaker;
     IRoleManager roleManager;
 
     constructor(
         IVotes _token,
         TimelockController _timelock,
         address stakingContractAddress,
-        address rmAddress
+        address roleManagerAddress
     )
         Governor("UDAOGovernor")
         /// @dev 1 block mined in 2 seconds in Polygon
@@ -40,8 +40,29 @@ contract UDAOGovernor is
         GovernorVotes(_token)
         GovernorTimelockControl(_timelock)
     {
-        stakingContract = IUDAOStaker(stakingContractAddress);
-        roleManager = IRoleManager(rmAddress);
+        roleManager = IRoleManager(roleManagerAddress);
+        udaoStaker = IUDAOStaker(stakingContractAddress);
+    }
+
+    event AddressesUpdated(
+        address RoleManagerAddress,
+        address StakingContractAddress
+    );
+
+    /// @notice Get the updated addresses from contract manager
+    function updateAddresses(
+        address roleManagerAddress,
+        address stakingContractAddress
+    ) external {
+        require(
+            (roleManager.hasRole(BACKEND_ROLE, msg.sender) ||
+                roleManager.hasRole(CONTRACT_MANAGER, msg.sender)),
+            "Only backend and contract manager can update addresses"
+        );
+        roleManager = IRoleManager(roleManagerAddress);
+        udaoStaker = IUDAOStaker(stakingContractAddress);
+
+        emit AddressesUpdated(roleManagerAddress, stakingContractAddress);
     }
 
     uint _quorum = 1e18; // 720000000e18 (100.000.000 * 0.04 * 6 * 30)
@@ -52,12 +73,13 @@ contract UDAOGovernor is
 
     /// @notice Allows backend to set the staking contract address.
     /// @param stakingContractAddress Address to set to
+    /// TODO remove this function and use updateAddresses instead
     function setStakingContract(address stakingContractAddress) external {
         require(
             roleManager.hasRole(BACKEND_ROLE, msg.sender),
             "Only backend can set staking contract"
         );
-        stakingContract = IUDAOStaker(stakingContractAddress);
+        udaoStaker = IUDAOStaker(stakingContractAddress);
     }
 
     function _castVote(
@@ -66,7 +88,7 @@ contract UDAOGovernor is
         uint8 support,
         string memory reason
     ) internal override(Governor) returns (uint256) {
-        stakingContract.addVoteRewards(msg.sender);
+        udaoStaker.addVoteRewards(msg.sender);
         return
             _castVote(proposalId, account, support, reason, _defaultParams());
     }

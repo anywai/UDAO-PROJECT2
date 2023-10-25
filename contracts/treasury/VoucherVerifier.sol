@@ -3,7 +3,6 @@ pragma solidity ^0.8.4;
 
 import "../RoleNames.sol";
 import "../interfaces/IRoleManager.sol";
-import "../ContractManager.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
 import "hardhat/console.sol";
