@@ -3,20 +3,18 @@
 pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
-import "./ContractManager.sol";
 
 import "./interfaces/ISupervision.sol";
 import "./RoleNames.sol";
 
 contract RoleManager is AccessControl, RoleNames {
-    ContractManager public contractManager;
     ISupervision ISupVis;
 
     // functionId => if Active or not
     mapping(uint256 => bool) public activeKYCFunctions;
     mapping(uint256 => bool) public activeBanFunctions;
 
-    event AddressesUpdated(address ContractManagerAddress);
+    event AddressesUpdated(address SupervisionAddress);
 
     mapping(address => bool) KYCList;
     mapping(address => bool) BanList;
@@ -31,23 +29,15 @@ contract RoleManager is AccessControl, RoleNames {
         _grantRole(ROLEMANAGER_CONTRACT, address(this));
     }
 
-    function setContractManager(address _contractManager) external {
-        require(
-            hasRole(BACKEND_ROLE, msg.sender),
-            "Only backend can set contract manager"
-        );
-        contractManager = ContractManager(_contractManager);
-    }
-
     /// @notice Get the updated addresses from contract manager
-    function updateAddresses() external {
+    function updateAddresses(address _supervisionAddress) external {
         require(
-            hasRole(BACKEND_ROLE, msg.sender),
+            (hasRole(BACKEND_ROLE, msg.sender) || hasRole(CONTRACT_MANAGER, msg.sender)),
             "Only backend can update addresses"
         );
-        ISupVis = ISupervision(contractManager.ISupVisAddress());
+        ISupVis = ISupervision(_supervisionAddress);
 
-        emit AddressesUpdated(contractManager.ISupVisAddress());
+        emit AddressesUpdated(_supervisionAddress);
     }
 
     /// @notice Modified AccessControl checkRoles for multiple role check

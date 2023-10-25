@@ -28,6 +28,9 @@ contract UDAOCertificate is
     Counters.Counter private _tokenIdCounter;
     IRoleManager roleManager;
 
+    /// @notice This event is triggered if the contract manager updates the addresses.
+    event AddressesUpdated(address roleManagerAddress);
+    
     constructor(
         address rmAddress
     )
@@ -52,6 +55,18 @@ contract UDAOCertificate is
         string description;
         /// @notice the EIP-712 signature of all other fields in the CertificateVoucher struct.
         bytes signature;
+    }
+
+
+    /// @notice Get the updated addresses from contract manager
+    function updateAddresses(address roleManagerAddress) external {
+        require(
+            roleManager.hasRole(BACKEND_ROLE, msg.sender),
+            "Only backend can update addresses"
+        );
+        roleManager = IRoleManager(roleManagerAddress);
+
+        emit AddressesUpdated(roleManagerAddress);
     }
 
     /// @notice Redeems a CertificateVoucher for an actual NFT, creating it in the process.
