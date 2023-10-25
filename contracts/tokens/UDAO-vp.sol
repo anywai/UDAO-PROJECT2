@@ -20,25 +20,31 @@ contract UDAOVp is
     ERC20Votes
 {
     address stakingContractAddress;
-    ContractManager public contractManager;
     IRoleManager roleManager;
 
-    /// @param rmAddress The address of the deployed role manager
+    /// @param roleManagerAddres The address of the deployed role manager
     constructor(
-        address rmAddress,
-        address _contractManager
+        address roleManagerAddres
     ) ERC20("UDAO-vp", "UDAOVP") ERC20Permit("UDAO-vp") {
-        contractManager = ContractManager(_contractManager);
-        roleManager = IRoleManager(rmAddress);
+        roleManager = IRoleManager(roleManagerAddres);
     }
 
+    event AddressesUpdated(address RoleManagerAddres, address UdaoStakerAddres);
+
     /// @notice Get the updated addresses from contract manager
-    function updateAddresses() external {
+    function updateAddresses(
+        address roleManagerAddres,
+        address udaoStakerAddres
+    ) external {
         require(
-            roleManager.hasRole(BACKEND_ROLE, msg.sender),
-            "Only backend can update addresses"
+            (roleManager.hasRole(BACKEND_ROLE, msg.sender) ||
+                roleManager.hasRole(CONTRACT_MANAGER, msg.sender)),
+            "Only backend and contract manager can update addresses"
         );
-        stakingContractAddress = contractManager.StakingContractAddress();
+        roleManager = IRoleManager(roleManagerAddres);
+        stakingContractAddress = udaoStakerAddres;
+
+        emit AddressesUpdated(roleManagerAddres, udaoStakerAddres);
     }
 
     /// @notice Allows staking contract to mint vp token "to" an address

@@ -22,11 +22,10 @@ interface IStakingContract {
 }
 
 contract Supervision is Pausable, RoleNames {
-    IUDAOC udaoc;
-    IPlatformTreasury PT;
-    IStakingContract staker;
     IRoleManager roleManager;
-    ContractManager contractManager;
+    IUDAOC udaoc;
+    IPlatformTreasury platformTreasury;
+    IStakingContract udaoStaker;
 
     /// @dev Events
     // Juror events
@@ -37,7 +36,13 @@ contract Supervision is Pausable, RoleNames {
     event DisputeResultSent(uint256 caseId, bool result, address juror);
     event DisputeEnded(uint256 caseId, bool verdict);
     event LateJurorScoreRecorded(uint256 caseId, address juror);
-    event AddressesUpdated(address IRMAddress, address PTAddress);
+    event AddressesUpdated(
+        address roleManagerAddress,
+        address udaocAddress,
+        address platformTreasuryAddress,
+        address udaoStakerAddres
+    );
+
     // Validation events
     event ValidationCreated(uint256 tokenId, uint256 validationId);
     event ValidationAssigned(
@@ -173,26 +178,46 @@ contract Supervision is Pausable, RoleNames {
         validations.push();
     }
 
-    /// @dev Setters
-    // Juror setters
-    function setContractManager(address _contractManager) external {
+    /// @notice Get the updated addresses from contract manager
+    /// TODO is this correct?
+    function updateAddresses(
+        address roleManagerAddress,
+        address udaocAddress,
+        address platformTreasuryAddress,
+        address udaoStakerAddres
+    ) external {
         require(
-            roleManager.hasRole(BACKEND_ROLE, msg.sender),
-            "Only backend can set contract manager"
+            (roleManager.hasRole(BACKEND_ROLE, msg.sender) ||
+                roleManager.hasRole(CONTRACT_MANAGER, msg.sender)),
+            "Only backend and contract manager can update addresses"
         );
-        contractManager = ContractManager(_contractManager);
+        roleManager = IRoleManager(roleManagerAddress);
+        udaoc = IUDAOC(udaocAddress);
+        platformTreasury = IPlatformTreasury(platformTreasuryAddress);
+        udaoStaker = IStakingContract(udaoStakerAddres);
+
+        emit AddressesUpdated(
+            roleManagerAddress,
+            udaocAddress,
+            platformTreasuryAddress,
+            udaoStakerAddres
+        );
     }
 
+    /// @dev Setters
+    // Juror setters
+
+    /// TODO remove this function update address function is enough
     function setPlatformTreasury(address _platformTreasury) external {
         require(
             roleManager.hasRole(BACKEND_ROLE, msg.sender),
             "Only backend can set platform treasury"
         );
-        PT = IPlatformTreasury(_platformTreasury);
+        platformTreasury = IPlatformTreasury(_platformTreasury);
     }
 
     function checkApplicationN(address _user) public view returns (uint256) {
-        return staker.checkExpireDateJuror(_user);
+        return udaoStaker.checkExpireDateJuror(_user);
     }
 
     /// TODO Wth is this function.
@@ -207,6 +232,7 @@ contract Supervision is Pausable, RoleNames {
     }
 
     // Validation setters
+    /// TODO remove this function update address function is enough
     function setUDAOC(address udaocAddress) external {
         require(
             roleManager.hasRole(BACKEND_ROLE, msg.sender),
@@ -216,13 +242,14 @@ contract Supervision is Pausable, RoleNames {
     }
 
     /// @notice creates a validation for a token
-    /// @param stakerAddress address of staking contract
-    function setAddressStaking(address stakerAddress) external {
+    /// @param udaoStakerAddress address of staking contract
+    /// TODO remove this function update address function is enough
+    function setAddressStaking(address udaoStakerAddress) external {
         require(
             roleManager.hasRole(BACKEND_ROLE, msg.sender),
             "Only backend can set staking contract"
         );
-        staker = IStakingContract(stakerAddress);
+        udaoStaker = IStakingContract(udaoStakerAddress);
     }
 
     /// @notice sets required validator vote count per content
@@ -356,7 +383,7 @@ contract Supervision is Pausable, RoleNames {
         require(roleManager.isKYCed(msg.sender, 1), "You are not KYCed");
         require(!roleManager.isBanned(msg.sender, 1), "You were banned");
         require(
-            staker.checkExpireDateJuror(msg.sender) > block.timestamp,
+            udaoStaker.checkExpireDateJuror(msg.sender) > block.timestamp,
             "Your application is expired"
         );
         require(caseId < disputes.length, "Dispute does not exist!");
@@ -807,7 +834,7 @@ contract Supervision is Pausable, RoleNames {
         require(roleManager.isKYCed(msg.sender, 4), "You are not KYCed");
         require(!roleManager.isBanned(msg.sender, 4), "You were banned");
         require(
-            staker.checkExpireDateValidator(msg.sender) > block.timestamp,
+            udaoStaker.checkExpireDateValidator(msg.sender) > block.timestamp,
             "Validation is expired"
         );
         require(
@@ -858,18 +885,6 @@ contract Supervision is Pausable, RoleNames {
         );
         distributionRound++;
         emit NextRound(distributionRound);
-    }
-
-    /// @notice Get the updated addresses from contract manager
-    /// TODO is this correct?
-    function updateAddresses() external {
-        require(
-            roleManager.hasRole(BACKEND_ROLE, msg.sender),
-            "Only backend can update addresses"
-        );
-        roleManager = IRoleManager(contractManager.RmAddress());
-        PT = IPlatformTreasury(contractManager.PlatformTreasuryAddress());
-        emit AddressesUpdated(address(roleManager), address(PT));
     }
 
     function pause() external {
