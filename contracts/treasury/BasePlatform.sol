@@ -13,27 +13,18 @@ import "../interfaces/IUDAOC.sol";
 import "../interfaces/IGovernanceTreasury.sol";
 import "../interfaces/IRoleManager.sol";
 import "../interfaces/IVoucherVerifier.sol";
+import "../RoleLegacy.sol";
 
-abstract contract BasePlatform is Pausable {
-    bytes32 public constant BACKEND_ROLE = keccak256("BACKEND_ROLE");
-    bytes32 public constant FOUNDATION_ROLE = keccak256("FOUNDATION_ROLE");
-    bytes32 public constant CONTRACT_MANAGER = keccak256("CONTRACT_MANAGER");
-    bytes32 public constant GOVERNANCE_ROLE = keccak256("GOVERNANCE_ROLE");
-
-    /// @notice RoleManager contract is used to check roles of users and KYC/Ban status
-    IRoleManager roleManager;
-    /// @notice VoucherVerifier contract is defines the vouchers of PlatformTreasury and used to verify vouchers
-    IVoucherVerifier voucherVerifier;
-    /// @notice GovernanceTreasury contract is platforms governance related funds treasury contract
-    IGovernanceTreasury public iGovernanceTreasury;
-
+abstract contract BasePlatform is Pausable, RoleLegacy {
     /// @notice UDAO (ERC20) Token is main token of the platform and used for payments
     IERC20 udao;
     /// @notice UDAOC (ERC721) Token is defines contents and used for content ownership
     IUDAOC udaoc;
+    /// @notice VoucherVerifier contract is defines the vouchers of PlatformTreasury and used to verify vouchers
+    IVoucherVerifier voucherVerifier;
+    /// @notice GovernanceTreasury contract is platforms governance related funds treasury contract
+    IGovernanceTreasury governanceTreasury;
 
-    /// @notice Address of governanceTreasury is used for sending funds to governance
-    address governanceTreasury;
     /// @notice Address of foundation wallet is used for sending funds to foundation
     address foundationWallet;
 
@@ -116,22 +107,21 @@ abstract contract BasePlatform is Pausable {
     bool isGovernanceTreasuryOnline = false;
 
     /// @notice constructor of BasePlatform
-    /// @param _rmAddress is address of RoleManager contract
-    /// @param _governanceTreasuryAddress is address of GovernanceTreasury contract
-    /// @param _voucherVerifierAddress is address of VoucherVerifier contract
+    /// @param roleManagerAddress is address of RoleManager contract
+    /// @param governanceTreasuryAddress is address of GovernanceTreasury contract
+    /// @param voucherVerifierAddress is address of VoucherVerifier contract
     constructor(
-        address _rmAddress,
-        address _udaoAddress,
-        address _udaocAddress,
-        address _governanceTreasuryAddress,
-        address _voucherVerifierAddress
+        address roleManagerAddress,
+        address udaoAddress,
+        address udaocAddress,
+        address governanceTreasuryAddress,
+        address voucherVerifierAddress
     ) {
-        roleManager = IRoleManager(_rmAddress);
-        udao = IERC20(_udaoAddress);
-        udaoc = IUDAOC(_udaocAddress);
-        iGovernanceTreasury = IGovernanceTreasury(_governanceTreasuryAddress);
-        governanceTreasury = _governanceTreasuryAddress;
-        voucherVerifier = IVoucherVerifier(_voucherVerifierAddress);
+        roleManager = IRoleManager(roleManagerAddress);
+        udao = IERC20(udaoAddress);
+        udaoc = IUDAOC(udaocAddress);
+        governanceTreasury = IGovernanceTreasury(governanceTreasuryAddress);
+        voucherVerifier = IVoucherVerifier(voucherVerifierAddress);
     }
 
     /// @notice This event is triggered if the foundation wallet address is updated.
@@ -139,46 +129,17 @@ abstract contract BasePlatform is Pausable {
 
     /// @notice This event is triggered if the contract manager updates the addresses.
     event AddressesUpdated(
-        address udao,
-        address udaoc,
-        address irm,
-        address governanceTreasury,
-        address voucherVerifier
+        address UDAOAddress,
+        address UDAOCAddress,
+        address RoleManagerAddress,
+        address GovernanceTreasuryAddress,
+        address VoucherVerifierAddress
     );
 
     /// @notice This event is triggered if a cut is updated.
     event PlatformCutsUpdated();
 
-    function hasRole(
-        bytes32 _role,
-        address _account
-    ) internal view returns (bool) {
-        return (roleManager.hasRole(_role, _account));
-    }
-
-    function isNotBanned(
-        address _userAddress,
-        uint _functionID
-    ) internal view returns (bool) {
-        return !roleManager.isBanned(_userAddress, _functionID);
-    }
-
-    function isKYCed(
-        address _userAddress,
-        uint _functionID
-    ) internal view returns (bool) {
-        return roleManager.isKYCed(_userAddress, _functionID);
-    }
-
-    function activateGovernanceTreasury(bool _boolean) external {
-        require(
-            hasRole(BACKEND_ROLE, msg.sender),
-            "Only backend can activate governance treasury"
-        );
-        isGovernanceTreasuryOnline = _boolean;
-    }
-
-    /// @notice sets governance, foundation, or contract manager addresses
+    /// @notice sets foundation wallet addresses
     /// @param _newAddress new address of the contract
     function setFoundationAddress(address _newAddress) external {
         require(
@@ -191,32 +152,38 @@ abstract contract BasePlatform is Pausable {
 
     /// @notice Get the updated addresses from contract manager
     function updateAddresses(
-        address _udaoAddress,
-        address _udaocAddress,
-        address _roleManager,
-        address _governanceAdress,
-        address _verifierAdress
-    ) public {
+        address udaoAddress,
+        address udaocAddress,
+        address roleManagerAddress,
+        address governanceTreasuryAddress,
+        address voucherVerifierAddress
+    ) external {
         require(
             (hasRole(BACKEND_ROLE, msg.sender) ||
-                hasRole(CONTRACT_MANAGER, msg.sender) ||
-                hasRole(FOUNDATION_ROLE, msg.sender)),
+                hasRole(CONTRACT_MANAGER, msg.sender)),
             "Only backend and contract manager can update addresses"
         );
-        udao = IERC20(_udaoAddress);
-        udaoc = IUDAOC(_udaocAddress);
-        roleManager = IRoleManager(_roleManager);
-        iGovernanceTreasury = IGovernanceTreasury(_governanceAdress);
-        governanceTreasury = _governanceAdress;
-        voucherVerifier = IVoucherVerifier(_verifierAdress);
+        udao = IERC20(udaoAddress);
+        udaoc = IUDAOC(udaocAddress);
+        roleManager = IRoleManager(roleManagerAddress);
+        governanceTreasury = IGovernanceTreasury(governanceTreasuryAddress);
+        voucherVerifier = IVoucherVerifier(voucherVerifierAddress);
 
         emit AddressesUpdated(
-            _udaoAddress,
-            _udaocAddress,
-            _roleManager,
-            _governanceAdress,
-            _verifierAdress
+            udaoAddress,
+            udaocAddress,
+            roleManagerAddress,
+            governanceTreasuryAddress,
+            voucherVerifierAddress
         );
+    }
+
+    function activateGovernanceTreasury(bool _boolean) external {
+        require(
+            hasRole(BACKEND_ROLE, msg.sender),
+            "Only backend can activate governance treasury"
+        );
+        isGovernanceTreasuryOnline = _boolean;
     }
 
     /// @notice distribute the shares of foundation and governance/juror/validator pools from a platform's content sale revenue

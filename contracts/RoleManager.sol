@@ -8,7 +8,8 @@ import "./interfaces/ISupervision.sol";
 import "./RoleNames.sol";
 
 contract RoleManager is AccessControl, RoleNames {
-    ISupervision ISupVis;
+    /// @notice Supervision contract is manages juror and validator based actions
+    ISupervision supervision;
 
     // functionId => if Active or not
     mapping(uint256 => bool) public activeKYCFunctions;
@@ -30,14 +31,15 @@ contract RoleManager is AccessControl, RoleNames {
     }
 
     /// @notice Get the updated addresses from contract manager
-    function updateAddresses(address _supervisionAddress) external {
+    function updateAddresses(address supervisionAddress) external {
         require(
-            (hasRole(BACKEND_ROLE, msg.sender) || hasRole(CONTRACT_MANAGER, msg.sender)),
+            (hasRole(BACKEND_ROLE, msg.sender) ||
+                hasRole(CONTRACT_MANAGER, msg.sender)),
             "Only backend can update addresses"
         );
-        ISupVis = ISupervision(_supervisionAddress);
+        supervision = ISupervision(supervisionAddress);
 
-        emit AddressesUpdated(_supervisionAddress);
+        emit AddressesUpdated(supervisionAddress);
     }
 
     /// @notice Modified AccessControl checkRoles for multiple role check
@@ -64,8 +66,8 @@ contract RoleManager is AccessControl, RoleNames {
         emit SetKYC(_address, _isKYCed);
 
         if (!_isKYCed) {
-            ISupVis.dismissValidation(_address);
-            ISupVis.dismissDispute(_address);
+            supervision.dismissValidation(_address);
+            supervision.dismissDispute(_address);
         }
     }
 
@@ -88,8 +90,8 @@ contract RoleManager is AccessControl, RoleNames {
         emit SetBan(_address, _isBanned);
 
         if (_isBanned) {
-            ISupVis.dismissValidation(_address);
-            ISupVis.dismissDispute(_address);
+            supervision.dismissValidation(_address);
+            supervision.dismissDispute(_address);
         }
     }
 

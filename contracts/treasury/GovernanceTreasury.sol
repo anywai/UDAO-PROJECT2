@@ -17,12 +17,11 @@ contract GovernanceTreasury {
     uint governanceBalance;
 
     address ownerOfDummy;
-    
-    constructor(address _udao) {
-        udao = IERC20(_udao);
+
+    constructor(address udaoAddress) {
+        udao = IERC20(udaoAddress);
         ownerOfDummy = msg.sender;
     }
-    
 
     function jurorBalanceUpdate(uint _balance) external {
         jurorBalance += _balance;
@@ -37,8 +36,14 @@ contract GovernanceTreasury {
     }
 
     function emergencyWithdraw() external {
-        require(msg.sender == ownerOfDummy, "you are not owner of dummy contract");
-        udao.transfer(msg.sender, jurorBalance + validatorBalance + governanceBalance);
+        require(
+            msg.sender == ownerOfDummy,
+            "you are not owner of dummy contract"
+        );
+        udao.transfer(
+            msg.sender,
+            jurorBalance + validatorBalance + governanceBalance
+        );
         validatorBalance = 0;
         jurorBalance = 0;
         governanceBalance = 0;

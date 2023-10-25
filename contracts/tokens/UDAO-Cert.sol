@@ -30,14 +30,14 @@ contract UDAOCertificate is
 
     /// @notice This event is triggered if the contract manager updates the addresses.
     event AddressesUpdated(address roleManagerAddress);
-    
+
     constructor(
-        address rmAddress
+        address roleManagerAddress
     )
         ERC721("UDAO Certificate", "UDAO-Cert")
         EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION)
     {
-        roleManager = IRoleManager(rmAddress);
+        roleManager = IRoleManager(roleManagerAddress);
     }
 
     /// @notice Represents an un-minted NFT, which has not yet been recorded into the blockchain.
@@ -57,12 +57,12 @@ contract UDAOCertificate is
         bytes signature;
     }
 
-
     /// @notice Get the updated addresses from contract manager
     function updateAddresses(address roleManagerAddress) external {
         require(
-            roleManager.hasRole(BACKEND_ROLE, msg.sender),
-            "Only backend can update addresses"
+            (roleManager.hasRole(BACKEND_ROLE, msg.sender) ||
+                roleManager.hasRole(CONTRACT_MANAGER, msg.sender)),
+            "Only backend and contract manager can update addresses"
         );
         roleManager = IRoleManager(roleManagerAddress);
 

@@ -13,15 +13,15 @@ contract VoucherVerifier is EIP712, RoleNames {
     string private constant SIGNATURE_VERSION = "1";
 
     IRoleManager roleManager;
-    ContractManager public contractManager;
 
     constructor(
-        address contractManagerAddress,
-        address rmAddress
+        address roleManagerAddress
     ) EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION) {
-        roleManager = IRoleManager(rmAddress);
-        contractManager = ContractManager(contractManagerAddress);
+        roleManager = IRoleManager(roleManagerAddress);
     }
+
+    /// @notice This event is triggered if the contract manager updates the addresses.
+    event AddressesUpdated(address roleManagerAddress);
 
     /// @notice struct to hold content discount voucher information
     /// @param tokenId id of the content
@@ -58,6 +58,18 @@ contract VoucherVerifier is EIP712, RoleNames {
         uint256 coachingDate;
         address learner;
         bytes signature;
+    }
+
+    /// @notice Get the updated addresses from contract manager
+    function updateAddresses(address roleManagerAddress) external {
+        require(
+            (roleManager.hasRole(BACKEND_ROLE, msg.sender) ||
+                roleManager.hasRole(CONTRACT_MANAGER, msg.sender)),
+            "Only backend and contract manager can update addresses"
+        );
+        roleManager = IRoleManager(roleManagerAddress);
+
+        emit AddressesUpdated(roleManagerAddress);
     }
 
     /// @notice Returns a hash of the given ContentDiscountVoucher, prepared using EIP712 typed data hashing rules.

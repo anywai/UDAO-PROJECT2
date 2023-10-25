@@ -27,17 +27,17 @@ contract UDAOContent is
     string private constant SIGNING_DOMAIN = "UDAOCMinter";
     string private constant SIGNATURE_VERSION = "1";
 
-    ISupervision ISupVis;
+    ISupervision supervision;
     IRoleManager roleManager;
 
-    /// @param rmAddress The address of the deployed role manager
+    /// @param roleManagerAddress The address of the deployed role manager
     constructor(
-        address rmAddress
+        address roleManagerAddress
     )
         ERC721("UDAO Content", "UDAOC")
         EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION)
     {
-        roleManager = IRoleManager(rmAddress);
+        roleManager = IRoleManager(roleManagerAddress);
     }
 
     mapping(uint256 => bool) public isSellable;
@@ -51,7 +51,7 @@ contract UDAOContent is
     /// @notice This event is triggered when a new part is added to a content
     event newPartAdded(uint tokenId, uint newPartId, uint newPartPrice);
     /// @notice This event is triggered if the contract manager updates the addresses.
-    event AddressesUpdated(address supervisionAddress);
+    event AddressesUpdated(address RoleManager, address Supervision);
     /// @notice Triggered when KYC requirement for content creating is changed
     event KYCRequirementForCreateContentChanged(bool status);
 
@@ -89,14 +89,19 @@ contract UDAOContent is
     }
 
     /// @notice Get the updated addresses from contract manager
-    function updateAddresses(address supervisionAddress) external {
+    function updateAddresses(
+        address roleManagerAddress,
+        address supervisionAddress
+    ) external {
         require(
-            roleManager.hasRole(BACKEND_ROLE, msg.sender),
+            (roleManager.hasRole(BACKEND_ROLE, msg.sender) ||
+                roleManager.hasRole(CONTRACT_MANAGER, msg.sender)),
             "Only backend can update addresses"
         );
-        ISupVis = ISupervision(supervisionAddress);
+        roleManager = IRoleManager(roleManagerAddress);
+        supervision = ISupervision(supervisionAddress);
 
-        emit AddressesUpdated(supervisionAddress);
+        emit AddressesUpdated(roleManagerAddress, supervisionAddress);
     }
 
     /// @notice Redeems a RedeemVoucher for an actual NFT, creating it in the process.
@@ -122,17 +127,14 @@ contract UDAOContent is
         require(!roleManager.isBanned(msg.sender, 13), "Redeemer is banned!");
         require(voucher.validationScore != 0, "Validation score cannot be 0");
         // make sure the full content price is not 0
-        require(
-            voucher._contentPrice != 0,
-            "Full content price cannot be 0"
-        );
+        require(voucher._contentPrice != 0, "Full content price cannot be 0");
 
         require(
             !isCalldataStringEmpty(voucher._uri),
             "Content URI cannot be empty"
         );
 
-        // save the content price 
+        // save the content price
         uint partLength = voucher._partPrice.length;
 
         contentPrices[tokenId] = voucher._contentPrice;
@@ -146,7 +148,7 @@ contract UDAOContent is
         _tokenIds.increment();
         isSellable[tokenId] = true;
 
-        ISupVis.createValidation(tokenId, voucher.validationScore);
+        supervision.createValidation(tokenId, voucher.validationScore);
     }
 
     /// @notice Checks if a string is empty
@@ -188,7 +190,7 @@ contract UDAOContent is
         if (voucher.validationScore != 0) {
             require(
                 /// @dev 0: rejected, 1: validated, 2: in validation
-                ISupVis.getIsValidated(voucher.tokenId) != 2,
+                supervision.getIsValidated(voucher.tokenId) != 2,
                 "Content is already in validation"
             );
         }
@@ -203,15 +205,16 @@ contract UDAOContent is
         _setTokenURI(voucher.tokenId, voucher._uri);
 
         if (voucher.validationScore != 0) {
-            ISupVis.createValidation(voucher.tokenId, voucher.validationScore);
+            supervision.createValidation(
+                voucher.tokenId,
+                voucher.validationScore
+            );
         }
     }
 
     /// @notice returns the price of a specific content
     /// @param tokenId the content ID of the token
-    function getContentPrice(
-        uint tokenId
-    ) external view returns (uint256) {
+    function getContentPrice(uint tokenId) external view returns (uint256) {
         return (contentPrices[tokenId]);
     }
 
@@ -246,7 +249,7 @@ contract UDAOContent is
         contentPrices[tokenId] = _contentPrice;
     }
 
-    /// @notice allows content owners to set price for single part in a content 
+    /// @notice allows content owners to set price for single part in a content
     /// @param tokenId the content ID of the token
     /// @param _partPrice the price to set
     function setPartialContent(
@@ -264,7 +267,7 @@ contract UDAOContent is
         partPrices[tokenId][partId] = _partPrice;
     }
 
-    /// @notice allows content owners to set price for multiple parts in a content 
+    /// @notice allows content owners to set price for multiple parts in a content
     /// @param tokenId the content ID of the token
     /// @param _partIds the part IDs of the token
     /// @param _partPrices the price to set
@@ -288,7 +291,7 @@ contract UDAOContent is
 
     /// @notice allows content owners to set price for full content and multiple parts in a content
     /// @param tokenId the content ID of the token
-    /// @param _partIds the part IDs of the token 
+    /// @param _partIds the part IDs of the token
     /// @param _partPrices the prices to set
     /// @param _contentPrice the price to set, first price is for full content price
     function setBatchFullContent(

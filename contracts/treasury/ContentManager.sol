@@ -761,22 +761,28 @@ abstract contract ContentManager is BasePlatform {
             if (jurorBalance > 0) {
                 jurorBalance = 0;
                 udao.transfer(
-                    address(iGovernanceTreasury),
+                    address(governanceTreasury),
                     transferredJurorBalance
                 );
-                iGovernanceTreasury.jurorBalanceUpdate(transferredJurorBalance);
+                governanceTreasury.jurorBalanceUpdate(transferredJurorBalance);
             }
             if (validatorsBalance > 0) {
                 validatorsBalance = 0;
-                udao.transfer(governanceTreasury, transferredValidatorBalance);
-                iGovernanceTreasury.validatorBalanceUpdate(
+                udao.transfer(
+                    address(governanceTreasury),
+                    transferredValidatorBalance
+                );
+                governanceTreasury.validatorBalanceUpdate(
                     transferredValidatorBalance
                 );
             }
             if (governanceBalance > 0) {
                 governanceBalance = 0;
-                udao.transfer(governanceTreasury, transferredGovernanceBalance);
-                iGovernanceTreasury.governanceBalanceUpdate(
+                udao.transfer(
+                    address(governanceTreasury),
+                    transferredGovernanceBalance
+                );
+                governanceTreasury.governanceBalanceUpdate(
                     transferredGovernanceBalance
                 );
             }
