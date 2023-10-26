@@ -111,12 +111,33 @@ contract UDAOContent is
 
         emit AddressesUpdated(contractManager.ISupVisAddress());
     }
-
+    event VoucherData(
+        uint256 validUntil,
+        uint256 _contentPrice,
+        uint256[] _partPrice,
+        uint256 tokenId,
+        string _uri,
+        address _redeemer,
+        uint256 redeemType,
+        uint256 validationScore,
+        bytes signature
+    );
     /// @notice Redeems a RedeemVoucher for an actual NFT, creating it in the process.
     /// @param voucher A RedeemVoucher describing an unminted NFT.
     function createContent(
         RedeemVoucher calldata voucher
     ) public whenNotPaused {
+        emit VoucherData(
+            voucher.validUntil,
+            voucher._contentPrice,
+            voucher._partPrice,
+            voucher.tokenId,
+            voucher._uri,
+            voucher._redeemer,
+            voucher.redeemType,
+            voucher.validationScore,
+            voucher.signature
+        );
         // make sure signature is valid and get the address of the signer
         address signer = _verify(voucher);
         require(
