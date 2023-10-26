@@ -192,13 +192,12 @@ describe("UDAOC Contract", function () {
       contentCreator,
       contentPrice,
       partPricesArray,
-      redeemType = 1,
-      validationScore = 1
+      (redeemType = 1),
+      (validationScore = 1)
     );
     await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample))
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs("0x0000000000000000000000000000000000000000", contentCreator.address, 0);
-
   });
 
   it("Should fail to create Content if wrong redeemer", async function () {
@@ -215,8 +214,8 @@ describe("UDAOC Contract", function () {
       contentCreator,
       contentPrice,
       partPricesArray,
-      redeemType = 1,
-      validationScore = 1
+      (redeemType = 1),
+      (validationScore = 1)
     );
     await expect(contractUDAOContent.connect(contentBuyer).createContent(createContentVoucherSample)).to.revertedWith(
       "You are not the redeemer"
@@ -237,8 +236,8 @@ describe("UDAOC Contract", function () {
       contentCreator,
       contentPrice,
       partPricesArray,
-      redeemType = 1,
-      validationScore = 1
+      (redeemType = 1),
+      (validationScore = 1)
     );
 
     await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample))
@@ -264,8 +263,8 @@ describe("UDAOC Contract", function () {
       contentCreator,
       contentPrice,
       partPricesArray,
-      redeemType = 1,
-      validationScore = 1
+      (redeemType = 1),
+      (validationScore = 1)
     );
 
     await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample))
@@ -296,8 +295,8 @@ describe("UDAOC Contract", function () {
       contentCreator,
       contentPrice,
       partPricesArray,
-      redeemType = 1,
-      validationScore = 1
+      (redeemType = 1),
+      (validationScore = 1)
     );
 
     await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample))
@@ -326,8 +325,8 @@ describe("UDAOC Contract", function () {
       contentCreator,
       contentPrice,
       partPricesArray,
-      redeemType = 1,
-      validationScore = 1
+      (redeemType = 1),
+      (validationScore = 1)
     );
 
     await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample))
@@ -357,8 +356,8 @@ describe("UDAOC Contract", function () {
       contentCreator,
       contentPrice,
       partPricesArray,
-      redeemType = 1,
-      validationScore = 1
+      (redeemType = 1),
+      (validationScore = 1)
     );
 
     await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample))
@@ -387,8 +386,8 @@ describe("UDAOC Contract", function () {
       contentCreator,
       contentPrice,
       partPricesArray,
-      redeemType = 1,
-      validationScore = 1
+      (redeemType = 1),
+      (validationScore = 1)
     );
 
     await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample))
@@ -401,7 +400,7 @@ describe("UDAOC Contract", function () {
     ).to.revertedWith("Sender is not KYCed!");
   });
 
-  it("Should burn token if token owner", async function () {
+  it("Should fail to burn token with TypeError since there is no burn function", async function () {
     await reDeploy();
     await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer.address, true);
@@ -416,42 +415,17 @@ describe("UDAOC Contract", function () {
       contentCreator,
       contentPrice,
       partPricesArray,
-      redeemType = 1,
-      validationScore = 1
-    );
-
-    await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample))
-      .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
-      .withArgs("0x0000000000000000000000000000000000000000", contentCreator.address, 0);
-    await expect(contractUDAOContent.connect(contentCreator).burn(0))
-      .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
-      .withArgs(contentCreator.address, "0x0000000000000000000000000000000000000000", 0);
-  });
-
-  it("Should fail to burn token if not token owner", async function () {
-    await reDeploy();
-    await contractRoleManager.setKYC(contentCreator.address, true);
-    await contractRoleManager.setKYC(contentBuyer.address, true);
-
-    /// part prices must be determined before creating content
-    const partPricesArray = [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")];
-    const contentPrice = ethers.utils.parseEther("2");
-    /// Create Voucher from redeem.js and use it for creating content
-    const createContentVoucherSample = await createContentVoucher(
-      contractUDAOContent,
-      backend,
-      contentCreator,
-      contentPrice,
-      partPricesArray,
-      redeemType = 1,
-      validationScore = 1
+      (redeemType = 1),
+      (validationScore = 1)
     );
 
     await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample))
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs("0x0000000000000000000000000000000000000000", contentCreator.address, 0);
 
-    await expect(contractUDAOContent.connect(contentBuyer).burn(0)).to.revertedWith("You are not the owner of token");
+    await expect(contractUDAOContent.connect(contentCreator).burn(0)).to.be.revertedWith(
+      "TypeError: contractUDAOContent.burn is not a function"
+    );
   });
 
   it("Should return true if supports ERC721 interface", async function () {
@@ -476,8 +450,8 @@ describe("UDAOC Contract", function () {
       contentCreator,
       contentPrice,
       partPricesArray,
-      redeemType = 1,
-      validationScore = 1
+      (redeemType = 1),
+      (validationScore = 1)
     );
 
     await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample))

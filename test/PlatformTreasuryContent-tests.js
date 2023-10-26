@@ -14,6 +14,23 @@ const { anyValue } = require("@nomicfoundation/hardhat-chai-matchers/withArgs");
 // Enable and inject BN dependency
 chai.use(require("chai-bn")(BN));
 /// HELPERS---------------------------------------------------------------------
+async function makeContentPurchase(contractPlatformTreasury, contentBuyer, contractRoleManager, contractUDAO) {
+  /// Set KYC
+  await contractRoleManager.setKYC(contentBuyer.address, true);
+  /// Send UDAO to the buyer's wallet
+  await contractUDAO.transfer(contentBuyer.address, ethers.utils.parseEther("100.0"));
+  /// Content buyer needs to give approval to the platformtreasury
+  await contractUDAO
+    .connect(contentBuyer)
+    .approve(contractPlatformTreasury.address, ethers.utils.parseEther("999999999999.0"));
+  const tokenIds = [0];
+  const purchasedParts = [[1]];
+  const giftReceiver = [ethers.constants.AddressZero];
+  await contractPlatformTreasury.connect(contentBuyer).buyContent(tokenIds, purchasedParts, giftReceiver);
+  const result = await contractPlatformTreasury.connect(contentBuyer).getOwnedParts(contentBuyer.address, tokenIds[0]);
+  // Result is bignumber array
+  expect(result[0]).to.equal(1);
+}
 /// @dev Deploy contracts and assign them
 async function reDeploy(reApplyRolesViaVoucher = true, isDexRequired = false) {
   const replace = await deploy(isDexRequired);
@@ -171,6 +188,7 @@ async function createContentVoucher(
   contractUDAOContent,
   backend,
   contentCreator,
+  contentPrice,
   partPrices,
   redeemType = 1,
   validationScore = 1
@@ -181,11 +199,13 @@ async function createContentVoucher(
   const futureBlock = block.timestamp + 1000;
   // convert it to a BigNumber
   const futureBlockBigNumber = ethers.BigNumber.from(futureBlock);
+
   return await new Redeem({
     contract: contractUDAOContent,
     signer: backend,
   }).createVoucher(
     futureBlockBigNumber,
+    contentPrice,
     partPrices,
     0,
     "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
@@ -196,28 +216,20 @@ async function createContentVoucher(
 }
 
 describe("Platform Treasury Contract - Content", function () {
-  it("Should get updated address of the validation manager", async function () {
-    await reDeploy();
-    await contractContractManager
-      .connect(backend)
-      .setAddressISupVisAddress("0x5B38Da6a701c568545dCfcB03FcB875f56beddC4");
-    // Get updated address
-    await expect(contractPlatformTreasury.connect(backend).updateAddresses())
-      .to.emit(contractPlatformTreasury, "AddressesUpdated")
-      .withArgs(anyValue, anyValue, "0x5B38Da6a701c568545dCfcB03FcB875f56beddC4", anyValue);
-    await contractContractManager.connect(backend).setAddressISupVisAddress(contractSupervision.address);
-    // Get updated address
-    await expect(contractPlatformTreasury.connect(backend).updateAddresses())
-      .to.emit(contractPlatformTreasury, "AddressesUpdated")
-      .withArgs(anyValue, anyValue, contractSupervision.address, anyValue);
-  });
-
   it("Should fail to set validation manager if not FOUNDATION", async function () {
     await reDeploy();
 
-    await expect(contractPlatformTreasury.connect(foundation).updateAddresses()).to.revertedWith(
-      "Only backend can update addresses"
-    );
+    await expect(
+      contractPlatformTreasury
+        .connect(foundation)
+        .updateAddresses(
+          contractUDAO.address,
+          contractUDAOContent.address,
+          contractRoleManager.address,
+          contractUDAOGovernor.address,
+          contractVoucherVerifier.address
+        )
+    ).to.revertedWith("Only backend and contract manager can update addresses");
   });
   //!!Bu dünkü test
   it("Should a user able to buy the full content", async function () {
@@ -227,43 +239,34 @@ describe("Platform Treasury Contract - Content", function () {
     await contractRoleManager.setKYC(contentBuyer.address, true);
     /// part prices must be determined before creating content
     const partPricesArray = [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")];
+    const contentPriceSet = ethers.utils.parseEther("2");
     /// Create Voucher from redeem.js and use it for creating content
+    // Create content voucher
     const createContentVoucherSample = await createContentVoucher(
       contractUDAOContent,
       backend,
       contentCreator,
-      partPricesArray
+      contentPriceSet,
+      partPricesArray,
+      (redeemType = 1),
+      (validationScore = 1)
     );
-    /// Create content
+    // Create content with voucher
     await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample))
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs("0x0000000000000000000000000000000000000000", contentCreator.address, 0);
-    /// Start validation and finalize it
-    await runValidation(
-      contractSupervision,
-      backend,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      contentCreator
-    );
-    /// Send UDAO to the buyer's wallet
-    await contractUDAO.transfer(contentBuyer.address, ethers.utils.parseEther("100.0"));
+    // Make a content purchase to gather funds for governance
+    await makeContentPurchase(contractPlatformTreasury, contentBuyer1, contractRoleManager, contractUDAO);
+
     /// Get current UDAO balance of the buyer
-    const balanceBefore = await contractUDAO.balanceOf(contentBuyer.address);
+    const balanceBefore = await contractUDAO.balanceOf(contentBuyer1.address);
     /// Content buyer needs to give approval to the platformtreasury
-    await contractUDAO
-      .connect(contentBuyer)
-      .approve(contractPlatformTreasury.address, ethers.utils.parseEther("999999999999.0"));
-    await contractPlatformTreasury.connect(contentBuyer).buyContent([0], [true], [[1]], [ethers.constants.AddressZero]);
-    const result = await contractPlatformTreasury.connect(contentBuyer).getOwnedContent(contentBuyer.address);
+    const result = await contractPlatformTreasury.connect(contentBuyer1).getOwnedParts(contentBuyer1.address);
     /// Get current UDAO balance of the buyer
-    const balanceAfter = await contractUDAO.balanceOf(contentBuyer.address);
+    const balanceAfter = await contractUDAO.balanceOf(contentBuyer1.address);
     /// Get tokenId 0 price with calculatePriceToPay function
     const priceToPay = await contractPlatformTreasury.calculatePriceToPay(0, true, [1]);
-    
+
     /// Check if the buyer's balance is decreased
 
     const numArray = result.map((x) => x.map((y) => y.toNumber()));

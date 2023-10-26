@@ -203,6 +203,7 @@ async function createContentVoucher(
   contractUDAOContent,
   backend,
   contentCreator,
+  contentPrice,
   partPrices,
   redeemType = 1,
   validationScore = 1
@@ -219,6 +220,7 @@ async function createContentVoucher(
     signer: backend,
   }).createVoucher(
     futureBlockBigNumber,
+    contentPrice,
     partPrices,
     0,
     "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
@@ -286,13 +288,22 @@ async function makeContentPurchase(contractPlatformTreasury, contentBuyer, contr
   await contractUDAO
     .connect(contentBuyer)
     .approve(contractPlatformTreasury.address, ethers.utils.parseEther("999999999999.0"));
-  await contractPlatformTreasury.connect(contentBuyer).buyContent([0], [true], [[1]], [ethers.constants.AddressZero]);
-  const result = await contractPlatformTreasury.connect(contentBuyer).getOwnedContent(contentBuyer.address);
-
-  const numArray = result.map((x) => x.map((y) => y.toNumber()));
-  expect(numArray).to.eql([[0, 0]]);
+  const tokenIds = [0];
+  const purchasedParts = [[1]];
+  const giftReceiver = [ethers.constants.AddressZero];
+  await contractPlatformTreasury.connect(contentBuyer).buyContent(tokenIds, purchasedParts, giftReceiver);
+  const result = await contractPlatformTreasury.connect(contentBuyer).getOwnedParts(contentBuyer.address, tokenIds[0]);
+  // Result is bignumber array
+  expect(result[0]).to.equal(1);
 }
-async function makeCoachingPurchase(contractRoleManager, contractUDAO, contractPlatformTreasury, contentBuyer, contentCreator, coachingPrice) {
+async function makeCoachingPurchase(
+  contractRoleManager,
+  contractUDAO,
+  contractPlatformTreasury,
+  contentBuyer,
+  contentCreator,
+  coachingPrice
+) {
   /// Make coaching purchase and finalize it
   // Set KYC
   await contractRoleManager.setKYC(contentBuyer.address, true);
@@ -312,7 +323,12 @@ async function makeCoachingPurchase(contractRoleManager, contractUDAO, contractP
   const currentBlockTimestamp = (await hre.ethers.provider.getBlock()).timestamp;
   /// Coaching date is 3 days from now
   const coachingDate = currentBlockTimestamp + 3 * 24 * 60 * 60;
-  const role_voucher = await lazyCoaching.createVoucher(contentCreator.address, coachingPrice, coachingDate, contentBuyer.address);
+  const role_voucher = await lazyCoaching.createVoucher(
+    contentCreator.address,
+    coachingPrice,
+    coachingDate,
+    contentBuyer.address
+  );
   // Buy coaching
   const purchaseTx = await contractPlatformTreasury.connect(contentBuyer).buyCoaching(role_voucher);
   const queueTxReceipt = await purchaseTx.wait();
@@ -331,11 +347,26 @@ describe("Platform Treasury General", function () {
     const newGovernanceTreasury = contractUDAOTimelockController;
 
     // set new governance treasury address
+
     await expect(
-      contractPlatformTreasury.connect(backend).setGovernanceTreasuryAddress(contractUDAOTimelockController.address)
+      contractPlatformTreasury
+        .connect(backend)
+        .updateAddresses(
+          contractUDAO.address,
+          contractUDAOContent.address,
+          contractRoleManager.address,
+          newGovernanceTreasury.address,
+          contractVoucherVerifier.address
+        )
     )
-      .to.emit(contractPlatformTreasury, "GovernanceTreasuryUpdated")
-      .withArgs(newGovernanceTreasury.address);
+      .to.emit(contractPlatformTreasury, "AddressesUpdated")
+      .withArgs(
+        contractUDAO.address,
+        contractUDAOContent.address,
+        contractRoleManager.address,
+        newGovernanceTreasury.address,
+        contractVoucherVerifier.address
+      );
   });
 
   it("Should allow backend to set new foundation wallet address", async function () {
@@ -344,38 +375,9 @@ describe("Platform Treasury General", function () {
     // new dummy foundation address
     const newFoundation = await ethers.Wallet.createRandom();
     // set new foundation address
-    await expect(contractPlatformTreasury.connect(backend).setFoundationWalletAddress(newFoundation.address))
+    await expect(contractPlatformTreasury.connect(backend).setFoundationAddress(newFoundation.address))
       .to.emit(contractPlatformTreasury, "FoundationWalletUpdated")
       .withArgs(newFoundation.address);
-  });
-
-  it("Should allow treasury contract to switch to the next round", async function () {
-    await reDeploy();
-    // send some eth to the contractPlatformTreasury and impersonate it
-    await helpers.setBalance(contractPlatformTreasury.address, hre.ethers.utils.parseEther("1"));
-    const signerTreasuryContract = await ethers.getImpersonatedSigner(contractPlatformTreasury.address);
-    // get the current distribution round
-    const currentDistributionRound = await contractSupervision.distributionRound();
-    expect(currentDistributionRound).to.equal(0);
-    // call the next round from contractSupervision
-    const nextDistributionRound = currentDistributionRound + 1;
-    await expect(contractSupervision.connect(signerTreasuryContract).nextRound())
-      .to.emit(contractSupervision, "NextRound")
-      .withArgs(nextDistributionRound);
-  });
-
-  it("Should treasury contract fail to switch to the next round when paused", async function () {
-    await reDeploy();
-    // send some eth to the contractPlatformTreasury and impersonate it
-    await helpers.setBalance(contractPlatformTreasury.address, hre.ethers.utils.parseEther("1"));
-    const signerTreasuryContract = await ethers.getImpersonatedSigner(contractPlatformTreasury.address);
-    // get the current distribution round
-    const currentDistributionRound = await contractSupervision.distributionRound();
-    expect(currentDistributionRound).to.equal(0);
-    // call the next round from contractSupervision
-    const nextDistributionRound = currentDistributionRound + 1;
-    await expect(contractSupervision.pause());
-    await expect(contractSupervision.connect(signerTreasuryContract).nextRound()).to.revertedWith("Pausable: paused");
   });
 
   it("Should allow governance to withdraw funds from the treasury after a content purchase", async function () {
@@ -662,24 +664,34 @@ describe("Platform Treasury General", function () {
 
   it("Should allow foundation to withdraw funds from the treasury after a content purchase", async function () {
     await reDeploy();
+    // KYC content creator and content buyer
+    await contractRoleManager.setKYC(contentCreator.address, true);
+    await contractRoleManager.setKYC(contentBuyer1.address, true);
     // Create content
-    await _createContent(
-      contractRoleManager,
+    /// Create Voucher from redeem.js and use it for creating content
+    const partPricesArray = [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")];
+    const contentPriceSet = ethers.utils.parseEther("2");
+
+    // Create content voucher
+    const createContentVoucherSample = await createContentVoucher(
       contractUDAOContent,
-      contractSupervision,
       backend,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      contentCreator
+      contentCreator,
+      contentPriceSet,
+      partPricesArray,
+      (redeemType = 1),
+      (validationScore = 1)
     );
+    // Create content with voucher
+    await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample))
+      .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
+      .withArgs("0x0000000000000000000000000000000000000000", contentCreator.address, 0);
+
     // Make a content purchase to gather funds for governance
     await makeContentPurchase(contractPlatformTreasury, contentBuyer1, contractRoleManager, contractUDAO);
 
     // set foundation wallet address
-    await expect(contractPlatformTreasury.connect(backend).setFoundationWalletAddress(foundation.address))
+    await expect(contractPlatformTreasury.connect(backend).setFoundationAddress(foundation.address))
       .to.emit(contractPlatformTreasury, "FoundationWalletUpdated")
       .withArgs(foundation.address);
 
@@ -695,7 +707,7 @@ describe("Platform Treasury General", function () {
     /// Get the current foundation balance
     const currentFoundationBalance = await contractUDAO.balanceOf(foundation.address);
     /// Get the content price of token Id 0 from UDAOC (first 0 is token ID, second 0 is full price of content)
-    const contentPrice = await contractUDAOContent.contentPrice(0, 0);
+    const contentPrice = await contractUDAOContent.getContentPartPrice(0, 0);
     /// Multiply the content price with the current foundation cut and divide by 100000 to get the expected foundation balance
     const expectedFoundationBalanceBeforePercentage = contentPrice.mul(currentFoundationCut);
     const expectedFoundationBalance = expectedFoundationBalanceBeforePercentage.div(100000);
@@ -706,26 +718,38 @@ describe("Platform Treasury General", function () {
 
   it("Should allow foundation to withdraw funds from the treasury after multiple content purchases", async function () {
     await reDeploy();
+    // KYC content creator and content buyers
+    await contractRoleManager.setKYC(contentCreator.address, true);
+    await contractRoleManager.setKYC(contentBuyer1.address, true);
+    await contractRoleManager.setKYC(contentBuyer2.address, true);
+    await contractRoleManager.setKYC(contentBuyer3.address, true);
     // Create content
-    await _createContent(
-      contractRoleManager,
+    /// Create Voucher from redeem.js and use it for creating content
+    const partPricesArray = [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")];
+    const contentPriceSet = ethers.utils.parseEther("2");
+
+    // Create content voucher
+    const createContentVoucherSample = await createContentVoucher(
       contractUDAOContent,
-      contractSupervision,
       backend,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      contentCreator
+      contentCreator,
+      contentPriceSet,
+      partPricesArray,
+      (redeemType = 1),
+      (validationScore = 1)
     );
+    // Create content with voucher
+    await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample))
+      .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
+      .withArgs("0x0000000000000000000000000000000000000000", contentCreator.address, 0);
+
     // Make a content purchase to gather funds for governance
     await makeContentPurchase(contractPlatformTreasury, contentBuyer1, contractRoleManager, contractUDAO);
     await makeContentPurchase(contractPlatformTreasury, contentBuyer2, contractRoleManager, contractUDAO);
     await makeContentPurchase(contractPlatformTreasury, contentBuyer3, contractRoleManager, contractUDAO);
 
     // set foundation wallet address
-    await expect(contractPlatformTreasury.connect(backend).setFoundationWalletAddress(foundation.address))
+    await expect(contractPlatformTreasury.connect(backend).setFoundationAddress(foundation.address))
       .to.emit(contractPlatformTreasury, "FoundationWalletUpdated")
       .withArgs(foundation.address);
 
@@ -742,7 +766,7 @@ describe("Platform Treasury General", function () {
     /// Get the current foundation balance
     const currentFoundationBalance = await contractUDAO.balanceOf(foundation.address);
     /// Get the content price of token Id 0 from UDAOC (first 0 is token ID, second 0 is full price of content)
-    const contentPrice = await contractUDAOContent.contentPrice(0, 0);
+    const contentPrice = await contractUDAOContent.getContentPartPrice(0, 0);
     /// Multiply content price with 3 since 3 content purchases were made
     const contentPriceTimesThree = contentPrice.mul(3);
     /// Multiply the content price with the current foundation cut and divide by 100000 to get the expected foundation balance
@@ -757,7 +781,7 @@ describe("Platform Treasury General", function () {
     await reDeploy();
     if (TEST_VERSION == 1) {
       this.skip();
-    } 
+    }
     // Create content
     await _createContent(
       contractRoleManager,
@@ -855,7 +879,7 @@ describe("Platform Treasury General", function () {
 
   it("Should allow validator to withdraw funds from the treasury after multiple content purchases", async function () {
     await reDeploy();
-    if(TEST_VERSION == 1) {
+    if (TEST_VERSION == 1) {
       this.skip();
     }
     // Create content
@@ -959,7 +983,7 @@ describe("Platform Treasury General", function () {
 
   it("Should allow jurors to withdraw funds from the treasury after a dispute is resolved", async function () {
     await reDeploy();
-    if(TEST_VERSION == 1) {
+    if (TEST_VERSION == 1) {
       this.skip();
     }
     /// Set KYC
@@ -1075,19 +1099,30 @@ describe("Platform Treasury General", function () {
 
   it("Should allow instructers to withdraw their earnings", async function () {
     await reDeploy();
+    // KYC content creator and content buyers
+    await contractRoleManager.setKYC(contentCreator.address, true);
+    await contractRoleManager.setKYC(contentBuyer1.address, true);
+    await contractRoleManager.setKYC(contentBuyer2.address, true);
+    await contractRoleManager.setKYC(contentBuyer3.address, true);
     // Create content
-    await _createContent(
-      contractRoleManager,
+    /// Create Voucher from redeem.js and use it for creating content
+    const partPricesArray = [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")];
+    const contentPriceSet = ethers.utils.parseEther("2");
+
+    // Create content voucher
+    const createContentVoucherSample = await createContentVoucher(
       contractUDAOContent,
-      contractSupervision,
       backend,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      contentCreator
+      contentCreator,
+      contentPriceSet,
+      partPricesArray,
+      (redeemType = 1),
+      (validationScore = 1)
     );
+    // Create content with voucher
+    await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample))
+      .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
+      .withArgs("0x0000000000000000000000000000000000000000", contentCreator.address, 0);
     // Make a content purchase
     await makeContentPurchase(contractPlatformTreasury, contentBuyer1, contractRoleManager, contractUDAO);
 
@@ -1106,7 +1141,7 @@ describe("Platform Treasury General", function () {
     await expect(instructerBalanceAfter).to.not.equal(0);
 
     /// @dev Calculate how much the instructer should receive
-    const contentPrice = await contractUDAOContent.contentPrice(0, 0);
+    const contentPrice = await contractUDAOContent.getContentPartPrice(0, 0);
     // Calculate the foundation cut
     const currentFoundationCut = await contractPlatformTreasury.contentFoundCut();
     const expectedFoundationBalanceBeforePercentage = contentPrice.mul(currentFoundationCut);
@@ -1116,7 +1151,7 @@ describe("Platform Treasury General", function () {
     const expectedGovernanceTreasuryBalanceBeforePercentage = contentPrice.mul(currentGovernanceTreasuryCut);
     const expectedGovernanceTreasuryBalance = expectedGovernanceTreasuryBalanceBeforePercentage.div(100000);
     // Calculate the validator cut
-    const validatorCut= await contractPlatformTreasury.contentValidCut();
+    const validatorCut = await contractPlatformTreasury.contentValidCut();
     const validatorBalance = contentPrice.mul(validatorCut).div(100000);
     // Calculate the juror cut
     const jurorCut = await contractPlatformTreasury.contentJurorCut();
@@ -1131,242 +1166,8 @@ describe("Platform Treasury General", function () {
     );
   });
 
-  it("Should allow instructers to withdraw their rewards after coaching is done", async function () {
-    await reDeploy();
-
-    /// Create content
-    await _createContent(
-      contractRoleManager,
-      contractUDAOContent,
-      contractSupervision,
-      backend,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      contentCreator
-    );
-    /// Make coaching purchase and finalize it
-    // Set KYC
-    await contractRoleManager.setKYC(contentBuyer1.address, true);
-    // Send some UDAO to contentBuyer1
-    await contractUDAO.transfer(contentBuyer1.address, ethers.utils.parseEther("100.0"));
-    // Content buyer needs to give approval to the platformtreasury
-    await contractUDAO
-      .connect(contentBuyer1)
-      .approve(contractPlatformTreasury.address, ethers.utils.parseEther("999999999999.0"));
-    // Create CoachingVoucher to be able to buy coaching
-    const lazyCoaching = new LazyCoaching({
-      contract: contractVoucherVerifier,
-      signer: backend,
-    });
-    const coachingPrice = ethers.utils.parseEther("1.0");
-    /// Get the current block timestamp
-    const currentBlockTimestamp = (await hre.ethers.provider.getBlock()).timestamp;
-    /// Coaching date is 3 days from now
-    const coachingDate = currentBlockTimestamp + 3 * 24 * 60 * 60;
-    const role_voucher = await lazyCoaching.createVoucher(contentCreator.address, coachingPrice, coachingDate, contentBuyer1.address);
-    // Buy coaching
-    const purchaseTx = await contractPlatformTreasury.connect(contentBuyer1).buyCoaching(role_voucher);
-    const queueTxReceipt = await purchaseTx.wait();
-    const queueTxEvent = queueTxReceipt.events.find((e) => e.event == "CoachingBought");
-    const coachingSaleID = queueTxEvent.args[0];
-    // Get coaching struct
-    const coachingStruct = await contractPlatformTreasury.coachSales(coachingSaleID);
-    // Check if returned learner address is the same as the buyer address
-    expect(coachingStruct.contentReceiver).to.equal(contentBuyer1.address);
-
-    /// @dev Withdraw instructer rewards and check
-    // Get the instructer balance before withdrawal
-    const instructerBalanceBefore = await contractUDAO.balanceOf(contentCreator.address);
-    // Expect that the instructer balance is 0 before withdrawal
-    await expect(instructerBalanceBefore).to.equal(0);
-    const refundWindow = 14
-    /// @dev Skip refundWindow days to allow foundation to withdraw funds
-    const numBlocksToMine = Math.ceil((refundWindow * 24 * 60 * 60) / 2);
-    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine.toString(16)}`, "0x2"]);
-    // Instructer should call withdrawInstructor from platformtreasury contract
-    await contractPlatformTreasury.connect(contentCreator).withdrawInstructor();
-    // Get the instructer balance after withdrawal
-    const instructerBalanceAfter = await contractUDAO.balanceOf(contentCreator.address);
-    // Get cuts from contract
-    const currentFoundationCut = await contractPlatformTreasury.coachFoundCut();
-    const currentGovernanceTreasuryCut = await contractPlatformTreasury.coachGoverCut();
-    const validatorCut = await contractPlatformTreasury.coachValidCut();
-    const jurorCut = await contractPlatformTreasury.coachJurorCut();
-    // Substract the cuts from coachingPrice
-    const coachingPriceMinusCuts = coachingPrice
-      .sub(coachingPrice.mul(currentFoundationCut).div(100000))
-      .sub(coachingPrice.mul(currentGovernanceTreasuryCut).div(100000))
-      .sub(coachingPrice.mul(validatorCut).div(100000))
-      .sub(coachingPrice.mul(jurorCut).div(100000));
-    // Expect that the instructer balance is equal to coachingPrice
-    await expect(instructerBalanceAfter).to.equal(coachingPriceMinusCuts);
-  });
-
-  it("Should allow instructers to withdraw their rewards after multiple coachings are done", async function () {
-    await reDeploy();
-    /// Create content
-    await _createContent(
-      contractRoleManager,
-      contractUDAOContent,
-      contractSupervision,
-      backend,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      contentCreator
-    );
-    const coachingPrice = ethers.utils.parseEther("1.0");
-    /// Make multiple coaching purchases and finalize all
-    const coachingId1 = await makeCoachingPurchase(
-      contractRoleManager,
-      contractUDAO,
-      contractPlatformTreasury,
-      contentBuyer1,
-      contentCreator,
-      coachingPrice
-    );
-    const coachingId2 = await makeCoachingPurchase(
-      contractRoleManager,
-      contractUDAO,
-      contractPlatformTreasury,
-      contentBuyer2,
-      contentCreator,
-      coachingPrice
-    );
-    const coachingId3 = await makeCoachingPurchase(
-      contractRoleManager,
-      contractUDAO,
-      contractPlatformTreasury,
-      contentBuyer3,
-      contentCreator,
-      coachingPrice
-    );
-    
-    /// @dev Withdraw instructer rewards and check
-    // Get the instructer balance before withdrawal
-    const instructerBalanceBefore = await contractUDAO.balanceOf(contentCreator.address);
-    // Expect that the instructer balance is 0 before withdrawal
-    await expect(instructerBalanceBefore).to.equal(0);
-    const refundWindow = 14
-    /// @dev Skip refundWindow days to allow foundation to withdraw funds
-    const numBlocksToMine = Math.ceil((refundWindow * 24 * 60 * 60) / 2);
-    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine.toString(16)}`, "0x2"]);
-
-    // Instructer should call withdrawInstructor from platformtreasury contract
-    await contractPlatformTreasury.connect(contentCreator).withdrawInstructor();
-    // Get the instructer balance after withdrawal
-    const instructerBalanceAfter = await contractUDAO.balanceOf(contentCreator.address);
-    // Get cuts from contract
-    const currentFoundationCut = await contractPlatformTreasury.coachFoundCut();
-    const currentGovernanceTreasuryCut = await contractPlatformTreasury.coachGoverCut();
-    const validatorCut = await contractPlatformTreasury.coachValidCut();
-    const jurorCut = await contractPlatformTreasury.coachJurorCut();
-    // Substract the cuts from coachingPrice
-    const coachingPriceMinusCuts = coachingPrice
-      .sub(coachingPrice.mul(currentFoundationCut).div(100000))
-      .sub(coachingPrice.mul(currentGovernanceTreasuryCut).div(100000))
-      .sub(coachingPrice.mul(validatorCut).div(100000))
-      .sub(coachingPrice.mul(jurorCut).div(100000));
-    // Expect that the instructer balance is equal to coachingPrice
-    await expect(instructerBalanceAfter).to.equal(coachingPriceMinusCuts.mul(3));
-  });
-
-  it("Should emit event InstructorWithdrawn with debt when instructer withdraws rewards with debt", async function () {
-    await reDeploy();
-    /// Create content
-    await _createContent(
-      contractRoleManager,
-      contractUDAOContent,
-      contractSupervision,
-      backend,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      contentCreator
-    );
-    const coachingPrice = ethers.utils.parseEther("1.0");
-    /// Make coaching purchase
-    const coachingId1 = await makeCoachingPurchase(
-      contractRoleManager,
-      contractUDAO,
-      contractPlatformTreasury,
-      contentBuyer1,
-      contentCreator,
-      coachingPrice
-    );
-    /// Get coachingPaymentAmount from coachingStructs
-    const coachingPaymentAmountTx = await contractPlatformTreasury.coachSales(coachingId1);
-    const coachingInstrShare = coachingPaymentAmountTx.instrShare;
-    const coachingTotalCut = coachingPaymentAmountTx.totalCut;
-    // Add coachingInstrShare and coachingTotalCut to get coachingPaymentAmount
-    const coachingPaymentAmount = coachingInstrShare.add(coachingTotalCut);
-
-    /// Refund coaching purchase
-    await contractPlatformTreasury.connect(contentBuyer1).refundCoachingByInstructorOrLearner(coachingId1);
-    /// Get instructorDebt
-    //const instructorDebt = await contractPlatformTreasury.instructorDebt(contentCreator.address);
-    /// Make another coaching purchase and finalize it
-    const coachingId2 = await makeCoachingPurchase(
-      contractRoleManager,
-      contractUDAO,
-      contractPlatformTreasury,
-      contentBuyer2,
-      contentCreator,
-      coachingPrice
-    );
-    const coachingId3 = await makeCoachingPurchase(
-      contractRoleManager,
-      contractUDAO,
-      contractPlatformTreasury,
-      contentBuyer3,
-      contentCreator,
-      coachingPrice
-    );
-
-    /// Get instructer balance before withdrawal
-    const instructerBalanceBefore = await contractUDAO.balanceOf(contentCreator.address);
-    const refundWindow = 14
-    /// @dev Skip refundWindow days to allow foundation to withdraw funds
-    const numBlocksToMine = Math.ceil((refundWindow * 24 * 60 * 60) / 2);
-    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine.toString(16)}`, "0x2"]);
-    /// Instructer should call withdrawInstructor from platformtreasury contract
-    const withdrawInstructorTx = await contractPlatformTreasury.connect(contentCreator).withdrawInstructor();
-    /// Get the InstructorWithdrawn event and check the debt amount
-    const withdrawInstructorTxReceipt = await withdrawInstructorTx.wait();
-    const withdrawInstructorTxEvent = withdrawInstructorTxReceipt.events.find(
-      (e) => e.event == "InstructorWithdrawn"
-    );
-    const debtAmount = withdrawInstructorTxEvent.args[2];
-    /// Expect that the debt amount from event is equal to 1 coachingPaymentAmount
-    // Get cuts
-    const currentFoundationCut = await contractPlatformTreasury.coachFoundCut();
-    const currentGovernanceTreasuryCut = await contractPlatformTreasury.coachGoverCut();
-    const validatorCut = await contractPlatformTreasury.coachValidCut();
-    const jurorCut = await contractPlatformTreasury.coachJurorCut();
-    // Substract the cuts from coachingPaymentAmount
-    const coachingPaymentAmountMinusCuts = coachingPaymentAmount
-      .sub(coachingPaymentAmount.mul(currentFoundationCut).div(100000))
-      .sub(coachingPaymentAmount.mul(currentGovernanceTreasuryCut).div(100000))
-      .sub(coachingPaymentAmount.mul(validatorCut).div(100000))
-      .sub(coachingPaymentAmount.mul(jurorCut).div(100000));
-    await expect(debtAmount).to.equal(coachingPaymentAmountMinusCuts);
-    /// Get instructer balance after withdrawal
-    const instructerBalanceAfter = await contractUDAO.balanceOf(contentCreator.address);
-    /// Expect that the instructer balance is equal to instructerBalanceBefore plus 2 coaching purchases minus instructorDebt
-    await expect(instructerBalanceAfter).to.equal(
-      instructerBalanceBefore.add(coachingPaymentAmountMinusCuts.mul(3)).sub(coachingPaymentAmountMinusCuts)
-    );
-  });
-
   it("Should allow Banned-jurors to withdraw funds from the treasury after a dispute is resolved", async function () {
-    if(TEST_VERSION == 1) {
+    if (TEST_VERSION == 1) {
       this.skip();
     }
     await reDeploy();
@@ -1487,7 +1288,7 @@ describe("Platform Treasury General", function () {
   });
 
   it("Should allow Banned-validator to withdraw funds from the treasury after a content purchase", async function () {
-    if(TEST_VERSION == 1) {
+    if (TEST_VERSION == 1) {
       this.skip();
     }
     await reDeploy();
@@ -1594,7 +1395,7 @@ describe("Platform Treasury General", function () {
   });
 
   it("Should allow Banned-validator to withdraw funds from the treasury after multiple content purchases", async function () {
-    if(TEST_VERSION == 1) {
+    if (TEST_VERSION == 1) {
       this.skip();
     }
     await reDeploy();
@@ -1705,7 +1506,7 @@ describe("Platform Treasury General", function () {
   });
 
   it("Should allow governance to withdraw funds from the treasury after a content purchase while governance member banned", async function () {
-    if(TEST_VERSION == 1) {
+    if (TEST_VERSION == 1) {
       this.skip();
     }
     await reDeploy();
@@ -1845,7 +1646,7 @@ describe("Platform Treasury General", function () {
   });
 
   it("Should allow governance to withdraw funds from the treasury after multiple content purchases while governance member banned", async function () {
-    if(TEST_VERSION == 1) {
+    if (TEST_VERSION == 1) {
       this.skip();
     }
     await reDeploy();
@@ -1991,7 +1792,7 @@ describe("Platform Treasury General", function () {
   });
 
   it("Should allow Banned-instructers to withdraw their rewards", async function () {
-    if(TEST_VERSION == 1) {
+    if (TEST_VERSION == 1) {
       this.skip();
     }
     await reDeploy();
@@ -2049,231 +1850,6 @@ describe("Platform Treasury General", function () {
         .sub(expectedGovernanceTreasuryBalance)
         .sub(validatorBalanceForRound)
         .sub(jurorBalanceForRound)
-    );
-  });
-
-  it("Should allow Banned-instructers to withdraw their rewards after coaching is done", async function () {
-    await reDeploy();
-    // Create content
-    await _createContent(
-      contractRoleManager,
-      contractUDAOContent,
-      contractSupervision,
-      backend,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      contentCreator
-    );
-    // Make a content purchase
-    await makeContentPurchase(contractPlatformTreasury, contentBuyer1, contractRoleManager, contractUDAO);
-
-    // Get the instructer balance before withdrawal
-    const instructerBalanceBefore = await contractUDAO.balanceOf(contentCreator.address);
-    // Expect that the instructer balance is 0 before withdrawal
-    await expect(instructerBalanceBefore).to.equal(0);
-    /// @dev Skip 14 days to allow instructor to withdraw funds
-    const numBlocksToMine = Math.ceil((14 * 24 * 60 * 60) / 2);
-    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine.toString(16)}`, "0x2"]);
-    // Ban the Instructor
-    await contractRoleManager.setBan(contentCreator.address, true);
-    // Instructer should call withdrawInstructor from platformtreasury contract
-    await contractPlatformTreasury.connect(contentCreator).withdrawInstructor();
-    // Get the instructer balance after withdrawal
-    const instructerBalanceAfter = await contractUDAO.balanceOf(contentCreator.address);
-    // Expect that the instructer balance is not 0 after withdrawal
-    await expect(instructerBalanceAfter).to.not.equal(0);
-
-    /// @dev Calculate how much the instructer should receive
-    const contentPrice = await contractUDAOContent.contentPrice(0, 0);
-    // Calculate the foundation cut
-    const currentFoundationCut = await contractPlatformTreasury.contentFoundCut();
-    const expectedFoundationBalanceBeforePercentage = contentPrice.mul(currentFoundationCut);
-    const expectedFoundationBalance = expectedFoundationBalanceBeforePercentage.div(100000);
-    // Calculate the governance cut
-    const currentGovernanceTreasuryCut = await contractPlatformTreasury.contentGoverCut();
-    const expectedGovernanceTreasuryBalanceBeforePercentage = contentPrice.mul(currentGovernanceTreasuryCut);
-    const expectedGovernanceTreasuryBalance = expectedGovernanceTreasuryBalanceBeforePercentage.div(100000);
-    // Calculate the validator cut
-    const validatorCut= await contractPlatformTreasury.contentValidCut();
-    const validatorBalance = contentPrice.mul(validatorCut).div(100000);
-    // Calculate the juror cut
-    const jurorCut = await contractPlatformTreasury.contentJurorCut();
-    const jurorBalance = contentPrice.mul(jurorCut).div(100000);
-    // Expect instructerBalance to be equal to priceToPay minus the sum of all cuts
-    await expect(instructerBalanceAfter).to.equal(
-      contentPrice
-        .sub(expectedFoundationBalance)
-        .sub(expectedGovernanceTreasuryBalance)
-        .sub(validatorBalance)
-        .sub(jurorBalance)
-    );
-  });
-
-  it("Should allow Banned-instructers to withdraw their rewards after multiple coachings are done", async function () {
-    await reDeploy();
-    /// Create content
-    await _createContent(
-      contractRoleManager,
-      contractUDAOContent,
-      contractSupervision,
-      backend,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      contentCreator
-    );
-    const coachingPrice = ethers.utils.parseEther("1.0");
-    /// Make multiple coaching purchases and finalize all
-    const coachingId1 = await makeCoachingPurchase(
-      contractRoleManager,
-      contractUDAO,
-      contractPlatformTreasury,
-      contentBuyer1,
-      contentCreator,
-      coachingPrice
-    );
-    const coachingId2 = await makeCoachingPurchase(
-      contractRoleManager,
-      contractUDAO,
-      contractPlatformTreasury,
-      contentBuyer2,
-      contentCreator,
-      coachingPrice
-    );
-    const coachingId3 = await makeCoachingPurchase(
-      contractRoleManager,
-      contractUDAO,
-      contractPlatformTreasury,
-      contentBuyer3,
-      contentCreator,
-      coachingPrice
-    );
-    
-    /// @dev Withdraw instructer rewards and check
-    // Get the instructer balance before withdrawal
-    const instructerBalanceBefore = await contractUDAO.balanceOf(contentCreator.address);
-    // Expect that the instructer balance is 0 before withdrawal
-    await expect(instructerBalanceBefore).to.equal(0);
-    const refundWindow = 14
-    /// @dev Skip refundWindow days to allow foundation to withdraw funds
-    const numBlocksToMine = Math.ceil((refundWindow * 24 * 60 * 60) / 2);
-    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine.toString(16)}`, "0x2"]);
-    
-    // Ban the Instructor
-    await contractRoleManager.setBan(contentCreator.address, true);
-    // Instructer should call withdrawInstructor from platformtreasury contract
-    await contractPlatformTreasury.connect(contentCreator).withdrawInstructor();
-    // Get the instructer balance after withdrawal
-    const instructerBalanceAfter = await contractUDAO.balanceOf(contentCreator.address);
-    // Get cuts from contract
-    const currentFoundationCut = await contractPlatformTreasury.coachFoundCut();
-    const currentGovernanceTreasuryCut = await contractPlatformTreasury.coachGoverCut();
-    const validatorCut = await contractPlatformTreasury.coachValidCut();
-    const jurorCut = await contractPlatformTreasury.coachJurorCut();
-    // Substract the cuts from coachingPrice
-    const coachingPriceMinusCuts = coachingPrice
-      .sub(coachingPrice.mul(currentFoundationCut).div(100000))
-      .sub(coachingPrice.mul(currentGovernanceTreasuryCut).div(100000))
-      .sub(coachingPrice.mul(validatorCut).div(100000))
-      .sub(coachingPrice.mul(jurorCut).div(100000));
-    // Expect that the instructer balance is equal to coachingPrice
-    await expect(instructerBalanceAfter).to.equal(coachingPriceMinusCuts.mul(3));
-  });
-
-  it("Should return InstructorWithdrawnWithDebt event when instructer withdraws rewards with debt while instructer banned", async function () {
-    await reDeploy();
-    /// Create content
-    await _createContent(
-      contractRoleManager,
-      contractUDAOContent,
-      contractSupervision,
-      backend,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      contentCreator
-    );
-    const coachingPrice = ethers.utils.parseEther("1.0");
-    /// Make coaching purchase
-    const coachingId1 = await makeCoachingPurchase(
-      contractRoleManager,
-      contractUDAO,
-      contractPlatformTreasury,
-      contentBuyer1,
-      contentCreator,
-      coachingPrice
-    );
-    /// Get coachingPaymentAmount from coachingStructs
-    const coachingPaymentAmountTx = await contractPlatformTreasury.coachSales(coachingId1);
-    const coachingInstrShare = coachingPaymentAmountTx.instrShare;
-    const coachingTotalCut = coachingPaymentAmountTx.totalCut;
-    // Add coachingInstrShare and coachingTotalCut to get coachingPaymentAmount
-    const coachingPaymentAmount = coachingInstrShare.add(coachingTotalCut);
-
-    /// Refund coaching purchase
-    await contractPlatformTreasury.connect(contentBuyer1).refundCoachingByInstructorOrLearner(coachingId1);
-
-    /// Get instructorDebt
-    //const instructorDebt = await contractPlatformTreasury.instructorDebt(contentCreator.address);
-    /// Make another coaching purchase and finalize it
-    const coachingId2 = await makeCoachingPurchase(
-      contractRoleManager,
-      contractUDAO,
-      contractPlatformTreasury,
-      contentBuyer2,
-      contentCreator,
-      coachingPrice
-    );
-    const coachingId3 = await makeCoachingPurchase(
-      contractRoleManager,
-      contractUDAO,
-      contractPlatformTreasury,
-      contentBuyer3,
-      contentCreator,
-      coachingPrice
-    );
-
-    /// Get instructer balance before withdrawal
-    const instructerBalanceBefore = await contractUDAO.balanceOf(contentCreator.address);
-    const refundWindow = 14
-    /// @dev Skip refundWindow days to allow foundation to withdraw funds
-    const numBlocksToMine = Math.ceil((refundWindow * 24 * 60 * 60) / 2);
-    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine.toString(16)}`, "0x2"]);
-    /// Ban the Instructor
-    await contractRoleManager.setBan(contentCreator.address, true);
-    /// Instructer should call withdrawInstructor from platformtreasury contract
-    const withdrawInstructorTx = await contractPlatformTreasury.connect(contentCreator).withdrawInstructor();
-    /// Get the InstructorWithdrawn event and check the debt amount
-    const withdrawInstructorTxReceipt = await withdrawInstructorTx.wait();
-    const withdrawInstructorTxEvent = withdrawInstructorTxReceipt.events.find(
-      (e) => e.event == "InstructorWithdrawn"
-    );
-    const debtAmount = withdrawInstructorTxEvent.args[2];
-    /// Expect that the debt amount from event is equal to 1 coachingPaymentAmount
-    // Get cuts
-    const currentFoundationCut = await contractPlatformTreasury.coachFoundCut();
-    const currentGovernanceTreasuryCut = await contractPlatformTreasury.coachGoverCut();
-    const validatorCut = await contractPlatformTreasury.coachValidCut();
-    const jurorCut = await contractPlatformTreasury.coachJurorCut();
-    // Substract the cuts from coachingPaymentAmount
-    const coachingPaymentAmountMinusCuts = coachingPaymentAmount
-      .sub(coachingPaymentAmount.mul(currentFoundationCut).div(100000))
-      .sub(coachingPaymentAmount.mul(currentGovernanceTreasuryCut).div(100000))
-      .sub(coachingPaymentAmount.mul(validatorCut).div(100000))
-      .sub(coachingPaymentAmount.mul(jurorCut).div(100000));
-    await expect(debtAmount).to.equal(coachingPaymentAmountMinusCuts);
-    /// Get instructer balance after withdrawal
-    const instructerBalanceAfter = await contractUDAO.balanceOf(contentCreator.address);
-    /// Expect that the instructer balance is equal to instructerBalanceBefore plus 2 coaching purchases minus instructorDebt
-    await expect(instructerBalanceAfter).to.equal(
-      instructerBalanceBefore.add(coachingPaymentAmountMinusCuts.mul(3)).sub(coachingPaymentAmountMinusCuts)
     );
   });
 });

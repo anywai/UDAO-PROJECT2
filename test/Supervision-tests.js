@@ -1703,7 +1703,16 @@ describe("Supervision Contract", function () {
     const currentIrmAddress = await contractContractManager.RmAddress();
     expect(currentIrmAddress).to.equal(dummyAddress);
     // Update addresses
-    await expect(contractSupervision.connect(backend).updateAddresses())
+    await expect(
+      contractSupervision
+        .connect(backend)
+        .updateAddresses(
+          contractRoleManager.address,
+          contractUDAOContent.address,
+          contractPlatformTreasury.address,
+          contractUDAOStaker.address
+        )
+    )
       .to.emit(contractSupervision, "AddressesUpdated")
       .withArgs(dummyAddress, contractPlatformTreasury.address);
   });
