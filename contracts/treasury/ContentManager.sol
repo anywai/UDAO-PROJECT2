@@ -68,6 +68,11 @@ abstract contract ContentManager is BasePlatform {
     /// @notice user address => content token Id => is full content purchase
     mapping(address => mapping(uint256 => bool)) isFullyPurchased;
 
+    /// @notice user address => (content id => content owned/not owned by the user)
+    mapping(address => mapping(uint => bool)) isContentBought;
+    /// @notice user address => content token Ids
+    mapping(address => uint256[]) ownedContents;
+
     /// @notice Allows users to buy coaching with a voucher created by instructor
     /// @param voucher buy coaching voucher
     function buyCoaching(
@@ -166,13 +171,13 @@ abstract contract ContentManager is BasePlatform {
         /// @dev Determine the number of items in the cart
         uint256 voucherIdsLength = vouchers.length;
         /// @dev Determine the RECEIVER of each item in the cart
-        address[] memory contentReceiver;
+        address[] memory contentReceiver = new address[](voucherIdsLength);
         /// @dev Used for recording the price to pay for each item in the cart
-        uint256[] memory priceToPay;
+        uint256[] memory priceToPay = new uint[](voucherIdsLength);
         /// @dev Used for recording the all roles cut for each item in the cart
-        uint256[] memory totalCut;
+        uint256[] memory totalCut = new uint[](voucherIdsLength);
         /// @dev Used for recording the instructor share for each item in the cart
-        uint256[] memory instrShare;
+        uint256[] memory instrShare = new uint[](voucherIdsLength);
         /// @dev Used for recording the total roles cut for all items in the cart
         uint256 totalRequiredUdao;
         /// @dev Boolean flag to determine if the purchase is made by a backend role
@@ -181,72 +186,37 @@ abstract contract ContentManager is BasePlatform {
 
         if (hasRole(BACKEND_ROLE, msg.sender)) {
             isFiatPurchase = true;
+        } else {
+            require(isKYCed(msg.sender, 20), "You are not KYCed");
+            require(isNotBanned(msg.sender, 20), "You are banned");
         }
 
-        require(isNotBanned(msg.sender, 20), "You are banned");
-        require(isKYCed(msg.sender, 20), "You are not KYCed");
         /// @dev Loop through the cart
         for (uint256 i; i < voucherIdsLength; i++) {
-            require(
-                udaoc.isSellable(vouchers[i].tokenId) == true,
-                "Not sellable"
-            );
             // make sure signature is valid and get the address of the signer
             voucherVerifier.verifyDiscountVoucher(vouchers[i]);
-
             require(
                 msg.sender == vouchers[i].redeemer,
                 "You are not redeemer."
             );
 
-            require(
-                isNotBanned(vouchers[i].redeemer, 28),
-                "Redeemer is banned"
-            );
-            require(
-                isNotBanned(vouchers[i].giftReceiver, 29),
-                "Gift receiver is banned"
-            );
-            require(isKYCed(vouchers[i].redeemer, 21), "Redeemer is not KYCed");
-            require(
-                isKYCed(vouchers[i].giftReceiver, 22),
-                "Gift receiver is not KYCed"
-            );
-
-            /// @dev Check the existance of content for each item in the cart
-            require(
-                udaoc.exists(vouchers[i].tokenId) == true,
-                "Content not exist!"
-            );
-            /// @dev Determine the RECEIVER of each item in cart, address(0) means RECEIVER is BUYER
-            if (vouchers[i].giftReceiver != address(0)) {
-                contentReceiver[i] = vouchers[i].giftReceiver;
-            } else {
-                require(
-                    !isFiatPurchase,
-                    "Fiat purchase requires a gift receiver!"
-                );
-                contentReceiver[i] = msg.sender;
-            }
-            /// @dev The RECEIVER cannot already own the content or parts which in the cart.
-            require(
-                _doReceiverHaveContentOrPart(
-                    vouchers[i].tokenId,
-                    vouchers[i].purchasedParts,
-                    contentReceiver[i]
-                ) == false,
-                "Content or part's is already bought"
-            );
-            /// @dev Calculate the BUYER's, how much will pay to each item
-            priceToPay[i] = calculatePriceToPay(
-                vouchers[i].tokenId,
-                vouchers[i].fullContentPurchase,
-                vouchers[i].purchasedParts,
+            (
+                priceToPay[i],
                 contentReceiver[i]
+            ) = _ifNotOwnedReturnPriceAndReceiver(
+                vouchers[i].tokenId,
+                vouchers[i].purchasedParts,
+                vouchers[i].giftReceiver
             );
+            priceToPay[i] = vouchers[i].priceToPay;
+
             totalCut[i] = calculateContentSaleTotalCut(priceToPay[i]);
 
             if (isFiatPurchase) {
+                require(
+                    contentReceiver[i] != msg.sender,
+                    "Fiat purchase requires a gift receiver!"
+                );
                 instrShare[i] = 0;
             } else {
                 instrShare[i] = priceToPay[i] - totalCut[i];
@@ -266,6 +236,7 @@ abstract contract ContentManager is BasePlatform {
             udao.allowance(msg.sender, address(this)) >= totalRequiredUdao,
             "Not enough allowance!"
         );
+
         cartSaleID.increment();
         for (uint256 i; i < voucherIdsLength; i++) {
             _buyContentwithUDAO(
@@ -290,6 +261,12 @@ abstract contract ContentManager is BasePlatform {
         uint256[][] calldata purchasedParts,
         address[] memory giftReceivers
     ) external whenNotPaused {
+        /// @dev The function arguments must have equal size
+        require(
+            tokenIds.length == purchasedParts.length &&
+                tokenIds.length == giftReceivers.length,
+            "Array lengths are not equal!"
+        );
         /// @dev Used for recording the price to pay for each item in the cart
         uint256[] memory priceToPay = new uint[](tokenIds.length);
         /// @dev Used for recording the all roles cut for each item in the cart
@@ -305,50 +282,21 @@ abstract contract ContentManager is BasePlatform {
 
         if (hasRole(BACKEND_ROLE, msg.sender)) {
             isFiatPurchase = true;
+        } else {
+            require(isKYCed(msg.sender, 23), "You are not KYCed");
+            require(isNotBanned(msg.sender, 30), "You are banned");
         }
-        /// @dev The function arguments must have equal size
-        require(
-            tokenIds.length == purchasedParts.length &&
-                tokenIds.length == giftReceivers.length,
-            "Array lengths are not equal!"
-        );
 
-        require(isKYCed(msg.sender, 23), "You are not KYCed");
-        require(isNotBanned(msg.sender, 30), "You are banned");
-
+        /// @dev Loop through the cart
         for (uint256 i; i < tokenIds.length; i++) {
-            require(udaoc.isSellable(tokenIds[i]) == true, "Not sellable");
-
-            /// @dev Check the existance of content for each item in the cart
-            require(udaoc.exists(tokenIds[i]) == true, "Content not exist!");
-            /// @dev Determine the RECEIVER of each item in cart, address(0) means RECEIVER is BUYER
-            if (giftReceivers[i] != address(0)) {
-                giftReceivers[i];
-            } else {
-                require(
-                    !isFiatPurchase,
-                    "Fiat purchase requires a gift receiver!"
-                );
-                giftReceivers[i] = msg.sender;
-            }
-
-            require(
-                isNotBanned(giftReceivers[i], 31),
-                "Gift receiver is banned"
-            );
-            require(
-                isKYCed(giftReceivers[i], 24),
-                "Gift receiver is not KYCed"
-            );
-
-            /// @dev The RECEIVER cannot already own the content or parts which in the cart.
-            require(
-                _doReceiverHaveContentOrPart(
-                    tokenIds[i],
-                    purchasedParts[i],
-                    giftReceivers[i]
-                ) == false,
-                "Content or part's is already bought"
+            // yorum
+            (
+                priceToPay[i],
+                giftReceivers[i]
+            ) = _ifNotOwnedReturnPriceAndReceiver(
+                tokenIds[i],
+                purchasedParts[i],
+                giftReceivers[i]
             );
 
             // Check if this is a full content purchase or not
@@ -358,19 +306,20 @@ abstract contract ContentManager is BasePlatform {
                 udaoc.getPartNumberOfContent(tokenIds[i])
             ) {
                 fullContentPurchases[i] = true;
+                if (priceToPay[i] > udaoc.getContentPrice(tokenIds[i])) {
+                    priceToPay[i] = udaoc.getContentPrice(tokenIds[i]);
+                }
             } else {
                 fullContentPurchases[i] = false;
             }
-            /// @dev Calculate the BUYER's, how much will pay to each item
-            priceToPay[i] = calculatePriceToPay(
-                tokenIds[i],
-                fullContentPurchases[i],
-                purchasedParts[i],
-                giftReceivers[i]
-            );
+
             totalCut[i] = calculateContentSaleTotalCut(priceToPay[i]);
 
             if (isFiatPurchase) {
+                require(
+                    giftReceivers[i] != msg.sender,
+                    "Fiat purchase requires a gift receiver!"
+                );
                 instrShare[i] = 0;
             } else {
                 instrShare[i] = priceToPay[i] - totalCut[i];
@@ -378,6 +327,7 @@ abstract contract ContentManager is BasePlatform {
 
             totalRequiredUdao += (totalCut[i] + instrShare[i]);
         }
+
         /// @dev The BUYER should have enough UDAO to pay for the cart
         require(
             udao.balanceOf(msg.sender) >= totalRequiredUdao,
@@ -389,6 +339,7 @@ abstract contract ContentManager is BasePlatform {
             udao.allowance(msg.sender, address(this)) >= totalRequiredUdao,
             "Not enough allowance!"
         );
+
         cartSaleID.increment();
         for (uint256 i; i < tokenIds.length; i++) {
             _buyContentwithUDAO(
@@ -401,7 +352,6 @@ abstract contract ContentManager is BasePlatform {
                 cartSaleID.current() - 1
             );
         }
-
         _transferPlatformCutstoGovernance();
     }
 
@@ -450,7 +400,16 @@ abstract contract ContentManager is BasePlatform {
             transactionFuIndex
         );
 
-        // Update owned contert or part
+        // Update owned content
+        if (isContentBought[contentReceiver][tokenId] == false) {
+            isContentBought[contentReceiver][tokenId] = true;
+            if (ownedContents[contentReceiver].length == 0) {
+                ownedContents[contentReceiver] = new uint[](0);
+            }
+            ownedContents[contentReceiver].push(tokenId);
+        }
+
+        // Update owned content part
         if (fullContentPurchase) {
             isPartBought[contentReceiver][tokenId][0] = true;
             ownedParts[contentReceiver][tokenId] = udaoc.getContentParts(
@@ -488,6 +447,81 @@ abstract contract ContentManager is BasePlatform {
         emit ContentBought(_cartSaleID, contentSaleID.current() - 1);
     }
 
+    function ifNotOwnedReturnPrice(
+        uint256[] calldata tokenIds,
+        uint256[][] calldata purchasedParts,
+        address[] calldata contentReceiver
+    ) external view returns (uint256) {
+        /// @dev The function arguments must have equal size
+        require(
+            tokenIds.length == purchasedParts.length &&
+                tokenIds.length == contentReceiver.length,
+            "Array lengths are not equal!"
+        );
+        uint partPrice;
+        uint totalPrice;
+        for (uint256 i; i < tokenIds.length; i++) {
+            (partPrice, ) = _ifNotOwnedReturnPriceAndReceiver(
+                tokenIds[i],
+                purchasedParts[i],
+                contentReceiver[i]
+            );
+            totalPrice += partPrice;
+        }
+        return totalPrice;
+    }
+
+    function _ifNotOwnedReturnPriceAndReceiver(
+        uint256 _tokenId,
+        uint256[] calldata _purchasedParts,
+        address _contentReceiver
+    ) internal view returns (uint256, address) {
+        /// @dev Determine the RECEIVER of each item in cart, address(0) means RECEIVER is BUYER
+        if (_contentReceiver == address(0)) {
+            _contentReceiver = msg.sender;
+        } else {
+            require(
+                isNotBanned(_contentReceiver, 29),
+                "Gift receiver is banned"
+            );
+            require(
+                isKYCed(_contentReceiver, 22),
+                "Gift receiver is not KYCed"
+            );
+        }
+
+        require(udaoc.exists(_tokenId) == true, "Content not exist!");
+        require(udaoc.isSellable(_tokenId) == true, "Not sellable");
+        require(
+            isFullyPurchased[_contentReceiver][_tokenId] == false,
+            "Content is already fully purchased!"
+        );
+        uint maxPart = udaoc.getPartNumberOfContent(_tokenId);
+        uint256 _priceToPay;
+
+        for (uint256 j; j < _purchasedParts.length; j++) {
+            require(_purchasedParts[j] < maxPart, "Part does not exist!");
+            if (j < _purchasedParts.length - 1) {
+                require(
+                    (_purchasedParts[j] < _purchasedParts[j + 1]),
+                    "Parts are not in order or duplicated!"
+                );
+            }
+            require(
+                isPartBought[_contentReceiver][_tokenId][_purchasedParts[j]] ==
+                    false,
+                "Part is already owned!"
+            );
+
+            _priceToPay += udaoc.getContentPartPrice(
+                _tokenId,
+                _purchasedParts[j]
+            );
+        }
+        return (_priceToPay, _contentReceiver);
+    }
+
+    /*
     /// @notice Checks does the receiver already own the content or content part
     /// @param tokenId The token ID of the content.
     /// @param purchasedParts An array representing the parts of the content purchased.
@@ -505,39 +539,6 @@ abstract contract ContentManager is BasePlatform {
         }
 
         return false;
-    }
-
-    /// @notice Calculates total amount to pay for a cart purchase
-    /// @param tokenIds An array of token IDs representing the contents in the cart.
-    /// @param fullContentPurchases An array indicating whether each purchase is for full content.
-    /// @param purchasedParts An array of arrays representing the content parts to be purchased.
-    function calculatePriceToPayInTotal(
-        uint256[] calldata tokenIds,
-        bool[] calldata fullContentPurchases,
-        uint256[][] calldata purchasedParts
-    ) external view returns (uint256) {
-        uint256 tokenIdsLength = tokenIds.length;
-        uint256 totalPriceToPayUdao;
-        for (uint256 i; i < tokenIdsLength; i++) {
-            // Calculate purchased parts (or full Content) total list price.
-            totalPriceToPayUdao += calculatePriceToPay(
-                tokenIds[i],
-                fullContentPurchases[i],
-                purchasedParts[i],
-                msg.sender
-            );
-        }
-        return (totalPriceToPayUdao);
-    }
-
-    /// @notice Returns the parts owned by buyer if buyer has bought any parts in the past
-    /// @param _buyer The address of the buyer.
-    /// @param _tokenId The token ID of the content.
-    function getOwnedParts(
-        address _buyer,
-        uint256 _tokenId
-    ) external view returns (uint256[] memory) {
-        return ownedParts[_buyer][_tokenId];
     }
 
     /// @notice Calculates price to pay for a content purchase
@@ -577,6 +578,40 @@ abstract contract ContentManager is BasePlatform {
             }
         }
         return _priceToPay;
+    }
+
+    /// @notice Calculates total amount to pay for a cart purchase
+    /// @param tokenIds An array of token IDs representing the contents in the cart.
+    /// @param fullContentPurchases An array indicating whether each purchase is for full content.
+    /// @param purchasedParts An array of arrays representing the content parts to be purchased.
+    function calculatePriceToPayInTotal(
+        uint256[] calldata tokenIds,
+        bool[] calldata fullContentPurchases,
+        uint256[][] calldata purchasedParts
+    ) external view returns (uint256) {
+        uint256 tokenIdsLength = tokenIds.length;
+        uint256 totalPriceToPayUdao;
+        for (uint256 i; i < tokenIdsLength; i++) {
+            // Calculate purchased parts (or full Content) total list price.
+            totalPriceToPayUdao += calculatePriceToPay(
+                tokenIds[i],
+                fullContentPurchases[i],
+                purchasedParts[i],
+                msg.sender
+            );
+        }
+        return (totalPriceToPayUdao);
+    }
+    */
+
+    /// @notice Returns the parts owned by buyer if buyer has bought any parts in the past
+    /// @param _buyer The address of the buyer.
+    /// @param _tokenId The token ID of the content.
+    function getOwnedParts(
+        address _buyer,
+        uint256 _tokenId
+    ) external view returns (uint256[] memory) {
+        return ownedParts[_buyer][_tokenId];
     }
 
     /// @notice Update content and coaching CutPools and handle locked payments during the refund window.
@@ -874,6 +909,7 @@ abstract contract ContentManager is BasePlatform {
         );
 
         require(refundItem.isRefunded == false, "Already refunded!");
+        contentSales[voucher.saleID].isRefunded = true;
 
         for (uint256 j; j < refundItem.purchasedParts.length; j++) {
             uint256 part = refundItem.purchasedParts[j];
@@ -889,7 +925,6 @@ abstract contract ContentManager is BasePlatform {
             ] = false;
         }
 
-        contentSales[voucher.saleID].isRefunded = true;
         /// @dev First remove specific content from the contentReceiver
         delete ownedParts[refundItem.contentReceiver][refundItem.tokenId];
 
@@ -897,6 +932,27 @@ abstract contract ContentManager is BasePlatform {
         if (voucher.finalParts.length > 0) {
             ownedParts[refundItem.contentReceiver][refundItem.tokenId] = voucher
                 .finalParts;
+        } else {
+            /// @dev If voucher.finalParts does not exist, then add the content to the contentReceiver as empty array;
+            ownedParts[refundItem.contentReceiver][
+                refundItem.tokenId
+            ] = new uint256[](0);
+        }
+
+        if (
+            ownedParts[refundItem.contentReceiver][refundItem.tokenId].length ==
+            0
+        ) {
+            isContentBought[refundItem.contentReceiver][
+                refundItem.tokenId
+            ] = false;
+            uint deleteIndex = voucher.ownedContentIndex;
+            uint lastIndex = ownedContents[refundItem.contentReceiver].length -
+                1;
+            ownedContents[refundItem.contentReceiver][
+                deleteIndex
+            ] = ownedContents[refundItem.contentReceiver][lastIndex];
+            ownedContents[refundItem.contentReceiver].pop();
         }
 
         instRefundedBalance[refundItem.instructor] += refundItem.instrShare;

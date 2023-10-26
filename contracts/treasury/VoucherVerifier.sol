@@ -44,6 +44,7 @@ contract VoucherVerifier is EIP712, RoleLegacy {
         uint256 saleID;
         address instructor;
         uint256[] finalParts;
+        uint256 ownedContentIndex;
         uint256 validUntil;
         bytes signature;
     }
@@ -103,7 +104,7 @@ contract VoucherVerifier is EIP712, RoleLegacy {
                 keccak256(
                     abi.encode(
                         keccak256(
-                            "RefundVoucher(uint256 saleID,address instructor,uint256[] finalParts,uint256 validUntil)"
+                            "RefundVoucher(uint256 saleID,address instructor,uint256[] finalParts,uint256 ownedContentIndex,uint256 validUntil)"
                         ),
                         voucher.saleID,
                         voucher.instructor,
