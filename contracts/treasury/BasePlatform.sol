@@ -13,9 +13,15 @@ import "../interfaces/IUDAOC.sol";
 import "../interfaces/IGovernanceTreasury.sol";
 import "../interfaces/IRoleManager.sol";
 import "../interfaces/IVoucherVerifier.sol";
-import "../RoleLegacy.sol";
 
-abstract contract BasePlatform is Pausable, RoleLegacy {
+abstract contract BasePlatform is Pausable {
+    bytes32 public constant BACKEND_ROLE = keccak256("BACKEND_ROLE");
+    bytes32 public constant FOUNDATION_ROLE = keccak256("FOUNDATION_ROLE");
+    bytes32 public constant GOVERNANCE_ROLE = keccak256("GOVERNANCE_ROLE");
+    bytes32 public constant CONTRACT_MANAGER = keccak256("CONTRACT_MANAGER");
+
+    /// @notice Role manager contract address
+    IRoleManager roleManager;
     /// @notice UDAO (ERC20) Token is main token of the platform and used for payments
     IERC20 udao;
     /// @notice UDAOC (ERC721) Token is defines contents and used for content ownership
@@ -176,6 +182,27 @@ abstract contract BasePlatform is Pausable, RoleLegacy {
             governanceTreasuryAddress,
             voucherVerifierAddress
         );
+    }
+
+    function hasRole(
+        bytes32 _role,
+        address _account
+    ) internal view returns (bool) {
+        return (roleManager.hasRole(_role, _account));
+    }
+
+    function isNotBanned(
+        address _userAddress,
+        uint _functionID
+    ) internal view returns (bool) {
+        return !roleManager.isBanned(_userAddress, _functionID);
+    }
+
+    function isKYCed(
+        address _userAddress,
+        uint _functionID
+    ) internal view returns (bool) {
+        return roleManager.isKYCed(_userAddress, _functionID);
     }
 
     function activateGovernanceTreasury(bool _boolean) external {
