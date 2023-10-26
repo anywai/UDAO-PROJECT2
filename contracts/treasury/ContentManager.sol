@@ -62,9 +62,9 @@ abstract contract ContentManager is BasePlatform {
     /// @notice coaching sale id => the coaching sale
     mapping(uint256 => CoachingSale) public coachSales;
     /// @notice user address => (content id => (content part id => part owned/not owned by the user))
-    mapping(address => mapping(uint => mapping(uint => bool))) isTokenBought;
+    mapping(address => mapping(uint => mapping(uint => bool))) isPartBought;
     /// @notice user address => content token Id => content part Id
-    mapping(address => mapping(uint256 => uint256[])) ownedContents;
+    mapping(address => mapping(uint256 => uint256[])) ownedParts;
     /// @notice user address => content token Id => is full content purchase
     mapping(address => mapping(uint256 => bool)) isFullyPurchased;
 
@@ -301,7 +301,7 @@ abstract contract ContentManager is BasePlatform {
         /// @dev Boolean flag to determine if the purchase is made by a backend role
         /// if so then this purchase is a fiat purchase
         bool isFiatPurchase;
-        bool[] memory fullContentPurchases;
+        bool[] memory fullContentPurchases = new bool[](tokenIds.length);
 
         if (hasRole(BACKEND_ROLE, msg.sender)) {
             isFiatPurchase = true;
@@ -353,7 +353,7 @@ abstract contract ContentManager is BasePlatform {
 
             // Check if this is a full content purchase or not
             if (
-                ownedContents[giftReceivers[i]][tokenIds[i]].length +
+                ownedParts[giftReceivers[i]][tokenIds[i]].length +
                     purchasedParts[i].length ==
                 udaoc.getPartNumberOfContent(tokenIds[i])
             ) {
@@ -452,20 +452,20 @@ abstract contract ContentManager is BasePlatform {
 
         // Update owned contert or part
         if (fullContentPurchase) {
-            isTokenBought[contentReceiver][tokenId][0] = true;
-            ownedContents[contentReceiver][tokenId] = udaoc.getContentParts(
+            isPartBought[contentReceiver][tokenId][0] = true;
+            ownedParts[contentReceiver][tokenId] = udaoc.getContentParts(
                 tokenId
             );
             isFullyPurchased[contentReceiver][tokenId] = true;
         } else {
             for (uint256 j; j < purchasedParts.length; j++) {
                 uint part = purchasedParts[j];
-                isTokenBought[contentReceiver][tokenId][part] = true;
+                isPartBought[contentReceiver][tokenId][part] = true;
                 /// @dev If the user has not bought any part of the content before, initialize the array
-                if (ownedContents[contentReceiver][tokenId].length == 0) {
-                    ownedContents[contentReceiver][tokenId] = new uint[](0);
+                if (ownedParts[contentReceiver][tokenId].length == 0) {
+                    ownedParts[contentReceiver][tokenId] = new uint[](0);
                 }
-                ownedContents[contentReceiver][tokenId].push(part);
+                ownedParts[contentReceiver][tokenId].push(part);
             }
             isFullyPurchased[contentReceiver][tokenId] = false;
         }
@@ -499,7 +499,7 @@ abstract contract ContentManager is BasePlatform {
     ) internal view returns (bool) {
         for (uint256 j; j < purchasedParts.length; j++) {
             uint256 part = purchasedParts[j];
-            if (isTokenBought[contentReceiver][tokenId][part] == true) {
+            if (isPartBought[contentReceiver][tokenId][part] == true) {
                 return true;
             }
         }
@@ -537,7 +537,7 @@ abstract contract ContentManager is BasePlatform {
         address _buyer,
         uint256 _tokenId
     ) external view returns (uint256[] memory) {
-        return ownedContents[_buyer][_tokenId];
+        return ownedParts[_buyer][_tokenId];
     }
 
     /// @notice Calculates price to pay for a content purchase
@@ -556,7 +556,7 @@ abstract contract ContentManager is BasePlatform {
         /// @dev Get the total payment amount first
         if (
             _fullContentPurchase == true &&
-            ownedContents[contentReceiver][_tokenId].length == 0
+            ownedParts[contentReceiver][_tokenId].length == 0
         ) {
             _priceToPay = udaoc.getContentPrice(_tokenId);
         } else {
@@ -878,7 +878,7 @@ abstract contract ContentManager is BasePlatform {
         for (uint256 j; j < refundItem.purchasedParts.length; j++) {
             uint256 part = refundItem.purchasedParts[j];
             /// @dev Set the content as not bought
-            isTokenBought[refundItem.contentReceiver][refundItem.tokenId][
+            isPartBought[refundItem.contentReceiver][refundItem.tokenId][
                 part
             ] = false;
         }
@@ -891,13 +891,12 @@ abstract contract ContentManager is BasePlatform {
 
         contentSales[voucher.saleID].isRefunded = true;
         /// @dev First remove specific content from the contentReceiver
-        delete ownedContents[refundItem.contentReceiver][refundItem.tokenId];
+        delete ownedParts[refundItem.contentReceiver][refundItem.tokenId];
 
         /// @dev Then add the content to the contentReceiver if voucher.finalParts exists;
         if (voucher.finalParts.length > 0) {
-            ownedContents[refundItem.contentReceiver][
-                refundItem.tokenId
-            ] = voucher.finalParts;
+            ownedParts[refundItem.contentReceiver][refundItem.tokenId] = voucher
+                .finalParts;
         }
 
         instRefundedBalance[refundItem.instructor] += refundItem.instrShare;
