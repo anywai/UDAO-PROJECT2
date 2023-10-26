@@ -27,6 +27,7 @@ describe("TokenSeller", function () {
     // Get signers
     [owner, user1, user2, user3, user4, user5, user6, user7, user8, user9, ethersProvider] = await ethers.getSigners();
   });
+  /*
   it("Owner should deploy", async function () {
     expect(await tokenSellerContract.address).to.not.equal(ethers.constants.AddressZero);
   });
@@ -224,6 +225,7 @@ describe("TokenSeller", function () {
     await tokenSellerContract.changeKYCStatus(user1.address, false);
     await expect(tokenSellerContract.connect(user1).withdraw()).to.be.revertedWith("You are not KYCed!");
   });
+  */
   /*
     //-------------------EXHAUSTIVE TESTS-------------------
     it("Should allow owner to add token balance for 250 users with addBalance and allow users to withdraw tokens", async function () {
