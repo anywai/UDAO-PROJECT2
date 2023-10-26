@@ -7,7 +7,7 @@ import "@openzeppelin/contracts/governance/extensions/GovernorCountingSimple.sol
 import "@openzeppelin/contracts/governance/extensions/GovernorVotes.sol";
 import "@openzeppelin/contracts/governance/extensions/GovernorTimelockControl.sol";
 import "../interfaces/IRoleManager.sol";
-import "../RoleNames.sol";
+import "../RoleLegacy.sol";
 
 interface IUDAOStaker {
     function addVoteRewards(address voter) external;
@@ -19,10 +19,9 @@ contract UDAOGovernor is
     GovernorCountingSimple,
     GovernorVotes,
     GovernorTimelockControl,
-    RoleNames
+    RoleLegacy
 {
     IUDAOStaker udaoStaker;
-    IRoleManager roleManager;
 
     constructor(
         IVotes _token,
@@ -55,8 +54,8 @@ contract UDAOGovernor is
         address stakingContractAddress
     ) external {
         require(
-            (roleManager.hasRole(BACKEND_ROLE, msg.sender) ||
-                roleManager.hasRole(CONTRACT_MANAGER, msg.sender)),
+            (hasRole(BACKEND_ROLE, msg.sender) ||
+                hasRole(CONTRACT_MANAGER, msg.sender)),
             "Only backend and contract manager can update addresses"
         );
         roleManager = IRoleManager(roleManagerAddress);
@@ -76,7 +75,7 @@ contract UDAOGovernor is
     /// TODO remove this function and use updateAddresses instead
     function setStakingContract(address stakingContractAddress) external {
         require(
-            roleManager.hasRole(BACKEND_ROLE, msg.sender),
+            hasRole(BACKEND_ROLE, msg.sender),
             "Only backend can set staking contract"
         );
         udaoStaker = IUDAOStaker(stakingContractAddress);

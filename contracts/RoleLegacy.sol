@@ -10,11 +10,6 @@ abstract contract RoleLegacy is RoleNames {
     /// @notice Role manager contract address
     IRoleManager roleManager;
 
-    // Bu contract eski roleManager-RoleControllerdaki abstract olup iherit edilen contracta benziyor. 2 opsiyonumuz var
-    // 1) aaşağıdaki fonksiyonları roleNames kullanan her contrata ekleyeceğiz
-    // 2) roleNames'i inherit eden contractlarıda bu kontratla değiştiririz. (RoleNames de bu kontrat tarafından inherit ediliyor bu arada)
-    // eğer bu iki yoldan birini izlemezsek external colling yapmak zorunda kalırız buda deployment memoryleri arttırıyor.
-
     function hasRole(
         bytes32 _role,
         address _account

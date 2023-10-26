@@ -7,19 +7,18 @@ import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/draft-ERC20Permit.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Votes.sol";
 import "../interfaces/IRoleManager.sol";
-import "../RoleNames.sol";
+import "../RoleLegacy.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 
 contract UDAOVp is
     Pausable,
-    RoleNames,
+    RoleLegacy,
     ERC20,
     ERC20Burnable,
     ERC20Permit,
     ERC20Votes
 {
     address stakingContractAddress;
-    IRoleManager roleManager;
 
     /// @param roleManagerAddres The address of the deployed role manager
     constructor(
@@ -36,8 +35,8 @@ contract UDAOVp is
         address udaoStakerAddres
     ) external {
         require(
-            (roleManager.hasRole(BACKEND_ROLE, msg.sender) ||
-                roleManager.hasRole(CONTRACT_MANAGER, msg.sender)),
+            (hasRole(BACKEND_ROLE, msg.sender) ||
+                hasRole(CONTRACT_MANAGER, msg.sender)),
             "Only backend and contract manager can update addresses"
         );
         roleManager = IRoleManager(roleManagerAddres);
@@ -50,10 +49,7 @@ contract UDAOVp is
     /// @param to The address of the vp token recipient
     /// @param amount of the vp token
     function mint(address to, uint256 amount) public whenNotPaused {
-        require(
-            roleManager.hasRole(STAKING_CONTRACT, msg.sender),
-            "Only staker can mint"
-        );
+        require(hasRole(STAKING_CONTRACT, msg.sender), "Only staker can mint");
         _mint(to, amount);
         /// @dev Staking contract requires allowence when user wants to unstake
         _approve(to, stakingContractAddress, 2 ** 256 - 1);
@@ -82,7 +78,7 @@ contract UDAOVp is
     ) internal override(ERC20, ERC20Votes) {
         super._afterTokenTransfer(from, to, amount);
         require(
-            roleManager.hasRole(STAKING_CONTRACT, msg.sender),
+            hasRole(STAKING_CONTRACT, msg.sender),
             "Only staker can transfer"
         );
     }
@@ -102,18 +98,12 @@ contract UDAOVp is
     }
 
     function pause() external {
-        require(
-            roleManager.hasRole(BACKEND_ROLE, msg.sender),
-            "Only backend can pause"
-        );
+        require(hasRole(BACKEND_ROLE, msg.sender), "Only backend can pause");
         _pause();
     }
 
     function unpause() external {
-        require(
-            roleManager.hasRole(BACKEND_ROLE, msg.sender),
-            "Only backend can unpause"
-        );
+        require(hasRole(BACKEND_ROLE, msg.sender), "Only backend can unpause");
         _unpause();
     }
 }

@@ -8,7 +8,7 @@ import "../interfaces/IPlatformTreasury.sol";
 import "../interfaces/IRoleManager.sol";
 import "hardhat/console.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
-import "../RoleNames.sol";
+import "../RoleLegacy.sol";
 
 interface IStakingContract {
     function checkExpireDateValidator(
@@ -20,8 +20,7 @@ interface IStakingContract {
     ) external view returns (uint256 expireDate);
 }
 
-contract Supervision is Pausable, RoleNames {
-    IRoleManager roleManager;
+contract Supervision is Pausable, RoleLegacy {
     IUDAOC udaoc;
     IPlatformTreasury platformTreasury;
     IStakingContract udaoStaker;
@@ -185,8 +184,8 @@ contract Supervision is Pausable, RoleNames {
         address udaoStakerAddres
     ) external {
         require(
-            (roleManager.hasRole(BACKEND_ROLE, msg.sender) ||
-                roleManager.hasRole(CONTRACT_MANAGER, msg.sender)),
+            (hasRole(BACKEND_ROLE, msg.sender) ||
+                hasRole(CONTRACT_MANAGER, msg.sender)),
             "Only backend and contract manager can update addresses"
         );
         roleManager = IRoleManager(roleManagerAddress);
@@ -208,7 +207,7 @@ contract Supervision is Pausable, RoleNames {
     /// TODO remove this function update address function is enough
     function setPlatformTreasury(address _platformTreasury) external {
         require(
-            roleManager.hasRole(BACKEND_ROLE, msg.sender),
+            hasRole(BACKEND_ROLE, msg.sender),
             "Only backend can set platform treasury"
         );
         platformTreasury = IPlatformTreasury(_platformTreasury);
@@ -223,7 +222,7 @@ contract Supervision is Pausable, RoleNames {
     /// @param _requiredJurors new required juror count
     function setRequiredJurors(uint128 _requiredJurors) external {
         require(
-            roleManager.hasRole(GOVERNANCE_ROLE, msg.sender),
+            hasRole(GOVERNANCE_ROLE, msg.sender),
             "Only governance can set required juror count"
         );
         requiredJurors = _requiredJurors;
@@ -233,7 +232,7 @@ contract Supervision is Pausable, RoleNames {
     /// TODO remove this function update address function is enough
     function setUDAOC(address udaocAddress) external {
         require(
-            roleManager.hasRole(BACKEND_ROLE, msg.sender),
+            hasRole(BACKEND_ROLE, msg.sender),
             "Only backend can set UDAOC"
         );
         udaoc = IUDAOC(udaocAddress);
@@ -244,7 +243,7 @@ contract Supervision is Pausable, RoleNames {
     /// TODO remove this function update address function is enough
     function setAddressStaking(address udaoStakerAddress) external {
         require(
-            roleManager.hasRole(BACKEND_ROLE, msg.sender),
+            hasRole(BACKEND_ROLE, msg.sender),
             "Only backend can set staking contract"
         );
         udaoStaker = IStakingContract(udaoStakerAddress);
@@ -254,7 +253,7 @@ contract Supervision is Pausable, RoleNames {
     /// @param _requiredValidators new required vote count
     function setRequiredValidators(uint128 _requiredValidators) external {
         require(
-            roleManager.hasRole(GOVERNANCE_ROLE, msg.sender),
+            hasRole(GOVERNANCE_ROLE, msg.sender),
             "Only governance can set required validator count"
         );
         requiredValidators = _requiredValidators;
@@ -264,7 +263,7 @@ contract Supervision is Pausable, RoleNames {
     /// @param _maxObjection new objection count
     function setMaxObjectionCount(uint256 _maxObjection) external {
         require(
-            roleManager.hasRole(GOVERNANCE_ROLE, msg.sender),
+            hasRole(GOVERNANCE_ROLE, msg.sender),
             "Only governance can set objection count"
         );
         maxObjection = _maxObjection;
@@ -352,7 +351,7 @@ contract Supervision is Pausable, RoleNames {
         address _targetContract
     ) external {
         require(
-            roleManager.hasRole(BACKEND_ROLE, msg.sender),
+            hasRole(BACKEND_ROLE, msg.sender),
             "Only backend can create dispute"
         );
         Dispute storage dispute = disputes.push();
@@ -374,12 +373,12 @@ contract Supervision is Pausable, RoleNames {
     /// @param caseId id of the dispute
     function assignDispute(uint256 caseId) external {
         require(
-            roleManager.hasRole(JUROR_ROLE, msg.sender),
+            hasRole(JUROR_ROLE, msg.sender),
             "Only jurors can assign dispute"
         );
         //make sure juror is kyced and not banned
-        require(roleManager.isKYCed(msg.sender, 1), "You are not KYCed");
-        require(!roleManager.isBanned(msg.sender, 1), "You were banned");
+        require(isKYCed(msg.sender, 1), "You are not KYCed");
+        require(isNotBanned(msg.sender, 1), "You were banned");
         require(
             udaoStaker.checkExpireDateJuror(msg.sender) > block.timestamp,
             "Your application is expired"
@@ -448,7 +447,7 @@ contract Supervision is Pausable, RoleNames {
     /// @param result result of dispute
     function sendDisputeResult(uint256 caseId, bool result) external {
         require(
-            roleManager.hasRole(JUROR_ROLE, msg.sender),
+            hasRole(JUROR_ROLE, msg.sender),
             "Only jurors can send dispute result"
         );
         /// @dev Below two requires are protecting against reentrancy
@@ -558,7 +557,7 @@ contract Supervision is Pausable, RoleNames {
     /// @param result result of validation
     function sendValidation(uint validationId, bool result) external {
         require(
-            roleManager.hasRole(VALIDATOR_ROLE, msg.sender),
+            hasRole(VALIDATOR_ROLE, msg.sender),
             "Only validators can send validation result"
         );
         /// @dev Below two requires are protecting against reentrancy
@@ -655,8 +654,8 @@ contract Supervision is Pausable, RoleNames {
             removeValidatorFromValidation(demissionAddress);
         } else {
             require(
-                roleManager.hasRole(BACKEND_ROLE, msg.sender) ||
-                    roleManager.hasRole(ROLEMANAGER_CONTRACT, msg.sender),
+                hasRole(BACKEND_ROLE, msg.sender) ||
+                    hasRole(ROLEMANAGER_CONTRACT, msg.sender),
                 "Only backend or role manager contract can set ban"
             );
             if (activeValidation[demissionAddress] != 0) {
@@ -729,8 +728,8 @@ contract Supervision is Pausable, RoleNames {
             removeJurorFromDispute(demissionAddress);
         } else {
             require(
-                roleManager.hasRole(BACKEND_ROLE, msg.sender) ||
-                    roleManager.hasRole(ROLEMANAGER_CONTRACT, msg.sender),
+                hasRole(BACKEND_ROLE, msg.sender) ||
+                    hasRole(ROLEMANAGER_CONTRACT, msg.sender),
                 "Only backend or role manager contract can set ban"
             );
             if (activeValidation[demissionAddress] != 0) {
@@ -766,7 +765,7 @@ contract Supervision is Pausable, RoleNames {
     /// @param score validation score of the content
     function createValidation(uint256 tokenId, uint256 score) external {
         require(
-            roleManager.hasRole(UDAOC_CONTRACT, msg.sender),
+            hasRole(UDAOC_CONTRACT, msg.sender),
             "Only UDAOC contract can create validation"
         );
         require(
@@ -780,7 +779,7 @@ contract Supervision is Pausable, RoleNames {
 
         address tokenOwner = udaoc.ownerOf(tokenId);
         //make sure token owner is not banned
-        require(!roleManager.isBanned(tokenOwner, 2), "Token owner is banned");
+        require(isNotBanned(tokenOwner, 2), "Token owner is banned");
 
         // Change status to 2 = in validation
         isValidated[tokenId] = 2;
@@ -807,7 +806,7 @@ contract Supervision is Pausable, RoleNames {
             "Only token owner can re-create validation"
         );
         //make sure token owner is not banned
-        require(!roleManager.isBanned(tokenOwner, 3), "Token owner is banned");
+        require(isNotBanned(tokenOwner, 3), "Token owner is banned");
         // Get the latest validation for this token
         uint256 validationId = latestValidationOfToken[tokenId];
         // Get the score
@@ -826,11 +825,11 @@ contract Supervision is Pausable, RoleNames {
     /// @param validationId id of the validation
     function assignValidation(uint256 validationId) external {
         require(
-            roleManager.hasRole(VALIDATOR_ROLE, msg.sender),
+            hasRole(VALIDATOR_ROLE, msg.sender),
             "Only validators can assign validation"
         );
-        require(roleManager.isKYCed(msg.sender, 4), "You are not KYCed");
-        require(!roleManager.isBanned(msg.sender, 4), "You were banned");
+        require(isKYCed(msg.sender, 4), "You are not KYCed");
+        require(isNotBanned(msg.sender, 4), "You were banned");
         require(
             udaoStaker.checkExpireDateValidator(msg.sender) > block.timestamp,
             "Validation is expired"
@@ -867,7 +866,7 @@ contract Supervision is Pausable, RoleNames {
 
     function setValidationStatus(uint256 tokenId, uint256 status) external {
         require(
-            roleManager.hasRole(UDAOC_CONTRACT, msg.sender),
+            hasRole(UDAOC_CONTRACT, msg.sender),
             "Only UDAOC contract can set validation status"
         );
 
@@ -878,7 +877,7 @@ contract Supervision is Pausable, RoleNames {
     /// @notice Starts the new reward round
     function nextRound() external whenNotPaused {
         require(
-            roleManager.hasRole(TREASURY_CONTRACT, msg.sender),
+            hasRole(TREASURY_CONTRACT, msg.sender),
             "Only treasury contract can start new round"
         );
         distributionRound++;
@@ -886,18 +885,12 @@ contract Supervision is Pausable, RoleNames {
     }
 
     function pause() external {
-        require(
-            roleManager.hasRole(BACKEND_ROLE, msg.sender),
-            "Only backend can pause"
-        );
+        require(hasRole(BACKEND_ROLE, msg.sender), "Only backend can pause");
         _pause();
     }
 
     function unpause() external {
-        require(
-            roleManager.hasRole(BACKEND_ROLE, msg.sender),
-            "Only backend can unpause"
-        );
+        require(hasRole(BACKEND_ROLE, msg.sender), "Only backend can unpause");
         _unpause();
     }
 }

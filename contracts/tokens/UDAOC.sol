@@ -10,12 +10,12 @@ import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
 import "../interfaces/IUDAOC.sol";
 import "../interfaces/ISupervision.sol";
 import "../interfaces/IRoleManager.sol";
-import "../RoleNames.sol";
+import "../RoleLegacy.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 
 contract UDAOContent is
     Pausable,
-    RoleNames,
+    RoleLegacy,
     IUDAOC,
     ERC721,
     EIP712,
@@ -28,7 +28,6 @@ contract UDAOContent is
     string private constant SIGNATURE_VERSION = "1";
 
     ISupervision supervision;
-    IRoleManager roleManager;
 
     /// @param roleManagerAddress The address of the deployed role manager
     constructor(
@@ -82,7 +81,7 @@ contract UDAOContent is
     /// @param _isSellable is content sellable
     function setSellable(uint _tokenId, bool _isSellable) external {
         require(
-            roleManager.hasRole(SALE_CONTROLLER, msg.sender),
+            hasRole(SALE_CONTROLLER, msg.sender),
             "Only sale controller can set sellable"
         );
         isSellable[_tokenId] = _isSellable;
@@ -94,8 +93,8 @@ contract UDAOContent is
         address supervisionAddress
     ) external {
         require(
-            (roleManager.hasRole(BACKEND_ROLE, msg.sender) ||
-                roleManager.hasRole(CONTRACT_MANAGER, msg.sender)),
+            (hasRole(BACKEND_ROLE, msg.sender) ||
+                hasRole(CONTRACT_MANAGER, msg.sender)),
             "Only backend can update addresses"
         );
         roleManager = IRoleManager(roleManagerAddress);
@@ -112,7 +111,7 @@ contract UDAOContent is
         // make sure signature is valid and get the address of the signer
         address signer = _verify(voucher);
         require(
-            roleManager.hasRole(VOUCHER_VERIFIER, signer),
+            hasRole(VOUCHER_VERIFIER, signer),
             "Signature invalid or unauthorized"
         );
         require(voucher.validUntil >= block.timestamp, "Voucher has expired.");
@@ -122,9 +121,9 @@ contract UDAOContent is
         // make sure redeemer is redeeming
         require(voucher._redeemer == msg.sender, "You are not the redeemer");
         //make sure redeemer is kyced
-        require(roleManager.isKYCed(msg.sender, 13), "You are not KYCed");
+        require(isKYCed(msg.sender, 13), "You are not KYCed");
         //make sure redeemer is not banned
-        require(!roleManager.isBanned(msg.sender, 13), "Redeemer is banned!");
+        require(isNotBanned(msg.sender, 13), "Redeemer is banned!");
         require(voucher.validationScore != 0, "Validation score cannot be 0");
         // make sure the full content price is not 0
         require(voucher._contentPrice != 0, "Full content price cannot be 0");
@@ -170,7 +169,7 @@ contract UDAOContent is
         // make sure signature is valid and get the address of the signer
         address signer = _verify(voucher);
         require(
-            roleManager.hasRole(VOUCHER_VERIFIER, signer),
+            hasRole(VOUCHER_VERIFIER, signer),
             "Signature invalid or unauthorized"
         );
         require(voucher.validUntil >= block.timestamp, "Voucher has expired.");
@@ -182,10 +181,10 @@ contract UDAOContent is
         );
 
         //make sure redeemer is kyced
-        require(roleManager.isKYCed(msg.sender, 14), "You are not KYCed");
+        require(isKYCed(msg.sender, 14), "You are not KYCed");
 
         // make sure caller is not banned
-        require(!roleManager.isBanned(msg.sender, 14), "You are banned");
+        require(isNotBanned(msg.sender, 14), "You are banned");
         // A content can be modified only if it is not in validation
         if (voucher.validationScore != 0) {
             require(
@@ -242,7 +241,7 @@ contract UDAOContent is
     function setFullPriceContent(uint tokenId, uint _contentPrice) external {
         require(ownerOf(tokenId) == msg.sender, "You are not the owner");
         //make sure caller is not banned
-        require(!roleManager.isBanned(msg.sender, 24), "You were banned!");
+        require(isNotBanned(msg.sender, 24), "You were banned!");
         // make sure full content price is not zero
         require(_contentPrice != 0, "Full content price cannot be 0");
 
@@ -263,7 +262,7 @@ contract UDAOContent is
             "Part does not exist!"
         );
         //make sure caller is not banned
-        require(!roleManager.isBanned(msg.sender, 25), "You were banned!");
+        require(isNotBanned(msg.sender, 25), "You were banned!");
         partPrices[tokenId][partId] = _partPrice;
     }
 
@@ -278,7 +277,7 @@ contract UDAOContent is
     ) external {
         require(ownerOf(tokenId) == msg.sender, "You are not the owner");
         //make sure caller is not banned
-        require(!roleManager.isBanned(msg.sender, 26), "You were banned!");
+        require(isNotBanned(msg.sender, 26), "You were banned!");
         uint partLength = _partIds.length;
         for (uint i = 0; i < partLength; i++) {
             require(
@@ -302,7 +301,7 @@ contract UDAOContent is
     ) external {
         require(ownerOf(tokenId) == msg.sender, "You are not the owner");
         //make sure caller is not banned
-        require(!roleManager.isBanned(msg.sender, 27), "You were banned!");
+        require(isNotBanned(msg.sender, 27), "You were banned!");
         uint partLength = _partIds.length;
 
         for (uint i = 0; i < partLength; i++) {
@@ -331,7 +330,7 @@ contract UDAOContent is
         uint256 tokenId
     ) internal override(ERC721, ERC721URIStorage) {
         require(
-            roleManager.hasRole(BACKEND_ROLE, msg.sender),
+            hasRole(BACKEND_ROLE, msg.sender),
             "Only backend can burn a content"
         );
         super._burn(tokenId);
@@ -344,12 +343,12 @@ contract UDAOContent is
     ) internal virtual override {
         super._beforeTokenTransfer(from, to, tokenId);
         if (to != address(0)) {
-            require(roleManager.isKYCed(to, 18), "Receiver is not KYCed!");
-            require(!roleManager.isBanned(to, 18), "Receiver is banned!");
+            require(isKYCed(to, 18), "Receiver is not KYCed!");
+            require(isNotBanned(to, 18), "Receiver is banned!");
         }
         if (from != address(0)) {
-            require(roleManager.isKYCed(from, 19), "Sender is not KYCed!");
-            require(!roleManager.isBanned(from, 19), "Sender is banned!");
+            require(isKYCed(from, 19), "Sender is not KYCed!");
+            require(isNotBanned(from, 19), "Sender is banned!");
         }
     }
 
@@ -430,18 +429,12 @@ contract UDAOContent is
     }
 
     function pause() external {
-        require(
-            roleManager.hasRole(BACKEND_ROLE, msg.sender),
-            "Only backend can pause"
-        );
+        require(hasRole(BACKEND_ROLE, msg.sender), "Only backend can pause");
         _pause();
     }
 
     function unpause() external {
-        require(
-            roleManager.hasRole(BACKEND_ROLE, msg.sender),
-            "Only backend can unpause"
-        );
+        require(hasRole(BACKEND_ROLE, msg.sender), "Only backend can unpause");
         _unpause();
     }
 }

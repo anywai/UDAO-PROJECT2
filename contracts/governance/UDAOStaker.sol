@@ -10,7 +10,7 @@ import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
 import "../interfaces/IPlatformTreasury.sol";
 import "../interfaces/IRoleManager.sol";
-import "../RoleNames.sol";
+import "../RoleLegacy.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 
 interface IUDAOVP is IVotes, IERC20 {
@@ -19,14 +19,13 @@ interface IUDAOVP is IVotes, IERC20 {
     function burnFrom(address account, uint256 amount) external;
 }
 
-contract UDAOStaker is RoleNames, EIP712, Pausable {
+contract UDAOStaker is RoleLegacy, EIP712, Pausable {
     string private constant SIGNING_DOMAIN = "UDAOStaker";
     string private constant SIGNATURE_VERSION = "1";
 
     IERC20 udao;
     IUDAOVP udaovp;
     IPlatformTreasury platformTreasury;
-    IRoleManager roleManager;
 
     /// @notice the required duration to be a validator
     uint256 public jurorLockTime = 30 days;
@@ -174,8 +173,8 @@ contract UDAOStaker is RoleNames, EIP712, Pausable {
         address udaoVpAddress
     ) external {
         require(
-            (roleManager.hasRole(BACKEND_ROLE, msg.sender) ||
-                roleManager.hasRole(CONTRACT_MANAGER, msg.sender)),
+            (hasRole(BACKEND_ROLE, msg.sender) ||
+                hasRole(CONTRACT_MANAGER, msg.sender)),
             "Only backend and contract manager can update addresses"
         );
         roleManager = IRoleManager(roleManagerAddress);
@@ -326,14 +325,14 @@ contract UDAOStaker is RoleNames, EIP712, Pausable {
     /// @notice allows users to apply for validator role
     function applyForValidator() external whenNotPaused {
         //make sure redeemer is kyced and not banned
-        require(roleManager.isKYCed(msg.sender, 5), "You are not KYCed");
-        require(!roleManager.isBanned(msg.sender, 5), "You were banned");
+        require(isKYCed(msg.sender, 5), "You are not KYCed");
+        require(isNotBanned(msg.sender, 5), "You were banned");
         require(
             udaovp.balanceOf(msg.sender) > 0,
             "You have to be governance member to apply"
         );
         require(
-            !roleManager.hasRole(VALIDATOR_ROLE, msg.sender),
+            !hasRole(VALIDATOR_ROLE, msg.sender),
             "Address is already a Validator"
         );
         require(
@@ -356,16 +355,13 @@ contract UDAOStaker is RoleNames, EIP712, Pausable {
     /// @notice allows users to apply for juror role
     function applyForJuror() external whenNotPaused {
         //make sure redeemer is kyced and not banned
-        require(roleManager.isKYCed(msg.sender, 6), "You are not KYCed");
-        require(!roleManager.isBanned(msg.sender, 6), "You were banned");
+        require(isKYCed(msg.sender, 6), "You are not KYCed");
+        require(isNotBanned(msg.sender, 6), "You were banned");
         require(
             udaovp.balanceOf(msg.sender) > 0,
             "You have to be governance member to apply"
         );
-        require(
-            !roleManager.hasRole(JUROR_ROLE, msg.sender),
-            "Address is already a Juror"
-        );
+        require(!hasRole(JUROR_ROLE, msg.sender), "Address is already a Juror");
         require(
             !activeApplicationForJuror[msg.sender],
             "You already have an active application"
@@ -385,15 +381,15 @@ contract UDAOStaker is RoleNames, EIP712, Pausable {
     /// @notice Users can use this function and assign validator or juror roles to themselves
     function getApproved(RoleVoucher calldata voucher) external whenNotPaused {
         //make sure redeemer is kyced and not banned
-        require(roleManager.isKYCed(msg.sender, 7), "You are not KYCed");
-        require(!roleManager.isBanned(msg.sender, 7), "You were banned");
+        require(isKYCed(msg.sender, 7), "You are not KYCed");
+        require(isNotBanned(msg.sender, 7), "You were banned");
         // make sure redeemer is redeeming
         require(voucher.redeemer == msg.sender, "You are not the redeemer");
         // make sure signature is valid and get the address of the signer
         address signer = _verifyRole(voucher);
         require(voucher.validUntil >= block.timestamp, "Voucher has expired.");
         require(
-            roleManager.hasRole(VOUCHER_VERIFIER, signer),
+            hasRole(VOUCHER_VERIFIER, signer),
             "Signature invalid or unauthorized"
         );
 
@@ -442,7 +438,7 @@ contract UDAOStaker is RoleNames, EIP712, Pausable {
     /// @param _applicant The address of the applicant
     function rejectApplication(address _applicant, uint256 roleId) external {
         require(
-            roleManager.hasRole(BACKEND_ROLE, msg.sender),
+            hasRole(BACKEND_ROLE, msg.sender),
             "Only backend can reject application"
         );
         if (roleId == 0) {
@@ -492,7 +488,7 @@ contract UDAOStaker is RoleNames, EIP712, Pausable {
                 validatorApplicationId[msg.sender]
             ];
 
-        if (roleManager.hasRole(VALIDATOR_ROLE, msg.sender)) {
+        if (hasRole(VALIDATOR_ROLE, msg.sender)) {
             if (
                 validatorApplication.isFinished &&
                 validatorApplication.expire < block.timestamp
@@ -535,7 +531,7 @@ contract UDAOStaker is RoleNames, EIP712, Pausable {
             jurorApplicationId[msg.sender]
         ];
 
-        if (roleManager.hasRole(JUROR_ROLE, msg.sender)) {
+        if (hasRole(JUROR_ROLE, msg.sender)) {
             if (
                 jurorApplication.isFinished &&
                 jurorApplication.expire < block.timestamp
@@ -579,7 +575,7 @@ contract UDAOStaker is RoleNames, EIP712, Pausable {
                 validatorApplicationId[msg.sender]
             ];
 
-        if (roleManager.hasRole(VALIDATOR_ROLE, msg.sender)) {
+        if (hasRole(VALIDATOR_ROLE, msg.sender)) {
             if (
                 validatorApplication.isFinished &&
                 validatorApplication.expire < block.timestamp
@@ -602,8 +598,8 @@ contract UDAOStaker is RoleNames, EIP712, Pausable {
         uint256 _amount,
         uint256 _days
     ) public whenNotPaused {
-        require(roleManager.isKYCed(msg.sender, 8), "Address is not KYCed");
-        require(!roleManager.isBanned(msg.sender, 8), "Address is banned");
+        require(isKYCed(msg.sender, 8), "Address is not KYCed");
+        require(isNotBanned(msg.sender, 8), "Address is banned");
         require(
             _days * (1 days) >= minimum_stake_days,
             "Can't stake less than minimum_stake_days"
@@ -692,7 +688,7 @@ contract UDAOStaker is RoleNames, EIP712, Pausable {
     /// @param voter address of the voter
     function addVoteRewards(address voter) external whenNotPaused {
         require(
-            roleManager.hasRole(GOVERNANCE_CONTRACT, msg.sender),
+            hasRole(GOVERNANCE_CONTRACT, msg.sender),
             "Only governance contract can add vote rewards"
         );
         require(udaovp.balanceOf(voter) > 0, "Voter has no voting power");
@@ -757,18 +753,12 @@ contract UDAOStaker is RoleNames, EIP712, Pausable {
     }
 
     function pause() external {
-        require(
-            roleManager.hasRole(BACKEND_ROLE, msg.sender),
-            "Only backend can pause"
-        );
+        require(hasRole(BACKEND_ROLE, msg.sender), "Only backend can pause");
         _pause();
     }
 
     function unpause() external {
-        require(
-            roleManager.hasRole(BACKEND_ROLE, msg.sender),
-            "Only backend can unpause"
-        );
+        require(hasRole(BACKEND_ROLE, msg.sender), "Only backend can unpause");
         _unpause();
     }
 }

@@ -9,14 +9,14 @@ import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "../interfaces/IRoleManager.sol";
-import "../RoleNames.sol";
+import "../RoleLegacy.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 
 contract UDAOCertificate is
     ERC721,
     EIP712,
     ERC721URIStorage,
-    RoleNames,
+    RoleLegacy,
     Pausable,
     Ownable
 {
@@ -26,7 +26,6 @@ contract UDAOCertificate is
     using Counters for Counters.Counter;
 
     Counters.Counter private _tokenIdCounter;
-    IRoleManager roleManager;
 
     /// @notice This event is triggered if the contract manager updates the addresses.
     event AddressesUpdated(address roleManagerAddress);
@@ -60,8 +59,8 @@ contract UDAOCertificate is
     /// @notice Get the updated addresses from contract manager
     function updateAddresses(address roleManagerAddress) external {
         require(
-            (roleManager.hasRole(BACKEND_ROLE, msg.sender) ||
-                roleManager.hasRole(CONTRACT_MANAGER, msg.sender)),
+            (hasRole(BACKEND_ROLE, msg.sender) ||
+                hasRole(CONTRACT_MANAGER, msg.sender)),
             "Only backend and contract manager can update addresses"
         );
         roleManager = IRoleManager(roleManagerAddress);
@@ -75,12 +74,12 @@ contract UDAOCertificate is
         // make sure redeemer is redeeming
         require(voucher.redeemer == msg.sender, "You are not the redeemer");
         //make sure redeemer is kyced and not banned
-        require(roleManager.isKYCed(msg.sender, 10), "You are not KYCed");
-        require(!roleManager.isBanned(msg.sender, 10), "You were banned");
+        require(isKYCed(msg.sender, 10), "You are not KYCed");
+        require(isNotBanned(msg.sender, 10), "You were banned");
         // make sure signature is valid and get the address of the signer
         address signer = _verify(voucher);
         require(
-            roleManager.hasRole(VOUCHER_VERIFIER, signer),
+            hasRole(VOUCHER_VERIFIER, signer),
             "Signature invalid or unauthorized"
         );
 
@@ -143,10 +142,10 @@ contract UDAOCertificate is
         super._beforeTokenTransfer(from, to, tokenId);
         if (from != address(0) && to != address(0)) {
             //make sure to address is kyced and not banned
-            require(roleManager.isKYCed(to, 11), "Receiver is not KYCed");
-            require(!roleManager.isBanned(to, 11), "Receiver is banned");
+            require(isKYCed(to, 11), "Receiver is not KYCed");
+            require(isNotBanned(to, 11), "Receiver is banned");
             require(
-                roleManager.hasRole(BACKEND_ROLE, msg.sender),
+                hasRole(BACKEND_ROLE, msg.sender),
                 "You don't have right to transfer token"
             );
         }
@@ -162,12 +161,12 @@ contract UDAOCertificate is
         uint256 tokenId
     ) external {
         require(
-            roleManager.hasRole(BACKEND_ROLE, msg.sender),
+            hasRole(BACKEND_ROLE, msg.sender),
             "You don't have right to transfer token"
         );
         //make sure "to" address is kyced and not banned
-        require(roleManager.isKYCed(to, 12), "Receiver is not KYCed");
-        require(!roleManager.isBanned(to, 12), "Receiver is banned");
+        require(isKYCed(to, 12), "Receiver is not KYCed");
+        require(isNotBanned(to, 12), "Receiver is banned");
         _transfer(from, to, tokenId);
     }
 
@@ -194,18 +193,12 @@ contract UDAOCertificate is
     }
 
     function pause() external {
-        require(
-            roleManager.hasRole(BACKEND_ROLE, msg.sender),
-            "Only backend can pause"
-        );
+        require(hasRole(BACKEND_ROLE, msg.sender), "Only backend can pause");
         _pause();
     }
 
     function unpause() external {
-        require(
-            roleManager.hasRole(BACKEND_ROLE, msg.sender),
-            "Only backend can unpause"
-        );
+        require(hasRole(BACKEND_ROLE, msg.sender), "Only backend can unpause");
         _unpause();
     }
 }

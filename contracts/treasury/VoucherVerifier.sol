@@ -1,17 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.4;
 
-import "../RoleNames.sol";
+import "../RoleLegacy.sol";
 import "../interfaces/IRoleManager.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
 import "hardhat/console.sol";
 
-contract VoucherVerifier is EIP712, RoleNames {
+contract VoucherVerifier is EIP712, RoleLegacy {
     string private constant SIGNING_DOMAIN = "TreasuryVouchers";
     string private constant SIGNATURE_VERSION = "1";
-
-    IRoleManager roleManager;
 
     constructor(
         address roleManagerAddress

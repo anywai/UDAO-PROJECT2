@@ -2,7 +2,7 @@
 /// @title Set contract addresses from a central location
 
 import "./interfaces/IRoleManager.sol";
-import "./RoleNames.sol";
+import "./RoleLegacy.sol";
 
 interface updRoleManager {
     function updateAddresses(address supervisionAddress) external;
@@ -67,9 +67,7 @@ interface updUDAOGovernor {
 
 pragma solidity ^0.8.0;
 
-contract ContractManager is RoleNames {
-    IRoleManager roleManager;
-
+contract ContractManager is RoleLegacy {
     // MVP contract addresses
     address public udaoAddress;
     address public roleManagerAddress;
@@ -117,7 +115,7 @@ contract ContractManager is RoleNames {
         address _platformTreasuryAddress
     ) external {
         require(
-            roleManager.hasRole(BACKEND_ROLE, msg.sender),
+            hasRole(BACKEND_ROLE, msg.sender),
             "Only backend can set governance treasury address"
         );
         udaoAddress = _udaoAddress;
@@ -133,7 +131,7 @@ contract ContractManager is RoleNames {
         address _supervisionAddress
     ) external {
         require(
-            roleManager.hasRole(BACKEND_ROLE, msg.sender),
+            hasRole(BACKEND_ROLE, msg.sender),
             "Only backend can set governance treasury address"
         );
         governanceTreasuryAddress = _governanceTreasuryAddress;
@@ -146,7 +144,7 @@ contract ContractManager is RoleNames {
         address _udaoGovernorAddress
     ) external {
         require(
-            roleManager.hasRole(BACKEND_ROLE, msg.sender),
+            hasRole(BACKEND_ROLE, msg.sender),
             "Only backend can set governance treasury address"
         );
         udaoVpAddress = _udaoVpAddress;
@@ -201,7 +199,7 @@ contract ContractManager is RoleNames {
         address _governanceTreasuryAddress
     ) external {
         require(
-            roleManager.hasRole(BACKEND_ROLE, msg.sender),
+            hasRole(BACKEND_ROLE, msg.sender),
             "Only backend can set governance treasury address"
         );
         GovernanceTreasuryAddress = _governanceTreasuryAddress;
@@ -211,7 +209,7 @@ contract ContractManager is RoleNames {
         address _platformTreasuryAddress
     ) external {
         require(
-            roleManager.hasRole(BACKEND_ROLE, msg.sender),
+            hasRole(BACKEND_ROLE, msg.sender),
             "Only backend can set platform treasury address"
         );
         PlatformTreasuryAddress = _platformTreasuryAddress;
@@ -219,7 +217,7 @@ contract ContractManager is RoleNames {
 
     function setAddressStaking(address _stakingAddress) external {
         require(
-            roleManager.hasRole(BACKEND_ROLE, msg.sender),
+            hasRole(BACKEND_ROLE, msg.sender),
             "Only backend can set staking address"
         );
         StakingContractAddress = _stakingAddress;
@@ -227,7 +225,7 @@ contract ContractManager is RoleNames {
 
     function setAddressUdaoVp(address _udaoVpAddress) external {
         require(
-            roleManager.hasRole(BACKEND_ROLE, msg.sender),
+            hasRole(BACKEND_ROLE, msg.sender),
             "Only backend can set udao vp address"
         );
         UdaoVpAddress = _udaoVpAddress;
@@ -235,7 +233,7 @@ contract ContractManager is RoleNames {
 
     function setAddressISupVisAddress(address _supAddress) external {
         require(
-            roleManager.hasRole(BACKEND_ROLE, msg.sender),
+            hasRole(BACKEND_ROLE, msg.sender),
             "Only backend can set ISupVis address"
         );
         ISupVisAddress = _supAddress;
@@ -243,7 +241,7 @@ contract ContractManager is RoleNames {
 
     function setAddressUdaoAddress(address _udaoAddress) external {
         require(
-            roleManager.hasRole(BACKEND_ROLE, msg.sender),
+            hasRole(BACKEND_ROLE, msg.sender),
             "Only backend can set udao address"
         );
         UdaoAddress = _udaoAddress;
@@ -251,7 +249,7 @@ contract ContractManager is RoleNames {
 
     function setAddressUdaocAddress(address _udaocAddress) external {
         require(
-            roleManager.hasRole(BACKEND_ROLE, msg.sender),
+            hasRole(BACKEND_ROLE, msg.sender),
             "Only backend can set udaoc address"
         );
         UdaocAddress = _udaocAddress;
@@ -259,7 +257,7 @@ contract ContractManager is RoleNames {
 
     function setAddressIrmAddress(address _rmAddress) external {
         require(
-            roleManager.hasRole(BACKEND_ROLE, msg.sender),
+            hasRole(BACKEND_ROLE, msg.sender),
             "Only backend can set irm address"
         );
         RmAddress = _rmAddress;
@@ -269,7 +267,7 @@ contract ContractManager is RoleNames {
         address _voucherVerifierAddress
     ) external {
         require(
-            roleManager.hasRole(BACKEND_ROLE, msg.sender),
+            hasRole(BACKEND_ROLE, msg.sender),
             "Only backend can set voucher verifier address"
         );
         VoucherVerifierAddress = _voucherVerifierAddress;
