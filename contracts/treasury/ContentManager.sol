@@ -926,7 +926,7 @@ abstract contract ContentManager is BasePlatform {
         }
 
         /// @dev First remove specific content from the contentReceiver
-        delete ownedParts[refundItem.contentReceiver][refundItem.tokenId];
+        //delete ownedParts[refundItem.contentReceiver][refundItem.tokenId];
 
         /// @dev Then add the content to the contentReceiver if voucher.finalParts exists;
         if (voucher.finalParts.length > 0) {
@@ -946,13 +946,13 @@ abstract contract ContentManager is BasePlatform {
             isContentBought[refundItem.contentReceiver][
                 refundItem.tokenId
             ] = false;
-            uint deleteIndex = voucher.ownedContentIndex;
-            uint lastIndex = ownedContents[refundItem.contentReceiver].length -
-                1;
-            ownedContents[refundItem.contentReceiver][
-                deleteIndex
-            ] = ownedContents[refundItem.contentReceiver][lastIndex];
-            ownedContents[refundItem.contentReceiver].pop();
+            //delete ownedContents[refundItem.contentReceiver];
+            if (voucher.finalContents.length > 0) {
+                ownedContents[refundItem.contentReceiver] = voucher
+                    .finalContents;
+            } else {
+                ownedContents[refundItem.contentReceiver] = new uint[](0);
+            }
         }
 
         instRefundedBalance[refundItem.instructor] += refundItem.instrShare;
