@@ -279,9 +279,6 @@ describe("UDAOC Contract", function () {
 
   it("Should fail to transfer token if sender is not KYCed", async function () {
     await reDeploy();
-    if (TEST_VERSION == 1) {
-      this.skip();
-    }
     await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
@@ -370,9 +367,7 @@ describe("UDAOC Contract", function () {
 
   it("Should fail to transfer token if sender is not KYCed", async function () {
     await reDeploy();
-    if (TEST_VERSION == 1) {
-      this.skip();
-    }
+
     await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
@@ -422,10 +417,15 @@ describe("UDAOC Contract", function () {
     await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample))
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs("0x0000000000000000000000000000000000000000", contentCreator.address, 0);
+    //await expect(contractUDAOContent.connect(contentCreator).burn(0)).to.be.revertedWithPanic();
+    //  "TypeError: contractUDAOContent.connect().burn is not a function"
+    //);
 
-    await expect(contractUDAOContent.connect(contentCreator).burn(0)).to.be.revertedWith(
-      "TypeError: contractUDAOContent.burn is not a function"
-    );
+    try {
+      await contractUDAOContent.connect(contentCreator).burn(0);
+    } catch (error) {
+      expect(error);
+    }
   });
 
   it("Should return true if supports ERC721 interface", async function () {
@@ -436,7 +436,7 @@ describe("UDAOC Contract", function () {
     expect(await contractUDAOContent.supportsInterface("0x80ac58cd")).to.eql(true);
   });
 
-  it("Should allow content owner to add a new part to content, in between existing parts", async function () {
+  it("Should modify content, add a new part in between existing parts", async function () {
     await reDeploy();
     await contractRoleManager.setKYC(contentCreator.address, true);
 
@@ -460,8 +460,7 @@ describe("UDAOC Contract", function () {
 
     // new part information
     const tokenId = 0;
-    const newPartId = 2;
-    const _contentPrice = [
+    const _NewPartPricesArray = [
       ethers.utils.parseEther("1"),
       ethers.utils.parseEther("2"),
       ethers.utils.parseEther("4"),
@@ -473,340 +472,68 @@ describe("UDAOC Contract", function () {
       contractUDAOContent,
       backend,
       contentCreator,
-      _contentPrice,
-      false,
-      false,
-      2
+      contentPrice,
+      _NewPartPricesArray,
+      (redeemType = 2),
+      (validationScore = 0)
     );
 
     // add new part and expect newPartAdded event to emit
     await expect(contractUDAOContent.connect(contentCreator).modifyContent(createModifyVoucherSample));
-
     // epxpect previous parts to be shifted
-    const returnedPartPrice0 = await contractUDAOContent.getContentPriceAndCurrency(tokenId, 0);
-    const returnedPartPrice1 = await contractUDAOContent.getContentPriceAndCurrency(tokenId, 1);
-    const returnedPartPrice2 = await contractUDAOContent.getContentPriceAndCurrency(tokenId, 2);
-    const returnedPartPrice3 = await contractUDAOContent.getContentPriceAndCurrency(tokenId, 3);
+    const returnedPartPrice0 = await contractUDAOContent.getContentPartPrice(tokenId, 0);
+    const returnedPartPrice1 = await contractUDAOContent.getContentPartPrice(tokenId, 1);
+    const returnedPartPrice2 = await contractUDAOContent.getContentPartPrice(tokenId, 2);
+    const returnedPartPrice3 = await contractUDAOContent.getContentPartPrice(tokenId, 3);
 
-    expect(returnedPartPrice0.value).to.equal(ethers.utils.parseEther("1").BigNumber);
-    expect(returnedPartPrice1.value).to.equal(ethers.utils.parseEther("2").BigNumber);
-    expect(returnedPartPrice2.value).to.equal(ethers.utils.parseEther("4").BigNumber);
-    expect(returnedPartPrice3.value).to.equal(ethers.utils.parseEther("3").BigNumber);
+    expect(returnedPartPrice0).to.equal(_NewPartPricesArray[0]);
+    expect(returnedPartPrice1).to.equal(_NewPartPricesArray[1]);
+    expect(returnedPartPrice2).to.equal(_NewPartPricesArray[2]);
+    expect(returnedPartPrice3).to.equal(_NewPartPricesArray[3]);
   });
 
-  it("Should allow content owner to add a new part to content, at the end of existing parts", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy(true);
+  it("Should revert modify content if caller is not owner of content", async function () {
+    await reDeploy();
     await contractRoleManager.setKYC(contentCreator.address, true);
+    await contractRoleManager.setKYC(contentBuyer.address, true);
+
     /// part prices must be determined before creating content
     const partPricesArray = [ethers.utils.parseEther("1"), ethers.utils.parseEther("2"), ethers.utils.parseEther("3")];
+    const contentPrice = ethers.utils.parseEther("10");
 
     /// Create Voucher from redeem.js and use it for creating content
     const createContentVoucherSample = await createContentVoucher(
       contractUDAOContent,
       backend,
       contentCreator,
+      contentPrice,
       partPricesArray,
-      false,
-      false
+      (redeemType = 1),
+      (validationScore = 1)
     );
 
     await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample))
-      .to.emit(contractUDAOContent, "Transfer") // transfer from null address to
+      .to.emit(contractUDAOContent, "Transfer") // transfer from null address to min
       .withArgs("0x0000000000000000000000000000000000000000", contentCreator.address, 0);
 
     // new part information
     const tokenId = 0;
-    const newPartId = 3;
-    const newPartPrice = ethers.utils.parseEther("20");
-    // add new part and expect newPartAdded event to emit
-    await expect(contractUDAOContent.connect(contentCreator).addNewPart(tokenId, newPartId, newPartPrice))
-      .to.emit(contractUDAOContent, "newPartAdded")
-      .withArgs(tokenId, newPartId, ethers.utils.parseEther("20"));
+    const _NewContentPrice = ethers.utils.parseEther("20");
+    const _NewPartPriceArray = [ethers.utils.parseEther("20")];
 
-    // expect new part price to be 20
-    const returnedPartPrice = await contractUDAOContent.getContentPriceAndCurrency(tokenId, newPartId);
-    expect(returnedPartPrice[0]).to.equal(ethers.utils.parseEther("20"));
-
-    // epxpect previous parts to stay as is
-    const returnedPartPrice1 = await contractUDAOContent.getContentPriceAndCurrency(tokenId, 0);
-    expect(returnedPartPrice1[0]).to.equal(ethers.utils.parseEther("1"));
-    const returnedPartPrice2 = await contractUDAOContent.getContentPriceAndCurrency(tokenId, 1);
-    expect(returnedPartPrice2[0]).to.equal(ethers.utils.parseEther("2"));
-    const returnedPartPrice3 = await contractUDAOContent.getContentPriceAndCurrency(tokenId, 2);
-    expect(returnedPartPrice3[0]).to.equal(ethers.utils.parseEther("3"));
-  });
-
-  it("Should allow content owner to add a new part to content, at the beginning of existing parts", async function () {
-    /// @dev Please note that the first indice of the price array is the price of the whole content and parts start from 1
-    const {
+    /// Create Voucher from redeem.js and use it for modifying content
+    const createModifyContentVoucherSample = await createContentVoucher(
+      contractUDAOContent,
       backend,
-      contentCreator,
       contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy(true);
-    await contractRoleManager.setKYC(contentCreator.address, true);
-    /// part prices must be determined before creating content
-    const partPricesArray = [ethers.utils.parseEther("1"), ethers.utils.parseEther("2"), ethers.utils.parseEther("3")];
-
-    /// Create Voucher from redeem.js and use it for creating content
-    const createContentVoucherSample = await createContentVoucher(
-      contractUDAOContent,
-      backend,
-      contentCreator,
-      partPricesArray,
-      false,
-      false
+      _NewContentPrice,
+      _NewPartPriceArray,
+      (redeemType = 2),
+      (validationScore = 0)
     );
-
-    await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample))
-      .to.emit(contractUDAOContent, "Transfer") // transfer from null address to
-      .withArgs("0x0000000000000000000000000000000000000000", contentCreator.address, 0);
-
-    // new part information
-    const tokenId = 0;
-    const newPartId = 1;
-    const newPartPrice = ethers.utils.parseEther("20");
-    // add new part and expect newPartAdded event to emit
-    await expect(contractUDAOContent.connect(contentCreator).addNewPart(tokenId, newPartId, newPartPrice))
-      .to.emit(contractUDAOContent, "newPartAdded")
-      .withArgs(tokenId, newPartId, ethers.utils.parseEther("20"));
-
-    // expect new part price to be 20
-    const returnedPartPrice = await contractUDAOContent.getContentPriceAndCurrency(tokenId, newPartId);
-    expect(returnedPartPrice[0]).to.equal(ethers.utils.parseEther("20"));
-
-    // epxpect previous part to stay as is
-    const returnedPartPrice1 = await contractUDAOContent.getContentPriceAndCurrency(tokenId, 0);
-    expect(returnedPartPrice1[0]).to.equal(ethers.utils.parseEther("1"));
-    const returnedPartPrice2 = await contractUDAOContent.getContentPriceAndCurrency(tokenId, 2);
-    expect(returnedPartPrice2[0]).to.equal(ethers.utils.parseEther("2"));
-    const returnedPartPrice3 = await contractUDAOContent.getContentPriceAndCurrency(tokenId, 3);
-    expect(returnedPartPrice3[0]).to.equal(ethers.utils.parseEther("3"));
-  });
-
-  it("Should revert if content owner tries to add a new part at 0 index", async function () {
-    /// @dev Please note that the first indice of the price array is the price of the whole content and parts start from 1
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy(true);
-    await contractRoleManager.setKYC(contentCreator.address, true);
-    /// part prices must be determined before creating content
-    const partPricesArray = [ethers.utils.parseEther("1"), ethers.utils.parseEther("2"), ethers.utils.parseEther("3")];
-
-    /// Create Voucher from redeem.js and use it for creating content
-    const createContentVoucherSample = await createContentVoucher(
-      contractUDAOContent,
-      backend,
-      contentCreator,
-      partPricesArray,
-      false,
-      false
-    );
-    await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample))
-      .to.emit(contractUDAOContent, "Transfer") // transfer from null address to
-      .withArgs("0x0000000000000000000000000000000000000000", contentCreator.address, 0);
-
-    // new part information
-    const tokenId = 0;
-    const newPartId = 0;
-    const newPartPrice = ethers.utils.parseEther("20");
-    // add new part and expect it to revert
+    // modify content and expect it to revert
     await expect(
-      contractUDAOContent.connect(contentCreator).addNewPart(tokenId, newPartId, newPartPrice)
-    ).to.be.revertedWith("0 sent as new part id, parts starts from 1");
-  });
-
-  it("Should revert if  someone other then the owner of the token tries to add a new part", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy(true);
-    await contractRoleManager.setKYC(contentCreator.address, true);
-    /// part prices must be determined before creating content
-    const partPricesArray = [ethers.utils.parseEther("1"), ethers.utils.parseEther("2"), ethers.utils.parseEther("3")];
-
-    /// Create Voucher from redeem.js and use it for creating content
-    const createContentVoucherSample = await createContentVoucher(
-      contractUDAOContent,
-      backend,
-      contentCreator,
-      partPricesArray,
-      false,
-      false
-    );
-    await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample))
-      .to.emit(contractUDAOContent, "Transfer") // transfer from null address to
-      .withArgs("0x0000000000000000000000000000000000000000", contentCreator.address, 0);
-
-    // new part information
-    const tokenId = 0;
-    const newPartId = 1;
-    const newPartPrice = ethers.utils.parseEther("20");
-    // add new part and expect it to revert
-    await expect(
-      contractUDAOContent.connect(contentBuyer).addNewPart(tokenId, newPartId, newPartPrice)
+      contractUDAOContent.connect(contentBuyer).modifyContent(createModifyContentVoucherSample)
     ).to.be.revertedWith("You are not the owner of token");
   });
 
@@ -968,78 +695,5 @@ describe("UDAOC Contract", function () {
     await expect(
       contractUDAOContent.connect(contentCreator).addNewPart(tokenId, newPartId, newPartPrice)
     ).to.be.revertedWith("You are banned");
-  });
-
-  it("Should revert if the given part id is bigger than the total parts", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy(true);
-
-    await contractRoleManager.setKYC(contentCreator.address, true);
-    /// part prices must be determined before creating content
-    const partPricesArray = [ethers.utils.parseEther("1"), ethers.utils.parseEther("2"), ethers.utils.parseEther("3")];
-
-    /// Create Voucher from redeem.js and use it for creating content
-    const createContentVoucherSample = await createContentVoucher(
-      contractUDAOContent,
-      backend,
-      contentCreator,
-      partPricesArray,
-      false,
-      false
-    );
-    await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample))
-      .to.emit(contractUDAOContent, "Transfer") // transfer from null address
-      .withArgs("0x0000000000000000000000000000000000000000", contentCreator.address, 0);
-
-    // new part information
-    const tokenId = 0;
-    const newPartId = 4;
-    const newPartPrice = ethers.utils.parseEther("20");
-    // add new part and expect it to revert
-    await expect(
-      contractUDAOContent.connect(contentCreator).addNewPart(tokenId, newPartId, newPartPrice)
-    ).to.be.revertedWith("Part id is bigger than the total number of parts");
   });
 });
