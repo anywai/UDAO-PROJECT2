@@ -30,4 +30,25 @@ abstract contract RoleLegacy is RoleNames {
     ) internal view returns (bool) {
         return roleManager.isKYCed(_userAddress, _functionID);
     }
+
+    /// @notice Address of foundation wallet is used for sending funds to foundation
+    address foundationWallet;
+
+    /// @notice This event is triggered if the foundation wallet address is updated.
+    event FoundationWalletUpdated(address newAddress);
+
+    constructor() {
+        foundationWallet = msg.sender;
+    }
+
+    /// @notice sets foundation wallet addresses
+    /// @param _newAddress new address of the contract
+    function setFoundationAddress(address _newAddress) external {
+        require(
+            msg.sender == foundationWallet,
+            "Only foundation can set foundation wallet address"
+        );
+        foundationWallet = _newAddress;
+        emit FoundationWalletUpdated(_newAddress);
+    }
 }

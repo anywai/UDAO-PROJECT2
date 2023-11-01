@@ -53,11 +53,13 @@ contract UDAOGovernor is
         address roleManagerAddress,
         address stakingContractAddress
     ) external {
-        require(
-            (hasRole(BACKEND_ROLE, msg.sender) ||
-                hasRole(CONTRACT_MANAGER, msg.sender)),
-            "Only backend and contract manager can update addresses"
-        );
+        if (msg.sender != foundationWallet) {
+            require(
+                (hasRole(BACKEND_ROLE, msg.sender) ||
+                    hasRole(CONTRACT_MANAGER, msg.sender)),
+                "Only backend and contract manager can update addresses"
+            );
+        }
         roleManager = IRoleManager(roleManagerAddress);
         udaoStaker = IUDAOStaker(stakingContractAddress);
 

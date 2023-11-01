@@ -60,11 +60,13 @@ contract VoucherVerifier is EIP712, RoleLegacy {
 
     /// @notice Get the updated addresses from contract manager
     function updateAddresses(address roleManagerAddress) external {
-        require(
-            (roleManager.hasRole(BACKEND_ROLE, msg.sender) ||
-                roleManager.hasRole(CONTRACT_MANAGER, msg.sender)),
-            "Only backend and contract manager can update addresses"
-        );
+        if (msg.sender != foundationWallet) {
+            require(
+                (hasRole(BACKEND_ROLE, msg.sender) ||
+                    hasRole(CONTRACT_MANAGER, msg.sender)),
+                "Only backend can update addresses"
+            );
+        }
         roleManager = IRoleManager(roleManagerAddress);
 
         emit AddressesUpdated(roleManagerAddress);

@@ -58,11 +58,13 @@ contract UDAOCertificate is
 
     /// @notice Get the updated addresses from contract manager
     function updateAddresses(address roleManagerAddress) external {
-        require(
-            (hasRole(BACKEND_ROLE, msg.sender) ||
-                hasRole(CONTRACT_MANAGER, msg.sender)),
-            "Only backend and contract manager can update addresses"
-        );
+        if (msg.sender != foundationWallet) {
+            require(
+                (hasRole(BACKEND_ROLE, msg.sender) ||
+                    hasRole(CONTRACT_MANAGER, msg.sender)),
+                "Only backend and contract manager can update addresses"
+            );
+        }
         roleManager = IRoleManager(roleManagerAddress);
 
         emit AddressesUpdated(roleManagerAddress);

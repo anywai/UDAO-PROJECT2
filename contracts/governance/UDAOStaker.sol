@@ -172,11 +172,13 @@ contract UDAOStaker is RoleLegacy, EIP712, Pausable {
         address platformTreasuryAddress,
         address udaoVpAddress
     ) external {
-        require(
-            (hasRole(BACKEND_ROLE, msg.sender) ||
-                hasRole(CONTRACT_MANAGER, msg.sender)),
-            "Only backend and contract manager can update addresses"
-        );
+        if (msg.sender != foundationWallet) {
+            require(
+                (hasRole(BACKEND_ROLE, msg.sender) ||
+                    hasRole(CONTRACT_MANAGER, msg.sender)),
+                "Only backend and contract manager can update addresses"
+            );
+        }
         roleManager = IRoleManager(roleManagerAddress);
         udao = IERC20(udaoAddress);
         platformTreasury = IPlatformTreasury(platformTreasuryAddress);

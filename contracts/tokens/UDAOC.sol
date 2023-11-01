@@ -94,11 +94,13 @@ contract UDAOContent is
         address roleManagerAddress,
         address supervisionAddress
     ) external {
-        require(
-            (hasRole(BACKEND_ROLE, msg.sender) ||
-                hasRole(CONTRACT_MANAGER, msg.sender)),
-            "Only backend can update addresses"
-        );
+        if (msg.sender != foundationWallet) {
+            require(
+                (hasRole(BACKEND_ROLE, msg.sender) ||
+                    hasRole(CONTRACT_MANAGER, msg.sender)),
+                "Only backend can update addresses"
+            );
+        }
         roleManager = IRoleManager(roleManagerAddress);
         supervision = ISupervision(supervisionAddress);
 
