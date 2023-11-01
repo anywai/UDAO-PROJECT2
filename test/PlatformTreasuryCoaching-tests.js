@@ -448,7 +448,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     expect(coachingStruct.contentReceiver).to.equal(contentBuyer.address);
     const refundWindow = await contractPlatformTreasury.refundWindow();
     // Mine days of blocks that bigger than refundWindow days:
-    const numBlocksToMine = Math.ceil(((refundWindow.add(1)) * 86400) / 2); 
+    const numBlocksToMine = Math.ceil(((refundWindow.add(1)) * 86400) / 2);
     await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine.toString(16)}`, "0x2"]);
     // Refund coaching
     await expect(contractPlatformTreasury.connect(contentCreator).refundCoachingByInstructorOrLearner(coachingSaleID)).to.revertedWith(
@@ -548,7 +548,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     const refundType = 0 // 0 since refund is coaching
     // Voucher will be valid for 1 day
     const voucherValidUntil = Date.now() + 86400;
-    const refund_voucher = await refundVoucher.createVoucher(coachingSaleID, contentCreator.address, [], voucherValidUntil);
+    const refund_voucher = await refundVoucher.createVoucher(coachingSaleID, contentCreator.address, [], [], voucherValidUntil);
     // Refund coaching
     await expect(contractPlatformTreasury.connect(contentCreator).newRefundCoaching(refund_voucher))
       .to.emit(contractPlatformTreasury, "SaleRefunded")
@@ -611,7 +611,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     const refundType = 0 // 0 since refund is coaching
     // Voucher will be valid for 1 day
     const voucherValidUntil = Date.now() + 86400;
-    const refund_voucher = await refundVoucher.createVoucher(coachingSaleID, contentCreator.address, [], voucherValidUntil);
+    const refund_voucher = await refundVoucher.createVoucher(coachingSaleID, contentCreator.address, [], [], voucherValidUntil);
     // Refund coaching
     await expect(contractPlatformTreasury.connect(contentCreator).newRefundCoaching(refund_voucher)).to.revertedWith(
       "Refund period over you cant refund"
