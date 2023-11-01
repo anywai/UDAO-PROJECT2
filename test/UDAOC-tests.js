@@ -537,163 +537,103 @@ describe("UDAOC Contract", function () {
     ).to.be.revertedWith("You are not the owner of token");
   });
 
-  it("Should revert if add new part caller is not kyced", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy(true);
-    if (TEST_VERSION == 1) {
-      this.skip();
-    }
+  it("Should revert modify content if content creator is not kyced", async function () {
+    await reDeploy();
     await contractRoleManager.setKYC(contentCreator.address, true);
+
     /// part prices must be determined before creating content
     const partPricesArray = [ethers.utils.parseEther("1"), ethers.utils.parseEther("2"), ethers.utils.parseEther("3")];
+    const contentPrice = ethers.utils.parseEther("10");
 
     /// Create Voucher from redeem.js and use it for creating content
     const createContentVoucherSample = await createContentVoucher(
       contractUDAOContent,
       backend,
       contentCreator,
+      contentPrice,
       partPricesArray,
-      false,
-      false
+      (redeemType = 1),
+      (validationScore = 1)
     );
+
     await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample))
-      .to.emit(contractUDAOContent, "Transfer") // transfer from null address to
+      .to.emit(contractUDAOContent, "Transfer") // transfer from null address to min
       .withArgs("0x0000000000000000000000000000000000000000", contentCreator.address, 0);
 
-    // UnKYC content creator
-    await contractRoleManager.setKYC(contentCreator.address, false);
-    // Add KYC requirement and expect it to emit KYCRequirementForCreateContentChanged
-    await expect(contractUDAOContent.connect(backend).setKYCRequirementForCreateContent(true))
-      .to.emit(contractUDAOContent, "KYCRequirementForCreateContentChanged")
-      .withArgs(true);
     // new part information
     const tokenId = 0;
-    const newPartId = 1;
-    const newPartPrice = ethers.utils.parseEther("20");
-    // add new part and expect it to revert
+    const _NewPartPriceArray = [
+      ethers.utils.parseEther("7"),
+      ethers.utils.parseEther("6"),
+      ethers.utils.parseEther("3"),
+      ethers.utils.parseEther("4"),
+    ];
+    const _NewContentPrice = ethers.utils.parseEther("20");
+    await contractRoleManager.setKYC(contentCreator.address, false);
+    /// Create Voucher from redeem.js and use it for modifying content
+    const createModifyContentVoucherSample = await createContentVoucher(
+      contractUDAOContent,
+      backend,
+      contentCreator,
+      _NewContentPrice,
+      _NewPartPriceArray,
+      (redeemType = 2),
+      (validationScore = 0)
+    );
+
+    // modify content and expect it to revert
     await expect(
-      contractUDAOContent.connect(contentCreator).addNewPart(tokenId, newPartId, newPartPrice)
+      contractUDAOContent.connect(contentCreator).modifyContent(createModifyContentVoucherSample)
     ).to.be.revertedWith("You are not KYCed");
   });
 
-  it("Should revert add new part if content creator gets banned", async function () {
-    const {
-      backend,
-      contentCreator,
-      contentBuyer,
-      contentBuyer1,
-      contentBuyer2,
-      contentBuyer3,
-      validatorCandidate,
-      validator,
-      validator1,
-      validator2,
-      validator3,
-      validator4,
-      validator5,
-      superValidatorCandidate,
-      superValidator,
-      foundation,
-      governanceCandidate,
-      governanceMember,
-      jurorCandidate,
-      jurorMember,
-      jurorMember1,
-      jurorMember2,
-      jurorMember3,
-      jurorMember4,
-      corporation,
-      contractUDAO,
-      contractRoleManager,
-      contractUDAOCertificate,
-      contractUDAOContent,
-      contractSupervision,
-      contractPlatformTreasury,
-      contractUDAOVp,
-      contractUDAOStaker,
-      contractUDAOTimelockController,
-      contractUDAOGovernor,
-      GOVERNANCE_ROLE,
-      BACKEND_ROLE,
-      contractContractManager,
-      account1,
-      account2,
-      account3,
-      contractPriceGetter,
-    } = await deploy(true);
-    if (TEST_VERSION == 1) {
-      this.skip();
-    }
+  it("Should revert modify content if content creator is banned", async function () {
+    await reDeploy();
     await contractRoleManager.setKYC(contentCreator.address, true);
 
     /// part prices must be determined before creating content
     const partPricesArray = [ethers.utils.parseEther("1"), ethers.utils.parseEther("2"), ethers.utils.parseEther("3")];
+    const contentPrice = ethers.utils.parseEther("10");
 
     /// Create Voucher from redeem.js and use it for creating content
     const createContentVoucherSample = await createContentVoucher(
       contractUDAOContent,
       backend,
       contentCreator,
+      contentPrice,
       partPricesArray,
-      false,
-      false
+      (redeemType = 1),
+      (validationScore = 1)
     );
 
     await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample))
-      .to.emit(contractUDAOContent, "Transfer") // transfer from null address
+      .to.emit(contractUDAOContent, "Transfer") // transfer from null address to min
       .withArgs("0x0000000000000000000000000000000000000000", contentCreator.address, 0);
 
-    // Ban content creator
-    await contractRoleManager.setBan(contentCreator.address, true);
     // new part information
     const tokenId = 0;
-    const newPartId = 1;
-    const newPartPrice = ethers.utils.parseEther("20");
-    // add new part and expect it to revert
+    const _NewPartPriceArray = [
+      ethers.utils.parseEther("7"),
+      ethers.utils.parseEther("6"),
+      ethers.utils.parseEther("3"),
+      ethers.utils.parseEther("4"),
+    ];
+    const _NewContentPrice = ethers.utils.parseEther("20");
+    await contractRoleManager.setBan(contentCreator.address, true);
+    /// Create Voucher from redeem.js and use it for modifying content
+    const createModifyContentVoucherSample = await createContentVoucher(
+      contractUDAOContent,
+      backend,
+      contentCreator,
+      _NewContentPrice,
+      _NewPartPriceArray,
+      (redeemType = 2),
+      (validationScore = 0)
+    );
+
+    // modify content and expect it to revert
     await expect(
-      contractUDAOContent.connect(contentCreator).addNewPart(tokenId, newPartId, newPartPrice)
+      contractUDAOContent.connect(contentCreator).modifyContent(createModifyContentVoucherSample)
     ).to.be.revertedWith("You are banned");
   });
 });
