@@ -71,7 +71,7 @@ abstract contract ContentManager is BasePlatform {
     /// @notice user address => (content id => content owned/not owned by the user)
     mapping(address => mapping(uint => bool)) isContentBought;
     /// @notice user address => content token Ids
-    mapping(address => uint256[]) ownedContents;
+    mapping(address => uint256[]) public ownedContents;
 
     /// @notice Allows users to buy coaching with a voucher created by instructor
     /// @param voucher buy coaching voucher
@@ -203,7 +203,7 @@ abstract contract ContentManager is BasePlatform {
             (
                 priceToPay[i],
                 contentReceiver[i]
-            ) = _ifNotOwnedReturnPriceAndReceiver(
+            ) = _returnPartPriceAndReceiver(
                 vouchers[i].tokenId,
                 vouchers[i].purchasedParts,
                 vouchers[i].giftReceiver
@@ -276,7 +276,7 @@ abstract contract ContentManager is BasePlatform {
         /// @dev Used for recording the total roles cut for all items in the cart
         uint256 totalRequiredUdao;
         /// @dev Boolean flag to determine if the purchase is made by a backend role
-        /// if so then this purchase is a fiat purchase
+        /// if so then this purchase is a fiat pur"chase
         bool isFiatPurchase;
         bool[] memory fullContentPurchases = new bool[](tokenIds.length);
 
@@ -293,7 +293,7 @@ abstract contract ContentManager is BasePlatform {
             (
                 priceToPay[i],
                 giftReceivers[i]
-            ) = _ifNotOwnedReturnPriceAndReceiver(
+            ) = _returnPartPriceAndReceiver(
                 tokenIds[i],
                 purchasedParts[i],
                 giftReceivers[i]
@@ -447,7 +447,11 @@ abstract contract ContentManager is BasePlatform {
         emit ContentBought(_cartSaleID, contentSaleID.current() - 1);
     }
 
-    function ifNotOwnedReturnPrice(
+    /// @notice Gets the price to pay for a content parts purchase
+    /// @param tokenIds An array of token IDs representing the contents in the cart.
+    /// @param purchasedParts An array of arrays representing the content parts to be purchased.
+    /// @param contentReceiver The address of the content receiver.
+    function getPartPriceAndReceiver(
         uint256[] calldata tokenIds,
         uint256[][] calldata purchasedParts,
         address[] calldata contentReceiver
@@ -461,7 +465,7 @@ abstract contract ContentManager is BasePlatform {
         uint partPrice;
         uint totalPrice;
         for (uint256 i; i < tokenIds.length; i++) {
-            (partPrice, ) = _ifNotOwnedReturnPriceAndReceiver(
+            (partPrice, ) = _returnPartPriceAndReceiver(
                 tokenIds[i],
                 purchasedParts[i],
                 contentReceiver[i]
@@ -470,8 +474,12 @@ abstract contract ContentManager is BasePlatform {
         }
         return totalPrice;
     }
-
-    function _ifNotOwnedReturnPriceAndReceiver(
+    
+    /// @notice Returns the price to pay for a content parts purchase
+    /// @param _tokenId The token ID of the content.
+    /// @param _purchasedParts An array representing the parts of the content purchased.
+    /// @param _contentReceiver The address of the content receiver.
+    function _returnPartPriceAndReceiver(
         uint256 _tokenId,
         uint256[] calldata _purchasedParts,
         address _contentReceiver
