@@ -109,6 +109,7 @@ contract VoucherVerifier is EIP712, RoleLegacy {
                         voucher.saleID,
                         voucher.instructor,
                         keccak256(abi.encodePacked(voucher.finalParts)),
+                        keccak256(abi.encodePacked(voucher.finalContents)),
                         voucher.validUntil
                     )
                 )
