@@ -49,7 +49,8 @@ contract UDAOContent is
     mapping(uint => uint) public contentPrices;
     // tokenId => partIds
     mapping(uint256 => uint256[]) public contentParts;
-
+    /// @notice This event is triggered when a new content is created
+    event NewContentCreated(uint tokenId, address owner);
     /// @notice This event is triggered when a new part is added to a content
     event newPartAdded(uint tokenId, uint newPartId, uint newPartPrice);
     /// @notice This event is triggered if the contract manager updates the addresses.
@@ -179,7 +180,7 @@ contract UDAOContent is
         _setTokenURI(tokenId, voucher._uri);
         _tokenIds.increment();
         isSellable[tokenId] = true;
-
+        emit NewContentCreated(tokenId, voucher._redeemer);
         ISupVis.createValidation(tokenId, voucher.validationScore);
     }
 
