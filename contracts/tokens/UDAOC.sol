@@ -48,7 +48,7 @@ contract UDAOContent is
     mapping(uint256 => uint256[]) public contentParts;
 
     /// @notice This event is triggered when a new content is created
-    event NewContentCreated(uint tokenId, address owner);
+    event NewContentCreated(uint indexed tokenId, address indexed owner);
     /// @notice This event is triggered when a new part is added to a content
     event newPartAdded(uint tokenId, uint newPartId, uint newPartPrice);
     /// @notice This event is triggered if the contract manager updates the addresses.
