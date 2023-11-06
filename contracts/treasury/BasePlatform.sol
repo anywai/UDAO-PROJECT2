@@ -32,7 +32,7 @@ abstract contract BasePlatform is Pausable {
     IGovernanceTreasury governanceTreasury;
 
     /// @notice Address of foundation wallet is used for sending funds to foundation
-    address foundationWallet;
+    address public foundationWallet;
 
     /// @notice during refund windows all payments locked on contract and users can request refund
     /// @dev instLockedBalance and coaching/contentCutLockedPool arrays's size defines the maximum setable refund window
@@ -69,9 +69,9 @@ abstract contract BasePlatform is Pausable {
     /// @notice instructor address => instructor's refunded balance to users
     mapping(address => uint) public instRefundedBalance;
     /// @notice content cut pool's refunded cuts to users
-    uint256 contentCutRefundedBalance;
+    uint256 public contentCutRefundedBalance;
     /// @notice coaching cut pool's refunded cuts to users
-    uint256 coachingCutRefundedBalance;
+    uint256 public coachingCutRefundedBalance;
 
     /// @notice instructor address => instructor's previous refund window for last sale
     mapping(address => uint) public prevInstRefundWindow;
@@ -103,14 +103,14 @@ abstract contract BasePlatform is Pausable {
     uint public coachValidCut = 0;
 
     /// @notice allocated total cut for foundation, governance, juror and validator from content sales
-    uint256 contentTotalCut =
+    uint256 public contentTotalCut =
         contentFoundCut + contentGoverCut + contentJurorCut + contentValidCut;
     /// @notice allocated total cut for foundation, governance, juror and validator from coaching sales
-    uint256 coachTotalCut =
+    uint256 public coachTotalCut =
         coachFoundCut + coachGoverCut + coachJurorCut + coachValidCut;
 
     /// @notice is governance part of platform released
-    bool isGovernanceTreasuryOnline = false;
+    bool public isGovernanceTreasuryOnline = false;
 
     /// @notice constructor of BasePlatform
     /// @param roleManagerAddress is address of RoleManager contract
