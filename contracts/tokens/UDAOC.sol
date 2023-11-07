@@ -122,12 +122,10 @@ contract UDAOContent is
         /// @dev 1 is new content, 2 is modification
         require(voucher.redeemType == 1, "Redeem type is not new content");
         uint tokenId = _tokenIds.current();
-        // make sure redeemer is redeeming
-        require(voucher._redeemer == msg.sender, "You are not the redeemer");
         //make sure redeemer is kyced
-        require(isKYCed(msg.sender, 13), "You are not KYCed");
+        require(isKYCed(voucher._redeemer, 13), "You are not KYCed");
         //make sure redeemer is not banned
-        require(isNotBanned(msg.sender, 13), "Redeemer is banned!");
+        require(isNotBanned(voucher._redeemer, 13), "Redeemer is banned!");
         require(voucher.validationScore != 0, "Validation score cannot be 0");
         // make sure the full content price is not 0
         require(voucher._contentPrice != 0, "Full content price cannot be 0");
