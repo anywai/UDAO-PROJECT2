@@ -178,16 +178,11 @@ contract UDAOContent is
         require(voucher.validUntil >= block.timestamp, "Voucher has expired.");
         /// @dev 1 is new content, 2 is modification
         require(voucher.redeemType == 2, "Redeem type is not modification");
-        require(
-            ownerOf(voucher.tokenId) == msg.sender,
-            "You are not the owner of token"
-        );
-
+        address instructor = ownerOf(voucher.tokenId);
         //make sure redeemer is kyced
-        require(isKYCed(msg.sender, 14), "You are not KYCed");
-
+        require(isKYCed(instructor, 14), "You are not KYCed");
         // make sure caller is not banned
-        require(isNotBanned(msg.sender, 14), "You are banned");
+        require(isNotBanned(instructor, 14), "You are banned");
         // A content can be modified only if it is not in validation
         if (voucher.validationScore != 0) {
             require(
