@@ -40,10 +40,6 @@ contract UDAOContent is
     }
 
     mapping(uint256 => bool) public isSellable;
-    // tokenId => (partId => price)
-    mapping(uint => mapping(uint => uint)) public partPrices;
-    // tokenId => price
-    mapping(uint => uint) public contentPrices;
     // tokenId => partIds
     mapping(uint256 => uint256[]) public contentParts;
 
@@ -60,10 +56,8 @@ contract UDAOContent is
     struct RedeemVoucher {
         /// @notice The date until the voucher is valid
         uint256 validUntil;
-        /// @notice The price of the content
-        uint256 _contentPrice;
-        /// @notice The price of the content parts
-        uint256[] _partPrice;
+        /// @notice Parts of the content
+        uint256[] _parts;
         /// @notice Token id of the content, not used if new content creation
         uint256 tokenId;
         /// @notice The metadata URI to associate with this token.
@@ -127,22 +121,14 @@ contract UDAOContent is
         //make sure redeemer is not banned
         require(isNotBanned(voucher._redeemer, 13), "Redeemer is banned!");
         require(voucher.validationScore != 0, "Validation score cannot be 0");
-        // make sure the full content price is not 0
-        require(voucher._contentPrice != 0, "Full content price cannot be 0");
 
         require(
             !isCalldataStringEmpty(voucher._uri),
             "Content URI cannot be empty"
         );
 
-        // save the content price
-        uint partLength = voucher._partPrice.length;
-
-        contentPrices[tokenId] = voucher._contentPrice;
-        for (uint i = 0; i < partLength; i++) {
-            partPrices[tokenId][i] = voucher._partPrice[i];
-            contentParts[tokenId].push(i);
-        }
+        // save the content parts
+        contentParts[tokenId] = voucher._parts;
 
         _mint(voucher._redeemer, tokenId);
         _setTokenURI(tokenId, voucher._uri);
@@ -192,13 +178,8 @@ contract UDAOContent is
             );
         }
         /// @dev Create the new token
-        // save the content price (it should test removing for partLength) batuhan ?
-        uint partLength = voucher._partPrice.length;
-        contentPrices[voucher.tokenId] = voucher._contentPrice;
-        for (uint i = 0; i < partLength; i++) {
-            partPrices[voucher.tokenId][i] = voucher._partPrice[i];
-            contentParts[voucher.tokenId].push(i);
-        }
+        contentParts[voucher.tokenId] = voucher._parts;
+
         _setTokenURI(voucher.tokenId, voucher._uri);
 
         if (voucher.validationScore != 0) {
@@ -209,107 +190,12 @@ contract UDAOContent is
         }
     }
 
-    /// @notice returns the price of a specific content
-    /// @param tokenId the content ID of the token
-    function getContentPrice(uint tokenId) external view returns (uint256) {
-        return (contentPrices[tokenId]);
-    }
-
-    /// @notice returns the price of a specific content
-    /// @param tokenId the content ID of the token
-    /// @param partId the part ID of the token (microlearning), full content price if 0
-    function getContentPartPrice(
-        uint tokenId,
-        uint partId
-    ) external view returns (uint256) {
-        return (partPrices[tokenId][partId]);
-    }
-
     /// @notice returns the parts array of a specific content
     /// @param tokenId the content ID of the token
     function getContentParts(
         uint tokenId
     ) external view returns (uint256[] memory) {
         return (contentParts[tokenId]);
-    }
-
-    /// @notice allows content owners to set full content price
-    /// @param tokenId the content ID of the token
-    /// @param _contentPrice the price to set
-    function setFullPriceContent(uint tokenId, uint _contentPrice) external {
-        require(ownerOf(tokenId) == msg.sender, "You are not the owner");
-        //make sure caller is not banned
-        require(isNotBanned(msg.sender, 24), "You were banned!");
-        // make sure full content price is not zero
-        require(_contentPrice != 0, "Full content price cannot be 0");
-
-        contentPrices[tokenId] = _contentPrice;
-    }
-
-    /// @notice allows content owners to set price for single part in a content
-    /// @param tokenId the content ID of the token
-    /// @param _partPrice the price to set
-    function setPartialContent(
-        uint tokenId,
-        uint partId,
-        uint _partPrice
-    ) external {
-        require(ownerOf(tokenId) == msg.sender, "You are not the owner");
-        require(
-            partId < _getPartNumberOfContent(tokenId),
-            "Part does not exist!"
-        );
-        //make sure caller is not banned
-        require(isNotBanned(msg.sender, 25), "You were banned!");
-        partPrices[tokenId][partId] = _partPrice;
-    }
-
-    /// @notice allows content owners to set price for multiple parts in a content
-    /// @param tokenId the content ID of the token
-    /// @param _partIds the part IDs of the token
-    /// @param _partPrices the price to set
-    function setBatchPartialContent(
-        uint tokenId,
-        uint[] calldata _partIds,
-        uint[] calldata _partPrices
-    ) external {
-        require(ownerOf(tokenId) == msg.sender, "You are not the owner");
-        //make sure caller is not banned
-        require(isNotBanned(msg.sender, 26), "You were banned!");
-        uint partLength = _partIds.length;
-        for (uint i = 0; i < partLength; i++) {
-            require(
-                _partIds[i] < _getPartNumberOfContent(tokenId),
-                "Part does not exist!"
-            );
-            partPrices[tokenId][_partIds[i]] = _partPrices[i];
-        }
-    }
-
-    /// @notice allows content owners to set price for full content and multiple parts in a content
-    /// @param tokenId the content ID of the token
-    /// @param _partIds the part IDs of the token
-    /// @param _partPrices the prices to set
-    /// @param _contentPrice the price to set, first price is for full content price
-    function setBatchFullContent(
-        uint tokenId,
-        uint[] calldata _partIds,
-        uint[] calldata _partPrices,
-        uint _contentPrice
-    ) external {
-        require(ownerOf(tokenId) == msg.sender, "You are not the owner");
-        //make sure caller is not banned
-        require(isNotBanned(msg.sender, 27), "You were banned!");
-        uint partLength = _partIds.length;
-
-        for (uint i = 0; i < partLength; i++) {
-            require(
-                _partIds[i] < _getPartNumberOfContent(tokenId),
-                "Part does not exist!"
-            );
-            partPrices[tokenId][_partIds[i]] = _partPrices[i];
-        }
-        contentPrices[tokenId] = _contentPrice;
     }
 
     /// @notice Returns the part numbers that a content has
@@ -384,11 +270,10 @@ contract UDAOContent is
                 keccak256(
                     abi.encode(
                         keccak256(
-                            "RedeemVoucher(uint256 validUntil,uint256 _contentPrice,uint256[] _partPrice,uint256 tokenId,string _uri,address _redeemer,uint256 redeemType,uint256 validationScore)"
+                            "RedeemVoucher(uint256 validUntil,uint256[] _parts,uint256 tokenId,string _uri,address _redeemer,uint256 redeemType,uint256 validationScore)"
                         ),
                         voucher.validUntil,
-                        voucher._contentPrice,
-                        keccak256(abi.encodePacked(voucher._partPrice)),
+                        keccak256(abi.encodePacked(voucher._parts)),
                         voucher.tokenId,
                         keccak256(bytes(voucher._uri)),
                         voucher._redeemer,
