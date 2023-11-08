@@ -64,12 +64,12 @@ abstract contract ContentManager is BasePlatform {
     /// @notice user address => (content id => (content part id => part owned/not owned by the user))
     mapping(address => mapping(uint => mapping(uint => bool))) isPartBought;
     /// @notice user address => content token Id => content part Id
-    mapping(address => mapping(uint256 => uint256[])) ownedParts;
+    mapping(address => mapping(uint256 => uint256[])) public ownedParts;
     /// @notice user address => content token Id => is full content purchase
-    mapping(address => mapping(uint256 => bool)) isFullyPurchased;
+    mapping(address => mapping(uint256 => bool)) public isFullyPurchased;
 
     /// @notice user address => (content id => content owned/not owned by the user)
-    mapping(address => mapping(uint => bool)) isContentBought;
+    mapping(address => mapping(uint => bool)) public isContentBought;
     /// @notice user address => content token Ids
     mapping(address => uint256[]) public ownedContents;
 
