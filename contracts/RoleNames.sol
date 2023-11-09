@@ -20,6 +20,7 @@ abstract contract RoleNames {
     bytes32 public constant CONTRACT_MANAGER = keccak256("CONTRACT_MANAGER");
     bytes32 public constant SALE_CONTROLLER = keccak256("SALE_CONTROLLER");
     bytes32 public constant VOUCHER_VERIFIER = keccak256("VOUCHER_VERIFIER");
+    bytes32 public constant CONTENT_PUBLISHER = keccak256("CONTENT_PUBLISHER");
 
     /// Role group for administrator roles
     bytes32[] administrator_roles;

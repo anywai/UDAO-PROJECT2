@@ -46,7 +46,11 @@ contract UDAOContent is
     /// @notice This event is triggered when a new content is created
     event NewContentCreated(uint indexed tokenId, address indexed owner);
     /// @notice This event is triggered when a new part is added to a content
-    event newPartAdded(uint tokenId, uint newPartId, uint newPartPrice);
+    event ContentModified(
+        uint indexed tokenId,
+        address indexed owner,
+        uint newPartNumber
+    );
     /// @notice This event is triggered if the contract manager updates the addresses.
     event AddressesUpdated(address RoleManager, address Supervision);
     /// @notice Triggered when KYC requirement for content creating is changed
@@ -112,6 +116,12 @@ contract UDAOContent is
             hasRole(VOUCHER_VERIFIER, signer),
             "Signature invalid or unauthorized"
         );
+        // Revert if the msg.sender is not the voucher._redeemer or has the CONTENT_PUBLISHER role
+        require(
+            hasRole(CONTENT_PUBLISHER, msg.sender) ||
+                voucher._redeemer == msg.sender,
+            "Only content modifier or redeemer can create content"
+        );
         require(voucher.validUntil >= block.timestamp, "Voucher has expired.");
         /// @dev 1 is new content, 2 is modification
         require(voucher.redeemType == 1, "Redeem type is not new content");
@@ -161,6 +171,12 @@ contract UDAOContent is
             hasRole(VOUCHER_VERIFIER, signer),
             "Signature invalid or unauthorized"
         );
+        // Revert if the msg.sender is not the owner of the content or has the CONTENT_PUBLISHER role
+        require(
+            hasRole(CONTENT_PUBLISHER, msg.sender) ||
+                ownerOf(voucher.tokenId) == msg.sender,
+            "Only content modifier or owner can modify content"
+        );
         require(voucher.validUntil >= block.timestamp, "Voucher has expired.");
         /// @dev 1 is new content, 2 is modification
         require(voucher.redeemType == 2, "Redeem type is not modification");
@@ -188,6 +204,12 @@ contract UDAOContent is
                 voucher.validationScore
             );
         }
+
+        emit ContentModified(
+            voucher.tokenId,
+            voucher._redeemer,
+            voucher._parts.length
+        );
     }
 
     /// @notice returns the parts array of a specific content
