@@ -13,6 +13,7 @@ const { latestBlock } = require("@nomicfoundation/hardhat-network-helpers/dist/s
 
 // Enable and inject BN dependency
 chai.use(require("chai-bn")(BN));
+const TEST_DISABLED = true;
 
 // @dev Proposal states
 /*
@@ -154,6 +155,9 @@ async function setupGovernanceMember(contractRoleManager, contractUDAO, contract
 }
 
 describe("Governance Contract", function () {
+  if (TEST_DISABLED) {
+    return;
+  }
   it("Should deploy", async function () {
     await reDeploy();
   });

@@ -249,7 +249,7 @@ async function _createContent(
   /// Set KYC
   await contractRoleManager.setKYC(contentCreator.address, true);
 
-  const contentParts = [0,1]
+  const contentParts = [0, 1];
   /// Create Voucher from redeem.js and use it for creating content
   const createContentVoucherSample = await createContentVoucher(
     contractUDAOContent,
@@ -277,7 +277,20 @@ async function _createContent(
     contentCreator
   );
 }
-async function makeContentPurchase(contractPlatformTreasury,contractVoucherVerifier, contentBuyer, contractRoleManager, contractUDAO, tokenIds, purchasedParts, pricesToPay, fullContentPurchase, validUntil, redeemers, giftReceiver) {
+async function makeContentPurchase(
+  contractPlatformTreasury,
+  contractVoucherVerifier,
+  contentBuyer,
+  contractRoleManager,
+  contractUDAO,
+  tokenIds,
+  purchasedParts,
+  pricesToPay,
+  fullContentPurchase,
+  validUntil,
+  redeemers,
+  giftReceiver
+) {
   /// Set KYC
   await contractRoleManager.setKYC(contentBuyer.address, true);
   /// Send UDAO to the buyer's wallet
@@ -286,7 +299,7 @@ async function makeContentPurchase(contractPlatformTreasury,contractVoucherVerif
   await contractUDAO
     .connect(contentBuyer)
     .approve(contractPlatformTreasury.address, ethers.utils.parseEther("999999999999.0"));
-  
+
   /// Create content purchase vouchers
   /*
   ContentDiscountVoucher: [
@@ -434,7 +447,7 @@ describe("Platform Treasury General", function () {
     await checkAccountUDAOVpBalanceAndDelegate(contractUDAOVp, validatorCandidate);
     await checkAccountUDAOVpBalanceAndDelegate(contractUDAOVp, jurorCandidate);
     // Create content
-    const contentParts = [0,1]
+    const contentParts = [0, 1];
     /// Create Voucher from redeem.js and use it for creating content
     const createContentVoucherSample = await createContentVoucher(
       contractUDAOContent,
@@ -447,7 +460,13 @@ describe("Platform Treasury General", function () {
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs("0x0000000000000000000000000000000000000000", contentCreator.address, 0);
     // Make a content purchase to gather funds for governance
-    await makeContentPurchase(contractPlatformTreasury, contractVoucherVerifier, contentBuyer1, contractRoleManager, contractUDAO);
+    await makeContentPurchase(
+      contractPlatformTreasury,
+      contractVoucherVerifier,
+      contentBuyer1,
+      contractRoleManager,
+      contractUDAO
+    );
 
     // new dummy governance treasury address
     const newGovernanceTreasury = contractUDAOTimelockController;
@@ -699,7 +718,7 @@ describe("Platform Treasury General", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer1.address, true);
     // Create content
-    const contentParts = [0,1]
+    const contentParts = [0, 1];
     // Create content voucher
     const createContentVoucherSample = await createContentVoucher(
       contractUDAOContent,
@@ -721,7 +740,20 @@ describe("Platform Treasury General", function () {
     const fullContentPurchase = [false];
     const pricesToPay = [ethers.utils.parseEther("1")];
     const validUntil = Date.now() + 999999999;
-    await makeContentPurchase(contractPlatformTreasury, contractVoucherVerifier, contentBuyer1, contractRoleManager, contractUDAO, tokenIds, purchasedParts, pricesToPay, fullContentPurchase, validUntil, redeemers, giftReceiver);
+    await makeContentPurchase(
+      contractPlatformTreasury,
+      contractVoucherVerifier,
+      contentBuyer1,
+      contractRoleManager,
+      contractUDAO,
+      tokenIds,
+      purchasedParts,
+      pricesToPay,
+      fullContentPurchase,
+      validUntil,
+      redeemers,
+      giftReceiver
+    );
     // set foundation wallet address
     await expect(contractPlatformTreasury.connect(backend).setFoundationAddress(foundation.address))
       .to.emit(contractPlatformTreasury, "FoundationWalletUpdated")
@@ -738,7 +770,7 @@ describe("Platform Treasury General", function () {
     const currentFoundationCut = await contractPlatformTreasury.contentFoundCut();
     /// Get the current foundation balance
     const currentFoundationBalance = await contractUDAO.balanceOf(foundation.address);
-    const contentPrice = pricesToPay[0]
+    const contentPrice = pricesToPay[0];
     /// Multiply the content price with the current foundation cut and divide by 100000 to get the expected foundation balance
     const expectedFoundationBalanceBeforePercentage = contentPrice.mul(currentFoundationCut);
     const expectedFoundationBalance = expectedFoundationBalanceBeforePercentage.div(100000);
@@ -755,7 +787,7 @@ describe("Platform Treasury General", function () {
     await contractRoleManager.setKYC(contentBuyer2.address, true);
     await contractRoleManager.setKYC(contentBuyer3.address, true);
     // Create content
-    const contentParts = [0,1]
+    const contentParts = [0, 1];
 
     // Create content voucher
     const createContentVoucherSample = await createContentVoucher(
@@ -780,10 +812,48 @@ describe("Platform Treasury General", function () {
     const fullContentPurchase = [false];
     const pricesToPay = [ethers.utils.parseEther("1")];
     const validUntil = Date.now() + 999999999;
-    await makeContentPurchase(contractPlatformTreasury, contractVoucherVerifier, contentBuyer1, contractRoleManager, contractUDAO, tokenIds, purchasedParts, pricesToPay, fullContentPurchase, validUntil, redeemers1, giftReceiver);
-    await makeContentPurchase(contractPlatformTreasury, contractVoucherVerifier, contentBuyer2, contractRoleManager, contractUDAO, tokenIds, purchasedParts, pricesToPay, fullContentPurchase, validUntil, redeemers2, giftReceiver);
-    await makeContentPurchase(contractPlatformTreasury, contractVoucherVerifier, contentBuyer3, contractRoleManager, contractUDAO, tokenIds, purchasedParts, pricesToPay, fullContentPurchase, validUntil, redeemers3, giftReceiver);
-
+    await makeContentPurchase(
+      contractPlatformTreasury,
+      contractVoucherVerifier,
+      contentBuyer1,
+      contractRoleManager,
+      contractUDAO,
+      tokenIds,
+      purchasedParts,
+      pricesToPay,
+      fullContentPurchase,
+      validUntil,
+      redeemers1,
+      giftReceiver
+    );
+    await makeContentPurchase(
+      contractPlatformTreasury,
+      contractVoucherVerifier,
+      contentBuyer2,
+      contractRoleManager,
+      contractUDAO,
+      tokenIds,
+      purchasedParts,
+      pricesToPay,
+      fullContentPurchase,
+      validUntil,
+      redeemers2,
+      giftReceiver
+    );
+    await makeContentPurchase(
+      contractPlatformTreasury,
+      contractVoucherVerifier,
+      contentBuyer3,
+      contractRoleManager,
+      contractUDAO,
+      tokenIds,
+      purchasedParts,
+      pricesToPay,
+      fullContentPurchase,
+      validUntil,
+      redeemers3,
+      giftReceiver
+    );
 
     // set foundation wallet address
     await expect(contractPlatformTreasury.connect(backend).setFoundationAddress(foundation.address))
@@ -802,7 +872,7 @@ describe("Platform Treasury General", function () {
 
     /// Get the current foundation balance
     const currentFoundationBalance = await contractUDAO.balanceOf(foundation.address);
-    const contentPrice = pricesToPay[0]
+    const contentPrice = pricesToPay[0];
     /// Multiply content price with 3 since 3 content purchases were made
     const contentPriceTimesThree = contentPrice.mul(3);
     /// Multiply the content price with the current foundation cut and divide by 100000 to get the expected foundation balance
@@ -1141,7 +1211,7 @@ describe("Platform Treasury General", function () {
     await contractRoleManager.setKYC(contentBuyer2.address, true);
     await contractRoleManager.setKYC(contentBuyer3.address, true);
     // Create content
-    const contentParts = [0,1]
+    const contentParts = [0, 1];
 
     // Create content voucher
     const createContentVoucherSample = await createContentVoucher(
@@ -1164,8 +1234,20 @@ describe("Platform Treasury General", function () {
     const fullContentPurchase = [false];
     const pricesToPay = [ethers.utils.parseEther("1")];
     const validUntil = Date.now() + 999999999;
-    await makeContentPurchase(contractPlatformTreasury, contractVoucherVerifier, contentBuyer1, contractRoleManager, contractUDAO, tokenIds, purchasedParts, pricesToPay, fullContentPurchase, validUntil, redeemers, giftReceiver);
-    
+    await makeContentPurchase(
+      contractPlatformTreasury,
+      contractVoucherVerifier,
+      contentBuyer1,
+      contractRoleManager,
+      contractUDAO,
+      tokenIds,
+      purchasedParts,
+      pricesToPay,
+      fullContentPurchase,
+      validUntil,
+      redeemers,
+      giftReceiver
+    );
 
     // Get the instructer balance before withdrawal
     const instructerBalanceBefore = await contractUDAO.balanceOf(contentCreator.address);
@@ -1182,7 +1264,7 @@ describe("Platform Treasury General", function () {
     await expect(instructerBalanceAfter).to.not.equal(0);
 
     /// @dev Calculate how much the instructer should receive
-    const contentPrice = pricesToPay[0]
+    const contentPrice = pricesToPay[0];
     // Calculate the foundation cut
     const currentFoundationCut = await contractPlatformTreasury.contentFoundCut();
     const expectedFoundationBalanceBeforePercentage = contentPrice.mul(currentFoundationCut);
