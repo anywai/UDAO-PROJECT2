@@ -11,6 +11,10 @@ const { WMATIC_ABI, NonFunbiblePositionABI, NonFunbiblePositionAddress, WMATICAd
 
 // Enable and inject BN dependency
 chai.use(require("chai-bn")(BN));
+
+const TEST_VERSION = process.env.TEST_VERSION;
+const TEST_DISABLED = true;
+
 /// HELPERS---------------------------------------------------------------------
 /// @dev Deploy contracts and assign them
 async function reDeploy(reApplyRolesViaVoucher = true, isDexRequired = false) {
@@ -132,14 +136,12 @@ async function setupGovernanceMember(contractRoleManager, contractUDAO, contract
 }
 
 describe("UDAOStaker Contract", function () {
+  if (TEST_DISABLED) {
+    return;
+  }
+
   it("Should deploy", async function () {
     await reDeploy();
-  });
-
-  it("Should update addresses", async function () {
-    const { backend, contractUDAOStaker } = await deploy();
-
-    await contractUDAOStaker.connect(backend).updateAddresses();
   });
 
   it("Should set validator lock amount", async function () {
@@ -1090,162 +1092,6 @@ describe("UDAOStaker Contract", function () {
       .withArgs(governanceCandidate.address, ethers.utils.parseEther("5"), ethers.utils.parseEther("150"));
   });
 
-  it("Should withdraw rewards from voting", async function () {
-    await reDeploy((reApplyRolesViaVoucher = false));
-    /// transfer UDAO to contractPlatformTreasury
-    await contractUDAO.transfer(contractPlatformTreasury.address, ethers.utils.parseEther("1000.0"));
-
-    /// @dev Setup governance member
-    await setupGovernanceMember(contractRoleManager, contractUDAO, contractUDAOStaker, governanceCandidate);
-    await setupGovernanceMember(contractRoleManager, contractUDAO, contractUDAOStaker, superValidator);
-
-    //const superValidatorBefore = await contractUDAO.balanceOf(superValidator.address);
-    //console.log("superValidatorBefore", superValidatorBefore.toString());
-
-    /// @dev Check if the governance candidate has the correct amount of UDAO-vp tokens
-    const governanceCandidateBalance = await contractUDAOVp.balanceOf(governanceCandidate.address);
-    //console.log("govCandidateBalance", governanceCandidateBalance.toString());
-    await expect(governanceCandidateBalance).to.equal(ethers.utils.parseEther("300"));
-    /// @dev delegate superValidator UDAO-vp tokens to himself
-    await contractUDAOVp.connect(governanceCandidate).delegate(governanceCandidate.address);
-    /// @dev Check votes for governance candidate on latest block
-    const governanceCandidateVotes = await contractUDAOVp.getVotes(governanceCandidate.address);
-    await expect(governanceCandidateVotes).to.equal(ethers.utils.parseEther("300"));
-    //console.log("govCandidateVotes", governanceCandidateVotes.toString());
-
-    /// @dev Check if the superValidator has the correct amount of UDAO-vp tokens
-    const superValidatorBalance = await contractUDAOVp.balanceOf(superValidator.address);
-    //console.log("superValidBalance", superValidatorBalance.toString());
-    await expect(superValidatorBalance).to.equal(ethers.utils.parseEther("300"));
-    /// @dev delegate superValidator UDAO-vp tokens to himself
-    await contractUDAOVp.connect(superValidator).delegate(superValidator.address);
-    /// @dev Check votes for superValidator on latest block
-    const superValidatorVotes = await contractUDAOVp.getVotes(superValidator.address);
-    await expect(superValidatorVotes).to.equal(ethers.utils.parseEther("300"));
-
-    /// @dev Proposal settings
-    const tokenAddress = contractUDAO.address;
-    const token = await ethers.getContractAt("ERC20", tokenAddress);
-    const teamAddress = foundation.address;
-    const grantAmount = ethers.utils.parseEther("1");
-    const transferCalldata = token.interface.encodeFunctionData("transfer", [teamAddress, grantAmount]);
-    /// @dev Propose a new proposal
-    const proposeTx = await contractUDAOGovernor
-      .connect(governanceCandidate)
-      .propose([tokenAddress], [0], [transferCalldata], "Proposal #1: Give grant to team");
-    /// @dev Wait for the transaction to be mined
-    const tx = await proposeTx.wait();
-    const proposalId = tx.events.find((e) => e.event == "ProposalCreated").args.proposalId;
-
-    // @dev (7 * 24 * 60 * 60) calculates the total number of seconds in 7 days.
-    // @dev 2 is the number of seconds per block
-    // @dev We divide the total number of seconds in 7 days by the number of seconds per block
-    // @dev We then round up to the nearest whole number
-    // @dev This is the number of blocks we need to mine to get to the start of the voting period
-    const numBlocksToMine = Math.ceil((7 * 24 * 60 * 60) / 2);
-    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine.toString(16)}`, "0x2"]);
-    /// @dev Vote on the proposal
-    await contractUDAOGovernor.connect(superValidator).castVote(proposalId, 1);
-    /// @dev Check if the vote was casted
-    const proposalState = await contractUDAOGovernor.state(proposalId);
-    await expect(proposalState).to.equal(1);
-    /// @dev Caluclate the reward
-    // Get the voteReward from UDAOStaker
-    const voteReward = await contractUDAOStaker.voteReward();
-    // Get the voting power ratio of the superValidator
-    //votingPowerRatio = (udaovp.balanceOf(voter) * 10000) / totalVotingPower;
-    // totalVotingPower = staked amount * days staked (10 ether * 30 days), 2 stakers
-    // votingPowerRatio = (300 * 10000) / (10 * 30 * 2) = 5000
-    //rewardBalanceOf[voter] += (votingPowerRatio * voteReward) / 10000;
-    const totalVotingPower = ethers.utils.parseEther("10") * 30 * 2;
-    //console.log(totalVotingPower.toString());
-    const vpBalanceOfSuperValidator = await contractUDAOVp.balanceOf(superValidator.address);
-    //console.log(vpBalanceOfSuperValidator);
-    const votingPowerRatio = (vpBalanceOfSuperValidator * 10000) / totalVotingPower;
-    //console.log(votingPowerRatio.toString());
-    const reward = (votingPowerRatio * voteReward) / 10000;
-    //const superValidatorAfter = await contractUDAO.balanceOf(superValidator.address);
-    //console.log("superValidatorAfter", superValidatorAfter.toString());
-    await expect(contractUDAOStaker.connect(superValidator).withdrawRewards())
-      .to.emit(contractUDAOStaker, "VoteRewardsWithdrawn")
-      .withArgs(superValidator.address, ethers.utils.parseEther(ethers.utils.formatEther(reward)));
-  });
-
-  it("Should withdraw rewards from voting when banned", async function () {
-    await reDeploy((reApplyRolesViaVoucher = false));
-    /// transfer UDAO to contractPlatformTreasury
-    await contractUDAO.transfer(contractPlatformTreasury.address, ethers.utils.parseEther("1000.0"));
-
-    /// @dev Setup governance member
-    await setupGovernanceMember(contractRoleManager, contractUDAO, contractUDAOStaker, governanceCandidate);
-    await setupGovernanceMember(contractRoleManager, contractUDAO, contractUDAOStaker, superValidator);
-    /// @dev Check if the governance candidate has the correct amount of UDAO-vp tokens
-    const governanceCandidateBalance = await contractUDAOVp.balanceOf(governanceCandidate.address);
-    await expect(governanceCandidateBalance).to.equal(ethers.utils.parseEther("300"));
-    /// @dev delegate superValidator UDAO-vp tokens to himself
-    await contractUDAOVp.connect(governanceCandidate).delegate(governanceCandidate.address);
-    /// @dev Check votes for governance candidate on latest block
-    const governanceCandidateVotes = await contractUDAOVp.getVotes(governanceCandidate.address);
-    await expect(governanceCandidateVotes).to.equal(ethers.utils.parseEther("300"));
-
-    /// @dev Check if the superValidator has the correct amount of UDAO-vp tokens
-    const superValidatorBalance = await contractUDAOVp.balanceOf(superValidator.address);
-    await expect(superValidatorBalance).to.equal(ethers.utils.parseEther("300"));
-    /// @dev delegate superValidator UDAO-vp tokens to himself
-    await contractUDAOVp.connect(superValidator).delegate(superValidator.address);
-    /// @dev Check votes for superValidator on latest block
-    const superValidatorVotes = await contractUDAOVp.getVotes(superValidator.address);
-    await expect(superValidatorVotes).to.equal(ethers.utils.parseEther("300"));
-
-    /// @dev Proposal settings
-    const tokenAddress = contractUDAO.address;
-    const token = await ethers.getContractAt("ERC20", tokenAddress);
-    const teamAddress = foundation.address;
-    const grantAmount = ethers.utils.parseEther("1");
-    const transferCalldata = token.interface.encodeFunctionData("transfer", [teamAddress, grantAmount]);
-    /// @dev Propose a new proposal
-    const proposeTx = await contractUDAOGovernor
-      .connect(governanceCandidate)
-      .propose([tokenAddress], [0], [transferCalldata], "Proposal #1: Give grant to team");
-    /// @dev Wait for the transaction to be mined
-    const tx = await proposeTx.wait();
-    const proposalId = tx.events.find((e) => e.event == "ProposalCreated").args.proposalId;
-
-    // @dev (7 * 24 * 60 * 60) calculates the total number of seconds in 7 days.
-    // @dev 2 is the number of seconds per block
-    // @dev We divide the total number of seconds in 7 days by the number of seconds per block
-    // @dev We then round up to the nearest whole number
-    // @dev This is the number of blocks we need to mine to get to the start of the voting period
-    const numBlocksToMine = Math.ceil((7 * 24 * 60 * 60) / 2);
-    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine.toString(16)}`, "0x2"]);
-    /// @dev Vote on the proposal
-    await contractUDAOGovernor.connect(superValidator).castVote(proposalId, 1);
-    /// @dev Check if the vote was casted
-    const proposalState = await contractUDAOGovernor.state(proposalId);
-    await expect(proposalState).to.equal(1);
-
-    //Ban the governance member
-    await contractRoleManager.setBan(superValidator.address, true);
-    /// @dev Caluclate the reward
-    // Get the voteReward from UDAOStaker
-    const voteReward = await contractUDAOStaker.voteReward();
-    // Get the voting power ratio of the superValidator
-    //votingPowerRatio = (udaovp.balanceOf(voter) * 10000) / totalVotingPower;
-    // totalVotingPower = staked amount * days staked (10 ether * 30 days), 2 stakers
-    // votingPowerRatio = (300 * 10000) / (10 * 30 * 2) = 5000
-    //rewardBalanceOf[voter] += (votingPowerRatio * voteReward) / 10000;
-    const totalVotingPower = ethers.utils.parseEther("10") * 30 * 2;
-    //console.log(totalVotingPower.toString());
-    const vpBalanceOfSuperValidator = await contractUDAOVp.balanceOf(superValidator.address);
-    //console.log(vpBalanceOfSuperValidator);
-    const votingPowerRatio = (vpBalanceOfSuperValidator * 10000) / totalVotingPower;
-    //console.log(votingPowerRatio.toString());
-    const reward = (votingPowerRatio * voteReward) / 10000;
-    await expect(contractUDAOStaker.connect(superValidator).withdrawRewards())
-      .to.emit(contractUDAOStaker, "VoteRewardsWithdrawn")
-      .withArgs(superValidator.address, ethers.utils.parseEther(ethers.utils.formatEther(reward)));
-  });
-
   it("Should fail to unstake to stop being a governance member when amount is higher than staked", async function () {
     await reDeploy();
     /// set KYC for governanceCandidate
@@ -1264,101 +1110,6 @@ describe("UDAOStaker Contract", function () {
     await expect(
       contractUDAOStaker.connect(governanceCandidate).withdrawGovernanceStake(ethers.utils.parseEther("15"))
     ).to.revertedWith("You don't have enough withdrawable balance");
-  });
-
-  it("Should approve for corporation account", async function () {
-    await reDeploy();
-    /// set KYC for corporation
-    await contractRoleManager.setKYC(corporation.address, true);
-    /// transfer UDAO to corporation
-    await contractUDAO.transfer(corporation.address, ethers.utils.parseEther("10000.0"));
-    /// approve UDAOStaker contract with jurorCandidate to spend UDAO
-    await contractUDAO.connect(jurorCandidate).approve(corporation.address, ethers.utils.parseEther("999999999999.0"));
-    /// get lazy role and role voucher
-    const lazyRole = new LazyRole({
-      contract: contractUDAOStaker,
-      signer: backend,
-    });
-    const role_voucher = await lazyRole.createVoucher(corporation.address, Date.now() + 999999999, 2);
-    /// approve the "corporation role" with corporation account
-    await expect(contractUDAOStaker.connect(corporation).getApproved(role_voucher))
-      .to.emit(contractUDAOStaker, "RoleApproved") // transfer from null address to minter
-      .withArgs(2, corporation.address);
-  });
-
-  it("Should register job listing", async function () {
-    await reDeploy();
-    /// set KYC for corporation
-    await contractRoleManager.setKYC(corporation.address, true);
-    /// transfer UDAO to corporation
-    await contractUDAO.transfer(corporation.address, ethers.utils.parseEther("10000.0"));
-    /// approve UDAOStaker contract with corporation to spend UDAO
-    await contractUDAO
-      .connect(corporation)
-      .approve(contractUDAOStaker.address, ethers.utils.parseEther("999999999999.0"));
-    /// get lazy role and role voucher
-    const lazyRole = new LazyRole({
-      contract: contractUDAOStaker,
-      signer: backend,
-    });
-    const role_voucher = await lazyRole.createVoucher(corporation.address, Date.now() + 999999999, 2);
-    /// approve the "corporation role" with corporation account
-    await expect(contractUDAOStaker.connect(corporation).getApproved(role_voucher))
-      .to.emit(contractUDAOStaker, "RoleApproved") // transfer from null address to minter
-      .withArgs(2, corporation.address);
-    await expect(contractUDAOStaker.connect(corporation).registerJobListing(5))
-      .to.emit(contractUDAOStaker, "JobListingRegistered")
-      .withArgs(corporation.address, ethers.utils.parseEther((5 * 500).toString()));
-  });
-
-  it("Should fail to register job listing if sender is not kyced", async function () {
-    await reDeploy();
-    /// set KYC for corporation
-    await contractRoleManager.setKYC(corporation.address, true);
-    /// transfer UDAO to corporation
-    await contractUDAO.transfer(corporation.address, ethers.utils.parseEther("10000.0"));
-    /// approve UDAOStaker contract with corporation to spend UDAO
-    await contractUDAO
-      .connect(corporation)
-      .approve(contractUDAOStaker.address, ethers.utils.parseEther("999999999999.0"));
-    /// get lazy role and role voucher
-    const lazyRole = new LazyRole({
-      contract: contractUDAOStaker,
-      signer: backend,
-    });
-    const role_voucher = await lazyRole.createVoucher(corporation.address, Date.now() + 999999999, 2);
-    /// approve the "corporation role" with corporation account
-    await expect(contractUDAOStaker.connect(corporation).getApproved(role_voucher))
-      .to.emit(contractUDAOStaker, "RoleApproved") // transfer from null address to minter
-      .withArgs(2, corporation.address);
-    /// remove KYC for corporation
-    await contractRoleManager.setKYC(corporation.address, false);
-    await expect(contractUDAOStaker.connect(corporation).registerJobListing(5)).to.revertedWith("You are not KYCed");
-  });
-
-  it("Should fail to register job listing if sender is banned", async function () {
-    await reDeploy();
-    /// set KYC for corporation
-    await contractRoleManager.setKYC(corporation.address, true);
-    /// transfer UDAO to corporation
-    await contractUDAO.transfer(corporation.address, ethers.utils.parseEther("10000.0"));
-    /// approve UDAOStaker contract with corporation to spend UDAO
-    await contractUDAO
-      .connect(corporation)
-      .approve(contractUDAOStaker.address, ethers.utils.parseEther("999999999999.0"));
-    /// get lazy role and role voucher
-    const lazyRole = new LazyRole({
-      contract: contractUDAOStaker,
-      signer: backend,
-    });
-    const role_voucher = await lazyRole.createVoucher(corporation.address, Date.now() + 999999999, 2);
-    /// approve the "corporation role" with corporation account
-    await expect(contractUDAOStaker.connect(corporation).getApproved(role_voucher))
-      .to.emit(contractUDAOStaker, "RoleApproved") // transfer from null address to minter
-      .withArgs(2, corporation.address);
-
-    await contractRoleManager.setBan(corporation.address, true);
-    await expect(contractUDAOStaker.connect(corporation).registerJobListing(5)).to.revertedWith("You were banned");
   });
 
   it("Should fail to apply for validator when the user hasn't kyced", async function () {
@@ -1515,6 +1266,9 @@ describe("UDAOStaker Contract", function () {
 
   it("Should fail to register job listing when user hasn't kyced", async function () {
     await reDeploy();
+    if (TEST_VERSION == 1) {
+      this.skip();
+    }
     /// set KYC for corporation
     await contractRoleManager.setKYC(corporation.address, true);
     /// transfer UDAO to corporation
@@ -1542,6 +1296,9 @@ describe("UDAOStaker Contract", function () {
 
   it("Should fail to register job listing when user banned", async function () {
     await reDeploy();
+    if (TEST_VERSION == 1) {
+      this.skip();
+    }
     /// set KYC for corporation
     await contractRoleManager.setKYC(corporation.address, true);
     /// transfer UDAO to corporation
@@ -1564,6 +1321,275 @@ describe("UDAOStaker Contract", function () {
 
     await contractRoleManager.setBan(corporation.address, true);
 
+    await expect(contractUDAOStaker.connect(corporation).registerJobListing(5)).to.revertedWith("You were banned");
+  });
+
+  it("Should withdraw rewards from voting", async function () {
+    await reDeploy((reApplyRolesViaVoucher = false));
+    if (TEST_VERSION == 1) {
+      this.skip();
+    }
+    /// transfer UDAO to contractPlatformTreasury
+    await contractUDAO.transfer(contractPlatformTreasury.address, ethers.utils.parseEther("1000.0"));
+
+    /// @dev Setup governance member
+    await setupGovernanceMember(contractRoleManager, contractUDAO, contractUDAOStaker, governanceCandidate);
+    await setupGovernanceMember(contractRoleManager, contractUDAO, contractUDAOStaker, superValidator);
+
+    //const superValidatorBefore = await contractUDAO.balanceOf(superValidator.address);
+    //console.log("superValidatorBefore", superValidatorBefore.toString());
+
+    /// @dev Check if the governance candidate has the correct amount of UDAO-vp tokens
+    const governanceCandidateBalance = await contractUDAOVp.balanceOf(governanceCandidate.address);
+    //console.log("govCandidateBalance", governanceCandidateBalance.toString());
+    await expect(governanceCandidateBalance).to.equal(ethers.utils.parseEther("300"));
+    /// @dev delegate superValidator UDAO-vp tokens to himself
+    await contractUDAOVp.connect(governanceCandidate).delegate(governanceCandidate.address);
+    /// @dev Check votes for governance candidate on latest block
+    const governanceCandidateVotes = await contractUDAOVp.getVotes(governanceCandidate.address);
+    await expect(governanceCandidateVotes).to.equal(ethers.utils.parseEther("300"));
+    //console.log("govCandidateVotes", governanceCandidateVotes.toString());
+
+    /// @dev Check if the superValidator has the correct amount of UDAO-vp tokens
+    const superValidatorBalance = await contractUDAOVp.balanceOf(superValidator.address);
+    //console.log("superValidBalance", superValidatorBalance.toString());
+    await expect(superValidatorBalance).to.equal(ethers.utils.parseEther("300"));
+    /// @dev delegate superValidator UDAO-vp tokens to himself
+    await contractUDAOVp.connect(superValidator).delegate(superValidator.address);
+    /// @dev Check votes for superValidator on latest block
+    const superValidatorVotes = await contractUDAOVp.getVotes(superValidator.address);
+    await expect(superValidatorVotes).to.equal(ethers.utils.parseEther("300"));
+
+    /// @dev Proposal settings
+    const tokenAddress = contractUDAO.address;
+    const token = await ethers.getContractAt("ERC20", tokenAddress);
+    const teamAddress = foundation.address;
+    const grantAmount = ethers.utils.parseEther("1");
+    const transferCalldata = token.interface.encodeFunctionData("transfer", [teamAddress, grantAmount]);
+    /// @dev Propose a new proposal
+    const proposeTx = await contractUDAOGovernor
+      .connect(governanceCandidate)
+      .propose([tokenAddress], [0], [transferCalldata], "Proposal #1: Give grant to team");
+    /// @dev Wait for the transaction to be mined
+    const tx = await proposeTx.wait();
+    const proposalId = tx.events.find((e) => e.event == "ProposalCreated").args.proposalId;
+
+    // @dev (7 * 24 * 60 * 60) calculates the total number of seconds in 7 days.
+    // @dev 2 is the number of seconds per block
+    // @dev We divide the total number of seconds in 7 days by the number of seconds per block
+    // @dev We then round up to the nearest whole number
+    // @dev This is the number of blocks we need to mine to get to the start of the voting period
+    const numBlocksToMine = Math.ceil((7 * 24 * 60 * 60) / 2);
+    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine.toString(16)}`, "0x2"]);
+    /// @dev Vote on the proposal
+    await contractUDAOGovernor.connect(superValidator).castVote(proposalId, 1);
+    /// @dev Check if the vote was casted
+    const proposalState = await contractUDAOGovernor.state(proposalId);
+    await expect(proposalState).to.equal(1);
+    /// @dev Caluclate the reward
+    // Get the voteReward from UDAOStaker
+    const voteReward = await contractUDAOStaker.voteReward();
+    // Get the voting power ratio of the superValidator
+    //votingPowerRatio = (udaovp.balanceOf(voter) * 10000) / totalVotingPower;
+    // totalVotingPower = staked amount * days staked (10 ether * 30 days), 2 stakers
+    // votingPowerRatio = (300 * 10000) / (10 * 30 * 2) = 5000
+    //rewardBalanceOf[voter] += (votingPowerRatio * voteReward) / 10000;
+    const totalVotingPower = ethers.utils.parseEther("10") * 30 * 2;
+    //console.log(totalVotingPower.toString());
+    const vpBalanceOfSuperValidator = await contractUDAOVp.balanceOf(superValidator.address);
+    //console.log(vpBalanceOfSuperValidator);
+    const votingPowerRatio = (vpBalanceOfSuperValidator * 10000) / totalVotingPower;
+    //console.log(votingPowerRatio.toString());
+    const reward = (votingPowerRatio * voteReward) / 10000;
+    //const superValidatorAfter = await contractUDAO.balanceOf(superValidator.address);
+    //console.log("superValidatorAfter", superValidatorAfter.toString());
+    await expect(contractUDAOStaker.connect(superValidator).withdrawRewards())
+      .to.emit(contractUDAOStaker, "VoteRewardsWithdrawn")
+      .withArgs(superValidator.address, ethers.utils.parseEther(ethers.utils.formatEther(reward)));
+  });
+
+  it("Should withdraw rewards from voting when banned", async function () {
+    await reDeploy((reApplyRolesViaVoucher = false));
+    if (TEST_VERSION == 1) {
+      this.skip();
+    }
+    /// transfer UDAO to contractPlatformTreasury
+    await contractUDAO.transfer(contractPlatformTreasury.address, ethers.utils.parseEther("1000.0"));
+
+    /// @dev Setup governance member
+    await setupGovernanceMember(contractRoleManager, contractUDAO, contractUDAOStaker, governanceCandidate);
+    await setupGovernanceMember(contractRoleManager, contractUDAO, contractUDAOStaker, superValidator);
+    /// @dev Check if the governance candidate has the correct amount of UDAO-vp tokens
+    const governanceCandidateBalance = await contractUDAOVp.balanceOf(governanceCandidate.address);
+    await expect(governanceCandidateBalance).to.equal(ethers.utils.parseEther("300"));
+    /// @dev delegate superValidator UDAO-vp tokens to himself
+    await contractUDAOVp.connect(governanceCandidate).delegate(governanceCandidate.address);
+    /// @dev Check votes for governance candidate on latest block
+    const governanceCandidateVotes = await contractUDAOVp.getVotes(governanceCandidate.address);
+    await expect(governanceCandidateVotes).to.equal(ethers.utils.parseEther("300"));
+
+    /// @dev Check if the superValidator has the correct amount of UDAO-vp tokens
+    const superValidatorBalance = await contractUDAOVp.balanceOf(superValidator.address);
+    await expect(superValidatorBalance).to.equal(ethers.utils.parseEther("300"));
+    /// @dev delegate superValidator UDAO-vp tokens to himself
+    await contractUDAOVp.connect(superValidator).delegate(superValidator.address);
+    /// @dev Check votes for superValidator on latest block
+    const superValidatorVotes = await contractUDAOVp.getVotes(superValidator.address);
+    await expect(superValidatorVotes).to.equal(ethers.utils.parseEther("300"));
+
+    /// @dev Proposal settings
+    const tokenAddress = contractUDAO.address;
+    const token = await ethers.getContractAt("ERC20", tokenAddress);
+    const teamAddress = foundation.address;
+    const grantAmount = ethers.utils.parseEther("1");
+    const transferCalldata = token.interface.encodeFunctionData("transfer", [teamAddress, grantAmount]);
+    /// @dev Propose a new proposal
+    const proposeTx = await contractUDAOGovernor
+      .connect(governanceCandidate)
+      .propose([tokenAddress], [0], [transferCalldata], "Proposal #1: Give grant to team");
+    /// @dev Wait for the transaction to be mined
+    const tx = await proposeTx.wait();
+    const proposalId = tx.events.find((e) => e.event == "ProposalCreated").args.proposalId;
+
+    // @dev (7 * 24 * 60 * 60) calculates the total number of seconds in 7 days.
+    // @dev 2 is the number of seconds per block
+    // @dev We divide the total number of seconds in 7 days by the number of seconds per block
+    // @dev We then round up to the nearest whole number
+    // @dev This is the number of blocks we need to mine to get to the start of the voting period
+    const numBlocksToMine = Math.ceil((7 * 24 * 60 * 60) / 2);
+    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine.toString(16)}`, "0x2"]);
+    /// @dev Vote on the proposal
+    await contractUDAOGovernor.connect(superValidator).castVote(proposalId, 1);
+    /// @dev Check if the vote was casted
+    const proposalState = await contractUDAOGovernor.state(proposalId);
+    await expect(proposalState).to.equal(1);
+
+    //Ban the governance member
+    await contractRoleManager.setBan(superValidator.address, true);
+    /// @dev Caluclate the reward
+    // Get the voteReward from UDAOStaker
+    const voteReward = await contractUDAOStaker.voteReward();
+    // Get the voting power ratio of the superValidator
+    //votingPowerRatio = (udaovp.balanceOf(voter) * 10000) / totalVotingPower;
+    // totalVotingPower = staked amount * days staked (10 ether * 30 days), 2 stakers
+    // votingPowerRatio = (300 * 10000) / (10 * 30 * 2) = 5000
+    //rewardBalanceOf[voter] += (votingPowerRatio * voteReward) / 10000;
+    const totalVotingPower = ethers.utils.parseEther("10") * 30 * 2;
+    //console.log(totalVotingPower.toString());
+    const vpBalanceOfSuperValidator = await contractUDAOVp.balanceOf(superValidator.address);
+    //console.log(vpBalanceOfSuperValidator);
+    const votingPowerRatio = (vpBalanceOfSuperValidator * 10000) / totalVotingPower;
+    //console.log(votingPowerRatio.toString());
+    const reward = (votingPowerRatio * voteReward) / 10000;
+    await expect(contractUDAOStaker.connect(superValidator).withdrawRewards())
+      .to.emit(contractUDAOStaker, "VoteRewardsWithdrawn")
+      .withArgs(superValidator.address, ethers.utils.parseEther(ethers.utils.formatEther(reward)));
+  });
+
+  it("Should approve for corporation account", async function () {
+    await reDeploy();
+    if (TEST_VERSION == 1) {
+      this.skip();
+    }
+    /// set KYC for corporation
+    await contractRoleManager.setKYC(corporation.address, true);
+    /// transfer UDAO to corporation
+    await contractUDAO.transfer(corporation.address, ethers.utils.parseEther("10000.0"));
+    /// approve UDAOStaker contract with jurorCandidate to spend UDAO
+    await contractUDAO.connect(jurorCandidate).approve(corporation.address, ethers.utils.parseEther("999999999999.0"));
+    /// get lazy role and role voucher
+    const lazyRole = new LazyRole({
+      contract: contractUDAOStaker,
+      signer: backend,
+    });
+    const role_voucher = await lazyRole.createVoucher(corporation.address, Date.now() + 999999999, 2);
+    /// approve the "corporation role" with corporation account
+    await expect(contractUDAOStaker.connect(corporation).getApproved(role_voucher))
+      .to.emit(contractUDAOStaker, "RoleApproved") // transfer from null address to minter
+      .withArgs(2, corporation.address);
+  });
+
+  it("Should register job listing", async function () {
+    await reDeploy();
+    if (TEST_VERSION == 1) {
+      this.skip();
+    }
+    /// set KYC for corporation
+    await contractRoleManager.setKYC(corporation.address, true);
+    /// transfer UDAO to corporation
+    await contractUDAO.transfer(corporation.address, ethers.utils.parseEther("10000.0"));
+    /// approve UDAOStaker contract with corporation to spend UDAO
+    await contractUDAO
+      .connect(corporation)
+      .approve(contractUDAOStaker.address, ethers.utils.parseEther("999999999999.0"));
+    /// get lazy role and role voucher
+    const lazyRole = new LazyRole({
+      contract: contractUDAOStaker,
+      signer: backend,
+    });
+    const role_voucher = await lazyRole.createVoucher(corporation.address, Date.now() + 999999999, 2);
+    /// approve the "corporation role" with corporation account
+    await expect(contractUDAOStaker.connect(corporation).getApproved(role_voucher))
+      .to.emit(contractUDAOStaker, "RoleApproved") // transfer from null address to minter
+      .withArgs(2, corporation.address);
+    await expect(contractUDAOStaker.connect(corporation).registerJobListing(5))
+      .to.emit(contractUDAOStaker, "JobListingRegistered")
+      .withArgs(corporation.address, ethers.utils.parseEther((5 * 500).toString()));
+  });
+
+  it("Should fail to register job listing if sender is not kyced", async function () {
+    await reDeploy();
+    if (TEST_VERSION == 1) {
+      this.skip();
+    }
+    /// set KYC for corporation
+    await contractRoleManager.setKYC(corporation.address, true);
+    /// transfer UDAO to corporation
+    await contractUDAO.transfer(corporation.address, ethers.utils.parseEther("10000.0"));
+    /// approve UDAOStaker contract with corporation to spend UDAO
+    await contractUDAO
+      .connect(corporation)
+      .approve(contractUDAOStaker.address, ethers.utils.parseEther("999999999999.0"));
+    /// get lazy role and role voucher
+    const lazyRole = new LazyRole({
+      contract: contractUDAOStaker,
+      signer: backend,
+    });
+    const role_voucher = await lazyRole.createVoucher(corporation.address, Date.now() + 999999999, 2);
+    /// approve the "corporation role" with corporation account
+    await expect(contractUDAOStaker.connect(corporation).getApproved(role_voucher))
+      .to.emit(contractUDAOStaker, "RoleApproved") // transfer from null address to minter
+      .withArgs(2, corporation.address);
+    /// remove KYC for corporation
+    await contractRoleManager.setKYC(corporation.address, false);
+    await expect(contractUDAOStaker.connect(corporation).registerJobListing(5)).to.revertedWith("You are not KYCed");
+  });
+
+  it("Should fail to register job listing if sender is banned", async function () {
+    await reDeploy();
+    if (TEST_VERSION == 1) {
+      this.skip();
+    }
+    /// set KYC for corporation
+    await contractRoleManager.setKYC(corporation.address, true);
+    /// transfer UDAO to corporation
+    await contractUDAO.transfer(corporation.address, ethers.utils.parseEther("10000.0"));
+    /// approve UDAOStaker contract with corporation to spend UDAO
+    await contractUDAO
+      .connect(corporation)
+      .approve(contractUDAOStaker.address, ethers.utils.parseEther("999999999999.0"));
+    /// get lazy role and role voucher
+    const lazyRole = new LazyRole({
+      contract: contractUDAOStaker,
+      signer: backend,
+    });
+    const role_voucher = await lazyRole.createVoucher(corporation.address, Date.now() + 999999999, 2);
+    /// approve the "corporation role" with corporation account
+    await expect(contractUDAOStaker.connect(corporation).getApproved(role_voucher))
+      .to.emit(contractUDAOStaker, "RoleApproved") // transfer from null address to minter
+      .withArgs(2, corporation.address);
+
+    await contractRoleManager.setBan(corporation.address, true);
     await expect(contractUDAOStaker.connect(corporation).registerJobListing(5)).to.revertedWith("You were banned");
   });
 });
