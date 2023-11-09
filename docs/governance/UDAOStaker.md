@@ -40,22 +40,10 @@ contract IERC20 udao
 contract IUDAOVP udaovp
 ```
 
-### contractManager
+### platformTreasury
 
 ```solidity
-contract ContractManager contractManager
-```
-
-### platformTreasuryAddress
-
-```solidity
-address platformTreasuryAddress
-```
-
-### roleManager
-
-```solidity
-contract IRoleManager roleManager
+contract IPlatformTreasury platformTreasury
 ```
 
 ### jurorLockTime
@@ -411,22 +399,28 @@ The total voting power of all governance members
 ### constructor
 
 ```solidity
-constructor(address _platformTreasuryAddress, address rmAddress, address udaoVpAddress, address _contractManager) public
+constructor(address roleManagerAddress, address udaoAddress, address platformTreasuryAddress, address udaoVpAddress) public
 ```
 
 #### Parameters
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| _platformTreasuryAddress | address | address of the platform treasury contract |
-| rmAddress | address | address of the role manager contract |
+| roleManagerAddress | address | address of the role manager contract |
+| udaoAddress | address | address of the udao token contract |
+| platformTreasuryAddress | address | address of the platform treasury contract |
 | udaoVpAddress | address | address of the udao voting power token contract |
-| _contractManager | address | address of the contract manager |
+
+### AddressesUpdated
+
+```solidity
+event AddressesUpdated(address RoleManagerAddress, address UdaoAddress, address PlatformTreasuryAddress, address UdaoVpAddress)
+```
 
 ### updateAddresses
 
 ```solidity
-function updateAddresses() external
+function updateAddresses(address roleManagerAddress, address udaoAddress, address platformTreasuryAddress, address udaoVpAddress) external
 ```
 
 Get the updated addresses from contract manager
@@ -518,7 +512,7 @@ sets the vote reward given when governance member votes
 ### setPlatformTreasuryAddress
 
 ```solidity
-function setPlatformTreasuryAddress(address _platformTreasuryAddress) external
+function setPlatformTreasuryAddress(address platformTreasuryAddress) external
 ```
 
 sets the platform treasury address
@@ -527,7 +521,7 @@ sets the platform treasury address
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| _platformTreasuryAddress | address | the address of the new platform treasury |
+| platformTreasuryAddress | address | the address of the new platform treasury TODO remove this function and use updateAddresses instead |
 
 ### setMaximumStakeDays
 

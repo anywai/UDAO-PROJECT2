@@ -8,35 +8,28 @@
 address stakingContractAddress
 ```
 
-### contractManager
-
-```solidity
-contract ContractManager contractManager
-```
-
-### roleManager
-
-```solidity
-contract IRoleManager roleManager
-```
-
 ### constructor
 
 ```solidity
-constructor(address rmAddress, address _contractManager) public
+constructor(address roleManagerAddres) public
 ```
 
 #### Parameters
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| rmAddress | address | The address of the deployed role manager |
-| _contractManager | address |  |
+| roleManagerAddres | address | The address of the deployed role manager |
+
+### AddressesUpdated
+
+```solidity
+event AddressesUpdated(address RoleManagerAddres, address UdaoStakerAddres)
+```
 
 ### updateAddresses
 
 ```solidity
-function updateAddresses() external
+function updateAddresses(address roleManagerAddres, address udaoStakerAddres) external
 ```
 
 Get the updated addresses from contract manager

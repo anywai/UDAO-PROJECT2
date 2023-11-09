@@ -24,6 +24,7 @@ struct RefundVoucher {
   uint256 saleID;
   address instructor;
   uint256[] finalParts;
+  uint256[] finalContents;
   uint256 validUntil;
   bytes signature;
 }

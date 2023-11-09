@@ -2,12 +2,6 @@
 
 ## UDAOContent
 
-### contractManager
-
-```solidity
-contract ContractManager contractManager
-```
-
 ### _tokenIds
 
 ```solidity
@@ -26,29 +20,23 @@ string SIGNING_DOMAIN
 string SIGNATURE_VERSION
 ```
 
-### ISupVis
+### supervision
 
 ```solidity
-contract ISupervision ISupVis
-```
-
-### roleManager
-
-```solidity
-contract IRoleManager roleManager
+contract ISupervision supervision
 ```
 
 ### constructor
 
 ```solidity
-constructor(address rmAddress) public
+constructor(address roleManagerAddress) public
 ```
 
 #### Parameters
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| rmAddress | address | The address of the deployed role manager |
+| roleManagerAddress | address | The address of the deployed role manager |
 
 ### isSellable
 
@@ -56,17 +44,19 @@ constructor(address rmAddress) public
 mapping(uint256 => bool) isSellable
 ```
 
-### contentPrice
+### contentParts
 
 ```solidity
-mapping(uint256 => mapping(uint256 => uint256)) contentPrice
+mapping(uint256 => uint256[]) contentParts
 ```
 
-### partNumberOfContent
+### NewContentCreated
 
 ```solidity
-mapping(uint256 => uint256) partNumberOfContent
+event NewContentCreated(uint256 tokenId, address owner)
 ```
+
+This event is triggered when a new content is created
 
 ### newPartAdded
 
@@ -79,7 +69,7 @@ This event is triggered when a new part is added to a content
 ### AddressesUpdated
 
 ```solidity
-event AddressesUpdated(address isupvis)
+event AddressesUpdated(address RoleManager, address Supervision)
 ```
 
 This event is triggered if the contract manager updates the addresses.
@@ -97,7 +87,7 @@ Triggered when KYC requirement for content creating is changed
 ```solidity
 struct RedeemVoucher {
   uint256 validUntil;
-  uint256[] _contentPrice;
+  uint256[] _parts;
   uint256 tokenId;
   string _uri;
   address _redeemer;
@@ -122,26 +112,10 @@ Allows sale controller to set sellable status of a content
 | _tokenId | uint256 | id of the content |
 | _isSellable | bool | is content sellable |
 
-### setContractManager
-
-```solidity
-function setContractManager(address _contractManager) external
-```
-
-Allows backend to set the contract manager address
-
-_This function is needed because the contract manager address is not known at compile time._
-
-#### Parameters
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _contractManager | address | The address of the contract manager |
-
 ### updateAddresses
 
 ```solidity
-function updateAddresses() external
+function updateAddresses(address roleManagerAddress, address supervisionAddress) external
 ```
 
 Get the updated addresses from contract manager
@@ -188,83 +162,19 @@ Redeems a RedeemVoucher for an actual NFT, modifying existing content in the pro
 | ---- | ---- | ----------- |
 | voucher | struct UDAOContent.RedeemVoucher | A RedeemVoucher describing an unminted NFT. |
 
-### getContentPriceAndCurrency
+### getContentParts
 
 ```solidity
-function getContentPriceAndCurrency(uint256 tokenId, uint256 partId) external view returns (uint256)
+function getContentParts(uint256 tokenId) external view returns (uint256[])
 ```
 
-returns the price of a specific content
+returns the parts array of a specific content
 
 #### Parameters
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | tokenId | uint256 | the content ID of the token |
-| partId | uint256 | the part ID of the token (microlearning), full content price if 0 |
-
-### setFullPriceContent
-
-```solidity
-function setFullPriceContent(uint256 tokenId, uint256 _contentPrice) external
-```
-
-allows content owners to set full content price
-
-#### Parameters
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| tokenId | uint256 | the content ID of the token |
-| _contentPrice | uint256 | the price to set |
-
-### setPartialContent
-
-```solidity
-function setPartialContent(uint256 tokenId, uint256 partId, uint256 _contentPrice) external
-```
-
-allows content owners to set price for a part in a content (microlearning)
-
-#### Parameters
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| tokenId | uint256 | the content ID of the token |
-| partId | uint256 |  |
-| _contentPrice | uint256 | the price to set |
-
-### setBatchPartialContent
-
-```solidity
-function setBatchPartialContent(uint256 tokenId, uint256[] partId, uint256[] _contentPrice) external
-```
-
-allows content owners to set price for multiple parts in a content (microlearning)
-
-#### Parameters
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| tokenId | uint256 | the content ID of the token |
-| partId | uint256[] |  |
-| _contentPrice | uint256[] | the price to set |
-
-### setBatchFullContent
-
-```solidity
-function setBatchFullContent(uint256 tokenId, uint256[] partId, uint256[] _contentPrice) external
-```
-
-allows content owners to set price for full content and multiple parts in a content
-
-#### Parameters
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| tokenId | uint256 | the content ID of the token |
-| partId | uint256[] |  |
-| _contentPrice | uint256[] | the price to set, first price is for full content price |
 
 ### _getPartNumberOfContent
 

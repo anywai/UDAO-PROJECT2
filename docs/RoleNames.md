@@ -68,6 +68,12 @@ bytes32 TREASURY_CONTRACT
 bytes32 ROLEMANAGER_CONTRACT
 ```
 
+### CONTRACT_MANAGER
+
+```solidity
+bytes32 CONTRACT_MANAGER
+```
+
 ### SALE_CONTROLLER
 
 ```solidity

@@ -22,28 +22,16 @@ function checkExpireDateJuror(address _user) external view returns (uint256 expi
 contract IUDAOC udaoc
 ```
 
-### PT
+### platformTreasury
 
 ```solidity
-contract IPlatformTreasury PT
+contract IPlatformTreasury platformTreasury
 ```
 
-### staker
+### udaoStaker
 
 ```solidity
-contract IStakingContract staker
-```
-
-### roleManager
-
-```solidity
-contract IRoleManager roleManager
-```
-
-### contractManager
-
-```solidity
-contract ContractManager contractManager
+contract IStakingContract udaoStaker
 ```
 
 ### EndDispute
@@ -93,7 +81,7 @@ event LateJurorScoreRecorded(uint256 caseId, address juror)
 ### AddressesUpdated
 
 ```solidity
-event AddressesUpdated(address IRMAddress, address PTAddress)
+event AddressesUpdated(address roleManagerAddress, address udaocAddress, address platformTreasuryAddress, address udaoStakerAddres)
 ```
 
 ### ValidationCreated
@@ -329,24 +317,26 @@ uint256 maxObjection
 ### constructor
 
 ```solidity
-constructor(address rmAddress, address udaocAddress) public
+constructor(address roleManagerAddress, address udaocAddress) public
 ```
 
 _Constructor_
 
-### setContractManager
+### updateAddresses
 
 ```solidity
-function setContractManager(address _contractManager) external
+function updateAddresses(address roleManagerAddress, address udaocAddress, address platformTreasuryAddress, address udaoStakerAddres) external
 ```
 
-_Setters_
+Get the updated addresses from contract manager
 
 ### setPlatformTreasury
 
 ```solidity
 function setPlatformTreasury(address _platformTreasury) external
 ```
+
+TODO remove this function update address function is enough
 
 ### checkApplicationN
 
@@ -375,10 +365,12 @@ sets required juror count per dispute
 function setUDAOC(address udaocAddress) external
 ```
 
+TODO remove this function update address function is enough
+
 ### setAddressStaking
 
 ```solidity
-function setAddressStaking(address stakerAddress) external
+function setAddressStaking(address udaoStakerAddress) external
 ```
 
 creates a validation for a token
@@ -387,7 +379,7 @@ creates a validation for a token
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| stakerAddress | address | address of staking contract |
+| udaoStakerAddress | address | address of staking contract TODO remove this function update address function is enough |
 
 ### setRequiredValidators
 
@@ -777,15 +769,6 @@ function nextRound() external
 Starts the new reward round
 
 _Common functions_
-
-### updateAddresses
-
-```solidity
-function updateAddresses() external
-```
-
-Get the updated addresses from contract manager
-TODO is this correct?
 
 ### pause
 

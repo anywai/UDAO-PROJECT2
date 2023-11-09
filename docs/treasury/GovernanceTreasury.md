@@ -2,6 +2,12 @@
 
 ## GovernanceTreasury
 
+### udao
+
+```solidity
+contract IERC20 udao
+```
+
 ### jurorBalance
 
 ```solidity
@@ -20,6 +26,18 @@ uint256 validatorBalance
 uint256 governanceBalance
 ```
 
+### ownerOfDummy
+
+```solidity
+address ownerOfDummy
+```
+
+### constructor
+
+```solidity
+constructor(address udaoAddress) public
+```
+
 ### jurorBalanceUpdate
 
 ```solidity
@@ -36,5 +54,11 @@ function validatorBalanceUpdate(uint256 _balance) external
 
 ```solidity
 function governanceBalanceUpdate(uint256 _balance) external
+```
+
+### emergencyWithdraw
+
+```solidity
+function emergencyWithdraw() external
 ```
 

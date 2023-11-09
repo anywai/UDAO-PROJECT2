@@ -10,23 +10,31 @@ function addVoteRewards(address voter) external
 
 ## UDAOGovernor
 
-### stakingContract
+### udaoStaker
 
 ```solidity
-contract IUDAOStaker stakingContract
-```
-
-### roleManager
-
-```solidity
-contract IRoleManager roleManager
+contract IUDAOStaker udaoStaker
 ```
 
 ### constructor
 
 ```solidity
-constructor(contract IVotes _token, contract TimelockController _timelock, address stakingContractAddress, address rmAddress) public
+constructor(contract IVotes _token, contract TimelockController _timelock, address stakingContractAddress, address roleManagerAddress) public
 ```
+
+### AddressesUpdated
+
+```solidity
+event AddressesUpdated(address RoleManagerAddress, address StakingContractAddress)
+```
+
+### updateAddresses
+
+```solidity
+function updateAddresses(address roleManagerAddress, address stakingContractAddress) external
+```
+
+Get the updated addresses from contract manager
 
 ### _quorum
 
@@ -52,7 +60,7 @@ Allows backend to set the staking contract address.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| stakingContractAddress | address | Address to set to |
+| stakingContractAddress | address | Address to set to TODO remove this function and use updateAddresses instead |
 
 ### _castVote
 
