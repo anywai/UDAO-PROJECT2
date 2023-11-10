@@ -207,7 +207,7 @@ describe("Platform Treasury Contract - Content", function () {
 
     const parts = await contractUDAOContent.getContentParts(tokenId);
     // Make a content purchase
-    const tokenIds = [0];
+    const tokenIds = [1];
     const purchasedParts = [parts];
     const redeemers = [contentBuyer1.address];
     const giftReceiver = [ethers.constants.AddressZero];
@@ -268,7 +268,7 @@ describe("Platform Treasury Contract - Content", function () {
     const receipt = await tx.wait();
     const tokenId = receipt.events[0].args[2].toNumber();
     // Make a content purchase
-    const tokenIds = [0];
+    const tokenIds = [1];
     const purchasedParts = [[2, 3, 5]];
     const redeemers = [contentBuyer1.address];
     const giftReceiver = [ethers.constants.AddressZero];
@@ -324,7 +324,7 @@ describe("Platform Treasury Contract - Content", function () {
     const receipt = await tx.wait();
     const tokenId = receipt.events[0].args[2].toNumber();
     // Make a content purchase
-    const tokenIds = [0];
+    const tokenIds = [1];
     const purchasedParts = [[2, 3, 5]];
     const redeemers = [contentBuyer1.address];
     const giftReceiver = [ethers.constants.AddressZero];
@@ -391,7 +391,7 @@ describe("Platform Treasury Contract - Content", function () {
     await contractUDAO.transfer(contentBuyer.address, ethers.utils.parseEther("100.0"));
     // Try to buy a content that does not exists
     // Make a content purchase
-    const tokenIds = [0];
+    const tokenIds = [1];
     const purchasedParts = [[2, 3, 5]];
     const redeemers = [contentBuyer1.address];
     const giftReceiver = [ethers.constants.AddressZero];
@@ -445,7 +445,7 @@ describe("Platform Treasury Contract - Content", function () {
     const receipt = await tx.wait();
     const tokenId = receipt.events[0].args[2].toNumber();
     // Make a content purchase
-    const tokenIds = [0];
+    const tokenIds = [1];
     const purchasedParts = [[2, 3, 5]];
     const redeemers = [contentBuyer1.address];
     const giftReceiver = [ethers.constants.AddressZero];
@@ -502,7 +502,7 @@ describe("Platform Treasury Contract - Content", function () {
     // set sellebla to false
     await contractUDAOContent.connect(backend).setSellable(tokenId, false);
     // Make a content purchase
-    const tokenIds = [0];
+    const tokenIds = [1];
     const purchasedParts = [[2, 3, 5]];
     const redeemers = [contentBuyer1.address];
     const giftReceiver = [ethers.constants.AddressZero];
@@ -555,7 +555,7 @@ describe("Platform Treasury Contract - Content", function () {
     const receipt = await tx.wait();
     const tokenId = receipt.events[0].args[2].toNumber();
     // Make a content purchase
-    const tokenIds = [0];
+    const tokenIds = [1];
     const purchasedParts = [[2, 3, 5]];
     const redeemers = [contentBuyer1.address];
     const giftReceiver = [ethers.constants.AddressZero];
@@ -615,7 +615,7 @@ describe("Platform Treasury Contract - Content", function () {
 
     const parts = await contractUDAOContent.getContentParts(tokenId);
     // Make a content purchase
-    const tokenIds = [0];
+    const tokenIds = [1];
     const purchasedParts = [parts];
     const redeemers = [contentBuyer1.address];
     const giftReceiver = [ethers.constants.AddressZero];
@@ -694,7 +694,7 @@ describe("Platform Treasury Contract - Content", function () {
     const receipt = await tx.wait();
     const tokenId = receipt.events[0].args[2].toNumber();
     // Make a content purchase
-    const tokenIds = [0];
+    const tokenIds = [1];
     const purchasedParts = [[8]];
     const redeemers = [contentBuyer1.address];
     const giftReceiver = [ethers.constants.AddressZero];
@@ -751,7 +751,7 @@ describe("Platform Treasury Contract - Content", function () {
     const tokenId = receipt.events[0].args[2].toNumber();
     const parts = await contractUDAOContent.getContentParts(tokenId);
     // Make a content purchase
-    const tokenIds = [0];
+    const tokenIds = [1];
     const purchasedParts = [parts];
     const redeemers = [contentBuyer1.address];
     const giftReceiver = [contentBuyer3.address];
@@ -810,7 +810,7 @@ describe("Platform Treasury Contract - Content", function () {
     const tokenId = receipt.events[0].args[2].toNumber();
     const parts = await contractUDAOContent.getContentParts(tokenId);
     // Make a content purchase
-    const tokenIds = [0];
+    const tokenIds = [1];
     const purchasedParts = [[2, 3, 4]];
     const redeemers = [contentBuyer1.address];
     const giftReceiver = [contentBuyer3.address];
@@ -876,7 +876,7 @@ describe("Platform Treasury Contract - Content", function () {
     const tokenId = receipt.events[0].args[2].toNumber();
     const parts = await contractUDAOContent.getContentParts(tokenId);
     // Make a content purchase
-    const tokenIds = [0];
+    const tokenIds = [1];
     const purchasedParts = [parts];
     const redeemers = [contentBuyer1.address];
     const giftReceiver = [contentBuyer3.address];
@@ -946,7 +946,7 @@ describe("Platform Treasury Contract - Content", function () {
     const parts1 = await contractUDAOContent.getContentParts(tokenId1);
     const parts2 = await contractUDAOContent.getContentParts(tokenId2);
     // Make a content purchase for token 1
-    const tokenIds = [0];
+    const tokenIds = [1];
     const purchasedParts1 = [parts1];
     const redeemers1 = [contentBuyer1.address];
     const giftReceiver = [ethers.constants.AddressZero];
@@ -978,7 +978,7 @@ describe("Platform Treasury Contract - Content", function () {
     // Check if the buyer paid the correct amount
     expect(balanceBefore1.sub(balanceAfter1)).to.equal(pricesToPay[0]);
     // Make a content purchase for token 2
-    const tokenIds2 = [1];
+    const tokenIds2 = [2];
     const purchasedParts2 = [parts2];
     const redeemers2 = [contentBuyer1.address];
     const giftReceiver2 = [ethers.constants.AddressZero];

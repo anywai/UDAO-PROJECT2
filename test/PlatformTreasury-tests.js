@@ -402,7 +402,7 @@ describe("Platform Treasury General", function () {
     /// Create content
     await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample))
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
-      .withArgs("0x0000000000000000000000000000000000000000", contentCreator.address, 0);
+      .withArgs("0x0000000000000000000000000000000000000000", contentCreator.address, 1);
     // Make a content purchase to gather funds for governance
     await makeContentPurchase(
       contractPlatformTreasury,
@@ -675,9 +675,9 @@ describe("Platform Treasury General", function () {
     // Create content with voucher
     await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample))
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
-      .withArgs("0x0000000000000000000000000000000000000000", contentCreator.address, 0);
+      .withArgs("0x0000000000000000000000000000000000000000", contentCreator.address, 1);
     // Make a content purchase to gather funds for governance
-    const tokenIds = [0];
+    const tokenIds = [1];
     const purchasedParts = [[1]];
     const redeemers = [contentBuyer1.address];
     const giftReceiver = [ethers.constants.AddressZero];
@@ -745,9 +745,9 @@ describe("Platform Treasury General", function () {
     // Create content with voucher
     await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample))
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
-      .withArgs("0x0000000000000000000000000000000000000000", contentCreator.address, 0);
+      .withArgs("0x0000000000000000000000000000000000000000", contentCreator.address, 1);
     // Make a content purchase to gather funds for governance
-    const tokenIds = [0];
+    const tokenIds = [1];
     const purchasedParts = [[1]];
     const redeemers1 = [contentBuyer1.address];
     const redeemers2 = [contentBuyer2.address];
@@ -1169,9 +1169,9 @@ describe("Platform Treasury General", function () {
     // Create content with voucher
     await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample))
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
-      .withArgs("0x0000000000000000000000000000000000000000", contentCreator.address, 0);
+      .withArgs("0x0000000000000000000000000000000000000000", contentCreator.address, 1);
     // Make a content purchase to gather funds for governance
-    const tokenIds = [0];
+    const tokenIds = [1];
     const purchasedParts = [[1]];
     const redeemers = [contentBuyer1.address];
     const giftReceiver = [ethers.constants.AddressZero];

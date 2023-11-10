@@ -131,7 +131,7 @@ contract UDAOContent is
         require(isKYCed(voucher._redeemer, 13), "You are not KYCed");
         //make sure redeemer is not banned
         require(isNotBanned(voucher._redeemer, 13), "Redeemer is banned!");
-        
+
         require(
             !isCalldataStringEmpty(voucher._uri),
             "Content URI cannot be empty"
@@ -146,10 +146,7 @@ contract UDAOContent is
         isSellable[tokenId] = true;
 
         if (voucher.validationScore != 0) {
-            supervision.createValidation(
-                tokenId,
-                voucher.validationScore
-            );
+            supervision.createValidation(tokenId, voucher.validationScore);
         }
         emit NewContentCreated(tokenId, voucher._redeemer);
     }

@@ -82,7 +82,7 @@ async function createContentVoucher(
   }).createVoucher(
     futureBlockBigNumber,
     contentParts,
-    0,
+    1,
     "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
     contentCreator.address,
     redeemType,
@@ -138,7 +138,7 @@ describe("UDAOC Contract", function () {
     );
     await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample))
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
-      .withArgs("0x0000000000000000000000000000000000000000", contentCreator.address, 0);
+      .withArgs("0x0000000000000000000000000000000000000000", contentCreator.address, 1);
   });
 
   it("Should get token URI of the Content", async function () {
@@ -162,8 +162,8 @@ describe("UDAOC Contract", function () {
 
     await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample))
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
-      .withArgs("0x0000000000000000000000000000000000000000", contentCreator.address, 0);
-    expect(await contractUDAOContent.tokenURI(0)).to.eql(
+      .withArgs("0x0000000000000000000000000000000000000000", contentCreator.address, 1);
+    expect(await contractUDAOContent.tokenURI(1)).to.eql(
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi"
     );
   });
@@ -190,12 +190,12 @@ describe("UDAOC Contract", function () {
 
     await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample))
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
-      .withArgs("0x0000000000000000000000000000000000000000", contentCreator.address, 0);
+      .withArgs("0x0000000000000000000000000000000000000000", contentCreator.address, 1);
     await expect(
-      contractUDAOContent.connect(contentCreator).transferFrom(contentCreator.address, contentBuyer.address, 0)
+      contractUDAOContent.connect(contentCreator).transferFrom(contentCreator.address, contentBuyer.address, 1)
     )
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
-      .withArgs(contentCreator.address, contentBuyer.address, 0);
+      .withArgs(contentCreator.address, contentBuyer.address, 1);
   });
 
   it("Should fail to transfer token if sender is not KYCed", async function () {
@@ -220,11 +220,11 @@ describe("UDAOC Contract", function () {
 
     await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample))
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
-      .withArgs("0x0000000000000000000000000000000000000000", contentCreator.address, 0);
+      .withArgs("0x0000000000000000000000000000000000000000", contentCreator.address, 1);
     await contractRoleManager.setKYC(contentCreator.address, false);
 
     await expect(
-      contractUDAOContent.connect(contentCreator).transferFrom(contentCreator.address, contentBuyer.address, 0)
+      contractUDAOContent.connect(contentCreator).transferFrom(contentCreator.address, contentBuyer.address, 1)
     ).to.revertedWith("Sender is not KYCed!");
   });
 
@@ -251,11 +251,11 @@ describe("UDAOC Contract", function () {
 
     await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample))
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
-      .withArgs("0x0000000000000000000000000000000000000000", contentCreator.address, 0);
+      .withArgs("0x0000000000000000000000000000000000000000", contentCreator.address, 1);
 
     await contractRoleManager.setBan(contentCreator.address, true);
     await expect(
-      contractUDAOContent.connect(contentCreator).transferFrom(contentCreator.address, contentBuyer.address, 0)
+      contractUDAOContent.connect(contentCreator).transferFrom(contentCreator.address, contentBuyer.address, 1)
     ).to.revertedWith("Sender is banned!");
   });
 
@@ -283,9 +283,9 @@ describe("UDAOC Contract", function () {
 
     await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample))
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
-      .withArgs("0x0000000000000000000000000000000000000000", contentCreator.address, 0);
+      .withArgs("0x0000000000000000000000000000000000000000", contentCreator.address, 1);
     await expect(
-      contractUDAOContent.connect(contentCreator).transferFrom(contentCreator.address, contentBuyer.address, 0)
+      contractUDAOContent.connect(contentCreator).transferFrom(contentCreator.address, contentBuyer.address, 1)
     ).to.revertedWith("Receiver is banned!");
   });
 
@@ -312,11 +312,11 @@ describe("UDAOC Contract", function () {
 
     await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample))
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
-      .withArgs("0x0000000000000000000000000000000000000000", contentCreator.address, 0);
+      .withArgs("0x0000000000000000000000000000000000000000", contentCreator.address, 1);
     await contractRoleManager.setKYC(contentCreator.address, false);
 
     await expect(
-      contractUDAOContent.connect(contentCreator).transferFrom(contentCreator.address, contentBuyer.address, 0)
+      contractUDAOContent.connect(contentCreator).transferFrom(contentCreator.address, contentBuyer.address, 1)
     ).to.revertedWith("Sender is not KYCed!");
   });
 
@@ -342,7 +342,7 @@ describe("UDAOC Contract", function () {
 
     await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample))
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
-      .withArgs("0x0000000000000000000000000000000000000000", contentCreator.address, 0);
+      .withArgs("0x0000000000000000000000000000000000000000", contentCreator.address, 1);
     //await expect(contractUDAOContent.connect(contentCreator).burn(0)).to.be.revertedWithPanic();
     //  "TypeError: contractUDAOContent.connect().burn is not a function"
     //);
@@ -383,10 +383,10 @@ describe("UDAOC Contract", function () {
 
     await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample))
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to min
-      .withArgs("0x0000000000000000000000000000000000000000", contentCreator.address, 0);
+      .withArgs("0x0000000000000000000000000000000000000000", contentCreator.address, 1);
 
     // new part information
-    const tokenId = 0;
+    const tokenId = 1;
     // Create content
     const contentParts2 = [0, 1, 2, 3];
     /// Create Voucher from redeem.js and use it for modifying content
@@ -436,7 +436,7 @@ describe("UDAOC Contract", function () {
 
     await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample))
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to min
-      .withArgs("0x0000000000000000000000000000000000000000", contentCreator.address, 0);
+      .withArgs("0x0000000000000000000000000000000000000000", contentCreator.address, 1);
 
     // new part information
     const tokenId = 0;
@@ -477,7 +477,7 @@ describe("UDAOC Contract", function () {
 
     await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample))
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to min
-      .withArgs("0x0000000000000000000000000000000000000000", contentCreator.address, 0);
+      .withArgs("0x0000000000000000000000000000000000000000", contentCreator.address, 1);
 
     // new part information
     const tokenId = 0;
@@ -528,7 +528,7 @@ describe("UDAOC Contract", function () {
 
     await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample))
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to min
-      .withArgs("0x0000000000000000000000000000000000000000", contentCreator.address, 0);
+      .withArgs("0x0000000000000000000000000000000000000000", contentCreator.address, 1);
 
     // new part information
     const tokenId = 0;
