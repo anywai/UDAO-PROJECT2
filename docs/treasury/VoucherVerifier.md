@@ -43,6 +43,11 @@ struct ContentDiscountVoucher {
 }
 ```
 
+
+selamun aleykum
+
+_aleykumselam
+
 ### RefundVoucher
 
 ```solidity
