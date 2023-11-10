@@ -22,6 +22,7 @@ contract UDAOContent is
     ERC721URIStorage
 {
     using Counters for Counters.Counter;
+    /// @dev The counter for content token ids.
     Counters.Counter private _tokenIds;
 
     string private constant SIGNING_DOMAIN = "UDAOCMinter";
@@ -40,8 +41,9 @@ contract UDAOContent is
         _tokenIds.increment();
     }
 
+    /// @dev tokenId => true/false (is sellable)
     mapping(uint256 => bool) public isSellable;
-    // tokenId => partIds
+    /// @dev tokenId => partIds
     mapping(uint256 => uint256[]) public contentParts;
 
     /// @notice This event is triggered when a new content is created
@@ -89,6 +91,8 @@ contract UDAOContent is
     }
 
     /// @notice Get the updated addresses from contract manager
+    /// @param roleManagerAddress The address of the role manager contract
+    /// @param supervisionAddress The address of the supervision contract
     function updateAddresses(
         address roleManagerAddress,
         address supervisionAddress
@@ -161,9 +165,8 @@ contract UDAOContent is
             keccak256(abi.encodePacked(""));
     }
 
-    /// @notice Redeems a RedeemVoucher for an actual NFT, modifying existing content in the process.
+    /// @notice Allows modification of a content by redeeming a voucher.
     /// @param voucher A RedeemVoucher describing an unminted NFT.
-    // TODO Content should be marked as not validated
     function modifyContent(
         RedeemVoucher calldata voucher
     ) external whenNotPaused {
@@ -234,6 +237,8 @@ contract UDAOContent is
         return contentParts[tokenId].length;
     }
 
+    /// @notice Burns a content which is not allowed
+    /// @param tokenId The id of the token to burn
     function _burn(
         uint256 tokenId
     ) internal override(ERC721, ERC721URIStorage) {
@@ -244,6 +249,10 @@ contract UDAOContent is
         super._burn(tokenId);
     }
 
+    /// @notice Allows transfer of a content with KYC and ban checks
+    /// @param from The current token owner
+    /// @param to Token to send to
+    /// @param tokenId The id of the token to transfer
     function _beforeTokenTransfer(
         address from,
         address to,
@@ -260,28 +269,22 @@ contract UDAOContent is
         }
     }
 
-    /// @notice Allows off-chain check if a token(content) exists
+    /// @notice Allows off-chain check if batch of tokens(content) exists
+    /// @param tokenIds Array of token IDs
     function existsBatch(
-        uint[] memory tokenId
+        uint[] memory tokenIds
     ) external view returns (bool[] memory) {
         bool[] memory existanceResult;
-        for (uint i = 0; i < tokenId.length; i++) {
-            existanceResult[i] = _exists(tokenId[i]);
+        for (uint i = 0; i < tokenIds.length; i++) {
+            existanceResult[i] = _exists(tokenIds[i]);
         }
         return existanceResult;
     }
 
     /// @notice Allows off-chain check if a token(content) exists
+    /// @param tokenId The ID of a token
     function exists(uint tokenId) external view returns (bool) {
         return _exists(tokenId);
-    }
-
-    // The following functions are overrides required by Solidity.
-
-    function tokenURI(
-        uint256 tokenId
-    ) public view override(ERC721, ERC721URIStorage) returns (string memory) {
-        return super.tokenURI(tokenId);
     }
 
     /// @notice Returns a hash of the given RedeemVoucher, prepared using EIP712 typed data hashing rules.
@@ -329,19 +332,28 @@ contract UDAOContent is
         return ECDSA.recover(digest, voucher.signature);
     }
 
-    function supportsInterface(
-        bytes4 interfaceId
-    ) public view override(ERC721, IERC165) returns (bool) {
-        return super.supportsInterface(interfaceId);
-    }
-
+    /// @notice Allows backend to pause the contract
     function pause() external {
         require(hasRole(BACKEND_ROLE, msg.sender), "Only backend can pause");
         _pause();
     }
-
+    /// @notice Allows backend to unpause the contract
     function unpause() external {
         require(hasRole(BACKEND_ROLE, msg.sender), "Only backend can unpause");
         _unpause();
+    }
+
+    // The following functions are overrides required by Solidity.
+
+    function tokenURI(
+        uint256 tokenId
+    ) public view override(ERC721, ERC721URIStorage) returns (string memory) {
+        return super.tokenURI(tokenId);
+    }
+
+    function supportsInterface(
+        bytes4 interfaceId
+    ) public view override(ERC721, IERC165) returns (bool) {
+        return super.supportsInterface(interfaceId);
     }
 }
