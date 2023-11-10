@@ -1,9 +1,12 @@
 // SPDX-License-Identifier: MIT
-/// @title Dummy version of the supervision contract.
+/// @title Dummy version of the supervision contract. This contract will be replaced at UDAO version 2.0.
+/// @dev This contract only serves as a placeholder so that other contracts can be compiled and work.
 
 pragma solidity ^0.8.4;
 
 contract DummySupervision {
+    
+    ///@notice Placeholder mapping. 
     mapping(uint => uint) emptyMapping;
 
     /// @notice Returns the validation result of a token
@@ -17,11 +20,11 @@ contract DummySupervision {
     /// @param score validation score of the content
     function createValidation(uint256 tokenId, uint256 score) external {}
 
-    /// @notice allows validators to be fired or resigned
-    /// @param demissionAddress is the address that will be revoked from validator role
+    /// @notice allows validators to be fired or resigned from a validation job
+    /// @param demissionAddress is the address that will be revoked from validation job
     function dismissValidation(address demissionAddress) external {}
 
-    /// @notice allows validators to dismiss a validation assignment
-    /// @param demissionAddress id of the content that will be dismissed
+    /// @notice allows jurors to be fired or resigned from a dispute
+    /// @param demissionAddress is the address that will be revoked from dispute
     function dismissDispute(address demissionAddress) external {}
 }
