@@ -2,6 +2,24 @@
 
 ## UDAOContent
 
+### _tokenIds
+
+```solidity
+struct Counters.Counter _tokenIds
+```
+
+### SIGNING_DOMAIN
+
+```solidity
+string SIGNING_DOMAIN
+```
+
+### SIGNATURE_VERSION
+
+```solidity
+string SIGNATURE_VERSION
+```
+
 ### supervision
 
 ```solidity
