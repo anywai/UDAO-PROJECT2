@@ -24,7 +24,7 @@ contract UDAOCertificate is
     string private constant SIGNATURE_VERSION = "1";
 
     using Counters for Counters.Counter;
-
+    /// @dev The counter for certificate token ids.
     Counters.Counter private _tokenIdCounter;
 
     /// @notice This event is triggered if the contract manager updates the addresses.
@@ -57,6 +57,7 @@ contract UDAOCertificate is
     }
 
     /// @notice Get the updated addresses from contract manager
+    /// @param roleManagerAddress The address of the role manager contract
     function updateAddresses(address roleManagerAddress) external {
         if (msg.sender != foundationWallet) {
             require(
@@ -132,10 +133,11 @@ contract UDAOCertificate is
         return ECDSA.recover(digest, voucher.signature);
     }
 
-    /// @notice Checks if token transfer is allowed. Reverts if not allowed.
+    /// @notice Checks if token transfer is allowed. 
     /// @param from The current token owner
     /// @param to Token to send to
     /// @param tokenId The id of the token to transfer
+    /// @dev Reverts if new receiver is not KYCed or msg.sender is not Backend.
     function _beforeTokenTransfer(
         address from,
         address to,
@@ -153,10 +155,11 @@ contract UDAOCertificate is
         }
     }
 
-    /// @notice transfer token in emergency
+    /// @notice transfer token in emergency if owner approved the backend
     /// @param from The current token owner
     /// @param to Token to send to
     /// @param tokenId The id of the token to transfer
+    /// @dev Reverts if msg sender is not Backend or if to address is not KYCed or banned
     function emergencyTransfer(
         address from,
         address to,
