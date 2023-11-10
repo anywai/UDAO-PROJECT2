@@ -26,11 +26,15 @@ constructor(address roleManagerAddress) public
 mapping(uint256 => bool) isSellable
 ```
 
+_tokenId => true/false (is sellable)_
+
 ### contentParts
 
 ```solidity
 mapping(uint256 => uint256[]) contentParts
 ```
+
+_tokenId => partIds_
 
 ### NewContentCreated
 
@@ -102,6 +106,13 @@ function updateAddresses(address roleManagerAddress, address supervisionAddress)
 
 Get the updated addresses from contract manager
 
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| roleManagerAddress | address | The address of the role manager contract |
+| supervisionAddress | address | The address of the supervision contract |
+
 ### createContent
 
 ```solidity
@@ -136,7 +147,7 @@ Checks if a string is empty
 function modifyContent(struct UDAOContent.RedeemVoucher voucher) external
 ```
 
-Redeems a RedeemVoucher for an actual NFT, modifying existing content in the process.
+Allows modification of a content by redeeming a voucher.
 
 #### Parameters
 
@@ -180,32 +191,43 @@ Returns the part numbers that a content has
 function _burn(uint256 tokenId) internal
 ```
 
+Burns a content which is not allowed
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| tokenId | uint256 | The id of the token to burn |
+
 ### _beforeTokenTransfer
 
 ```solidity
 function _beforeTokenTransfer(address from, address to, uint256 tokenId) internal virtual
 ```
 
-_Hook that is called before any token transfer. This includes minting
-and burning.
+Allows transfer of a content with KYC and ban checks
 
-Calling conditions:
+#### Parameters
 
-- When `from` and `to` are both non-zero, ``from``'s `tokenId` will be
-transferred to `to`.
-- When `from` is zero, `tokenId` will be minted for `to`.
-- When `to` is zero, ``from``'s `tokenId` will be burned.
-- `from` and `to` are never both zero.
-
-To learn more about hooks, head to xref:ROOT:extending-contracts.adoc#using-hooks[Using Hooks]._
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| from | address | The current token owner |
+| to | address | Token to send to |
+| tokenId | uint256 | The id of the token to transfer |
 
 ### existsBatch
 
 ```solidity
-function existsBatch(uint256[] tokenId) external view returns (bool[])
+function existsBatch(uint256[] tokenIds) external view returns (bool[])
 ```
 
-Allows off-chain check if a token(content) exists
+Allows off-chain check if batch of tokens(content) exists
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| tokenIds | uint256[] | Array of token IDs |
 
 ### exists
 
@@ -215,11 +237,11 @@ function exists(uint256 tokenId) external view returns (bool)
 
 Allows off-chain check if a token(content) exists
 
-### tokenURI
+#### Parameters
 
-```solidity
-function tokenURI(uint256 tokenId) public view returns (string)
-```
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| tokenId | uint256 | The ID of a token |
 
 ### _hash
 
@@ -262,21 +284,31 @@ _Will revert if the signature is invalid. Does not verify that the signer is aut
 | ---- | ---- | ----------- |
 | voucher | struct UDAOContent.RedeemVoucher | A RedeemVoucher describing an unminted NFT. |
 
-### supportsInterface
-
-```solidity
-function supportsInterface(bytes4 interfaceId) public view returns (bool)
-```
-
 ### pause
 
 ```solidity
 function pause() external
 ```
 
+Allows backend to pause the contract
+
 ### unpause
 
 ```solidity
 function unpause() external
+```
+
+Allows backend to unpause the contract
+
+### tokenURI
+
+```solidity
+function tokenURI(uint256 tokenId) public view returns (string)
+```
+
+### supportsInterface
+
+```solidity
+function supportsInterface(bytes4 interfaceId) public view returns (bool)
 ```
 

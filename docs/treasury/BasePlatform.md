@@ -8,6 +8,8 @@
 bytes32 BACKEND_ROLE
 ```
 
+_Role definitions are here to reduce the size of the contract._
+
 ### FOUNDATION_ROLE
 
 ```solidity
@@ -382,11 +384,30 @@ function updateAddresses(address udaoAddress, address udaocAddress, address role
 
 Get the updated addresses from contract manager
 
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| udaoAddress | address | The address of the UDAO token contract |
+| udaocAddress | address | The address of the UDAOC token contract |
+| roleManagerAddress | address | The address of the role manager contract |
+| governanceTreasuryAddress | address | The address of the governance treasury contract |
+| voucherVerifierAddress | address | The address of the voucher verifier contract |
+
 ### hasRole
 
 ```solidity
 function hasRole(bytes32 _role, address _account) internal view returns (bool)
 ```
+
+Checks if the user has the given role
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _role | bytes32 | is the role to be checked |
+| _account | address | is the address to be checked |
 
 ### isNotBanned
 
@@ -394,17 +415,45 @@ function hasRole(bytes32 _role, address _account) internal view returns (bool)
 function isNotBanned(address _userAddress, uint256 _functionID) internal view returns (bool)
 ```
 
+Checks if the user is banned
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _userAddress | address | is the address to be checked |
+| _functionID | uint256 | is the function id to be checked |
+
 ### isKYCed
 
 ```solidity
 function isKYCed(address _userAddress, uint256 _functionID) internal view returns (bool)
 ```
 
+Checks if the user is KYCed
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _userAddress | address | is the address to be checked |
+| _functionID | uint256 | is the function id to be checked |
+
 ### activateGovernanceTreasury
 
 ```solidity
 function activateGovernanceTreasury(bool _boolean) external
 ```
+
+Allows the backend to activate the governance treasury
+
+_Tokens flows to governance treasury after if this function is called with true_
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _boolean | bool | is the boolean value to be set |
 
 ### _distributeContentCutShares
 
