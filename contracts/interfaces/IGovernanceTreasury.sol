@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-/// @title Interface of validation manager
+/// @title Interface of governance treasury contract
 pragma solidity ^0.8.4;
 
 interface IGovernanceTreasury {
