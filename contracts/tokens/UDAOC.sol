@@ -37,6 +37,7 @@ contract UDAOContent is
         EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION)
     {
         roleManager = IRoleManager(roleManagerAddress);
+        _tokenIds.increment();
     }
 
     mapping(uint256 => bool) public isSellable;
@@ -130,8 +131,7 @@ contract UDAOContent is
         require(isKYCed(voucher._redeemer, 13), "You are not KYCed");
         //make sure redeemer is not banned
         require(isNotBanned(voucher._redeemer, 13), "Redeemer is banned!");
-        require(voucher.validationScore != 0, "Validation score cannot be 0");
-
+        
         require(
             !isCalldataStringEmpty(voucher._uri),
             "Content URI cannot be empty"
@@ -145,7 +145,12 @@ contract UDAOContent is
         _tokenIds.increment();
         isSellable[tokenId] = true;
 
-        supervision.createValidation(tokenId, voucher.validationScore);
+        if (voucher.validationScore != 0) {
+            supervision.createValidation(
+                tokenId,
+                voucher.validationScore
+            );
+        }
         emit NewContentCreated(tokenId, voucher._redeemer);
     }
 
