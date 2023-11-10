@@ -3,7 +3,6 @@ const hardhat = require("hardhat");
 const { ethers } = hardhat;
 const chai = require("chai");
 const BN = require("bn.js");
-const { LazyRole } = require("../lib/LazyRole");
 const { LazyCoaching } = require("../lib/LazyCoaching");
 const { DiscountedPurchase } = require("../lib/DiscountedPurchase");
 const helpers = require("@nomicfoundation/hardhat-network-helpers");
@@ -82,61 +81,8 @@ async function reDeploy(reApplyRolesViaVoucher = true, isDexRequired = false) {
   const reApplyJurorRoles = [jurorMember, jurorMember1, jurorMember2, jurorMember3, jurorMember4];
   const VALIDATOR_ROLE = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("VALIDATOR_ROLE"));
   const JUROR_ROLE = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("JUROR_ROLE"));
-  if (reApplyRolesViaVoucher) {
-    for (let i = 0; i < reApplyValidatorRoles.length; i++) {
-      await contractRoleManager.revokeRole(VALIDATOR_ROLE, reApplyValidatorRoles[i].address);
-    }
-    for (let i = 0; i < reApplyJurorRoles.length; i++) {
-      await contractRoleManager.revokeRole(JUROR_ROLE, reApplyJurorRoles[i].address);
-    }
-    for (let i = 0; i < reApplyValidatorRoles.length; i++) {
-      await grantValidatorRole(
-        reApplyValidatorRoles[i],
-        contractRoleManager,
-        contractUDAO,
-        contractUDAOStaker,
-        backend
-      );
-    }
-    for (let i = 0; i < reApplyJurorRoles.length; i++) {
-      await grantJurorRole(reApplyJurorRoles[i], contractRoleManager, contractUDAO, contractUDAOStaker, backend);
-    }
-  }
 }
 
-async function grantValidatorRole(account, contractRoleManager, contractUDAO, contractUDAOStaker, backend) {
-  await contractRoleManager.setKYC(account.address, true);
-  await contractUDAO.transfer(account.address, ethers.utils.parseEther("100.0"));
-  await contractUDAO.connect(account).approve(contractUDAOStaker.address, ethers.utils.parseEther("999999999999.0"));
-
-  // Staking
-  await contractUDAOStaker.connect(account).stakeForGovernance(ethers.utils.parseEther("10"), 30);
-  await contractUDAOStaker.connect(account).applyForValidator();
-  const lazyRole = new LazyRole({
-    contract: contractUDAOStaker,
-    signer: backend,
-  });
-  const role_voucher = await lazyRole.createVoucher(account.address, Date.now() + 999999999, 0);
-  await contractUDAOStaker.connect(account).getApproved(role_voucher);
-}
-
-async function grantJurorRole(account, contractRoleManager, contractUDAO, contractUDAOStaker, backend) {
-  await contractRoleManager.setKYC(account.address, true);
-  await contractUDAO.transfer(account.address, ethers.utils.parseEther("100.0"));
-
-  await contractUDAO.connect(account).approve(contractUDAOStaker.address, ethers.utils.parseEther("999999999999.0"));
-
-  // Staking
-
-  await contractUDAOStaker.connect(account).stakeForGovernance(ethers.utils.parseEther("10"), 30);
-  await contractUDAOStaker.connect(account).applyForJuror();
-  const lazyRole = new LazyRole({
-    contract: contractUDAOStaker,
-    signer: backend,
-  });
-  const role_voucher = await lazyRole.createVoucher(account.address, Date.now() + 999999999, 1);
-  await contractUDAOStaker.connect(account).getApproved(role_voucher);
-}
 async function checkAccountUDAOVpBalanceAndDelegate(contractUDAOVp, account) {
   const accountBalance = await contractUDAOVp.balanceOf(account.address);
   await expect(accountBalance).to.equal(ethers.utils.parseEther("300"));
@@ -389,9 +335,7 @@ async function makeCoachingPurchase(
 describe("Platform Treasury General", function () {
   it("Should allow backend to set new governance treasury address", async function () {
     await reDeploy();
-    const newGovernanceTreasury = contractUDAOTimelockController;
-
-    // set new governance treasury address
+    const newGovernanceTreasury = contractSupervision;
 
     await expect(
       contractPlatformTreasury

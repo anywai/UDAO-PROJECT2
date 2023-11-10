@@ -4,12 +4,10 @@ const { ethers } = hardhat;
 const chai = require("chai");
 const BN = require("bn.js");
 const { LazyCoaching } = require("../lib/LazyCoaching");
-const { LazyRole } = require("../lib/LazyRole");
 const { RefundVoucher } = require("../lib/RefundVoucher");
 const { Redeem } = require("../lib/Redeem");
 const helpers = require("@nomicfoundation/hardhat-network-helpers");
 const { deploy } = require("../lib/deployments");
-
 
 // Enable and inject BN dependency
 chai.use(require("chai-bn")(BN));
@@ -66,104 +64,6 @@ async function reDeploy(reApplyRolesViaVoucher = true, isDexRequired = false) {
   const reApplyJurorRoles = [jurorMember, jurorMember1, jurorMember2, jurorMember3, jurorMember4];
   const VALIDATOR_ROLE = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("VALIDATOR_ROLE"));
   const JUROR_ROLE = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("JUROR_ROLE"));
-  if (reApplyRolesViaVoucher) {
-    for (let i = 0; i < reApplyValidatorRoles.length; i++) {
-      await contractRoleManager.revokeRole(VALIDATOR_ROLE, reApplyValidatorRoles[i].address);
-    }
-    for (let i = 0; i < reApplyJurorRoles.length; i++) {
-      await contractRoleManager.revokeRole(JUROR_ROLE, reApplyJurorRoles[i].address);
-    }
-    for (let i = 0; i < reApplyValidatorRoles.length; i++) {
-      await grantValidatorRole(
-        reApplyValidatorRoles[i],
-        contractRoleManager,
-        contractUDAO,
-        contractUDAOStaker,
-        backend
-      );
-    }
-    for (let i = 0; i < reApplyJurorRoles.length; i++) {
-      await grantJurorRole(reApplyJurorRoles[i], contractRoleManager, contractUDAO, contractUDAOStaker, backend);
-    }
-  }
-}
-async function grantValidatorRole(account, contractRoleManager, contractUDAO, contractUDAOStaker, backend) {
-  await contractRoleManager.setKYC(account.address, true);
-  await contractUDAO.transfer(account.address, ethers.utils.parseEther("100.0"));
-  await contractUDAO.connect(account).approve(contractUDAOStaker.address, ethers.utils.parseEther("999999999999.0"));
-
-  // Staking
-  await contractUDAOStaker.connect(account).stakeForGovernance(ethers.utils.parseEther("10"), 30);
-  await contractUDAOStaker.connect(account).applyForValidator();
-  const lazyRole = new LazyRole({
-    contract: contractUDAOStaker,
-    signer: backend,
-  });
-  const role_voucher = await lazyRole.createVoucher(account.address, Date.now() + 999999999, 0);
-  await contractUDAOStaker.connect(account).getApproved(role_voucher);
-}
-
-async function grantJurorRole(account, contractRoleManager, contractUDAO, contractUDAOStaker, backend) {
-  await contractRoleManager.setKYC(account.address, true);
-  await contractUDAO.transfer(account.address, ethers.utils.parseEther("100.0"));
-
-  await contractUDAO.connect(account).approve(contractUDAOStaker.address, ethers.utils.parseEther("999999999999.0"));
-
-  // Staking
-
-  await contractUDAOStaker.connect(account).stakeForGovernance(ethers.utils.parseEther("10"), 30);
-  await contractUDAOStaker.connect(account).applyForJuror();
-  const lazyRole = new LazyRole({
-    contract: contractUDAOStaker,
-    signer: backend,
-  });
-  const role_voucher = await lazyRole.createVoucher(account.address, Date.now() + 999999999, 1);
-  await contractUDAOStaker.connect(account).getApproved(role_voucher);
-}
-async function runValidation(
-  contractSupervision,
-  backend,
-  validator1,
-  validator2,
-  validator3,
-  validator4,
-  validator5,
-  contentCreator
-) {
-  await expect(contractSupervision.connect(validator1).assignValidation(1))
-    .to.emit(contractSupervision, "ValidationAssigned")
-    .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), validator1.address);
-  await expect(contractSupervision.connect(validator2).assignValidation(1))
-    .to.emit(contractSupervision, "ValidationAssigned")
-    .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), validator2.address);
-  await expect(contractSupervision.connect(validator3).assignValidation(1))
-    .to.emit(contractSupervision, "ValidationAssigned")
-    .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), validator3.address);
-  await expect(contractSupervision.connect(validator4).assignValidation(1))
-    .to.emit(contractSupervision, "ValidationAssigned")
-    .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), validator4.address);
-  await expect(contractSupervision.connect(validator5).assignValidation(1))
-    .to.emit(contractSupervision, "ValidationAssigned")
-    .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), validator5.address);
-
-  await expect(contractSupervision.connect(validator1).sendValidation(1, true))
-    .to.emit(contractSupervision, "ValidationResultSent")
-    .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), validator1.address, true);
-  await expect(contractSupervision.connect(validator2).sendValidation(1, true))
-    .to.emit(contractSupervision, "ValidationResultSent")
-    .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), validator2.address, true);
-  await expect(contractSupervision.connect(validator3).sendValidation(1, true))
-    .to.emit(contractSupervision, "ValidationResultSent")
-    .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), validator3.address, true);
-  await expect(contractSupervision.connect(validator4).sendValidation(1, true))
-    .to.emit(contractSupervision, "ValidationResultSent")
-    .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), validator4.address, true);
-  await expect(contractSupervision.connect(validator5).sendValidation(1, false))
-    .to.emit(contractSupervision, "ValidationResultSent")
-    .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), validator5.address, false);
-  await expect(contractSupervision.connect(contentCreator).finalizeValidation(1))
-    .to.emit(contractSupervision, "ValidationEnded")
-    .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), true);
 }
 
 async function createContentVoucher(
@@ -228,7 +128,12 @@ describe("Platform Treasury Contract - Coaching", function () {
     const currentBlockTimestamp = (await hre.ethers.provider.getBlock()).timestamp;
     /// Coaching date is 3 days from now
     const coachingDate = currentBlockTimestamp + 3 * 24 * 60 * 60;
-    const role_voucher = await lazyCoaching.createVoucher(contentCreator.address, coachingPrice, coachingDate, contentBuyer.address);
+    const role_voucher = await lazyCoaching.createVoucher(
+      contentCreator.address,
+      coachingPrice,
+      coachingDate,
+      contentBuyer.address
+    );
     // Buy coaching
     const purchaseTx = await contractPlatformTreasury.connect(contentBuyer).buyCoaching(role_voucher);
     const queueTxReceipt = await purchaseTx.wait();
@@ -268,11 +173,18 @@ describe("Platform Treasury Contract - Coaching", function () {
     const currentBlockTimestamp = (await hre.ethers.provider.getBlock()).timestamp;
     /// Coaching date is 3 days from now
     const coachingDate = currentBlockTimestamp + 3 * 24 * 60 * 60;
-    const role_voucher = await lazyCoaching.createVoucher(contentCreator.address, coachingPrice, coachingDate, contentBuyer.address);
+    const role_voucher = await lazyCoaching.createVoucher(
+      contentCreator.address,
+      coachingPrice,
+      coachingDate,
+      contentBuyer.address
+    );
     // Set BAN
     await contractRoleManager.setBan(contentBuyer.address, true);
     // Buy coaching
-    await expect(contractPlatformTreasury.connect(contentBuyer).buyCoaching(role_voucher)).to.revertedWith("Learner is banned");
+    await expect(contractPlatformTreasury.connect(contentBuyer).buyCoaching(role_voucher)).to.revertedWith(
+      "Learner is banned"
+    );
   });
 
   it("Should fail to buy coaching if instructer is banned", async function () {
@@ -299,11 +211,18 @@ describe("Platform Treasury Contract - Coaching", function () {
     const currentBlockTimestamp = (await hre.ethers.provider.getBlock()).timestamp;
     /// Coaching date is 3 days from now
     const coachingDate = currentBlockTimestamp + 3 * 24 * 60 * 60;
-    const role_voucher = await lazyCoaching.createVoucher(contentCreator.address, coachingPrice, coachingDate, contentBuyer.address);
+    const role_voucher = await lazyCoaching.createVoucher(
+      contentCreator.address,
+      coachingPrice,
+      coachingDate,
+      contentBuyer.address
+    );
     // Set BAN
     await contractRoleManager.setBan(contentCreator.address, true);
     // Buy coaching
-    await expect(contractPlatformTreasury.connect(contentBuyer).buyCoaching(role_voucher)).to.revertedWith("Coach is banned");
+    await expect(contractPlatformTreasury.connect(contentBuyer).buyCoaching(role_voucher)).to.revertedWith(
+      "Coach is banned"
+    );
   });
 
   it("Should refund payment for coaching requested by buyer if 1 day prior to coaching date", async function () {
@@ -331,7 +250,12 @@ describe("Platform Treasury Contract - Coaching", function () {
     const currentBlockTimestamp = (await hre.ethers.provider.getBlock()).timestamp;
     /// Coaching date is 3 days from now
     const coachingDate = currentBlockTimestamp + 3 * 24 * 60 * 60;
-    const role_voucher = await lazyCoaching.createVoucher(contentCreator.address, coachingPrice, coachingDate, contentBuyer.address);
+    const role_voucher = await lazyCoaching.createVoucher(
+      contentCreator.address,
+      coachingPrice,
+      coachingDate,
+      contentBuyer.address
+    );
     // Buy coaching
     const purchaseTx = await contractPlatformTreasury.connect(contentBuyer).buyCoaching(role_voucher);
     const queueTxReceipt = await purchaseTx.wait();
@@ -346,7 +270,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     // Check if returned learner address is the same as the buyer address
     expect(coachingStruct.contentReceiver).to.equal(contentBuyer.address);
     // Refund coaching
-    const refundType = 0 // 0 since refund is coaching
+    const refundType = 0; // 0 since refund is coaching
     await expect(contractPlatformTreasury.connect(contentBuyer).refundCoachingByInstructorOrLearner(coachingSaleID))
       .to.emit(contractPlatformTreasury, "SaleRefunded")
       .withArgs(coachingSaleID, refundType);
@@ -380,7 +304,12 @@ describe("Platform Treasury Contract - Coaching", function () {
     const currentBlockTimestamp = (await hre.ethers.provider.getBlock()).timestamp;
     /// Coaching date is 3 days from now
     const coachingDate = currentBlockTimestamp + 3 * 24 * 60 * 60;
-    const role_voucher = await lazyCoaching.createVoucher(contentCreator.address, coachingPrice, coachingDate, contentBuyer.address);
+    const role_voucher = await lazyCoaching.createVoucher(
+      contentCreator.address,
+      coachingPrice,
+      coachingDate,
+      contentBuyer.address
+    );
     // Buy coaching
     const purchaseTx = await contractPlatformTreasury.connect(contentBuyer).buyCoaching(role_voucher);
     const queueTxReceipt = await purchaseTx.wait();
@@ -398,7 +327,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     const numBlocksToMine = Math.ceil((5 * 86400) / 2);
     await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine.toString(16)}`, "0x2"]);
     // Refund coaching
-    const refundType = 0 // 0 since refund is coaching
+    const refundType = 0; // 0 since refund is coaching
     await expect(contractPlatformTreasury.connect(contentCreator).refundCoachingByInstructorOrLearner(coachingSaleID))
       .to.emit(contractPlatformTreasury, "SaleRefunded")
       .withArgs(coachingSaleID, refundType);
@@ -432,7 +361,12 @@ describe("Platform Treasury Contract - Coaching", function () {
     const currentBlockTimestamp = (await hre.ethers.provider.getBlock()).timestamp;
     /// Coaching date is 3 days from now
     const coachingDate = currentBlockTimestamp + 3 * 24 * 60 * 60;
-    const role_voucher = await lazyCoaching.createVoucher(contentCreator.address, coachingPrice, coachingDate, contentBuyer.address);
+    const role_voucher = await lazyCoaching.createVoucher(
+      contentCreator.address,
+      coachingPrice,
+      coachingDate,
+      contentBuyer.address
+    );
     // Buy coaching
     const purchaseTx = await contractPlatformTreasury.connect(contentBuyer).buyCoaching(role_voucher);
     const queueTxReceipt = await purchaseTx.wait();
@@ -448,12 +382,12 @@ describe("Platform Treasury Contract - Coaching", function () {
     expect(coachingStruct.contentReceiver).to.equal(contentBuyer.address);
     const refundWindow = await contractPlatformTreasury.refundWindow();
     // Mine days of blocks that bigger than refundWindow days:
-    const numBlocksToMine = Math.ceil(((refundWindow.add(1)) * 86400) / 2);
+    const numBlocksToMine = Math.ceil((refundWindow.add(1) * 86400) / 2);
     await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine.toString(16)}`, "0x2"]);
     // Refund coaching
-    await expect(contractPlatformTreasury.connect(contentCreator).refundCoachingByInstructorOrLearner(coachingSaleID)).to.revertedWith(
-      "Refund period over you cant refund"
-    );
+    await expect(
+      contractPlatformTreasury.connect(contentCreator).refundCoachingByInstructorOrLearner(coachingSaleID)
+    ).to.revertedWith("Refund period over you cant refund");
   });
   it("Should fail to refund payment for coaching requested by buyer if less than 1 day prior to coaching date", async function () {
     await reDeploy();
@@ -479,7 +413,12 @@ describe("Platform Treasury Contract - Coaching", function () {
     const currentBlockTimestamp = (await hre.ethers.provider.getBlock()).timestamp;
     /// Coaching date is 3 days from now
     const coachingDate = currentBlockTimestamp + 3 * 24 * 60 * 60;
-    const role_voucher = await lazyCoaching.createVoucher(contentCreator.address, coachingPrice, coachingDate, contentBuyer.address);
+    const role_voucher = await lazyCoaching.createVoucher(
+      contentCreator.address,
+      coachingPrice,
+      coachingDate,
+      contentBuyer.address
+    );
     // Buy coaching
     const purchaseTx = await contractPlatformTreasury.connect(contentBuyer).buyCoaching(role_voucher);
     const queueTxReceipt = await purchaseTx.wait();
@@ -493,9 +432,9 @@ describe("Platform Treasury Contract - Coaching", function () {
     const numBlocksToMine = Math.ceil((2 * 86400) / 2);
     await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine.toString(16)}`, "0x2"]);
     // Refund coaching
-    await expect(contractPlatformTreasury.connect(contentBuyer).refundCoachingByInstructorOrLearner(coachingSaleID)).to.revertedWith(
-      "You can't refund less than 1 day prior to coaching date"
-    );
+    await expect(
+      contractPlatformTreasury.connect(contentBuyer).refundCoachingByInstructorOrLearner(coachingSaleID)
+    ).to.revertedWith("You can't refund less than 1 day prior to coaching date");
   });
   it("Should refund coaching with voucher if before refundablePeriod", async function () {
     await reDeploy();
@@ -521,7 +460,12 @@ describe("Platform Treasury Contract - Coaching", function () {
     const currentBlockTimestamp = (await hre.ethers.provider.getBlock()).timestamp;
     /// Coaching date is 3 days from now
     const coachingDate = currentBlockTimestamp + 3 * 24 * 60 * 60;
-    const role_voucher = await lazyCoaching.createVoucher(contentCreator.address, coachingPrice, coachingDate, contentBuyer.address);
+    const role_voucher = await lazyCoaching.createVoucher(
+      contentCreator.address,
+      coachingPrice,
+      coachingDate,
+      contentBuyer.address
+    );
     // Get buyer's UDAO balance
     const buyerBalance = await contractUDAO.balanceOf(contentBuyer.address);
     // Buy coaching
@@ -537,7 +481,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     const coachingStruct = await contractPlatformTreasury.coachSales(coachingSaleID);
     // Check if returned learner address is the same as the buyer address
     expect(coachingStruct.contentReceiver).to.equal(contentBuyer.address);
-    // Mine 2 days of blocks 
+    // Mine 2 days of blocks
     const numBlocksToMine = Math.ceil((2 * 86400) / 2);
     await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine.toString(16)}`, "0x2"]);
     //  Create RefundVoucher
@@ -545,10 +489,16 @@ describe("Platform Treasury Contract - Coaching", function () {
       contract: contractVoucherVerifier,
       signer: backend,
     });
-    const refundType = 0 // 0 since refund is coaching
+    const refundType = 0; // 0 since refund is coaching
     // Voucher will be valid for 1 day
     const voucherValidUntil = Date.now() + 86400;
-    const refund_voucher = await refundVoucher.createVoucher(coachingSaleID, contentCreator.address, [], [], voucherValidUntil);
+    const refund_voucher = await refundVoucher.createVoucher(
+      coachingSaleID,
+      contentCreator.address,
+      [],
+      [],
+      voucherValidUntil
+    );
     // Refund coaching
     await expect(contractPlatformTreasury.connect(contentCreator).newRefundCoaching(refund_voucher))
       .to.emit(contractPlatformTreasury, "SaleRefunded")
@@ -582,7 +532,12 @@ describe("Platform Treasury Contract - Coaching", function () {
     const currentBlockTimestamp = (await hre.ethers.provider.getBlock()).timestamp;
     /// Coaching date is 3 days from now
     const coachingDate = currentBlockTimestamp + 3 * 24 * 60 * 60;
-    const role_voucher = await lazyCoaching.createVoucher(contentCreator.address, coachingPrice, coachingDate, contentBuyer.address);
+    const role_voucher = await lazyCoaching.createVoucher(
+      contentCreator.address,
+      coachingPrice,
+      coachingDate,
+      contentBuyer.address
+    );
     // Get buyer's UDAO balance
     const buyerBalance = await contractUDAO.balanceOf(contentBuyer.address);
     // Buy coaching
@@ -601,21 +556,26 @@ describe("Platform Treasury Contract - Coaching", function () {
     // Mine more than refund period
     const refundWindow = await contractPlatformTreasury.refundWindow();
     // Mine days of blocks that bigger than refundWindow days:
-    const numBlocksToMine = Math.ceil(((refundWindow.add(1)) * 86400) / 2);
+    const numBlocksToMine = Math.ceil((refundWindow.add(1) * 86400) / 2);
     await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine.toString(16)}`, "0x2"]);
     //  Create RefundVoucher
     const refundVoucher = new RefundVoucher({
       contract: contractVoucherVerifier,
       signer: backend,
     });
-    const refundType = 0 // 0 since refund is coaching
+    const refundType = 0; // 0 since refund is coaching
     // Voucher will be valid for 1 day
     const voucherValidUntil = Date.now() + 86400;
-    const refund_voucher = await refundVoucher.createVoucher(coachingSaleID, contentCreator.address, [], [], voucherValidUntil);
+    const refund_voucher = await refundVoucher.createVoucher(
+      coachingSaleID,
+      contentCreator.address,
+      [],
+      [],
+      voucherValidUntil
+    );
     // Refund coaching
     await expect(contractPlatformTreasury.connect(contentCreator).newRefundCoaching(refund_voucher)).to.revertedWith(
       "Refund period over you cant refund"
     );
   });
-
 });
