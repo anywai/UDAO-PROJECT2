@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+/// @title Interface of voucher verifier contract
 pragma solidity ^0.8.4;
 
 interface IVoucherVerifier {
