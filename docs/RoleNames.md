@@ -68,6 +68,12 @@ bytes32 TREASURY_CONTRACT
 bytes32 ROLEMANAGER_CONTRACT
 ```
 
+### CONTRACT_MANAGER
+
+```solidity
+bytes32 CONTRACT_MANAGER
+```
+
 ### SALE_CONTROLLER
 
 ```solidity
@@ -78,6 +84,12 @@ bytes32 SALE_CONTROLLER
 
 ```solidity
 bytes32 VOUCHER_VERIFIER
+```
+
+### CONTENT_PUBLISHER
+
+```solidity
+bytes32 CONTENT_PUBLISHER
 ```
 
 ### administrator_roles

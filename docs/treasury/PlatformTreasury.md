@@ -2,26 +2,6 @@
 
 ## PlatformTreasury
 
-### SIGNING_DOMAIN
-
-```solidity
-string SIGNING_DOMAIN
-```
-
-### SIGNATURE_VERSION
-
-```solidity
-string SIGNATURE_VERSION
-```
-
-### GovernanceWithdrawn
-
-```solidity
-event GovernanceWithdrawn(uint256 amount)
-```
-
-this event gets triggered when governance withdraw tokens
-
 ### FoundationWithdrawn
 
 ```solidity
@@ -29,22 +9,6 @@ event FoundationWithdrawn(uint256 amount)
 ```
 
 this event gets triggered when founcation withdraw tokens
-
-### ValidatorWithdrawn
-
-```solidity
-event ValidatorWithdrawn(address validator, uint256 amount)
-```
-
-this event gets triggered when a validator withdraw tokens
-
-### JurorWithdrawn
-
-```solidity
-event JurorWithdrawn(address juror, uint256 amount)
-```
-
-this event gets triggered when a juror withdraw tokens
 
 ### InstructorWithdrawn
 
@@ -54,20 +18,37 @@ event InstructorWithdrawn(address instructor, uint256 amount, uint256 debt)
 
 this event gets triggered when a instructor withdraw tokens
 
+### RefundWindowUpdated
+
+```solidity
+event RefundWindowUpdated(uint256 newWindow)
+```
+
+this event gets triggered when the refund window is updated
+
 ### constructor
 
 ```solidity
-constructor(address _contractManagerAddress, address _rmAddress, address _iGovernanceTreasuryAddress, address voucherVerifierAddress) public
+constructor(address _rmAddress, address _udaoAddress, address _udaocAddress, address _governanceTreasuryAddress, address _voucherVerifierAddress) public
 ```
 
 #### Parameters
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| _contractManagerAddress | address | The address of the deployed role manager |
 | _rmAddress | address | The address of the deployed role manager |
-| _iGovernanceTreasuryAddress | address |  |
-| voucherVerifierAddress | address |  |
+| _udaoAddress | address |  |
+| _udaocAddress | address |  |
+| _governanceTreasuryAddress | address |  |
+| _voucherVerifierAddress | address |  |
+
+### updateAndTransferPlatformBalances
+
+```solidity
+function updateAndTransferPlatformBalances() external
+```
+
+Allows anyone to update the platform cut balances and transfer the platform cut to governance
 
 ### withdrawFoundation
 
@@ -104,4 +85,18 @@ returns the withdrawable balance of the instructor
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | [0] | uint256 | withdrawableBalance The withdrawable balance of the given instructor |
+
+### changeRefundWindow
+
+```solidity
+function changeRefundWindow(uint256 _newWindow) external
+```
+
+Allows backend to change platform refun window period
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _newWindow | uint256 | The new refund window period |
 

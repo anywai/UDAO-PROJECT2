@@ -20,16 +20,18 @@ string SIGNATURE_VERSION
 struct Counters.Counter _tokenIdCounter
 ```
 
-### roleManager
+### AddressesUpdated
 
 ```solidity
-contract IRoleManager roleManager
+event AddressesUpdated(address roleManagerAddress)
 ```
+
+This event is triggered if the contract manager updates the addresses.
 
 ### constructor
 
 ```solidity
-constructor(address rmAddress) public
+constructor(address roleManagerAddress) public
 ```
 
 ### CertificateVoucher
@@ -44,6 +46,14 @@ struct CertificateVoucher {
   bytes signature;
 }
 ```
+
+### updateAddresses
+
+```solidity
+function updateAddresses(address roleManagerAddress) external
+```
+
+Get the updated addresses from contract manager
 
 ### redeem
 

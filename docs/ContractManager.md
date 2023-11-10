@@ -1,11 +1,143 @@
 # Solidity API
 
-## ContractManager
+## updRoleManager
 
-### roleManager
+### updateAddresses
 
 ```solidity
-contract IRoleManager roleManager
+function updateAddresses(address supervisionAddress) external
+```
+
+## updUDAOC
+
+### updateAddresses
+
+```solidity
+function updateAddresses(address roleManagerAddress, address supervisionAddress) external
+```
+
+## updUDAOCert
+
+### updateAddresses
+
+```solidity
+function updateAddresses(address roleManagerAddress) external
+```
+
+## updVoucherVerifier
+
+### updateAddresses
+
+```solidity
+function updateAddresses(address roleManagerAddress) external
+```
+
+## updPlatformTreasury
+
+### updateAddresses
+
+```solidity
+function updateAddresses(address udaoAddress, address udaocAddress, address roleManagerAddress, address governanceTreasuryAddress, address voucherVerifierAddress) external
+```
+
+## updSupervision
+
+### updateAddresses
+
+```solidity
+function updateAddresses(address roleManagerAddress, address udaocAddress, address platformTreasuryAddress, address udaoStakerAddres) external
+```
+
+## updUDAOvp
+
+### updateAddresses
+
+```solidity
+function updateAddresses(address roleManagerAddress, address udaoStakerAddres) external
+```
+
+## updUDAOStaker
+
+### updateAddresses
+
+```solidity
+function updateAddresses(address roleManagerAddress, address udaoAddress, address platformTreasuryAddress, address udaoVpAddress) external
+```
+
+## updUDAOGovernor
+
+### updateAddresses
+
+```solidity
+function updateAddresses(address roleManagerAddress, address udaoStakerAddress) external
+```
+
+## ContractManager
+
+### udaoAddress
+
+```solidity
+address udaoAddress
+```
+
+### roleManagerAddress
+
+```solidity
+address roleManagerAddress
+```
+
+### governanceTreasuryAddress
+
+```solidity
+address governanceTreasuryAddress
+```
+
+### supervisionAddress
+
+```solidity
+address supervisionAddress
+```
+
+### udaocAddress
+
+```solidity
+address udaocAddress
+```
+
+### udaoCertAddress
+
+```solidity
+address udaoCertAddress
+```
+
+### voucherVerifierAddress
+
+```solidity
+address voucherVerifierAddress
+```
+
+### platformTreasuryAddress
+
+```solidity
+address platformTreasuryAddress
+```
+
+### udaoVpAddress
+
+```solidity
+address udaoVpAddress
+```
+
+### udaoStakerAddress
+
+```solidity
+address udaoStakerAddress
+```
+
+### udaoGovernorAddress
+
+```solidity
+address udaoGovernorAddress
 ```
 
 ### StakingContractAddress
@@ -14,7 +146,8 @@ contract IRoleManager roleManager
 address StakingContractAddress
 ```
 
-_Below should be set after the deployment_
+_Below should be set after the deployment
+TODO OLD CODE_
 
 ### PlatformTreasuryAddress
 
@@ -34,7 +167,8 @@ address UdaoVpAddress
 address ISupVisAddress
 ```
 
-_Below needs to be set during deployment_
+_Below needs to be set during deployment
+TODO OLD CODE_
 
 ### UdaoAddress
 
@@ -60,7 +194,8 @@ address RmAddress
 address GovernanceTreasuryAddress
 ```
 
-_unknown if before or after_
+_unknown if before or after
+TODO OLD CODE_
 
 ### VoucherVerifierAddress
 
@@ -71,7 +206,37 @@ address VoucherVerifierAddress
 ### constructor
 
 ```solidity
-constructor(address _supAddress, address _udaoAddress, address _udaocAddress, address _rmAddress) public
+constructor(address _roleManagerAddress) public
+```
+
+### setMVPAddreses
+
+```solidity
+function setMVPAddreses(address _udaoAddress, address _roleManagerAddress, address _udaocAddress, address _udaoCertAddress, address _voucherVerifierAddress, address _platformTreasuryAddress) external
+```
+
+### setDummyAddreses
+
+```solidity
+function setDummyAddreses(address _governanceTreasuryAddress, address _supervisionAddress) external
+```
+
+### setGovernanceUpdateAddreses
+
+```solidity
+function setGovernanceUpdateAddreses(address _udaoVpAddress, address _udaoStakerAddress, address _udaoGovernorAddress) external
+```
+
+### callUpdAddFunctionsMVP
+
+```solidity
+function callUpdAddFunctionsMVP() external
+```
+
+### callUpdAddFunctionsGoverUpd
+
+```solidity
+function callUpdAddFunctionsGoverUpd() external
 ```
 
 ### setGovernanceTreasuryAddress
@@ -79,6 +244,8 @@ constructor(address _supAddress, address _udaoAddress, address _udaocAddress, ad
 ```solidity
 function setGovernanceTreasuryAddress(address _governanceTreasuryAddress) external
 ```
+
+TODO OLD CODE BELOW
 
 ### setPlatformTreasuryAddress
 

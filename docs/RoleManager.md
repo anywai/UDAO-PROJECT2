@@ -2,17 +2,13 @@
 
 ## RoleManager
 
-### contractManager
+### supervision
 
 ```solidity
-contract ContractManager contractManager
+contract ISupervision supervision
 ```
 
-### ISupVis
-
-```solidity
-contract ISupervision ISupVis
-```
+Supervision contract is manages juror and validator based actions
 
 ### activeKYCFunctions
 
@@ -29,7 +25,7 @@ mapping(uint256 => bool) activeBanFunctions
 ### AddressesUpdated
 
 ```solidity
-event AddressesUpdated(address ContractManagerAddress)
+event AddressesUpdated(address SupervisionAddress)
 ```
 
 ### KYCList
@@ -66,16 +62,10 @@ constructor() public
 
 Deployer gets the admin role.
 
-### setContractManager
-
-```solidity
-function setContractManager(address _contractManager) external
-```
-
 ### updateAddresses
 
 ```solidity
-function updateAddresses() external
+function updateAddresses(address supervisionAddress) external
 ```
 
 Get the updated addresses from contract manager
