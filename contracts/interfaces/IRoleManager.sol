@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-/// @title Interface for UDAO smart contract's role definitions. Other contracts inherits this to allow usage of custom roles.
+/// @title Interface of role manager: UDAO smart contract's role, KYC and ban management
 pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/access/IAccessControl.sol";
