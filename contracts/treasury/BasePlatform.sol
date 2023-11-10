@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.4;
-
 /// @title BasePlatform - PlatformTreasury
 /// @author anywaiTR: Bugrahan Duran, Batuhan Darcin
 /// @notice Contains key definitions for a platform treasury.
 /// @dev This contract is inherited by ContentManager contract.
+pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -15,6 +14,7 @@ import "../interfaces/IRoleManager.sol";
 import "../interfaces/IVoucherVerifier.sol";
 
 abstract contract BasePlatform is Pausable {
+    /// @dev Role definitions are here to reduce the size of the contract.
     bytes32 public constant BACKEND_ROLE = keccak256("BACKEND_ROLE");
     bytes32 public constant FOUNDATION_ROLE = keccak256("FOUNDATION_ROLE");
     bytes32 public constant GOVERNANCE_ROLE = keccak256("GOVERNANCE_ROLE");
@@ -158,6 +158,11 @@ abstract contract BasePlatform is Pausable {
     }
 
     /// @notice Get the updated addresses from contract manager
+    /// @param udaoAddress The address of the UDAO token contract
+    /// @param udaocAddress The address of the UDAOC token contract
+    /// @param roleManagerAddress The address of the role manager contract
+    /// @param governanceTreasuryAddress The address of the governance treasury contract
+    /// @param voucherVerifierAddress The address of the voucher verifier contract
     function updateAddresses(
         address udaoAddress,
         address udaocAddress,
@@ -187,6 +192,9 @@ abstract contract BasePlatform is Pausable {
         );
     }
 
+    /// @notice Checks if the user has the given role
+    /// @param _role is the role to be checked
+    /// @param _account is the address to be checked
     function hasRole(
         bytes32 _role,
         address _account
@@ -194,6 +202,9 @@ abstract contract BasePlatform is Pausable {
         return (roleManager.hasRole(_role, _account));
     }
 
+    /// @notice Checks if the user is banned
+    /// @param _userAddress is the address to be checked
+    /// @param _functionID is the function id to be checked
     function isNotBanned(
         address _userAddress,
         uint _functionID
@@ -201,6 +212,9 @@ abstract contract BasePlatform is Pausable {
         return !roleManager.isBanned(_userAddress, _functionID);
     }
 
+    /// @notice Checks if the user is KYCed
+    /// @param _userAddress is the address to be checked
+    /// @param _functionID is the function id to be checked
     function isKYCed(
         address _userAddress,
         uint _functionID
@@ -208,6 +222,9 @@ abstract contract BasePlatform is Pausable {
         return roleManager.isKYCed(_userAddress, _functionID);
     }
 
+    /// @notice Allows the backend to activate the governance treasury
+    /// @param _boolean is the boolean value to be set
+    /// @dev Tokens flows to governance treasury after if this function is called with true
     function activateGovernanceTreasury(bool _boolean) external {
         require(
             hasRole(BACKEND_ROLE, msg.sender),
@@ -290,7 +307,7 @@ abstract contract BasePlatform is Pausable {
         coachValidCut = _coachValidCut;
 
         coachTotalCut = newTotal;
-
+        /// TODO Add variables to this event
         emit PlatformCutsUpdated();
     }
 
@@ -323,7 +340,7 @@ abstract contract BasePlatform is Pausable {
         contentValidCut = _contentValidCut;
 
         contentTotalCut = newTotal;
-
+        /// TODO Add variables to this event
         emit PlatformCutsUpdated();
     }
 }
