@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-/// @title UDAOC (UDAO-Content) token.
+/// @title UDAOC (UDAO-Content) token is an ERC721 token.
 pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
@@ -337,6 +337,7 @@ contract UDAOContent is
         require(hasRole(BACKEND_ROLE, msg.sender), "Only backend can pause");
         _pause();
     }
+
     /// @notice Allows backend to unpause the contract
     function unpause() external {
         require(hasRole(BACKEND_ROLE, msg.sender), "Only backend can unpause");

@@ -5,8 +5,7 @@
 pragma solidity ^0.8.4;
 
 contract DummySupervision {
-    
-    ///@notice Placeholder mapping. 
+    ///@notice Placeholder empty mapping to disable hardhat warnings.
     mapping(uint => uint) emptyMapping;
 
     /// @notice Returns the validation result of a token
