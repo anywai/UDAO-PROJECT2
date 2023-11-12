@@ -112,51 +112,147 @@ describe("Contract Manager", function () {
     await reDeploy();
   });
 
-  it("Should allow backend to set the platform treasury address", async function () {
+  it("Should allow backend to set the UDAO token address", async function () {
     await reDeploy();
     // @dev Dummy contract address
     const dummyAddress = "0x7D1AfA7B718fb893dB30A3aBc0Cfc608AaCfeBB0";
-    await contractContractManager.connect(backend).setPlatformTreasuryAddress(dummyAddress);
-    expect(await contractContractManager.PlatformTreasuryAddress()).to.equal(dummyAddress);
+    await contractContractManager.connect(backend).setAddressUDAOContract(dummyAddress);
+    expect(await contractContractManager.udaoAddress()).to.equal(dummyAddress);
   });
 
-  it("Should allow backend to set the staking address", async function () {
+  it("Should allow backend to set the Role Manager contract address", async function () {
     await reDeploy();
     // @dev Dummy contract address
     const dummyAddress = "0x7D1AfA7B718fb893dB30A3aBc0Cfc608AaCfeBB0";
-    await contractContractManager.connect(backend).setAddressStaking(dummyAddress);
-    expect(await contractContractManager.StakingContractAddress()).to.equal(dummyAddress);
+    await contractContractManager.connect(backend).setAddressRoleManagerContract(dummyAddress);
+    expect(await contractContractManager.roleManagerAddress()).to.equal(dummyAddress);
   });
 
-  it("Should allow backend to set the UDAO-VP address", async function () {
+  it("Should allow backend to set the UDAOC token address", async function () {
     await reDeploy();
     // @dev Dummy contract address
     const dummyAddress = "0x7D1AfA7B718fb893dB30A3aBc0Cfc608AaCfeBB0";
-    await contractContractManager.connect(backend).setAddressUdaoVp(dummyAddress);
-    expect(await contractContractManager.UdaoVpAddress()).to.equal(dummyAddress);
+    await contractContractManager.connect(backend).setAddressUDAOCContract(dummyAddress);
+    expect(await contractContractManager.udaocAddress()).to.equal(dummyAddress);
   });
 
-  it("Should allow backend to set the UDAO address", async function () {
+  it("Should allow backend to set the UDAO-Cert token address", async function () {
     await reDeploy();
     // @dev Dummy contract address
     const dummyAddress = "0x7D1AfA7B718fb893dB30A3aBc0Cfc608AaCfeBB0";
-    await contractContractManager.connect(backend).setAddressUdaoAddress(dummyAddress);
-    expect(await contractContractManager.UdaoAddress()).to.equal(dummyAddress);
+    await contractContractManager.connect(backend).setAddressUDAOCertContract(dummyAddress);
+    expect(await contractContractManager.udaoCertAddress()).to.equal(dummyAddress);
   });
 
-  it("Should allow backend to set the UDAOC address", async function () {
+  it("Should allow backend to set the Voucher Verifier contract address", async function () {
     await reDeploy();
     // @dev Dummy contract address
     const dummyAddress = "0x7D1AfA7B718fb893dB30A3aBc0Cfc608AaCfeBB0";
-    await contractContractManager.connect(backend).setAddressUdaocAddress(dummyAddress);
-    expect(await contractContractManager.UdaocAddress()).to.equal(dummyAddress);
+    await contractContractManager.connect(backend).setAddressVoucherVerifierContract(dummyAddress);
+    expect(await contractContractManager.voucherVerifierAddress()).to.equal(dummyAddress);
   });
 
-  it("Should allow backend to set the IRM address", async function () {
+  it("Should allow backend to set the Platform Treasury contract address", async function () {
     await reDeploy();
     // @dev Dummy contract address
     const dummyAddress = "0x7D1AfA7B718fb893dB30A3aBc0Cfc608AaCfeBB0";
-    await contractContractManager.connect(backend).setAddressIrmAddress(dummyAddress);
-    expect(await contractContractManager.RmAddress()).to.equal(dummyAddress);
+    await contractContractManager.connect(backend).setAddressPlatformTreasuryContract(dummyAddress);
+    expect(await contractContractManager.platformTreasuryAddress()).to.equal(dummyAddress);
+  });
+
+  it("Should allow backend to set the Governance Treasury contract address", async function () {
+    await reDeploy();
+    // @dev Dummy contract address
+    const dummyAddress = "0x7D1AfA7B718fb893dB30A3aBc0Cfc608AaCfeBB0";
+    await contractContractManager.connect(backend).setAddressGovernanceTreasuryContract(dummyAddress);
+    expect(await contractContractManager.governanceTreasuryAddress()).to.equal(dummyAddress);
+  });
+
+  it("Should allow backend to set the Supervision address", async function () {
+    await reDeploy();
+    // @dev Dummy contract address
+    const dummyAddress = "0x7D1AfA7B718fb893dB30A3aBc0Cfc608AaCfeBB0";
+    await contractContractManager.connect(backend).setAddressSupervisionContract(dummyAddress);
+    expect(await contractContractManager.supervisionAddress()).to.equal(dummyAddress);
+  });
+  //BATU
+
+  it("Should allow backend to set the UDAO-VP token address", async function () {
+    await reDeploy();
+    // @dev Dummy contract address
+    const dummyAddress = "0x7D1AfA7B718fb893dB30A3aBc0Cfc608AaCfeBB0";
+    await contractContractManager.connect(backend).setAddressUDAOvpContract(dummyAddress);
+    expect(await contractContractManager.udaoVpAddress()).to.equal(dummyAddress);
+  });
+
+  it("Should allow backend to set the Udao Staker contract address", async function () {
+    await reDeploy();
+    // @dev Dummy contract address
+    const dummyAddress = "0x7D1AfA7B718fb893dB30A3aBc0Cfc608AaCfeBB0";
+    await contractContractManager.connect(backend).setAddressUDAOStakerContract(dummyAddress);
+    expect(await contractContractManager.udaoStakerAddress()).to.equal(dummyAddress);
+  });
+
+  it("Should allow backend to set the Udao Governor contract address", async function () {
+    await reDeploy();
+    // @dev Dummy contract address
+    const dummyAddress = "0x7D1AfA7B718fb893dB30A3aBc0Cfc608AaCfeBB0";
+    await contractContractManager.connect(backend).setAddressUDAOStakerContract(dummyAddress);
+    expect(await contractContractManager.udaoStakerAddress()).to.equal(dummyAddress);
+  });
+
+  it("Should allow backend to bulk set address of UDAO Version 1.0 contracts", async function () {
+    await reDeploy();
+    // @dev Dummy contract address
+    const testAddressUdao = "0x7D1AfA7B718fb893dB30A3aBc0Cfc608AaCfeBB0";
+    const testAddressRoleManager = "0x7D1AfA7B718fb893dB30A3aBc0Cfc608AaCfeBB0";
+    const testAddressUdaoc = "0x7D1AfA7B718fb893dB30A3aBc0Cfc608AaCfeBB0";
+    const testAddressUdaoCert = "0x7D1AfA7B718fb893dB30A3aBc0Cfc608AaCfeBB0";
+    const testAddressVoucherVerifier = "0x7D1AfA7B718fb893dB30A3aBc0Cfc608AaCfeBB0";
+    const testAddressPlatformTreasury = "0x7D1AfA7B718fb893dB30A3aBc0Cfc608AaCfeBB0";
+
+    await contractContractManager
+      .connect(backend)
+      .setAddresesVersion1Contracts(
+        testAddressUdao,
+        testAddressRoleManager,
+        testAddressUdaoc,
+        testAddressUdaoCert,
+        testAddressVoucherVerifier,
+        testAddressPlatformTreasury
+      );
+    expect(await contractContractManager.udaoAddress()).to.equal(testAddressUdao);
+    expect(await contractContractManager.roleManagerAddress()).to.equal(testAddressRoleManager);
+    expect(await contractContractManager.udaocAddress()).to.equal(testAddressUdaoc);
+    expect(await contractContractManager.udaoCertAddress()).to.equal(testAddressUdaoCert);
+    expect(await contractContractManager.voucherVerifierAddress()).to.equal(testAddressVoucherVerifier);
+    expect(await contractContractManager.platformTreasuryAddress()).to.equal(testAddressPlatformTreasury);
+  });
+
+  it("Should allow backend to set common(dummy) address of UDAO Version 1.0 and 2.0 contracts", async function () {
+    await reDeploy();
+    // @dev Dummy contract address
+    const testAddressGovernanceTreasury = "0x7D1AfA7B718fb893dB30A3aBc0Cfc608AaCfeBB0";
+    const testAddressSupervision = "0x7D1AfA7B718fb893dB30A3aBc0Cfc608AaCfeBB0";
+    await contractContractManager
+      .connect(backend)
+      .setAddresesCommonInVersion1and2(testAddressGovernanceTreasury, testAddressSupervision);
+    expect(await contractContractManager.governanceTreasuryAddress()).to.equal(testAddressGovernanceTreasury);
+    expect(await contractContractManager.supervisionAddress()).to.equal(testAddressSupervision);
+  });
+
+  it("Should allow backend to bulk set address of UDAO Version 2.0 contracts", async function () {
+    await reDeploy();
+    // @dev Dummy contract address
+    const testAddressUdaoVp = "0x7D1AfA7B718fb893dB30A3aBc0Cfc608AaCfeBB0";
+    const testAddressUdaoStaker = "0x7D1AfA7B718fb893dB30A3aBc0Cfc608AaCfeBB0";
+    const testAddressUdaoGovernor = "0x7D1AfA7B718fb893dB30A3aBc0Cfc608AaCfeBB0";
+
+    await contractContractManager
+      .connect(backend)
+      .setAddresesVersion2GovernanceContracts(testAddressUdaoVp, testAddressUdaoStaker, testAddressUdaoGovernor);
+    expect(await contractContractManager.udaoVpAddress()).to.equal(testAddressUdaoVp);
+    expect(await contractContractManager.udaoStakerAddress()).to.equal(testAddressUdaoStaker);
+    expect(await contractContractManager.udaoGovernorAddress()).to.equal(testAddressUdaoGovernor);
   });
 });
