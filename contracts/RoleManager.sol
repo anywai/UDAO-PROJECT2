@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-/// @title UDAO smart contract's role definitions.
+/// @title Interface of role manager: UDAO smart contract's role, KYC and ban management
 pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
@@ -11,10 +11,12 @@ contract RoleManager is AccessControl, RoleNames {
     /// @notice Supervision contract is manages juror and validator based actions
     ISupervision supervision;
 
-    // functionId => if Active or not
+    ///@dev functionId => if KYC check Active or not
     mapping(uint256 => bool) public activeKYCFunctions;
+    ///@dev functionId => if Ban check Active or not
     mapping(uint256 => bool) public activeBanFunctions;
 
+    /// @dev This event is triggered if the supervision contract address is updated.
     event AddressesUpdated(address SupervisionAddress);
 
     mapping(address => bool) KYCList;
@@ -31,6 +33,7 @@ contract RoleManager is AccessControl, RoleNames {
     }
 
     /// @notice Get the updated addresses from contract manager
+    /// @param supervisionAddress The address of the supervision contract
     function updateAddresses(address supervisionAddress) external {
         require(
             (hasRole(BACKEND_ROLE, msg.sender) ||
@@ -117,7 +120,7 @@ contract RoleManager is AccessControl, RoleNames {
         activeBanFunctions[functionId] = status;
     }
 
-    /// @notice gets KYC result of the address
+    /// @notice gets KYC result of the address if KYC is active for the function else returns true
     /// @param _address wallet that KYC result will be sent
     function isKYCed(
         address _address,
@@ -130,7 +133,7 @@ contract RoleManager is AccessControl, RoleNames {
         }
     }
 
-    /// @notice gets ban result of the address
+    /// @notice gets ban result of the address if ban is active for the function else returns false
     /// @param _address wallet that ban result will be sent
     function isBanned(
         address _address,
