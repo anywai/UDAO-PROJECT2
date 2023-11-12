@@ -1,28 +1,40 @@
 // SPDX-License-Identifier: MIT
-/// @title Content purchasing and cut management
+/// @title Content purchasing ,refund, and cut management
 pragma solidity ^0.8.4;
 import "./BasePlatform.sol";
 
 abstract contract ContentManager is BasePlatform {
     /// @notice Emitted when a content is bought
-    event ContentBought(uint256 cartSaleID, uint256 contentSaleID);
+    event ContentBought(
+        uint256 indexed cartSaleID,
+        uint256 indexed contentSaleID
+    );
     /// @notice Emitted when a coaching is bought
-    event CoachingBought(uint256 coachingSaleID);
+    event CoachingBought(uint256 indexed coachingSaleID);
     /// @notice Emitted when refund is requested. saleType: 0=coaching, 1=content
-    event SaleRefunded(uint256 saleID, uint8 saleType);
-    /// @notice
+    event SaleRefunded(uint256 indexed saleID, uint8 indexed saleType);
+    /// @notice Emitted when percentage of cut pool of content sales is updated
     event ContentCutPoolUpdated(uint256 _contentCutPool);
+    /// @notice Emitted when percentage of cut pool of coaching sales is updated
     event CoachingCutPoolUpdated(uint256 _coachingCutPool);
+    /// @notice BATUHAN
     event ContentCutLockedPoolUpdated();
+    /// @notice BATUHAN
     event CoachingCutLockedPoolUpdated();
+    /// @notice Emitted when there is a change in any of the cut pools
     event RoleBalancesUpdated(
         uint256 foundationBalance,
         uint256 jurorBalance,
         uint256 validatorsBalance,
         uint256 governanceBalance
     );
-    event InstructorBalanceUpdated(address _instructor, uint256 _instBalance);
-    event InstructorLockedBalanceUpdated(address _instructor);
+    /// @notice Emitted when the instructor balance is updated
+    event InstructorBalanceUpdated(
+        address indexed _instructor,
+        uint256 _instBalance
+    );
+    /// @notice Emitted when the instructor locked balance is updated
+    event InstructorLockedBalanceUpdated(address indexed _instructor);
 
     using Counters for Counters.Counter;
     /// @notice Used to generate unique ids for content sales
@@ -34,26 +46,44 @@ abstract contract ContentManager is BasePlatform {
 
     /// @notice Used to store the content sales
     struct ContentSale {
+        /// @param payee The address of the payment maker
         address payee;
+        /// @param contentReceiver The address of the content receiver
         address contentReceiver;
+        /// @param instructor The address of the instructor
         address instructor;
+        /// @param instrShare The cut of the instructor from the content sale
         uint256 instrShare;
+        /// @param totalCut The total platform cut applied to the content sale
         uint256 totalCut;
+        /// @param tokenId The token ID of the content
         uint256 tokenId;
+        /// @param purchasedParts An array representing the parts of the content purchased
         uint256[] purchasedParts;
+        /// @param isRefunded A boolean indicating whether the content sale is refunded
         bool isRefunded;
+        /// @param refundablePeriod The period during which the content sale can be refunded
         uint256 refundablePeriod;
+        /// @param fullPurchase A boolean indicating whether it's a full content purchase
         bool fullPurchase;
     }
     /// @notice Used to store the coaching sales
     struct CoachingSale {
+        /// @param payee The address of the payment maker
         address payee;
+        /// @param contentReceiver The address of the content receiver
         address contentReceiver;
+        /// @param coach The address of the coach/instructor
         address coach;
+        /// @param instrShare The cut of the instructor from the coaching sale
         uint256 instrShare;
+        /// @param totalCut The total platform cut applied to the coaching sale
         uint256 totalCut;
+        /// @param isRefunded A boolean indicating whether the coaching sale is refunded
         bool isRefunded;
+        /// @param coachingDate The date of the coaching
         uint256 coachingDate;
+        /// @param refundablePeriod The period during which the coaching sale can be refunded
         uint256 refundablePeriod;
     }
 
@@ -109,6 +139,9 @@ abstract contract ContentManager is BasePlatform {
 
         totalCut = calculateCoachingSaleTotalCut(voucher.priceToPay);
 
+        /* If fiat purchase, then the instructor share is 0 since
+        the instructor will receive fiat money from the bank account
+        */
         if (isFiatPurchase) {
             instrShare = 0;
         } else {
@@ -134,7 +167,7 @@ abstract contract ContentManager is BasePlatform {
         //transactionFuIndex determines which position it will be added to in the FutureBalances array.
         uint256 transactionFuIndex = transactionTime % refundWindow;
         _updatePlatformCutBalances(
-            0, //contentCut=0
+            0, //contentCut=0 TODO BATUHAN, is this correct?
             totalCut,
             transactionTime,
             transactionFuIndex
@@ -146,7 +179,7 @@ abstract contract ContentManager is BasePlatform {
             transactionFuIndex
         );
 
-        //Save the sale on a refund list
+        /// @dev Save the sale on a list for future use (e.g refund)
         coachSales[coachingSaleID.current()] = CoachingSale({
             payee: msg.sender,
             contentReceiver: learner,
@@ -193,7 +226,7 @@ abstract contract ContentManager is BasePlatform {
 
         /// @dev Loop through the cart
         for (uint256 i; i < voucherIdsLength; i++) {
-            // make sure signature is valid and get the address of the signer
+            /// @dev make sure signature is valid and get the address of the signer
             voucherVerifier.verifyDiscountVoucher(vouchers[i]);
             require(
                 msg.sender == vouchers[i].redeemer,
@@ -209,6 +242,12 @@ abstract contract ContentManager is BasePlatform {
 
             totalCut[i] = calculateContentSaleTotalCut(priceToPay[i]);
 
+            /* @dev
+            If fiat purchase, then the instructor share is 0 since
+            the instructor will receive fiat money from the bank account.
+            Also, the content receiver is the gift receiver defined
+            in the voucher.
+            */
             if (isFiatPurchase) {
                 require(
                     contentReceiver[i] != msg.sender,
@@ -266,11 +305,7 @@ abstract contract ContentManager is BasePlatform {
         uint256 instrShare,
         uint256 _cartSaleID
     ) internal {
-        // Who created and own that content?
         address instructor = udaoc.ownerOf(tokenId);
-
-        //uint256 totalCut = calculateContentSaleTotalCut(_priceToPayUdao);
-        //uint256 instrShare = _priceToPayUdao - totalCut;
 
         udao.transferFrom(msg.sender, address(this), instrShare + totalCut);
 
@@ -283,7 +318,7 @@ abstract contract ContentManager is BasePlatform {
         uint256 transactionFuIndex = transactionTime % refundWindow;
         _updatePlatformCutBalances(
             totalCut,
-            0, //coachingCut=0
+            0, //coachingCut=0 /// TODO BATUHAN, is this correct?
             transactionTime,
             transactionFuIndex
         );
@@ -323,7 +358,7 @@ abstract contract ContentManager is BasePlatform {
             isFullyPurchased[contentReceiver][tokenId] = false;
         }
 
-        //Save the sale on a refund list
+        //Save the sale on a list for future use (e.g refund)
         contentSales[contentSaleID.current()] = ContentSale({
             payee: msg.sender,
             contentReceiver: contentReceiver,
@@ -341,10 +376,11 @@ abstract contract ContentManager is BasePlatform {
         emit ContentBought(_cartSaleID, contentSaleID.current() - 1);
     }
 
-    /// @notice Returns the price to pay for a content parts purchase
+    /// @notice Checks if there is nothing wrong with the content purchase related to content receiver
     /// @param _tokenId The token ID of the content.
     /// @param _purchasedParts An array representing the parts of the content purchased.
     /// @param _contentReceiver The address of the content receiver.
+    /// @dev This function checks if the content receiver is banned, not KYCed, or already owns the content or content part.
     function _checkPartReceiver(
         uint256 _tokenId,
         uint256[] calldata _purchasedParts,
@@ -388,89 +424,6 @@ abstract contract ContentManager is BasePlatform {
         }
         return _contentReceiver;
     }
-
-    /*
-    /// @notice Checks does the receiver already own the content or content part
-    /// @param tokenId The token ID of the content.
-    /// @param purchasedParts An array representing the parts of the content purchased.
-    /// @param contentReceiver The address of the content receiver.
-    function _doReceiverHaveContentOrPart(
-        uint256 tokenId,
-        uint256[] calldata purchasedParts,
-        address contentReceiver
-    ) internal view returns (bool) {
-        for (uint256 j; j < purchasedParts.length; j++) {
-            uint256 part = purchasedParts[j];
-            if (isPartBought[contentReceiver][tokenId][part] == true) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    /// @notice Calculates price to pay for a content purchase
-    /// @param _tokenId The token ID of the content.
-    /// @param _fullContentPurchase A boolean indicating whether it's a full content purchase.
-    /// @param _purchasedParts An array representing the parts of the content purchased.
-    function calculatePriceToPay(
-        uint256 _tokenId,
-        bool _fullContentPurchase,
-        uint256[] calldata _purchasedParts,
-        address contentReceiver
-    ) public view returns (uint256) {
-        uint256 _priceToPay;
-        uint256 _pricePerPart;
-
-        /// @dev Get the total payment amount first
-        if (
-            _fullContentPurchase == true &&
-            ownedParts[contentReceiver][_tokenId].length == 0
-        ) {
-            _priceToPay = udaoc.getContentPrice(_tokenId);
-        } else {
-            require(
-                _purchasedParts[0] != 0,
-                "Purchased parts says 0, but fullContentPurchase is false!"
-            );
-            for (uint256 j; j < _purchasedParts.length; j++) {
-                require(
-                    _purchasedParts[j] < udaoc.getPartNumberOfContent(_tokenId),
-                    "Part does not exist!"
-                );
-                _pricePerPart = udaoc.getContentPartPrice(
-                    _tokenId,
-                    _purchasedParts[j]
-                );
-                _priceToPay += _pricePerPart;
-            }
-        }
-        return _priceToPay;
-    }
-
-    /// @notice Calculates total amount to pay for a cart purchase
-    /// @param tokenIds An array of token IDs representing the contents in the cart.
-    /// @param fullContentPurchases An array indicating whether each purchase is for full content.
-    /// @param purchasedParts An array of arrays representing the content parts to be purchased.
-    function calculatePriceToPayInTotal(
-        uint256[] calldata tokenIds,
-        bool[] calldata fullContentPurchases,
-        uint256[][] calldata purchasedParts
-    ) external view returns (uint256) {
-        uint256 tokenIdsLength = tokenIds.length;
-        uint256 totalPriceToPayUdao;
-        for (uint256 i; i < tokenIdsLength; i++) {
-            // Calculate purchased parts (or full Content) total list price.
-            totalPriceToPayUdao += calculatePriceToPay(
-                tokenIds[i],
-                fullContentPurchases[i],
-                purchasedParts[i],
-                msg.sender
-            );
-        }
-        return (totalPriceToPayUdao);
-    }
-    */
 
     /// @notice Returns the parts owned by buyer if buyer has bought any parts in the past
     /// @param _buyer The address of the buyer.
@@ -736,7 +689,7 @@ abstract contract ContentManager is BasePlatform {
         emit SaleRefunded(_refCoachSaleID, 0);
     }
 
-    /// @notice Allows refund of coaching with a voucher created by platform
+    /// @notice Allows to anyone to refund of coaching with a voucher created by platform
     /// @param voucher A RefundVoucher
     function newRefundCoaching(
         IVoucherVerifier.RefundVoucher calldata voucher
@@ -762,7 +715,7 @@ abstract contract ContentManager is BasePlatform {
         emit SaleRefunded(voucher.saleID, 0);
     }
 
-    /// @notice Allows refund of a content with a voucher created by platform
+    /// @notice Allows anyone to refund of a content with a voucher created by platform
     /// @param voucher A RefundVoucher
     function newRefundContent(
         IVoucherVerifier.RefundVoucher calldata voucher
@@ -793,20 +746,18 @@ abstract contract ContentManager is BasePlatform {
             ] = false;
         }
 
-        /// @dev First remove specific content from the contentReceiver
-        //delete ownedParts[refundItem.contentReceiver][refundItem.tokenId];
-
-        /// @dev Then add the content to the contentReceiver if voucher.finalParts exists;
+        /// @dev Replace the content owned by the contentReceiver if voucher.finalParts exists;
         if (voucher.finalParts.length > 0) {
             ownedParts[refundItem.contentReceiver][refundItem.tokenId] = voucher
                 .finalParts;
         } else {
-            /// @dev If voucher.finalParts does not exist, then add the content to the contentReceiver as empty array;
+            /// @dev If voucher.finalParts does not exist, then replace the content owned by the contentReceiver as empty array;
             ownedParts[refundItem.contentReceiver][
                 refundItem.tokenId
             ] = new uint256[](0);
         }
 
+        /// @dev BATUHAN altta ne yaptigini anlat, IF ne?
         if (
             ownedParts[refundItem.contentReceiver][refundItem.tokenId].length ==
             0
@@ -814,7 +765,6 @@ abstract contract ContentManager is BasePlatform {
             isContentBought[refundItem.contentReceiver][
                 refundItem.tokenId
             ] = false;
-            //delete ownedContents[refundItem.contentReceiver];
             if (voucher.finalContents.length > 0) {
                 ownedContents[refundItem.contentReceiver] = voucher
                     .finalContents;
