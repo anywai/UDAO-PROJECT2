@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+/// @title Platform Treasury contract
 pragma solidity ^0.8.4;
 
 import "./ContentManager.sol";
@@ -7,7 +8,7 @@ contract PlatformTreasury is ContentManager {
     ///@notice this event gets triggered when founcation withdraw tokens
     event FoundationWithdrawn(uint amount);
     ///@notice this event gets triggered when a instructor withdraw tokens
-    event InstructorWithdrawn(address instructor, uint amount, uint debt);
+    event InstructorWithdrawn(address indexed instructor, uint amount, uint debt);
     /// @notice this event gets triggered when the refund window is updated
     event RefundWindowUpdated(uint newWindow);
 
