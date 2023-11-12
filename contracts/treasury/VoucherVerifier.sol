@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
+/// @title Main contract for voucher verification of platform treasury
 pragma solidity ^0.8.4;
 
 import "../RoleLegacy.sol";
 import "../interfaces/IRoleManager.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
-import "hardhat/console.sol";
 
 contract VoucherVerifier is EIP712, RoleLegacy {
     string private constant SIGNING_DOMAIN = "TreasuryVouchers";
@@ -27,7 +27,7 @@ contract VoucherVerifier is EIP712, RoleLegacy {
     /// @param priceToPay price to pay
     /// @param validUntil date until the voucher is valid
     /// @param redeemer address of the redeemer
-    /// @param giftReceiver address of the gift receiver if purchase is a gift
+    /// @param giftReceiver address of the gift receiver if purchase is a gift or fiat purchase
     /// @param signature the EIP-712 signature of all other fields in the ContentDiscountVoucher struct.
     struct ContentDiscountVoucher {
         uint256 tokenId;
@@ -40,6 +40,12 @@ contract VoucherVerifier is EIP712, RoleLegacy {
         bytes signature;
     }
     /// @notice Represents a refund voucher for a coaching
+    /// @param saleID id of the sale to be refunded
+    /// @param instructor address of the instructor
+    /// @param finalParts parts that will remain in the learner's wallet after refund
+    /// @param finalContents contents that will remain in the learner's wallet after refund
+    /// @param validUntil date until the voucher is valid
+    /// @param signature the EIP-712 signature of all other fields in the RefundVoucher struct.
     struct RefundVoucher {
         uint256 saleID;
         address instructor;
@@ -50,6 +56,11 @@ contract VoucherVerifier is EIP712, RoleLegacy {
     }
 
     /// @notice struct to hold coaching voucher information
+    /// @param coach address of the coach
+    /// @param priceToPay price to pay
+    /// @param coachingDate date of the coaching
+    /// @param learner address of the learner
+    /// @param signature the EIP-712 signature of all other fields in the CoachingVoucher struct.
     struct CoachingVoucher {
         address coach;
         uint256 priceToPay;
@@ -59,6 +70,7 @@ contract VoucherVerifier is EIP712, RoleLegacy {
     }
 
     /// @notice Get the updated addresses from contract manager
+    /// @param roleManagerAddress The address of the role manager contract
     function updateAddresses(address roleManagerAddress) external {
         if (msg.sender != foundationWallet) {
             require(
@@ -141,7 +153,7 @@ contract VoucherVerifier is EIP712, RoleLegacy {
 
     /// @notice Verifies the signature for a given ContentDiscountVoucher, returning the address of the signer.
     /// @dev Will revert if the signature is invalid.
-    /// @param voucher A ContentDiscountVoucher describing a content access rights.
+    /// @param voucher A ContentDiscountVoucher describing a content purchase.
     function verifyDiscountVoucher(
         ContentDiscountVoucher calldata voucher
     ) external view {
@@ -156,9 +168,9 @@ contract VoucherVerifier is EIP712, RoleLegacy {
         require(voucher.validUntil >= block.timestamp, "Voucher has expired.");
     }
 
-    /// @notice Verifies the signature for a given ContentDiscountVoucher, returning the address of the signer.
+    /// @notice Verifies the signature for a given RefundVoucher, returning the address of the signer.
     /// @dev Will revert if the signature is invalid.
-    /// @param voucher A ContentDiscountVoucher describing a content access rights.
+    /// @param voucher A RefundVoucher describing a refund.
     function verifyRefundVoucher(RefundVoucher calldata voucher) external view {
         bytes32 digest = _hashRefundVoucher(voucher);
         address signer = ECDSA.recover(digest, voucher.signature);
@@ -170,7 +182,7 @@ contract VoucherVerifier is EIP712, RoleLegacy {
 
     /// @notice Verifies the signature for a given CoachingVoucher, returning the address of the signer.
     /// @dev Will revert if the signature is invalid.
-    /// @param voucher A CoachingVoucher describing a content access rights.
+    /// @param voucher A CoachingVoucher describing a coaching purchase.
     function verifyCoachingVoucher(
         CoachingVoucher calldata voucher
     ) external view {
