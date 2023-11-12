@@ -175,7 +175,6 @@ describe("Contract Manager", function () {
     await contractContractManager.connect(backend).setAddressSupervisionContract(dummyAddress);
     expect(await contractContractManager.supervisionAddress()).to.equal(dummyAddress);
   });
-  //BATU
 
   it("Should allow backend to set the UDAO-VP token address", async function () {
     await reDeploy();

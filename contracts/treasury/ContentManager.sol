@@ -1,39 +1,64 @@
 // SPDX-License-Identifier: MIT
-/// @title Content purchasing ,refund, and cut management
+/// @title Content Manager of PlatformTreasury
+/// @author anywaiTR: Bugrahan Duran, Batuhan Darcin
+/// @notice Adds content and coaching sale functionality to the platform treasury, This is an abstract contract and serves as the content manager for the UDAO Platform treasury.
+/// @dev Contains buy and refund funcions for content and coaching sales, also shares the revenue of sales with platform roles.
 pragma solidity ^0.8.4;
 import "./BasePlatform.sol";
 
 abstract contract ContentManager is BasePlatform {
     /// @notice Emitted when a content is bought
+    /// @param cartSaleID The ID of the cart sale
+    /// @param contentSaleID The ID of the content sale
     event ContentBought(
         uint256 indexed cartSaleID,
         uint256 indexed contentSaleID
     );
     /// @notice Emitted when a coaching is bought
+    /// @param coachingSaleID The ID of the coaching sale
     event CoachingBought(uint256 indexed coachingSaleID);
     /// @notice Emitted when refund is requested. saleType: 0=coaching, 1=content
+    /// @param saleID The ID of the coaching or content sale to be refunded
+    /// @param saleType The type of the sale 0=coaching, 1=content
     event SaleRefunded(uint256 indexed saleID, uint8 indexed saleType);
-    /// @notice Emitted when percentage of cut pool of content sales is updated
+
+    /// @notice Emitted when the "ContentCutPool revenue balance" is updated,
+    /// @dev after the refund window is over, the revenue collected from content sales for platform roles is transferred to the "ContentCutPool"
+    /// @param _contentCutPool The new value of the content cut pool
     event ContentCutPoolUpdated(uint256 _contentCutPool);
-    /// @notice Emitted when percentage of cut pool of coaching sales is updated
-    event CoachingCutPoolUpdated(uint256 _coachingCutPool);
-    /// @notice BATUHAN
+    /// @notice Emitted when the "ContentCutLockedPool: locked revenue balances" are updated,
+    /// @dev This revenue collected from content sales for platform roles, and these are locked revenue balances which doesn't completes refund window yet
     event ContentCutLockedPoolUpdated();
-    /// @notice BATUHAN
+
+    /// @notice Emitted when the "CoachingCutPool revenue balance" is updated,
+    /// @dev after the refund window is over, the revenue collected from coaching sales for platform roles is transferred to the "CoachingCutPool"
+    /// @param _coachingCutPool The new value of the cut pool
+    event CoachingCutPoolUpdated(uint256 _coachingCutPool);
+    /// @notice Emitted when the "CoachingCutLockedPool: locked revenue balances" are updated,
+    /// @dev This revenue collected from coaching sales for platform roles, and these are locked revenue balances which doesn't completes refund window yet
     event CoachingCutLockedPoolUpdated();
-    /// @notice Emitted when there is a change in any of the cut pools
+
+    /// @notice Emitted when platform role revenues are distributed to roles or role revenues are directed to governance treasury
+    /// @dev the platform role revenues are content and coaching cut pools, and roles are foundation, juror, validator and governance
+    /// @param foundationBalance The new value of the foundation balance
+    /// @param jurorBalance The new value of the juror balance
+    /// @param validatorsBalance The new value of the validators balance
+    /// @param governanceBalance The new value of the governance balance
     event RoleBalancesUpdated(
         uint256 foundationBalance,
         uint256 jurorBalance,
         uint256 validatorsBalance,
         uint256 governanceBalance
     );
+
     /// @notice Emitted when the instructor balance is updated
+    /// @param _instructor The address of the instructor
+    /// @param _instBalance The new value of the instructor balance
     event InstructorBalanceUpdated(
         address indexed _instructor,
         uint256 _instBalance
     );
-    /// @notice Emitted when the instructor locked balance is updated
+    /// @notice Emitted when the instructor locked balances is updated
     event InstructorLockedBalanceUpdated(address indexed _instructor);
 
     using Counters for Counters.Counter;
@@ -45,45 +70,46 @@ abstract contract ContentManager is BasePlatform {
     Counters.Counter private cartSaleID;
 
     /// @notice Used to store the content sales
+    /// @param payee The address of the payment maker
+    /// @param contentReceiver The address of the content receiver
+    /// @param instructor The address of the instructor
+    /// @param instrShare The cut of the instructor from the content sale
+    /// @param totalCut The total platform cut applied to the content sale
+    /// @param tokenId The token ID of the content
+    /// @param purchasedParts An array representing the parts of the content purchased
+    /// @param isRefunded A boolean indicating whether the content sale is refunded
+    /// @param refundablePeriod The period during which the content sale can be refunded
+    /// @param fullPurchase A boolean indicating whether it's a full content purchase
     struct ContentSale {
-        /// @param payee The address of the payment maker
         address payee;
-        /// @param contentReceiver The address of the content receiver
         address contentReceiver;
-        /// @param instructor The address of the instructor
         address instructor;
-        /// @param instrShare The cut of the instructor from the content sale
         uint256 instrShare;
-        /// @param totalCut The total platform cut applied to the content sale
         uint256 totalCut;
-        /// @param tokenId The token ID of the content
         uint256 tokenId;
-        /// @param purchasedParts An array representing the parts of the content purchased
         uint256[] purchasedParts;
-        /// @param isRefunded A boolean indicating whether the content sale is refunded
         bool isRefunded;
-        /// @param refundablePeriod The period during which the content sale can be refunded
         uint256 refundablePeriod;
-        /// @param fullPurchase A boolean indicating whether it's a full content purchase
         bool fullPurchase;
     }
+
     /// @notice Used to store the coaching sales
+    /// @param payee The address of the payment maker
+    /// @param contentReceiver The address of the content receiver
+    /// @param coach The address of the coach/instructor
+    /// @param instrShare The cut of the instructor from the coaching sale
+    /// @param totalCut The total platform cut applied to the coaching sale
+    /// @param isRefunded A boolean indicating whether the coaching sale is refunded
+    /// @param coachingDate The date of the coaching
+    /// @param refundablePeriod The period during which the coaching sale can be refunded
     struct CoachingSale {
-        /// @param payee The address of the payment maker
         address payee;
-        /// @param contentReceiver The address of the content receiver
         address contentReceiver;
-        /// @param coach The address of the coach/instructor
         address coach;
-        /// @param instrShare The cut of the instructor from the coaching sale
         uint256 instrShare;
-        /// @param totalCut The total platform cut applied to the coaching sale
         uint256 totalCut;
-        /// @param isRefunded A boolean indicating whether the coaching sale is refunded
         bool isRefunded;
-        /// @param coachingDate The date of the coaching
         uint256 coachingDate;
-        /// @param refundablePeriod The period during which the coaching sale can be refunded
         uint256 refundablePeriod;
     }
 
@@ -112,7 +138,7 @@ abstract contract ContentManager is BasePlatform {
         uint256 instrShare;
         address learner;
         bool isFiatPurchase;
-
+        /// @dev check and verify the voucher is created by platform
         voucherVerifier.verifyCoachingVoucher(voucher);
         require(
             voucher.coachingDate >= block.timestamp + 86400 * 1,
@@ -139,9 +165,7 @@ abstract contract ContentManager is BasePlatform {
 
         totalCut = calculateCoachingSaleTotalCut(voucher.priceToPay);
 
-        /* If fiat purchase, then the instructor share is 0 since
-        the instructor will receive fiat money from the bank account
-        */
+        /// @dev in a fiat purchase, instructor share payed with FIAT money by platform in a seperate transaction. So that instrShare=0
         if (isFiatPurchase) {
             instrShare = 0;
         } else {
@@ -160,27 +184,33 @@ abstract contract ContentManager is BasePlatform {
             "Not enough allowance!"
         );
 
+        /// @dev Transfer UDAO payment from buyer to contract
         udao.transferFrom(msg.sender, address(this), totalCut + instrShare);
 
+        /// @dev this is the timestamp of the transaction in days
         uint256 transactionTime = (block.timestamp / 86400);
 
-        //transactionFuIndex determines which position it will be added to in the FutureBalances array.
-        uint256 transactionFuIndex = transactionTime % refundWindow;
+        /// @dev transactionLBIndex determines a "transaction time dependent position" in the Locked balanaces array.
+        uint256 transactionLBIndex = transactionTime % refundWindow;
+
+        /// @dev update platform cut (coaching&content) pools and platform locked pools
         _updatePlatformCutBalances(
-            0, //contentCut=0 TODO BATUHAN, is this correct?
-            totalCut,
+            0, //contentCut=0 due to there is no content revenue on this sale
+            totalCut, //totalCut is a new coaching sale revenue from this sale
             transactionTime,
-            transactionFuIndex
+            transactionLBIndex
         );
+        /// @dev update instructor balance and instructor locked balances,
         _updateInstructorBalances(
             instrShare,
             voucher.coach,
             transactionTime,
-            transactionFuIndex
+            transactionLBIndex
         );
 
         /// @dev Save the sale on a list for future use (e.g refund)
-        coachSales[coachingSaleID.current()] = CoachingSale({
+        coachingSaleID.increment();
+        coachSales[coachingSaleID.current() - 1] = CoachingSale({
             payee: msg.sender,
             contentReceiver: learner,
             coach: voucher.coach,
@@ -190,7 +220,8 @@ abstract contract ContentManager is BasePlatform {
             coachingDate: voucher.coachingDate,
             refundablePeriod: transactionTime + refundWindow
         });
-        coachingSaleID.increment();
+
+        /// @dev if there is any revenue in platform cut pools, distribute role shares to roles and transfer governance role shares to governance treasury
         _transferPlatformCutstoGovernance();
 
         emit CoachingBought(coachingSaleID.current() - 1);
@@ -226,7 +257,7 @@ abstract contract ContentManager is BasePlatform {
 
         /// @dev Loop through the cart
         for (uint256 i; i < voucherIdsLength; i++) {
-            /// @dev make sure signature is valid and get the address of the signer
+            /// @dev check and verify the voucher is created by platform
             voucherVerifier.verifyDiscountVoucher(vouchers[i]);
             require(
                 msg.sender == vouchers[i].redeemer,
@@ -242,12 +273,7 @@ abstract contract ContentManager is BasePlatform {
 
             totalCut[i] = calculateContentSaleTotalCut(priceToPay[i]);
 
-            /* @dev
-            If fiat purchase, then the instructor share is 0 since
-            the instructor will receive fiat money from the bank account.
-            Also, the content receiver is the gift receiver defined
-            in the voucher.
-            */
+            /// @dev in a fiat purchase, instructor share payed with FIAT money by platform in a seperate transaction. So that instrShare=0
             if (isFiatPurchase) {
                 require(
                     contentReceiver[i] != msg.sender,
@@ -273,6 +299,7 @@ abstract contract ContentManager is BasePlatform {
             "Not enough allowance!"
         );
 
+        /// @dev Save the sale on a list for future use (e.g refund)
         cartSaleID.increment();
         for (uint256 i; i < voucherIdsLength; i++) {
             _buyContentwithUDAO(
@@ -285,6 +312,8 @@ abstract contract ContentManager is BasePlatform {
                 cartSaleID.current() - 1
             );
         }
+
+        /// @dev if there is any revenue in platform cut pools, distribute role shares to roles and transfer governance role shares to governance treasury
         _transferPlatformCutstoGovernance();
     }
 
@@ -307,29 +336,30 @@ abstract contract ContentManager is BasePlatform {
     ) internal {
         address instructor = udaoc.ownerOf(tokenId);
 
+        /// @dev Transfer UDAO payment from buyer to contract
         udao.transferFrom(msg.sender, address(this), instrShare + totalCut);
 
-        //timestamp returns 1694513188: 12Sep2023-10:06:28 so buyerTransactionTime is 19612.42
-        //this means 19612.42 day passed since 1Jan1970-0:0:0
-        //There is no fractional number in solidity so that buyerTransactionTime is 19612
+        /// @dev this is the timestamp of the transaction in days
         uint256 transactionTime = (block.timestamp / 86400);
+        /// @dev transactionLBIndex determines a "transaction time dependent position" in the Locked balanaces array.
+        uint256 transactionLBIndex = transactionTime % refundWindow;
 
-        //transactionFuIndex determines which position it will be added to in the FutureBalances array.
-        uint256 transactionFuIndex = transactionTime % refundWindow;
+        /// @dev update platform cut (coaching&content) pools and platform locked pools
         _updatePlatformCutBalances(
-            totalCut,
-            0, //coachingCut=0 /// TODO BATUHAN, is this correct?
+            totalCut, //totalCut is a new content sale revenue from this sale
+            0, //coachingCut=0 due to there is no coaching revenue on this sale
             transactionTime,
-            transactionFuIndex
+            transactionLBIndex
         );
+        /// @dev update instructor balance and instructor locked balances,
         _updateInstructorBalances(
             instrShare,
             instructor,
             transactionTime,
-            transactionFuIndex
+            transactionLBIndex
         );
 
-        // Update owned content
+        /// @dev update owned content
         if (isContentBought[contentReceiver][tokenId] == false) {
             isContentBought[contentReceiver][tokenId] = true;
             if (ownedContents[contentReceiver].length == 0) {
@@ -338,7 +368,7 @@ abstract contract ContentManager is BasePlatform {
             ownedContents[contentReceiver].push(tokenId);
         }
 
-        // Update owned content part
+        /// @dev update owned content part
         if (fullContentPurchase) {
             isPartBought[contentReceiver][tokenId][0] = true;
             ownedParts[contentReceiver][tokenId] = udaoc.getContentParts(
@@ -358,8 +388,9 @@ abstract contract ContentManager is BasePlatform {
             isFullyPurchased[contentReceiver][tokenId] = false;
         }
 
-        //Save the sale on a list for future use (e.g refund)
-        contentSales[contentSaleID.current()] = ContentSale({
+        /// @dev Save the sale on a list for future use (e.g refund)
+        contentSaleID.increment();
+        contentSales[contentSaleID.current() - 1] = ContentSale({
             payee: msg.sender,
             contentReceiver: contentReceiver,
             instructor: instructor,
@@ -371,7 +402,6 @@ abstract contract ContentManager is BasePlatform {
             refundablePeriod: transactionTime + refundWindow,
             fullPurchase: fullContentPurchase
         });
-        contentSaleID.increment();
 
         emit ContentBought(_cartSaleID, contentSaleID.current() - 1);
     }
@@ -381,11 +411,12 @@ abstract contract ContentManager is BasePlatform {
     /// @param _purchasedParts An array representing the parts of the content purchased.
     /// @param _contentReceiver The address of the content receiver.
     /// @dev This function checks if the content receiver is banned, not KYCed, or already owns the content or content part.
+    /// @dev It can be used also by backend to check a purchase request is acceptable or not before a bulk fiat purchase.(So that it a public view function)
     function _checkPartReceiver(
         uint256 _tokenId,
         uint256[] calldata _purchasedParts,
         address _contentReceiver
-    ) internal view returns (address) {
+    ) public view returns (address) {
         /// @dev Determine the RECEIVER of each item in cart, address(0) means RECEIVER is BUYER
         if (_contentReceiver == address(0)) {
             _contentReceiver = msg.sender;
@@ -577,13 +608,16 @@ abstract contract ContentManager is BasePlatform {
 
     /// @notice Distributes platform revenue to platform roles and transfers governance role shares to the governance treasury.
     function _transferPlatformCutstoGovernance() internal {
+        /// @dev if there is any revenue in contentCutPool which is completed the refund window, distribute role shares to roles and transfer governance role shares to governance treasury
         if (contentCutPool > contentCutRefundedBalance) {
+            /// @dev reduce the refunded and blocked balance from the content cut pool
             uint positiveContentCutPool = contentCutPool -
                 contentCutRefundedBalance;
             contentCutPool = 0;
             contentCutRefundedBalance = 0;
             emit ContentCutPoolUpdated(contentCutPool);
 
+            /// @dev Distribute the content cut shares to platform roles
             _distributeContentCutShares(positiveContentCutPool);
             emit RoleBalancesUpdated(
                 foundationBalance,
@@ -593,13 +627,16 @@ abstract contract ContentManager is BasePlatform {
             );
         }
 
+        /// @dev if there is any revenue in coachingCutPool which is completed the refund window, distribute role shares to roles and transfer governance role shares to governance treasury
         if (coachingCutPool > coachingCutRefundedBalance) {
+            /// @dev reduce the refunded and blocked balance from the coaching cut pool
             uint positiveCoachingCutPool = coachingCutPool -
                 coachingCutRefundedBalance;
             coachingCutPool = 0;
             coachingCutRefundedBalance = 0;
             emit CoachingCutPoolUpdated(coachingCutPool);
 
+            /// @dev Distribute the coaching cut shares to platform roles
             _distributeCoachingCutShares(positiveCoachingCutPool);
             emit RoleBalancesUpdated(
                 foundationBalance,
@@ -609,44 +646,55 @@ abstract contract ContentManager is BasePlatform {
             );
         }
 
+        /// @dev Transfer the governance role shares to the governance treasury if governance treasury is online
         if (isGovernanceTreasuryOnline == true) {
-            uint transferredJurorBalance = jurorBalance;
-            uint transferredValidatorBalance = validatorsBalance;
-            uint transferredGovernanceBalance = governanceBalance;
-
+            bool aBalanceUpdated;
+            /// @dev if jurorBalance is positive, transfer the juror balance to the governance treasury
             if (jurorBalance > 0) {
+                uint transferredJurorBalance = jurorBalance;
                 jurorBalance = 0;
+                /// @dev transfer the juror role balance to the governance treasury contract
                 udao.transfer(
                     address(governanceTreasury),
                     transferredJurorBalance
                 );
+                /// @dev update the juror role balance in governance treasury contract
                 governanceTreasury.jurorBalanceUpdate(transferredJurorBalance);
+                aBalanceUpdated = true;
             }
+            /// @dev if validatorsBalance is positive, transfer the validators balance to the governance treasury
             if (validatorsBalance > 0) {
+                uint transferredValidatorBalance = validatorsBalance;
                 validatorsBalance = 0;
+                /// @dev transfer the validators role balance to the governance treasury contract
                 udao.transfer(
                     address(governanceTreasury),
                     transferredValidatorBalance
                 );
+                /// @dev update the validators role balance in governance treasury contract
                 governanceTreasury.validatorBalanceUpdate(
                     transferredValidatorBalance
                 );
+                aBalanceUpdated = true;
             }
+            /// @dev if governanceBalance is positive, transfer the foundation balance to the governance treasury
             if (governanceBalance > 0) {
+                uint transferredGovernanceBalance = governanceBalance;
                 governanceBalance = 0;
+                /// @dev transfer the governance role balance to the governance treasury contract
                 udao.transfer(
                     address(governanceTreasury),
                     transferredGovernanceBalance
                 );
+                /// @dev update the governance role balance in governance treasury contract
                 governanceTreasury.governanceBalanceUpdate(
                     transferredGovernanceBalance
                 );
+                aBalanceUpdated = true;
             }
-            if (
-                (transferredJurorBalance +
-                    transferredValidatorBalance +
-                    transferredGovernanceBalance) > 0
-            ) {
+
+            /// @dev Emit the event if any balance is updated
+            if (aBalanceUpdated) {
                 emit RoleBalancesUpdated(
                     foundationBalance,
                     jurorBalance,
@@ -663,6 +711,7 @@ abstract contract ContentManager is BasePlatform {
         uint256 _refCoachSaleID
     ) external whenNotPaused {
         CoachingSale storage refundItem = coachSales[_refCoachSaleID];
+        /// @dev a sale only be refunded in the refund window period after the purchase date
         require(
             refundItem.refundablePeriod >= (block.timestamp / 86400),
             "Refund period over you cant refund"
@@ -675,13 +724,15 @@ abstract contract ContentManager is BasePlatform {
         } else if (msg.sender != refundItem.coach) {
             revert("You are not the payee or coach");
         }
-
+        /// @dev a sale can only be refunded once
         require(refundItem.isRefunded == false, "Already refunded!");
         coachSales[_refCoachSaleID].isRefunded = true;
 
+        /// @dev block the revenue of the refunded sale from the instructor balance and platform cut pools
         instRefundedBalance[refundItem.coach] += refundItem.instrShare;
         coachingCutRefundedBalance += refundItem.totalCut;
 
+        /// @dev Transfer UDAO refund payment from contract to buyer
         udao.transfer(
             refundItem.payee,
             (refundItem.instrShare + refundItem.totalCut)
@@ -694,20 +745,23 @@ abstract contract ContentManager is BasePlatform {
     function newRefundCoaching(
         IVoucherVerifier.RefundVoucher calldata voucher
     ) external whenNotPaused {
+        /// @dev check and verify the voucher is created by platform
         voucherVerifier.verifyRefundVoucher(voucher);
-
         CoachingSale storage refundItem = coachSales[voucher.saleID];
+        /// @dev a sale only be refunded in the refund window period after the purchase date
         require(
             refundItem.refundablePeriod >= (block.timestamp / 86400),
             "Refund period over you cant refund"
         );
-
+        /// @dev a sale can only be refunded once
         require(refundItem.isRefunded == false, "Already refunded!");
         coachSales[voucher.saleID].isRefunded = true;
 
+        /// @dev block the revenue of the refunded sale from the instructor balance and platform cut pools
         instRefundedBalance[refundItem.coach] += refundItem.instrShare;
         coachingCutRefundedBalance += refundItem.totalCut;
 
+        /// @dev Transfer UDAO refund payment from contract to buyer
         udao.transfer(
             refundItem.payee,
             (refundItem.instrShare + refundItem.totalCut)
@@ -720,44 +774,45 @@ abstract contract ContentManager is BasePlatform {
     function newRefundContent(
         IVoucherVerifier.RefundVoucher calldata voucher
     ) external whenNotPaused {
+        /// @dev check and verify the voucher is created by platform
         voucherVerifier.verifyRefundVoucher(voucher);
-
         ContentSale storage refundItem = contentSales[voucher.saleID];
-
+        /// @dev a sale only be refunded in the refund window period after the purchase date
         require(
             refundItem.refundablePeriod >= (block.timestamp / 86400),
             "refund period over you cant refund"
         );
-
+        /// @dev a sale can only be refunded once
         require(refundItem.isRefunded == false, "Already refunded!");
         contentSales[voucher.saleID].isRefunded = true;
 
+        /// @dev Loop through the purchased parts of the content in the sale
         for (uint256 j; j < refundItem.purchasedParts.length; j++) {
             uint256 part = refundItem.purchasedParts[j];
-            /// @dev Set the content as not bought
+            /// @dev Set the content part as not bought
             isPartBought[refundItem.contentReceiver][refundItem.tokenId][
                 part
             ] = false;
         }
-        /// @dev If the sale was a full content purchase...
+        /// @dev If the sale was a full content purchase change the "full purchase status" of the content for instructor
         if (refundItem.fullPurchase == true) {
             isFullyPurchased[refundItem.contentReceiver][
                 refundItem.tokenId
             ] = false;
         }
 
-        /// @dev Replace the content owned by the contentReceiver if voucher.finalParts exists;
+        /// @dev Replace the "owned content parts" of the contentReceiver by the voucher.finalParts if any parts are left after refund
         if (voucher.finalParts.length > 0) {
             ownedParts[refundItem.contentReceiver][refundItem.tokenId] = voucher
                 .finalParts;
         } else {
-            /// @dev If voucher.finalParts does not exist, then replace the content owned by the contentReceiver as empty array;
+            /// @dev If voucher.finalParts does not exist, then replace "owned content parts" of the contentReceiver with an empty array
             ownedParts[refundItem.contentReceiver][
                 refundItem.tokenId
             ] = new uint256[](0);
         }
 
-        /// @dev BATUHAN altta ne yaptigini anlat, IF ne?
+        /// @dev If the contentReceiver does not own any part of the content anymore, set the "owned content" of contentReceiver for this content as not bought
         if (
             ownedParts[refundItem.contentReceiver][refundItem.tokenId].length ==
             0
@@ -765,6 +820,7 @@ abstract contract ContentManager is BasePlatform {
             isContentBought[refundItem.contentReceiver][
                 refundItem.tokenId
             ] = false;
+            /// @dev If the contentReceiver does not own any content anymore then replace "owned content" of contentReceiver with an empty array
             if (voucher.finalContents.length > 0) {
                 ownedContents[refundItem.contentReceiver] = voucher
                     .finalContents;
@@ -773,9 +829,11 @@ abstract contract ContentManager is BasePlatform {
             }
         }
 
+        /// @dev block the revenue of the refunded sale from the instructor balance and platform cut pools
         instRefundedBalance[refundItem.instructor] += refundItem.instrShare;
         contentCutRefundedBalance += refundItem.totalCut;
 
+        /// @dev Transfer UDAO refund payment from contract to buyer
         udao.transfer(
             refundItem.payee,
             (refundItem.instrShare + refundItem.totalCut)
@@ -785,7 +843,7 @@ abstract contract ContentManager is BasePlatform {
 
     /// @notice Returns the chain id of the current blockchain.
     /// @dev This is used to workaround an issue with ganache returning different values from the on-chain chainid() function and
-    ///  the eth_chainId RPC method. See https://github.com/protocol/nft-website/issues/121 for context.
+    /// @dev the eth_chainId RPC method. See https://github.com/protocol/nft-website/issues/121 for context.
     function getChainID() external view returns (uint256) {
         uint256 id;
         assembly {

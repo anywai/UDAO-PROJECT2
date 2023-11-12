@@ -539,9 +539,6 @@ describe("Platform Treasury General", function () {
     await expect(currentFoundationBalance).to.equal(expectedFoundationBalance);
   });
 
-  /// TODO
-  it("Should distribute rewards to jurors when there are multiple disputes", async function () {});
-
   it("Should allow instructers to withdraw their earnings", async function () {
     await reDeploy();
     // KYC content creator and content buyers
@@ -627,5 +624,4 @@ describe("Platform Treasury General", function () {
         .sub(jurorBalance)
     );
   });
-
 });

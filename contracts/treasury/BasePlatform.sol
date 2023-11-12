@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
-/// @title BasePlatform - PlatformTreasury
+/// @title BasePlatform of PlatformTreasury
 /// @author anywaiTR: Bugrahan Duran, Batuhan Darcin
-/// @notice Contains key definitions for a platform treasury.
-/// @dev This contract is inherited by ContentManager contract.
+/// @notice Contains key definitions for a platform treasury. This is an abstract contract and serves as the base contract for the UDAO Platform treasury.
+/// @dev It defines and allocates role dependent balances-pools-timers, and purchase cuts.
 pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/security/Pausable.sol";
@@ -35,7 +35,7 @@ abstract contract BasePlatform is Pausable {
     address public foundationWallet;
 
     /// @notice during refund windows all payments locked on contract and users can request refund
-    /// @dev instLockedBalance and coaching/contentCutLockedPool arrays's size defines the maximum setable refund window
+    /// @dev it initiated as 14 day and locked balance/pool array's size (61) defines the maximum setable refund window.
     uint256 public refundWindow = 14;
 
     /// @notice instructor address => instructor's balance
@@ -114,6 +114,8 @@ abstract contract BasePlatform is Pausable {
 
     /// @notice constructor of BasePlatform
     /// @param roleManagerAddress is address of RoleManager contract
+    /// @param udaoAddress is address of UDAO token contract
+    /// @param udaocAddress is address of UDAOC token contract
     /// @param governanceTreasuryAddress is address of GovernanceTreasury contract
     /// @param voucherVerifierAddress is address of VoucherVerifier contract
     constructor(
@@ -144,7 +146,28 @@ abstract contract BasePlatform is Pausable {
     );
 
     /// @notice This event is triggered if a cut is updated.
-    event PlatformCutsUpdated();
+    /// @param _contentFoundCut is the new cut for foundation
+    /// @param _contentGoverCut is the new cut for governance
+    /// @param _contentJurorCut is the new cut for juror pool
+    /// @param _contentValidCut is the new cut for validator pool
+    /// @param _contentTotalCut is the new total cut for foundation, governance, juror and validator
+    /// @param _coachFoundCut is the new cut for foundation
+    /// @param _coachGoverCut is the new cut for governance
+    /// @param _coachJurorCut is the new cut for juror pool
+    /// @param _coachValidCut is the new cut for validator pool
+    /// @param _coachTotalCut is the new total cut for foundation, governance, juror and validator
+    event PlatformCutsUpdated(
+        uint _contentFoundCut,
+        uint _contentGoverCut,
+        uint _contentJurorCut,
+        uint _contentValidCut,
+        uint _contentTotalCut,
+        uint _coachFoundCut,
+        uint _coachGoverCut,
+        uint _coachJurorCut,
+        uint _coachValidCut,
+        uint _coachTotalCut
+    );
 
     /// @notice sets foundation wallet addresses
     /// @param _newAddress new address of the contract
@@ -307,8 +330,19 @@ abstract contract BasePlatform is Pausable {
         coachValidCut = _coachValidCut;
 
         coachTotalCut = newTotal;
-        /// TODO Add variables to this event
-        emit PlatformCutsUpdated();
+
+        emit PlatformCutsUpdated(
+            contentFoundCut,
+            contentGoverCut,
+            contentJurorCut,
+            contentValidCut,
+            contentTotalCut,
+            coachFoundCut,
+            coachGoverCut,
+            coachJurorCut,
+            coachValidCut,
+            coachTotalCut
+        );
     }
 
     /// @notice sets the cut for foundation/governance/juror/validator for a content sale
@@ -340,7 +374,18 @@ abstract contract BasePlatform is Pausable {
         contentValidCut = _contentValidCut;
 
         contentTotalCut = newTotal;
-        /// TODO Add variables to this event
-        emit PlatformCutsUpdated();
+
+        emit PlatformCutsUpdated(
+            contentFoundCut,
+            contentGoverCut,
+            contentJurorCut,
+            contentValidCut,
+            contentTotalCut,
+            coachFoundCut,
+            coachGoverCut,
+            coachJurorCut,
+            coachValidCut,
+            coachTotalCut
+        );
     }
 }
