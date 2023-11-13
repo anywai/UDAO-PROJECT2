@@ -64,6 +64,12 @@ function updateAddresses(address roleManagerAddress) external
 
 Get the updated addresses from contract manager
 
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| roleManagerAddress | address | The address of the role manager contract |
+
 ### _hashDiscountVoucher
 
 ```solidity
@@ -120,7 +126,7 @@ _Will revert if the signature is invalid._
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| voucher | struct VoucherVerifier.ContentDiscountVoucher | A ContentDiscountVoucher describing a content access rights. |
+| voucher | struct VoucherVerifier.ContentDiscountVoucher | A ContentDiscountVoucher describing a content purchase. |
 
 ### verifyRefundVoucher
 
@@ -128,7 +134,7 @@ _Will revert if the signature is invalid._
 function verifyRefundVoucher(struct VoucherVerifier.RefundVoucher voucher) external view
 ```
 
-Verifies the signature for a given ContentDiscountVoucher, returning the address of the signer.
+Verifies the signature for a given RefundVoucher, returning the address of the signer.
 
 _Will revert if the signature is invalid._
 
@@ -136,7 +142,7 @@ _Will revert if the signature is invalid._
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| voucher | struct VoucherVerifier.RefundVoucher | A ContentDiscountVoucher describing a content access rights. |
+| voucher | struct VoucherVerifier.RefundVoucher | A RefundVoucher describing a refund. |
 
 ### verifyCoachingVoucher
 
@@ -152,7 +158,7 @@ _Will revert if the signature is invalid._
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| voucher | struct VoucherVerifier.CoachingVoucher | A CoachingVoucher describing a content access rights. |
+| voucher | struct VoucherVerifier.CoachingVoucher | A CoachingVoucher describing a coaching purchase. |
 
 ### getChainID
 

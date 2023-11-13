@@ -16,17 +16,23 @@ Supervision contract is manages juror and validator based actions
 mapping(uint256 => bool) activeKYCFunctions
 ```
 
+_functionId => if KYC check Active or not_
+
 ### activeBanFunctions
 
 ```solidity
 mapping(uint256 => bool) activeBanFunctions
 ```
 
+_functionId => if Ban check Active or not_
+
 ### AddressesUpdated
 
 ```solidity
 event AddressesUpdated(address SupervisionAddress)
 ```
+
+_This event is triggered if the supervision contract address is updated._
 
 ### KYCList
 
@@ -69,6 +75,12 @@ function updateAddresses(address supervisionAddress) external
 ```
 
 Get the updated addresses from contract manager
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| supervisionAddress | address | The address of the supervision contract |
 
 ### hasRoles
 
@@ -151,7 +163,7 @@ Setter function of activeBanFunctions
 function isKYCed(address _address, uint256 functionId) external view returns (bool)
 ```
 
-gets KYC result of the address
+gets KYC result of the address if KYC is active for the function else returns true
 
 #### Parameters
 
@@ -166,7 +178,7 @@ gets KYC result of the address
 function isBanned(address _address, uint256 functionId) external view returns (bool)
 ```
 
-gets ban result of the address
+gets ban result of the address if ban is active for the function else returns false
 
 #### Parameters
 

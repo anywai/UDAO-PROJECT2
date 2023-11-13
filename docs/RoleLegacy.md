@@ -16,17 +16,44 @@ Role manager contract address
 function hasRole(bytes32 _role, address _account) internal view returns (bool)
 ```
 
+Checks if a wallet address has a specific role
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _role | bytes32 | The role to check |
+| _account | address | The address to check |
+
 ### isNotBanned
 
 ```solidity
 function isNotBanned(address _userAddress, uint256 _functionID) internal view returns (bool)
 ```
 
+Checks if a wallet address is banned from a specific function
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _userAddress | address | The address to check |
+| _functionID | uint256 | The function to check |
+
 ### isKYCed
 
 ```solidity
 function isKYCed(address _userAddress, uint256 _functionID) internal view returns (bool)
 ```
+
+Checks if a wallet address is KYCed for a specific function
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _userAddress | address | The address to check |
+| _functionID | uint256 | The function to check |
 
 ### foundationWallet
 

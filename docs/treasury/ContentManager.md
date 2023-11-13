@@ -10,6 +10,13 @@ event ContentBought(uint256 cartSaleID, uint256 contentSaleID)
 
 Emitted when a content is bought
 
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| cartSaleID | uint256 | The ID of the cart sale |
+| contentSaleID | uint256 | The ID of the content sale |
+
 ### CoachingBought
 
 ```solidity
@@ -17,6 +24,12 @@ event CoachingBought(uint256 coachingSaleID)
 ```
 
 Emitted when a coaching is bought
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| coachingSaleID | uint256 | The ID of the coaching sale |
 
 ### SaleRefunded
 
@@ -26,19 +39,28 @@ event SaleRefunded(uint256 saleID, uint8 saleType)
 
 Emitted when refund is requested. saleType: 0=coaching, 1=content
 
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| saleID | uint256 | The ID of the coaching or content sale to be refunded |
+| saleType | uint8 | The type of the sale 0=coaching, 1=content |
+
 ### ContentCutPoolUpdated
 
 ```solidity
 event ContentCutPoolUpdated(uint256 _contentCutPool)
 ```
 
-@notice
+Emitted when the "ContentCutPool revenue balance" is updated,
 
-### CoachingCutPoolUpdated
+_after the refund window is over, the revenue collected from content sales for platform roles is transferred to the "ContentCutPool"_
 
-```solidity
-event CoachingCutPoolUpdated(uint256 _coachingCutPool)
-```
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _contentCutPool | uint256 | The new value of the content cut pool |
 
 ### ContentCutLockedPoolUpdated
 
@@ -46,11 +68,35 @@ event CoachingCutPoolUpdated(uint256 _coachingCutPool)
 event ContentCutLockedPoolUpdated()
 ```
 
+Emitted when the "ContentCutLockedPool: locked revenue balances" are updated,
+
+_This revenue collected from content sales for platform roles, and these are locked revenue balances which doesn't completes refund window yet_
+
+### CoachingCutPoolUpdated
+
+```solidity
+event CoachingCutPoolUpdated(uint256 _coachingCutPool)
+```
+
+Emitted when the "CoachingCutPool revenue balance" is updated,
+
+_after the refund window is over, the revenue collected from coaching sales for platform roles is transferred to the "CoachingCutPool"_
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _coachingCutPool | uint256 | The new value of the cut pool |
+
 ### CoachingCutLockedPoolUpdated
 
 ```solidity
 event CoachingCutLockedPoolUpdated()
 ```
+
+Emitted when the "CoachingCutLockedPool: locked revenue balances" are updated,
+
+_This revenue collected from coaching sales for platform roles, and these are locked revenue balances which doesn't completes refund window yet_
 
 ### RoleBalancesUpdated
 
@@ -58,17 +104,41 @@ event CoachingCutLockedPoolUpdated()
 event RoleBalancesUpdated(uint256 foundationBalance, uint256 jurorBalance, uint256 validatorsBalance, uint256 governanceBalance)
 ```
 
+Emitted when platform role revenues are distributed to roles or role revenues are directed to governance treasury
+
+_the platform role revenues are content and coaching cut pools, and roles are foundation, juror, validator and governance_
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| foundationBalance | uint256 | The new value of the foundation balance |
+| jurorBalance | uint256 | The new value of the juror balance |
+| validatorsBalance | uint256 | The new value of the validators balance |
+| governanceBalance | uint256 | The new value of the governance balance |
+
 ### InstructorBalanceUpdated
 
 ```solidity
 event InstructorBalanceUpdated(address _instructor, uint256 _instBalance)
 ```
 
+Emitted when the instructor balance is updated
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _instructor | address | The address of the instructor |
+| _instBalance | uint256 | The new value of the instructor balance |
+
 ### InstructorLockedBalanceUpdated
 
 ```solidity
 event InstructorLockedBalanceUpdated(address _instructor)
 ```
+
+Emitted when the instructor locked balances is updated
 
 ### ContentSale
 
@@ -209,10 +279,13 @@ Used by buy content functions to receive payment from user and deliver the conte
 ### _checkPartReceiver
 
 ```solidity
-function _checkPartReceiver(uint256 _tokenId, uint256[] _purchasedParts, address _contentReceiver) internal view returns (address)
+function _checkPartReceiver(uint256 _tokenId, uint256[] _purchasedParts, address _contentReceiver) public view returns (address)
 ```
 
-Returns the price to pay for a content parts purchase
+Checks if there is nothing wrong with the content purchase related to content receiver
+
+_This function checks if the content receiver is banned, not KYCed, or already owns the content or content part.
+It can be used also by backend to check a purchase request is acceptable or not before a bulk fiat purchase.(So that it a public view function)_
 
 #### Parameters
 
@@ -299,7 +372,7 @@ Allows learner to get refund of coaching 1 day prior to coaching date, or coach 
 function newRefundCoaching(struct IVoucherVerifier.RefundVoucher voucher) external
 ```
 
-Allows refund of coaching with a voucher created by platform
+Allows to anyone to refund of coaching with a voucher created by platform
 
 #### Parameters
 
@@ -313,7 +386,7 @@ Allows refund of coaching with a voucher created by platform
 function newRefundContent(struct IVoucherVerifier.RefundVoucher voucher) external
 ```
 
-Allows refund of a content with a voucher created by platform
+Allows anyone to refund of a content with a voucher created by platform
 
 #### Parameters
 
@@ -330,5 +403,5 @@ function getChainID() external view returns (uint256)
 Returns the chain id of the current blockchain.
 
 _This is used to workaround an issue with ganache returning different values from the on-chain chainid() function and
- the eth_chainId RPC method. See https://github.com/protocol/nft-website/issues/121 for context._
+the eth_chainId RPC method. See https://github.com/protocol/nft-website/issues/121 for context._
 

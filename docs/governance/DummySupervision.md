@@ -8,7 +8,7 @@
 mapping(uint256 => uint256) emptyMapping
 ```
 
-Placeholder mapping.
+Placeholder empty mapping to disable hardhat warnings.
 
 ### getIsValidated
 

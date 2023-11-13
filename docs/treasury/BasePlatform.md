@@ -84,7 +84,7 @@ uint256 refundWindow
 
 during refund windows all payments locked on contract and users can request refund
 
-_instLockedBalance and coaching/contentCutLockedPool arrays's size defines the maximum setable refund window_
+_it initiated as 20 days and locked balance/pool array's size (61) defines the maximum setable refund window._
 
 ### instBalance
 
@@ -333,8 +333,8 @@ constructor of BasePlatform
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | roleManagerAddress | address | is address of RoleManager contract |
-| udaoAddress | address |  |
-| udaocAddress | address |  |
+| udaoAddress | address | is address of UDAO token contract |
+| udaocAddress | address | is address of UDAOC token contract |
 | governanceTreasuryAddress | address | is address of GovernanceTreasury contract |
 | voucherVerifierAddress | address | is address of VoucherVerifier contract |
 
@@ -357,10 +357,25 @@ This event is triggered if the contract manager updates the addresses.
 ### PlatformCutsUpdated
 
 ```solidity
-event PlatformCutsUpdated()
+event PlatformCutsUpdated(uint256 _contentFoundCut, uint256 _contentGoverCut, uint256 _contentJurorCut, uint256 _contentValidCut, uint256 _contentTotalCut, uint256 _coachFoundCut, uint256 _coachGoverCut, uint256 _coachJurorCut, uint256 _coachValidCut, uint256 _coachTotalCut)
 ```
 
 This event is triggered if a cut is updated.
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _contentFoundCut | uint256 | is the new cut for foundation |
+| _contentGoverCut | uint256 | is the new cut for governance |
+| _contentJurorCut | uint256 | is the new cut for juror pool |
+| _contentValidCut | uint256 | is the new cut for validator pool |
+| _contentTotalCut | uint256 | is the new total cut for foundation, governance, juror and validator |
+| _coachFoundCut | uint256 | is the new cut for foundation |
+| _coachGoverCut | uint256 | is the new cut for governance |
+| _coachJurorCut | uint256 | is the new cut for juror pool |
+| _coachValidCut | uint256 | is the new cut for validator pool |
+| _coachTotalCut | uint256 | is the new total cut for foundation, governance, juror and validator |
 
 ### setFoundationAddress
 

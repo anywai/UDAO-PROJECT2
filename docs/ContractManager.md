@@ -80,23 +80,15 @@ function updateAddresses(address roleManagerAddress, address udaoStakerAddress) 
 address udaoAddress
 ```
 
+Address record of UDAO Token Contract
+
 ### roleManagerAddress
 
 ```solidity
 address roleManagerAddress
 ```
 
-### governanceTreasuryAddress
-
-```solidity
-address governanceTreasuryAddress
-```
-
-### supervisionAddress
-
-```solidity
-address supervisionAddress
-```
+Address record of RoleManager Contract
 
 ### udaocAddress
 
@@ -104,11 +96,15 @@ address supervisionAddress
 address udaocAddress
 ```
 
+Address record of UDAOC Token Contract
+
 ### udaoCertAddress
 
 ```solidity
 address udaoCertAddress
 ```
+
+Address record of UDAO-Cert Token Contract
 
 ### voucherVerifierAddress
 
@@ -116,11 +112,35 @@ address udaoCertAddress
 address voucherVerifierAddress
 ```
 
+Address record of Voucher Verifier Contract
+
 ### platformTreasuryAddress
 
 ```solidity
 address platformTreasuryAddress
 ```
+
+Address record of Platform Treasury Contract
+
+### governanceTreasuryAddress
+
+```solidity
+address governanceTreasuryAddress
+```
+
+Address record of Governance Treasury Contract
+
+_The Governance Treasury contract is a placeholder with a dummy version on the MVP release and needs to be replaced with a functional contract._
+
+### supervisionAddress
+
+```solidity
+address supervisionAddress
+```
+
+Address record of Supervision Contract
+
+_The Supervision contract is a placeholder with a dummy version on the MVP release and needs to be replaced with a functional contract._
 
 ### udaoVpAddress
 
@@ -128,11 +148,15 @@ address platformTreasuryAddress
 address udaoVpAddress
 ```
 
+Address record of UDAO-VP Token Contract
+
 ### udaoStakerAddress
 
 ```solidity
 address udaoStakerAddress
 ```
+
+Address record of UDAO Staker Contract
 
 ### udaoGovernorAddress
 
@@ -140,68 +164,7 @@ address udaoStakerAddress
 address udaoGovernorAddress
 ```
 
-### StakingContractAddress
-
-```solidity
-address StakingContractAddress
-```
-
-_Below should be set after the deployment
-TODO OLD CODE_
-
-### PlatformTreasuryAddress
-
-```solidity
-address PlatformTreasuryAddress
-```
-
-### UdaoVpAddress
-
-```solidity
-address UdaoVpAddress
-```
-
-### ISupVisAddress
-
-```solidity
-address ISupVisAddress
-```
-
-_Below needs to be set during deployment
-TODO OLD CODE_
-
-### UdaoAddress
-
-```solidity
-address UdaoAddress
-```
-
-### UdaocAddress
-
-```solidity
-address UdaocAddress
-```
-
-### RmAddress
-
-```solidity
-address RmAddress
-```
-
-### GovernanceTreasuryAddress
-
-```solidity
-address GovernanceTreasuryAddress
-```
-
-_unknown if before or after
-TODO OLD CODE_
-
-### VoucherVerifierAddress
-
-```solidity
-address VoucherVerifierAddress
-```
+Address record of UDAO Governor Contract
 
 ### constructor
 
@@ -209,89 +172,233 @@ address VoucherVerifierAddress
 constructor(address _roleManagerAddress) public
 ```
 
-### setMVPAddreses
+### setAddresesVersion1Contracts
 
 ```solidity
-function setMVPAddreses(address _udaoAddress, address _roleManagerAddress, address _udaocAddress, address _udaoCertAddress, address _voucherVerifierAddress, address _platformTreasuryAddress) external
+function setAddresesVersion1Contracts(address _udaoAddress, address _roleManagerAddress, address _udaocAddress, address _udaoCertAddress, address _voucherVerifierAddress, address _platformTreasuryAddress) external
 ```
 
-### setDummyAddreses
+This function updates the addresses records held in this contract for the contracts used in UDAO Project version1.0
+
+_Intended for use after the release of UDAO version 1.0 to perform bulk updates on address records for UDAO Project version 1.0 contracts._
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _udaoAddress | address | The new address recond of the UDAO token contract to be held in this contract. |
+| _roleManagerAddress | address | The new address recond of the Role Manager contract to be held in this contract. |
+| _udaocAddress | address | The new address recond of the UDAOC (Content) token contract to be held in this contract. |
+| _udaoCertAddress | address | The new address recond of the UDAO-Cert token contract to be held in this contract. |
+| _voucherVerifierAddress | address | The new address recond of the Voucher Verifier contract to be held in this contract. |
+| _platformTreasuryAddress | address | The new address recond of the Platform Treasury contract to be held in this contract. |
+
+### setAddresesCommonInVersion1and2
 
 ```solidity
-function setDummyAddreses(address _governanceTreasuryAddress, address _supervisionAddress) external
+function setAddresesCommonInVersion1and2(address _governanceTreasuryAddress, address _supervisionAddress) external
 ```
 
-### setGovernanceUpdateAddreses
+This function updates the addresses records held in this contract for the common contracts used in UDAO Project version 1.0 and 2.0
+
+_Intended for use after the release of UDAO version 1.0 and 2.0 to update Governance Treasury and Supervison contract address records._
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _governanceTreasuryAddress | address | The new address recond of the Governance Treasury contract to be held in this contract. |
+| _supervisionAddress | address | The new address recond of the Supervision contract to be held in this contract. |
+
+### setAddresesVersion2GovernanceContracts
 
 ```solidity
-function setGovernanceUpdateAddreses(address _udaoVpAddress, address _udaoStakerAddress, address _udaoGovernorAddress) external
+function setAddresesVersion2GovernanceContracts(address _udaoVpAddress, address _udaoStakerAddress, address _udaoGovernorAddress) external
 ```
 
-### callUpdAddFunctionsMVP
+This function updates the addresses records held in this contract for the contracts used in UDAO Project version2.0 (Governance Update)
+
+_Intended for use after the release of UDAO version 2.0 to perform bulk updates on address records for UDAO Project version 2.0 contracts._
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _udaoVpAddress | address | The new address recond of the UDAO-VP token contract to be held in this contract. |
+| _udaoStakerAddress | address | The new address recond of the UDAO Staker contract to be held in this contract. |
+| _udaoGovernorAddress | address | The new address recond of the UDAO Governor contract to be held in this contract. |
+
+### syncVersion1ContractAddresses
 
 ```solidity
-function callUpdAddFunctionsMVP() external
+function syncVersion1ContractAddresses() external
 ```
 
-### callUpdAddFunctionsGoverUpd
+Updates and syncs addresses of UDAO version 1.0 contracts.
+
+_This function performs contract wise address updates on UDAO version 1.0 contracts and synchronizes them with the records in this contract._
+
+### syncVersion2ContractAddresses
 
 ```solidity
-function callUpdAddFunctionsGoverUpd() external
+function syncVersion2ContractAddresses() external
 ```
 
-### setGovernanceTreasuryAddress
+Updates and syncs addresses of UDAO version 2.0 contracts.
+
+_This function performs contract wise address updates on UDAO version 2.0 contracts and synchronizes them with the records in this contract._
+
+### setAddressUDAOContract
 
 ```solidity
-function setGovernanceTreasuryAddress(address _governanceTreasuryAddress) external
+function setAddressUDAOContract(address _udaoAddress) external
 ```
 
-TODO OLD CODE BELOW
+This function updates the address record held in this contract for the UDAO token contract
 
-### setPlatformTreasuryAddress
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _udaoAddress | address | The new address recond of the UDAO token contract to be held in this contract. |
+
+### setAddressRoleManagerContract
 
 ```solidity
-function setPlatformTreasuryAddress(address _platformTreasuryAddress) external
+function setAddressRoleManagerContract(address _roleManagerAddress) external
 ```
 
-### setAddressStaking
+This function updates the address record held in this contract for the Role Manager contract
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _roleManagerAddress | address | The new address recond of the Role Manager contract to be held in this contract. |
+
+### setAddressUDAOCContract
 
 ```solidity
-function setAddressStaking(address _stakingAddress) external
+function setAddressUDAOCContract(address _udaocAddress) external
 ```
 
-### setAddressUdaoVp
+This function updates the address record held in this contract for the UDAOContent token contract
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _udaocAddress | address | The new address recond of the UDAOC (Content) token contract to be held in this contract. |
+
+### setAddressUDAOCertContract
 
 ```solidity
-function setAddressUdaoVp(address _udaoVpAddress) external
+function setAddressUDAOCertContract(address _udaoCertAddress) external
 ```
 
-### setAddressISupVisAddress
+This function updates the address record held in this contract for the UDAO-Cert token contract
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _udaoCertAddress | address | The new address recond of the UDAO-Cert token contract to be held in this contract. |
+
+### setAddressVoucherVerifierContract
 
 ```solidity
-function setAddressISupVisAddress(address _supAddress) external
+function setAddressVoucherVerifierContract(address _voucherVerifierAddress) external
 ```
 
-### setAddressUdaoAddress
+This function updates the address record held in this contract for the Voucher Verifier contract
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _voucherVerifierAddress | address | The new address recond of the Voucher Verifier contract to be held in this contract. |
+
+### setAddressPlatformTreasuryContract
 
 ```solidity
-function setAddressUdaoAddress(address _udaoAddress) external
+function setAddressPlatformTreasuryContract(address _platformTreasuryAddress) external
 ```
 
-### setAddressUdaocAddress
+This function updates the address record held in this contract for the Platform Treasury contract
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _platformTreasuryAddress | address | The new address recond of the Platform Treasury contract to be held in this contract. |
+
+### setAddressGovernanceTreasuryContract
 
 ```solidity
-function setAddressUdaocAddress(address _udaocAddress) external
+function setAddressGovernanceTreasuryContract(address _governanceTreasuryAddress) external
 ```
 
-### setAddressIrmAddress
+This function updates the address record held in this contract for the Governance Treasury contract
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _governanceTreasuryAddress | address | The new address recond of the Governance Treasury contract to be held in this contract. |
+
+### setAddressSupervisionContract
 
 ```solidity
-function setAddressIrmAddress(address _rmAddress) external
+function setAddressSupervisionContract(address _supervisionAddress) external
 ```
 
-### setAddressVoucherVerifierAddress
+This function updates the address record held in this contract for the Supervision contract
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _supervisionAddress | address | The new address recond of the Supervision contract to be held in this contract. |
+
+### setAddressUDAOvpContract
 
 ```solidity
-function setAddressVoucherVerifierAddress(address _voucherVerifierAddress) external
+function setAddressUDAOvpContract(address _udaoVpAddress) external
 ```
+
+This function updates the address record held in this contract for the UDAO-VP token contract
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _udaoVpAddress | address | The new address recond of the UDAO-VP token contract to be held in this contract. |
+
+### setAddressUDAOStakerContract
+
+```solidity
+function setAddressUDAOStakerContract(address _udaoStakerAddress) external
+```
+
+This function updates the address record held in this contract for the UDAO Staker contract
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _udaoStakerAddress | address | The new address recond of the UDAO Staker contract to be held in this contract. |
+
+### setAddressUDAOGovernorContract
+
+```solidity
+function setAddressUDAOGovernorContract(address _udaoGovernorAddress) external
+```
+
+This function updates the address record held in this contract for the UDAO Governor contract
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _udaoGovernorAddress | address | The new address recond of the UDAO Governor contract to be held in this contract. |
 
