@@ -415,8 +415,12 @@ describe("Platform Treasury General", function () {
       .to.emit(contractPlatformTreasury, "FoundationWalletUpdated")
       .withArgs(foundation.address);
 
-    /// @dev Skip 14 days to allow foundation to withdraw funds
-    const numBlocksToMine = Math.ceil((14 * 24 * 60 * 60) / 2);
+    /// @dev Skip "refund window" days to allow foundation to withdraw funds
+    const refundWindowDays = await contractPlatformTreasury.refundWindow();
+    /// convert big number to number
+    const refundWindowDaysNumber = refundWindowDays.toNumber();
+
+    const numBlocksToMine = Math.ceil((refundWindowDaysNumber * 24 * 60 * 60) / 2);
     await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine.toString(16)}`, "0x2"]);
 
     /// @dev Withdraw foundation funds from the treasury
@@ -515,9 +519,13 @@ describe("Platform Treasury General", function () {
     await expect(contractPlatformTreasury.connect(backend).setFoundationAddress(foundation.address))
       .to.emit(contractPlatformTreasury, "FoundationWalletUpdated")
       .withArgs(foundation.address);
+    /// @dev Skip "refund window" days to allow foundation to withdraw funds
+    const refundWindowDays = await contractPlatformTreasury.refundWindow();
+    /// convert big number to number
+    const refundWindowDaysNumber = refundWindowDays.toNumber();
 
-    /// @dev Skip 14 days to allow foundation to withdraw funds
-    const numBlocksToMine = Math.ceil((14 * 24 * 60 * 60) / 2);
+    /// @dev Skip 20 days to allow foundation to withdraw funds
+    const numBlocksToMine = Math.ceil((refundWindowDaysNumber * 24 * 60 * 60) / 2);
     await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine.toString(16)}`, "0x2"]);
 
     /// @dev Withdraw foundation funds from the treasury
@@ -589,8 +597,13 @@ describe("Platform Treasury General", function () {
     const instructerBalanceBefore = await contractUDAO.balanceOf(contentCreator.address);
     // Expect that the instructer balance is 0 before withdrawal
     await expect(instructerBalanceBefore).to.equal(0);
-    /// @dev Skip 14 days to allow foundation to withdraw funds
-    const numBlocksToMine = Math.ceil((14 * 24 * 60 * 60) / 2);
+    /// @dev Skip "refund window" days to allow foundation to withdraw funds
+    const refundWindowDays = await contractPlatformTreasury.refundWindow();
+    /// convert big number to number
+    const refundWindowDaysNumber = refundWindowDays.toNumber();
+
+    /// @dev Skip 20 days to allow foundation to withdraw funds
+    const numBlocksToMine = Math.ceil((refundWindowDaysNumber * 24 * 60 * 60) / 2);
     await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine.toString(16)}`, "0x2"]);
     // Instructer should call withdrawInstructor from platformtreasury contract
     await contractPlatformTreasury.connect(contentCreator).withdrawInstructor();
