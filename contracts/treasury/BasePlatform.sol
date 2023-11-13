@@ -35,8 +35,8 @@ abstract contract BasePlatform is Pausable {
     address public foundationWallet;
 
     /// @notice during refund windows all payments locked on contract and users can request refund
-    /// @dev it initiated as 14 day and locked balance/pool array's size (61) defines the maximum setable refund window.
-    uint256 public refundWindow = 14;
+    /// @dev it initiated as 20 days and locked balance/pool array's size (61) defines the maximum setable refund window.
+    uint256 public refundWindow = 20; 
 
     /// @notice instructor address => instructor's balance
     mapping(address => uint) public instBalance;
