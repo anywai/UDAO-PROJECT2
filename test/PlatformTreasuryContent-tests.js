@@ -1181,17 +1181,17 @@ describe("Platform Treasury Contract - Content", function () {
     const _contentJurorCut = 100;
     const _contentValidCut = 200;
     const _contentTotalCut = _contentFoundCut + _contentGoverCut + _contentJurorCut + _contentValidCut;
-    
+
     const _coachFoundCut = 4000;
     const _coachGoverCut = 700;
     const _coachJurorCut = 100;
     const _coachValidCut = 200;
     const _coachTotalCut = _coachFoundCut + _coachGoverCut + _coachJurorCut + _coachValidCut;
-    
+
     // Set coach cuts
-    const txCoachCuts = await contractPlatformTreasury.connect(backend).setCoachCuts(_coachFoundCut,_coachGoverCut,_coachJurorCut,_coachValidCut);
-    const txContentCuts = await contractPlatformTreasury.connect(backend).setContentCuts(_contentFoundCut,_contentGoverCut,_contentJurorCut,_contentValidCut);
-    
+    const txCoachCuts = await contractPlatformTreasury.connect(backend).setCoachCuts(_coachFoundCut, _coachGoverCut, _coachJurorCut, _coachValidCut);
+    const txContentCuts = await contractPlatformTreasury.connect(backend).setContentCuts(_contentFoundCut, _contentGoverCut, _contentJurorCut, _contentValidCut);
+
 
     // expect PlatformCutsUpdated event
     await expect(txContentCuts).to.emit(contractPlatformTreasury, "PlatformCutsUpdated").withArgs(
@@ -1206,7 +1206,7 @@ describe("Platform Treasury Contract - Content", function () {
       _coachValidCut,
       _coachTotalCut,
     );
-    
+
     // Create content
     const contentParts = [0, 1, 2, 3, 4];
     // Create content voucher
@@ -1289,7 +1289,7 @@ describe("Platform Treasury Contract - Content", function () {
     /// @dev Skip 20'refund window period' days to allow foundation to withdraw funds
     const numBlocksToMine = Math.ceil((refundWindowDaysNumber * 24 * 60 * 60) / 2);
     await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine.toString(16)}`, "0x2"]);
-        
+
 
     // Check if the buyer paid the correct amount
     expect(balanceBefore1.sub(balanceAfter1)).to.equal(pricesToPay[0]);
@@ -1343,6 +1343,100 @@ describe("Platform Treasury Contract - Content", function () {
     const totalCut = contentGoverCut.add(contentJurorCut).add(contentValidCut);
     // Check if the governance treasury has the correct amount with respect to the platform cut percentages
     expect(governanceTreasuryBalance).to.equal(totalCut);
+
+  });
+
+  it("Should allow buyer to refund a full content in refundable window", async function () {
+    await reDeploy();
+    /// Set KYC
+    await contractRoleManager.setKYC(contentCreator.address, true);
+    await contractRoleManager.setKYC(contentBuyer.address, true);
+    // Create content
+    const contentParts = [0, 1];
+    // Create content voucher
+    const createContentVoucherSample = await createContentVoucher(
+      contractUDAOContent,
+      backend,
+      contentCreator,
+      contentParts,
+      (redeemType = 1),
+      (validationScore = 1)
+    );
+
+    // Create content with voucher
+    const tx = await contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample);
+    // Get NewContentCreated event and get tokenId
+    const receipt = await tx.wait();
+    const tokenId = receipt.events[0].args[2].toNumber();
+    // You need to use all parts of the content to buy it. Get all parts of the content
+
+    const parts = await contractUDAOContent.getContentParts(tokenId);
+    // Make a content purchase
+    const tokenIds = [1];
+    const purchasedParts = [parts];
+    const redeemers = [contentBuyer1.address];
+    const giftReceiver = [ethers.constants.AddressZero];
+    const fullContentPurchase = [true];
+    const pricesToPay = [ethers.utils.parseEther("1")];
+    const validUntil = Date.now() + 999999999;
+    const balances = await makeContentPurchase(
+      contractPlatformTreasury,
+      contractVoucherVerifier,
+      contentBuyer1,
+      contractRoleManager,
+      contractUDAO,
+      tokenIds,
+      purchasedParts,
+      pricesToPay,
+      fullContentPurchase,
+      validUntil,
+      redeemers,
+      giftReceiver
+    );
+    const balanceBefore = balances[0];
+    const balanceAfter = balances[1];
+
+    /// @notice user address => content token Id => is full content purchase
+    //mapping(address => mapping(uint256 => bool)) public ;
+    /// Check if the buyer has the content part
+    const result = await contractPlatformTreasury.connect(contentBuyer1).getOwnedParts(contentBuyer1.address, tokenId);
+    expect(result[0]).to.equal(purchasedParts[0][0]);
+    const isFullyPurchased = await contractPlatformTreasury.isFullyPurchased(contentBuyer1.address, tokenId);
+
+    expect(isFullyPurchased).to.equal(true);
+    /// Get tokenId 0 price with calculatePriceToPay function
+    const priceToPay = pricesToPay[0];
+    /// Check if the buyer paid the correct amount
+    expect(balanceBefore.sub(balanceAfter)).to.equal(priceToPay);
+
+    //  Create RefundVoucher
+    const refundVoucher = new RefundVoucher({
+      contract: contractVoucherVerifier,
+      signer: backend,
+    });
+    const refundType = 1; // 0 since refund is content
+    // Voucher will be valid for 1 day
+    const voucherValidUntil = Date.now() + 86400;
+    const contentSaleId = 0; // 0 since only one content is created and sold
+    const finalParts = []; // Empty since buyer had no parts
+    const finalContents = []; // Empty since buyer had no co
+    const refund_voucher = await refundVoucher.createVoucher(
+      contentSaleId,
+      contentCreator.address,
+      finalParts,
+      finalContents,
+      voucherValidUntil
+    );
+    // Refund the content
+    await expect(contractPlatformTreasury.connect(contentCreator).newRefundContent(refund_voucher))
+      .to.emit(contractPlatformTreasury, "SaleRefunded")
+      .withArgs(contentSaleId, refundType);
+    // Check if the buyer has finalParts
+    const result2 = await contractPlatformTreasury.connect(contentBuyer1).getOwnedParts(contentBuyer1.address, tokenId);
+    expect(result2[0]).to.equal(finalParts[0]);
+    // Check if the buyer has finalContents
+    const result3 = await contractPlatformTreasury.connect(contentBuyer1).getOwnedContents(contentBuyer1.address);
+    expect(result3[0]).to.equal(finalContents[0]);
 
   });
 });
