@@ -1,0 +1,404 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>Code coverage report for contracts/Vesting.sol</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../prettify.css" />
+    <link rel="stylesheet" href="../base.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style type='text/css'>
+        .coverage-summary .sorter {
+            background-image: url(../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+<body>
+<div class='wrapper'>
+  <div class='pad1'>
+    <h1>
+      <a href="../index.html">all files</a> / <a href="index.html">contracts/</a> Vesting.sol
+    </h1>
+    <div class='clearfix'>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">0% </span>
+        <span class="quiet">Statements</span>
+        <span class='fraction'>0/27</span>
+      </div>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">0% </span>
+        <span class="quiet">Branches</span>
+        <span class='fraction'>0/20</span>
+      </div>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">0% </span>
+        <span class="quiet">Functions</span>
+        <span class='fraction'>0/6</span>
+      </div>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">0% </span>
+        <span class="quiet">Lines</span>
+        <span class='fraction'>0/35</span>
+      </div>
+    </div>
+  </div>
+  <div class='status-line low'></div>
+<pre><table class="coverage">
+<tr><td class="line-count quiet">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114</td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">// SPDX-License-Identifier: MIT
+/// @title UDAO Token Vesting Contract
+&nbsp;
+pragma solidity ^0.8.4;
+&nbsp;
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/access/AccessControl.sol";
+&nbsp;
+contract Vesting is AccessControl {
+    /// @dev The token being held in this contract.
+    IERC20 token;
+&nbsp;
+    /// @dev Represents a VestingLock that holds tokens for a beneficiary until a release time.
+    struct VestingLock {
+        address beneficiary;
+        uint balance;
+        uint releaseTime;
+    }
+&nbsp;
+    /// @dev Array of VestingLocks
+    VestingLock[] public vestingLocks; 
+    /// @dev This event is triggered when tokens are deposited into the contract and lock created.
+    event VestingDeposit(address indexed sender, address indexed beneficiary, uint vestingIndex, uint amount, uint releaseTime);
+    /// @dev This event is triggered when tokens are withdrawn from the contract.
+    event VestingWithdrawal(address indexed receiver, uint vestingIndex, uint amount);
+    /// @dev This role is used to grant access to deposit tokens and create locks.
+    bytes32 public constant DEPOSITOR_ROLE = keccak256("DEPOSITOR_ROLE");
+&nbsp;
+<span class="fstat-no" title="function not covered" >    constructor(address tokenContract) {</span>
+        token = IERC20(tokenContract);
+<span class="cstat-no" title="statement not covered" >        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender)</span>;
+<span class="cstat-no" title="statement not covered" >        _grantRole(DEPOSITOR_ROLE, msg.sender)</span>;
+    }
+&nbsp;
+    /// @notice Allows admin to grant depositer role to a new address
+    /// @param _newAddress The address to grant the role to
+<span class="fstat-no" title="function not covered" >    function grantDepositerRole(address _newAddress) external {</span>
+<span class="cstat-no" title="statement not covered" >        require(</span>
+            hasRole(DEFAULT_ADMIN_ROLE, msg.sender),
+            "Only admin can grant deposit role"
+        );
+<span class="cstat-no" title="statement not covered" >        _grantRole(DEPOSITOR_ROLE, _newAddress)</span>;
+    }
+&nbsp;
+    /// @notice Allows admin to revoke depositer role from an address
+    /// @param _oldAddress The address to revoke the role from
+<span class="fstat-no" title="function not covered" >    function revokeDepositerRole(address _oldAddress) external {</span>
+<span class="cstat-no" title="statement not covered" >        require(</span>
+            hasRole(DEFAULT_ADMIN_ROLE, msg.sender),
+            "Only admin can revoke deposit role"
+        );
+<span class="cstat-no" title="statement not covered" >        _revokeRole(DEPOSITOR_ROLE, _oldAddress)</span>;
+    }
+&nbsp;
+    /// @notice Allows DEPOSITOR_ROLE to deposit tokens for a beneficiary
+    /// @param beneficiary The address to lock tokens for
+    /// @param amount The amount of tokens to lock
+    /// @param releaseTime The time when the tokens can be withdrawn
+<span class="fstat-no" title="function not covered" >    function deposit(</span>
+        address beneficiary,
+        uint amount,
+        uint releaseTime
+    ) external onlyRole(DEPOSITOR_ROLE) returns (bool success) {
+<span class="cstat-no" title="statement not covered" >        require(token.transferFrom(msg.sender, address(this), amount))</span>;
+<span class="cstat-no" title="statement not covered" >        VestingLock memory currentVesting;</span>
+        currentVesting.beneficiary = beneficiary;
+        currentVesting.balance = amount;
+        currentVesting.releaseTime = releaseTime;
+<span class="cstat-no" title="statement not covered" >        vestingLocks.push(currentVesting)</span>;
+<span class="cstat-no" title="statement not covered" >        uint vestingIndex = vestingLocks.length-1;</span>
+<span class="cstat-no" title="statement not covered" >        emit VestingDeposit(msg.sender, beneficiary, vestingIndex, amount, releaseTime);</span>
+<span class="cstat-no" title="statement not covered" >        return true;</span>
+    }
+&nbsp;
+    /// @notice Allows DEPOSITOR_ROLE to deposit tokens for multiple beneficiaries
+    /// @param beneficiaries The addresses to lock tokens for
+    /// @param amounts The amounts of tokens to lock
+    /// @param releaseTimes The times when the tokens can be withdrawn
+<span class="fstat-no" title="function not covered" >    function depositInBatch(</span>
+        address[] calldata beneficiaries,
+        uint[] calldata amounts,
+        uint[] calldata releaseTimes
+    ) external onlyRole(DEPOSITOR_ROLE) returns (bool success) {
+<span class="cstat-no" title="statement not covered" >        require(</span>
+            beneficiaries.length == amounts.length &amp;&amp;
+                beneficiaries.length == releaseTimes.length
+        );
+<span class="cstat-no" title="statement not covered" >        for (uint i = 0; i &lt; beneficiaries.length; i++) {</span>
+<span class="cstat-no" title="statement not covered" >            require(token.transferFrom(msg.sender, address(this), amounts[i]))</span>;
+<span class="cstat-no" title="statement not covered" >            VestingLock memory currentVesting;</span>
+            currentVesting.beneficiary = beneficiaries[i];
+            currentVesting.balance = amounts[i];
+            currentVesting.releaseTime = releaseTimes[i];
+<span class="cstat-no" title="statement not covered" >            vestingLocks.push(currentVesting)</span>;
+<span class="cstat-no" title="statement not covered" >            uint vestingIndex = vestingLocks.length-1;</span>
+<span class="cstat-no" title="statement not covered" >            emit VestingDeposit(msg.sender, beneficiaries[i], vestingIndex, amounts[i], releaseTimes[i]);</span>
+        }
+<span class="cstat-no" title="statement not covered" >        return true;</span>
+    }
+&nbsp;
+    /// @notice Allows beneficiary to withdraw tokens
+    /// @param vestingIndex The index of the lockbox to withdraw from
+<span class="fstat-no" title="function not covered" >    function withdraw(uint vestingIndex) public returns (bool success) {</span>
+<span class="cstat-no" title="statement not covered" >        VestingLock storage currentVesting = vestingLocks[vestingIndex];</span>
+<span class="cstat-no" title="statement not covered" >        require(currentVesting.beneficiary == msg.sender)</span>;
+<span class="cstat-no" title="statement not covered" >        require(currentVesting.releaseTime &lt;= block.timestamp)</span>;
+<span class="cstat-no" title="statement not covered" >        uint amount = currentVesting.balance;</span>
+        currentVesting.balance = 0;
+<span class="cstat-no" title="statement not covered" >        emit VestingWithdrawal(msg.sender, vestingIndex, amount);</span>
+<span class="cstat-no" title="statement not covered" >        require(token.transfer(msg.sender, amount))</span>;
+<span class="cstat-no" title="statement not covered" >        return true;</span>
+    }
+}
+&nbsp;</pre></td></tr>
+</table></pre>
+<div class='push'></div><!-- for sticky footer -->
+</div><!-- /wrapper -->
+<div class='footer quiet pad2 space-top1 center small'>
+  Code coverage
+  generated by <a href="http://istanbul-js.org/" target="_blank">istanbul</a> at Wed Nov 15 2023 10:12:08 GMT+0300 (GMT+03:00)
+</div>
+</div>
+<script src="../prettify.js"></script>
+<script>
+window.onload = function () {
+        if (typeof prettyPrint === 'function') {
+            prettyPrint();
+        }
+};
+</script>
+<script src="../sorter.js"></script>
+</body>
+</html>

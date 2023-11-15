@@ -1,0 +1,1079 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>Code coverage report for contracts/ContractManager.sol</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../prettify.css" />
+    <link rel="stylesheet" href="../base.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style type='text/css'>
+        .coverage-summary .sorter {
+            background-image: url(../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+<body>
+<div class='wrapper'>
+  <div class='pad1'>
+    <h1>
+      <a href="../index.html">all files</a> / <a href="index.html">contracts/</a> ContractManager.sol
+    </h1>
+    <div class='clearfix'>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">56.52% </span>
+        <span class="quiet">Statements</span>
+        <span class='fraction'>13/23</span>
+      </div>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">46.43% </span>
+        <span class="quiet">Branches</span>
+        <span class='fraction'>13/28</span>
+      </div>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">82.35% </span>
+        <span class="quiet">Functions</span>
+        <span class='fraction'>14/17</span>
+      </div>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">76.6% </span>
+        <span class="quiet">Lines</span>
+        <span class='fraction'>36/47</span>
+      </div>
+    </div>
+  </div>
+  <div class='status-line medium'></div>
+<pre><table class="coverage">
+<tr><td class="line-count quiet">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283
+284
+285
+286
+287
+288
+289
+290
+291
+292
+293
+294
+295
+296
+297
+298
+299
+300
+301
+302
+303
+304
+305
+306
+307
+308
+309
+310
+311
+312
+313
+314
+315
+316
+317
+318
+319
+320
+321
+322
+323
+324
+325
+326
+327
+328
+329
+330
+331
+332
+333
+334
+335
+336
+337
+338
+339</td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">213×</span>
+<span class="cline-any cline-yes">213×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">// SPDX-License-Identifier: MIT
+&nbsp;
+/// @title A contract for storing and updating project-wide contract addresses.
+/// @dev This helper-contract facilitates straightforward updates and synchronization of contract addresses within the project.
+&nbsp;
+import "./interfaces/IRoleManager.sol";
+import "./RoleLegacy.sol";
+&nbsp;
+interface updRoleManager {
+    function updateAddresses(address supervisionAddress) external;
+}
+&nbsp;
+interface updUDAOC {
+    function updateAddresses(
+        address roleManagerAddress,
+        address supervisionAddress
+    ) external;
+}
+&nbsp;
+interface updUDAOCert {
+    function updateAddresses(address roleManagerAddress) external;
+}
+&nbsp;
+interface updVoucherVerifier {
+    function updateAddresses(address roleManagerAddress) external;
+}
+&nbsp;
+interface updPlatformTreasury {
+    function updateAddresses(
+        address udaoAddress,
+        address udaocAddress,
+        address roleManagerAddress,
+        address governanceTreasuryAddress,
+        address voucherVerifierAddress
+    ) external;
+}
+&nbsp;
+interface updSupervision {
+    function updateAddresses(
+        address roleManagerAddress,
+        address udaocAddress,
+        address platformTreasuryAddress,
+        address udaoStakerAddres
+    ) external;
+}
+&nbsp;
+interface updUDAOvp {
+    function updateAddresses(
+        address roleManagerAddress,
+        address udaoStakerAddres
+    ) external;
+}
+&nbsp;
+interface updUDAOStaker {
+    function updateAddresses(
+        address roleManagerAddress,
+        address udaoAddress,
+        address platformTreasuryAddress,
+        address udaoVpAddress
+    ) external;
+}
+&nbsp;
+interface updUDAOGovernor {
+    function updateAddresses(
+        address roleManagerAddress,
+        address udaoStakerAddress
+    ) external;
+}
+&nbsp;
+pragma solidity ^0.8.0;
+&nbsp;
+contract ContractManager is RoleLegacy {
+    // UDAO Version 1.0 contract addresses
+    /// @notice Address record of UDAO Token Contract
+    address public udaoAddress;
+    /// @notice Address record of RoleManager Contract
+    address public roleManagerAddress;
+    /// @notice Address record of UDAOC Token Contract
+    address public udaocAddress;
+    /// @notice Address record of UDAO-Cert Token Contract
+    address public udaoCertAddress;
+    /// @notice Address record of Voucher Verifier Contract
+    address public voucherVerifierAddress;
+    /// @notice Address record of Platform Treasury Contract
+    address public platformTreasuryAddress;
+&nbsp;
+    // UDAO Version 1.0-2.0 common(dummy) contract addresses
+    /// @notice Address record of Governance Treasury Contract
+    /// @dev The Governance Treasury contract is a placeholder with a dummy version on the MVP release and needs to be replaced with a functional contract.
+    address public governanceTreasuryAddress; // Have a dummy version on MVP
+    /// @notice Address record of Supervision Contract
+    /// @dev The Supervision contract is a placeholder with a dummy version on the MVP release and needs to be replaced with a functional contract.
+    address public supervisionAddress; // Have a dummy version on MVP
+&nbsp;
+    // UDAO Version 2.0 (Governance Update) contract addresses
+    /// @notice Address record of UDAO-VP Token Contract
+    address public udaoVpAddress;
+    /// @notice Address record of UDAO Staker Contract
+    address public udaoStakerAddress;
+    /// @notice Address record of UDAO Governor Contract
+    address public udaoGovernorAddress;
+&nbsp;
+    constructor(address _roleManagerAddress) {
+        roleManagerAddress = _roleManagerAddress;
+        roleManager = IRoleManager(_roleManagerAddress);
+    }
+&nbsp;
+    /// @notice This function updates the addresses records held in this contract for the contracts used in UDAO Project version1.0
+    /// @dev Intended for use after the release of UDAO version 1.0 to perform bulk updates on address records for UDAO Project version 1.0 contracts.
+    /// @param _udaoAddress The new address recond of the UDAO token contract to be held in this contract.
+    /// @param _roleManagerAddress The new address recond of the Role Manager contract to be held in this contract.
+    /// @param _udaocAddress The new address recond of the UDAOC (Content) token contract to be held in this contract.
+    /// @param _udaoCertAddress The new address recond of the UDAO-Cert token contract to be held in this contract.
+    /// @param _voucherVerifierAddress The new address recond of the Voucher Verifier contract to be held in this contract.
+    /// @param _platformTreasuryAddress The new address recond of the Platform Treasury contract to be held in this contract.
+    function setAddresesVersion1Contracts(
+        address _udaoAddress,
+        address _roleManagerAddress,
+        address _udaocAddress,
+        address _udaoCertAddress,
+        address _voucherVerifierAddress,
+        address _platformTreasuryAddress
+    ) external {
+        <span class="missing-if-branch" title="else path not taken" >E</span>require(
+            hasRole(BACKEND_ROLE, msg.sender),
+            "Only backend can set governance treasury address"
+        );
+        udaoAddress = _udaoAddress;
+        roleManagerAddress = _roleManagerAddress;
+        udaocAddress = _udaocAddress;
+        udaoCertAddress = _udaoCertAddress;
+        voucherVerifierAddress = _voucherVerifierAddress;
+        platformTreasuryAddress = _platformTreasuryAddress;
+    }
+&nbsp;
+    /// @notice This function updates the addresses records held in this contract for the common contracts used in UDAO Project version 1.0 and 2.0
+    /// @dev Intended for use after the release of UDAO version 1.0 and 2.0 to update Governance Treasury and Supervison contract address records.
+    /// @param _governanceTreasuryAddress The new address recond of the Governance Treasury contract to be held in this contract.
+    /// @param _supervisionAddress The new address recond of the Supervision contract to be held in this contract.
+    function setAddresesCommonInVersion1and2(
+        address _governanceTreasuryAddress,
+        address _supervisionAddress
+    ) external {
+        <span class="missing-if-branch" title="else path not taken" >E</span>require(
+            hasRole(BACKEND_ROLE, msg.sender),
+            "Only backend can set governance treasury address"
+        );
+        governanceTreasuryAddress = _governanceTreasuryAddress;
+        supervisionAddress = _supervisionAddress;
+    }
+&nbsp;
+    /// @notice This function updates the addresses records held in this contract for the contracts used in UDAO Project version2.0 (Governance Update)
+    /// @dev Intended for use after the release of UDAO version 2.0 to perform bulk updates on address records for UDAO Project version 2.0 contracts.
+    /// @param _udaoVpAddress The new address recond of the UDAO-VP token contract to be held in this contract.
+    /// @param _udaoStakerAddress The new address recond of the UDAO Staker contract to be held in this contract.
+    /// @param _udaoGovernorAddress The new address recond of the UDAO Governor contract to be held in this contract.
+    function setAddresesVersion2GovernanceContracts(
+        address _udaoVpAddress,
+        address _udaoStakerAddress,
+        address _udaoGovernorAddress
+    ) external {
+        <span class="missing-if-branch" title="else path not taken" >E</span>require(
+            hasRole(BACKEND_ROLE, msg.sender),
+            "Only backend can set governance treasury address"
+        );
+        udaoVpAddress = _udaoVpAddress;
+        udaoStakerAddress = _udaoStakerAddress;
+        udaoGovernorAddress = _udaoGovernorAddress;
+    }
+&nbsp;
+    /// @notice Updates and syncs addresses of UDAO version 1.0 contracts.
+    /// @dev This function performs contract wise address updates on UDAO version 1.0 contracts and synchronizes them with the records in this contract.
+<span class="fstat-no" title="function not covered" >    function syncVersion1ContractAddresses() external {</span>
+<span class="cstat-no" title="statement not covered" >        updRoleManager(roleManagerAddress).updateAddresses(supervisionAddress)</span>;
+<span class="cstat-no" title="statement not covered" >        updUDAOC(udaoAddress).updateAddresses(</span>
+            roleManagerAddress,
+            supervisionAddress
+        );
+<span class="cstat-no" title="statement not covered" >        updUDAOCert(udaoCertAddress).updateAddresses(roleManagerAddress)</span>;
+<span class="cstat-no" title="statement not covered" >        updVoucherVerifier(voucherVerifierAddress).updateAddresses(</span>
+            roleManagerAddress
+        );
+<span class="cstat-no" title="statement not covered" >        updPlatformTreasury(platformTreasuryAddress).updateAddresses(</span>
+            udaoAddress,
+            udaocAddress,
+            roleManagerAddress,
+            governanceTreasuryAddress,
+            voucherVerifierAddress
+        );
+    }
+&nbsp;
+    /// @notice Updates and syncs addresses of UDAO version 2.0 contracts.
+    /// @dev This function performs contract wise address updates on UDAO version 2.0 contracts and synchronizes them with the records in this contract.
+<span class="fstat-no" title="function not covered" >    function syncVersion2ContractAddresses() external {</span>
+<span class="cstat-no" title="statement not covered" >        updSupervision(supervisionAddress).updateAddresses(</span>
+            roleManagerAddress,
+            udaocAddress,
+            platformTreasuryAddress,
+            udaoStakerAddress
+        );
+<span class="cstat-no" title="statement not covered" >        updUDAOvp(udaoVpAddress).updateAddresses(</span>
+            roleManagerAddress,
+            udaoStakerAddress
+        );
+<span class="cstat-no" title="statement not covered" >        updUDAOStaker(udaoStakerAddress).updateAddresses(</span>
+            roleManagerAddress,
+            udaoAddress,
+            platformTreasuryAddress,
+            udaoVpAddress
+        );
+<span class="cstat-no" title="statement not covered" >        updUDAOGovernor(udaoGovernorAddress).updateAddresses(</span>
+            roleManagerAddress,
+            udaoStakerAddress
+        );
+    }
+&nbsp;
+    /// @notice This function updates the address record held in this contract for the UDAO token contract
+    /// @param _udaoAddress The new address recond of the UDAO token contract to be held in this contract.
+    function setAddressUDAOContract(address _udaoAddress) external {
+        <span class="missing-if-branch" title="else path not taken" >E</span>require(
+            hasRole(BACKEND_ROLE, msg.sender),
+            "Only backend can set udao address"
+        );
+        udaoAddress = _udaoAddress;
+    }
+&nbsp;
+    /// @notice This function updates the address record held in this contract for the Role Manager contract
+    /// @param _roleManagerAddress The new address recond of the Role Manager contract to be held in this contract.
+    function setAddressRoleManagerContract(
+        address _roleManagerAddress
+    ) external {
+        <span class="missing-if-branch" title="else path not taken" >E</span>require(
+            hasRole(BACKEND_ROLE, msg.sender),
+            "Only backend can set irm address"
+        );
+        roleManagerAddress = _roleManagerAddress;
+    }
+&nbsp;
+    /// @notice This function updates the address record held in this contract for the UDAOContent token contract
+    /// @param _udaocAddress The new address recond of the UDAOC (Content) token contract to be held in this contract.
+    function setAddressUDAOCContract(address _udaocAddress) external {
+        <span class="missing-if-branch" title="else path not taken" >E</span>require(
+            hasRole(BACKEND_ROLE, msg.sender),
+            "Only backend can set udaoc address"
+        );
+        udaocAddress = _udaocAddress;
+    }
+&nbsp;
+    /// @notice This function updates the address record held in this contract for the UDAO-Cert token contract
+    /// @param _udaoCertAddress The new address recond of the UDAO-Cert token contract to be held in this contract.
+    function setAddressUDAOCertContract(address _udaoCertAddress) external {
+        <span class="missing-if-branch" title="else path not taken" >E</span>require(
+            hasRole(BACKEND_ROLE, msg.sender),
+            "Only backend can set udaoc address"
+        );
+        udaoCertAddress = _udaoCertAddress;
+    }
+&nbsp;
+    /// @notice This function updates the address record held in this contract for the Voucher Verifier contract
+    /// @param _voucherVerifierAddress The new address recond of the Voucher Verifier contract to be held in this contract.
+    function setAddressVoucherVerifierContract(
+        address _voucherVerifierAddress
+    ) external {
+        <span class="missing-if-branch" title="else path not taken" >E</span>require(
+            hasRole(BACKEND_ROLE, msg.sender),
+            "Only backend can set voucher verifier address"
+        );
+        voucherVerifierAddress = _voucherVerifierAddress;
+    }
+&nbsp;
+    /// @notice This function updates the address record held in this contract for the Platform Treasury contract
+    /// @param _platformTreasuryAddress The new address recond of the Platform Treasury contract to be held in this contract.
+    function setAddressPlatformTreasuryContract(
+        address _platformTreasuryAddress
+    ) external {
+        <span class="missing-if-branch" title="else path not taken" >E</span>require(
+            hasRole(BACKEND_ROLE, msg.sender),
+            "Only backend can set platform treasury address"
+        );
+        platformTreasuryAddress = _platformTreasuryAddress;
+    }
+&nbsp;
+    /// @notice This function updates the address record held in this contract for the Governance Treasury contract
+    /// @param _governanceTreasuryAddress The new address recond of the Governance Treasury contract to be held in this contract.
+    function setAddressGovernanceTreasuryContract(
+        address _governanceTreasuryAddress
+    ) external {
+        <span class="missing-if-branch" title="else path not taken" >E</span>require(
+            hasRole(BACKEND_ROLE, msg.sender),
+            "Only backend can set governance treasury address"
+        );
+        governanceTreasuryAddress = _governanceTreasuryAddress;
+    }
+&nbsp;
+    /// @notice This function updates the address record held in this contract for the Supervision contract
+    /// @param _supervisionAddress The new address recond of the Supervision contract to be held in this contract.
+    function setAddressSupervisionContract(
+        address _supervisionAddress
+    ) external {
+        <span class="missing-if-branch" title="else path not taken" >E</span>require(
+            hasRole(BACKEND_ROLE, msg.sender),
+            "Only backend can set ISupVis address"
+        );
+        supervisionAddress = _supervisionAddress;
+    }
+&nbsp;
+    /// @notice This function updates the address record held in this contract for the UDAO-VP token contract
+    /// @param _udaoVpAddress The new address recond of the UDAO-VP token contract to be held in this contract.
+    function setAddressUDAOvpContract(address _udaoVpAddress) external {
+        <span class="missing-if-branch" title="else path not taken" >E</span>require(
+            hasRole(BACKEND_ROLE, msg.sender),
+            "Only backend can set udao vp address"
+        );
+        udaoVpAddress = _udaoVpAddress;
+    }
+&nbsp;
+    /// @notice This function updates the address record held in this contract for the UDAO Staker contract
+    /// @param _udaoStakerAddress The new address recond of the UDAO Staker contract to be held in this contract.
+    function setAddressUDAOStakerContract(address _udaoStakerAddress) external {
+        <span class="missing-if-branch" title="else path not taken" >E</span>require(
+            hasRole(BACKEND_ROLE, msg.sender),
+            "Only backend can set staking address"
+        );
+        udaoStakerAddress = _udaoStakerAddress;
+    }
+&nbsp;
+    /// @notice This function updates the address record held in this contract for the UDAO Governor contract
+    /// @param _udaoGovernorAddress The new address recond of the UDAO Governor contract to be held in this contract.
+<span class="fstat-no" title="function not covered" >    function setAddressUDAOGovernorContract(</span>
+        address _udaoGovernorAddress
+    ) external {
+<span class="cstat-no" title="statement not covered" >        require(</span>
+            hasRole(BACKEND_ROLE, msg.sender),
+            "Only backend can set staking address"
+        );
+        udaoGovernorAddress = _udaoGovernorAddress;
+    }
+}
+&nbsp;</pre></td></tr>
+</table></pre>
+<div class='push'></div><!-- for sticky footer -->
+</div><!-- /wrapper -->
+<div class='footer quiet pad2 space-top1 center small'>
+  Code coverage
+  generated by <a href="http://istanbul-js.org/" target="_blank">istanbul</a> at Wed Nov 15 2023 10:12:08 GMT+0300 (GMT+03:00)
+</div>
+</div>
+<script src="../prettify.js"></script>
+<script>
+window.onload = function () {
+        if (typeof prettyPrint === 'function') {
+            prettyPrint();
+        }
+};
+</script>
+<script src="../sorter.js"></script>
+</body>
+</html>

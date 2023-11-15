@@ -1,0 +1,1238 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>Code coverage report for contracts/treasury/BasePlatform.sol</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../../prettify.css" />
+    <link rel="stylesheet" href="../../base.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style type='text/css'>
+        .coverage-summary .sorter {
+            background-image: url(../../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+<body>
+<div class='wrapper'>
+  <div class='pad1'>
+    <h1>
+      <a href="../../index.html">all files</a> / <a href="index.html">contracts/treasury/</a> BasePlatform.sol
+    </h1>
+    <div class='clearfix'>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">51.85% </span>
+        <span class="quiet">Statements</span>
+        <span class='fraction'>14/27</span>
+      </div>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">15.38% </span>
+        <span class="quiet">Branches</span>
+        <span class='fraction'>4/26</span>
+      </div>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">69.23% </span>
+        <span class="quiet">Functions</span>
+        <span class='fraction'>9/13</span>
+      </div>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">51.72% </span>
+        <span class="quiet">Lines</span>
+        <span class='fraction'>30/58</span>
+      </div>
+    </div>
+  </div>
+  <div class='status-line medium'></div>
+<pre><table class="coverage">
+<tr><td class="line-count quiet">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283
+284
+285
+286
+287
+288
+289
+290
+291
+292
+293
+294
+295
+296
+297
+298
+299
+300
+301
+302
+303
+304
+305
+306
+307
+308
+309
+310
+311
+312
+313
+314
+315
+316
+317
+318
+319
+320
+321
+322
+323
+324
+325
+326
+327
+328
+329
+330
+331
+332
+333
+334
+335
+336
+337
+338
+339
+340
+341
+342
+343
+344
+345
+346
+347
+348
+349
+350
+351
+352
+353
+354
+355
+356
+357
+358
+359
+360
+361
+362
+363
+364
+365
+366
+367
+368
+369
+370
+371
+372
+373
+374
+375
+376
+377
+378
+379
+380
+381
+382
+383
+384
+385
+386
+387
+388
+389
+390
+391
+392</td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">213×</span>
+<span class="cline-any cline-yes">213×</span>
+<span class="cline-any cline-yes">213×</span>
+<span class="cline-any cline-yes">213×</span>
+<span class="cline-any cline-yes">213×</span>
+<span class="cline-any cline-yes">213×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">3×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">3×</span>
+<span class="cline-any cline-yes">3×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2×</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">37×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">41×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">40×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">3×</span>
+<span class="cline-any cline-yes">3×</span>
+<span class="cline-any cline-yes">3×</span>
+<span class="cline-any cline-yes">3×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">3×</span>
+<span class="cline-any cline-yes">3×</span>
+<span class="cline-any cline-yes">3×</span>
+<span class="cline-any cline-yes">3×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">14×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">7×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">// SPDX-License-Identifier: MIT
+/// @title BasePlatform of PlatformTreasury
+/// @author anywaiTR: Bugrahan Duran, Batuhan Darcin
+/// @notice Contains key definitions for a platform treasury. This is an abstract contract and serves as the base contract for the UDAO Platform treasury.
+/// @dev It defines and allocates role dependent balances-pools-timers, and purchase cuts.
+pragma solidity ^0.8.4;
+&nbsp;
+import "@openzeppelin/contracts/security/Pausable.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/utils/Counters.sol";
+import "../interfaces/IUDAOC.sol";
+import "../interfaces/IGovernanceTreasury.sol";
+import "../interfaces/IRoleManager.sol";
+import "../interfaces/IVoucherVerifier.sol";
+&nbsp;
+abstract contract BasePlatform is Pausable {
+    /// @dev Role definitions are here to reduce the size of the contract.
+    bytes32 public constant BACKEND_ROLE = keccak256("BACKEND_ROLE");
+    bytes32 public constant FOUNDATION_ROLE = keccak256("FOUNDATION_ROLE");
+    bytes32 public constant GOVERNANCE_ROLE = keccak256("GOVERNANCE_ROLE");
+    bytes32 public constant CONTRACT_MANAGER = keccak256("CONTRACT_MANAGER");
+&nbsp;
+    /// @notice Role manager contract address
+    IRoleManager roleManager;
+    /// @notice UDAO (ERC20) Token is main token of the platform and used for payments
+    IERC20 udao;
+    /// @notice UDAOC (ERC721) Token is defines contents and used for content ownership
+    IUDAOC udaoc;
+    /// @notice VoucherVerifier contract is defines the vouchers of PlatformTreasury and used to verify vouchers
+    IVoucherVerifier voucherVerifier;
+    /// @notice GovernanceTreasury contract is platforms governance related funds treasury contract
+    IGovernanceTreasury governanceTreasury;
+&nbsp;
+    /// @notice Address of foundation wallet is used for sending funds to foundation
+    address public foundationWallet;
+&nbsp;
+    /// @notice during refund windows all payments locked on contract and users can request refund
+    /// @dev it initiated as 20 days and locked balance/pool array's size (61) defines the maximum setable refund window.
+    uint256 public refundWindow = 20; 
+&nbsp;
+    /// @notice instructor address =&gt; instructor's balance
+    mapping(address =&gt; uint) public instBalance;
+    /// @notice instructor address =&gt; instructor's locked balances
+    mapping(address =&gt; uint[61]) public instLockedBalance;
+    /// @notice content cut pool for content sales
+    uint256 public contentCutPool;
+    /// @notice content cut locked pool for content sales (locked revenues during refund window)
+    uint256[61] public contentCutLockedPool;
+    /// @notice coaching cut pool for coaching sales
+    uint256 public coachingCutPool;
+    /// @notice coaching cut locked pool for coaching sales (locked revenues during refund window)
+    uint256[61] public coachingCutLockedPool;
+&nbsp;
+    /// @notice foundation balance
+    uint public foundationBalance;
+    /// @notice governance pool balance
+    uint public governanceBalance;
+    /// @notice juror pool balance
+    uint public jurorBalance;
+    /// @notice validator pool balance
+    uint public validatorsBalance;
+&nbsp;
+    /// @notice instructor address =&gt; the date of the oldest locked payment of instructor.
+    mapping(address =&gt; uint256) public instLockTime;
+    /// @notice the date of the oldest locked payment in content/coaching CutLockedPool
+    /// @dev platformLockTime initialized with deployment time
+    uint public platformLockTime = (block.timestamp / 86400);
+&nbsp;
+    /// @notice instructor address =&gt; instructor's refunded balance to users
+    mapping(address =&gt; uint) public instRefundedBalance;
+    /// @notice content cut pool's refunded cuts to users
+    uint256 public contentCutRefundedBalance;
+    /// @notice coaching cut pool's refunded cuts to users
+    uint256 public coachingCutRefundedBalance;
+&nbsp;
+    /// @notice instructor address =&gt; instructor's previous refund window for last sale
+    mapping(address =&gt; uint) public prevInstRefundWindow;
+&nbsp;
+    /// @notice The allocated cut for foundation from content sales
+    /// @dev initiated as (4000/100000 = 4%)
+    uint public contentFoundCut = 4000;
+    /// @notice The allocated cut for governance pool from content sales
+    /// @dev initiated as 0% and planned to be (700/100000 = 0.7%) after governance release
+    uint public contentGoverCut = 0;
+    /// @notice The allocated cut for juror pool from content sales
+    /// @dev initiated as 0% and planned to be (100/100000 = 0.1%) after governance release
+    uint public contentJurorCut = 0;
+    /// @notice The allocated cut for validator pool from content sales
+    /// @dev initiated as 0% and planned to be (200/100000 = 0.2%) after governance release
+    uint public contentValidCut = 0;
+&nbsp;
+    /// @notice The allocated cut for foundation from coaching sales
+    /// @dev initiated as (4000/100000 = 4%)
+    uint public coachFoundCut = 4000;
+    /// @notice The allocated cut for governance pool from coaching sales
+    /// @dev initiated as 0% and planned to be (700/100000 = 0.7%) after governance release
+    uint public coachGoverCut = 0;
+    /// @notice The allocated cut for juror pool from coaching sales
+    /// @dev initiated as 0% and planned to be (100/100000 = 0.1%) after governance release
+    uint public coachJurorCut = 0;
+    /// @notice The allocated cut for validator pool from coaching sales
+    /// @dev initiated as 0% and there is no use case
+    uint public coachValidCut = 0;
+&nbsp;
+    /// @notice allocated total cut for foundation, governance, juror and validator from content sales
+    uint256 public contentTotalCut =
+        contentFoundCut + contentGoverCut + contentJurorCut + contentValidCut;
+    /// @notice allocated total cut for foundation, governance, juror and validator from coaching sales
+    uint256 public coachTotalCut =
+        coachFoundCut + coachGoverCut + coachJurorCut + coachValidCut;
+&nbsp;
+    /// @notice is governance part of platform released
+    bool public isGovernanceTreasuryOnline = false;
+&nbsp;
+    /// @notice constructor of BasePlatform
+    /// @param roleManagerAddress is address of RoleManager contract
+    /// @param udaoAddress is address of UDAO token contract
+    /// @param udaocAddress is address of UDAOC token contract
+    /// @param governanceTreasuryAddress is address of GovernanceTreasury contract
+    /// @param voucherVerifierAddress is address of VoucherVerifier contract
+    constructor(
+        address roleManagerAddress,
+        address udaoAddress,
+        address udaocAddress,
+        address governanceTreasuryAddress,
+        address voucherVerifierAddress
+    ) {
+        foundationWallet = msg.sender;
+        roleManager = IRoleManager(roleManagerAddress);
+        udao = IERC20(udaoAddress);
+        udaoc = IUDAOC(udaocAddress);
+        governanceTreasury = IGovernanceTreasury(governanceTreasuryAddress);
+        voucherVerifier = IVoucherVerifier(voucherVerifierAddress);
+    }
+&nbsp;
+    /// @notice This event is triggered if the foundation wallet address is updated.
+    event FoundationWalletUpdated(address newAddress);
+&nbsp;
+    /// @notice This event is triggered if the contract manager updates the addresses.
+    event AddressesUpdated(
+        address UDAOAddress,
+        address UDAOCAddress,
+        address RoleManagerAddress,
+        address GovernanceTreasuryAddress,
+        address VoucherVerifierAddress
+    );
+&nbsp;
+    /// @notice This event is triggered if a cut is updated.
+    /// @param _contentFoundCut is the new cut for foundation
+    /// @param _contentGoverCut is the new cut for governance
+    /// @param _contentJurorCut is the new cut for juror pool
+    /// @param _contentValidCut is the new cut for validator pool
+    /// @param _contentTotalCut is the new total cut for foundation, governance, juror and validator
+    /// @param _coachFoundCut is the new cut for foundation
+    /// @param _coachGoverCut is the new cut for governance
+    /// @param _coachJurorCut is the new cut for juror pool
+    /// @param _coachValidCut is the new cut for validator pool
+    /// @param _coachTotalCut is the new total cut for foundation, governance, juror and validator
+    event PlatformCutsUpdated(
+        uint _contentFoundCut,
+        uint _contentGoverCut,
+        uint _contentJurorCut,
+        uint _contentValidCut,
+        uint _contentTotalCut,
+        uint _coachFoundCut,
+        uint _coachGoverCut,
+        uint _coachJurorCut,
+        uint _coachValidCut,
+        uint _coachTotalCut
+    );
+&nbsp;
+    /// @notice sets foundation wallet addresses
+    /// @param _newAddress new address of the contract
+    function setFoundationAddress(address _newAddress) external {
+        <span class="missing-if-branch" title="else path not taken" >E</span>require(
+            hasRole(BACKEND_ROLE, msg.sender),
+            "Only backend can set contract address"
+        );
+        foundationWallet = _newAddress;
+        emit FoundationWalletUpdated(_newAddress);
+    }
+&nbsp;
+    /// @notice Get the updated addresses from contract manager
+    /// @param udaoAddress The address of the UDAO token contract
+    /// @param udaocAddress The address of the UDAOC token contract
+    /// @param roleManagerAddress The address of the role manager contract
+    /// @param governanceTreasuryAddress The address of the governance treasury contract
+    /// @param voucherVerifierAddress The address of the voucher verifier contract
+    function updateAddresses(
+        address udaoAddress,
+        address udaocAddress,
+        address roleManagerAddress,
+        address governanceTreasuryAddress,
+        address voucherVerifierAddress
+    ) external {
+        if (msg.sender != foundationWallet) {
+            <span class="missing-if-branch" title="if path not taken" >I</span>require(
+                (hasRole(BACKEND_ROLE, msg.sender) ||
+                    hasRole(CONTRACT_MANAGER, msg.sender)),
+                "Only backend and contract manager can update addresses"
+            );
+        }
+        udao = IERC20(udaoAddress);
+        udaoc = IUDAOC(udaocAddress);
+        roleManager = IRoleManager(roleManagerAddress);
+        governanceTreasury = IGovernanceTreasury(governanceTreasuryAddress);
+        voucherVerifier = IVoucherVerifier(voucherVerifierAddress);
+&nbsp;
+        emit AddressesUpdated(
+            udaoAddress,
+            udaocAddress,
+            roleManagerAddress,
+            governanceTreasuryAddress,
+            voucherVerifierAddress
+        );
+    }
+&nbsp;
+    /// @notice Checks if the user has the given role
+    /// @param _role is the role to be checked
+    /// @param _account is the address to be checked
+    function hasRole(
+        bytes32 _role,
+        address _account
+    ) internal view returns (bool) {
+        return (roleManager.hasRole(_role, _account));
+    }
+&nbsp;
+    /// @notice Checks if the user is banned
+    /// @param _userAddress is the address to be checked
+    /// @param _functionID is the function id to be checked
+    function isNotBanned(
+        address _userAddress,
+        uint _functionID
+    ) internal view returns (bool) {
+        return !roleManager.isBanned(_userAddress, _functionID);
+    }
+&nbsp;
+    /// @notice Checks if the user is KYCed
+    /// @param _userAddress is the address to be checked
+    /// @param _functionID is the function id to be checked
+    function isKYCed(
+        address _userAddress,
+        uint _functionID
+    ) internal view returns (bool) {
+        return roleManager.isKYCed(_userAddress, _functionID);
+    }
+&nbsp;
+    /// @notice Allows the backend to activate the governance treasury
+    /// @param _boolean is the boolean value to be set
+    /// @dev Tokens flows to governance treasury after if this function is called with true
+<span class="fstat-no" title="function not covered" >    function activateGovernanceTreasury(bool _boolean) external {</span>
+<span class="cstat-no" title="statement not covered" >        require(</span>
+            hasRole(BACKEND_ROLE, msg.sender),
+            "Only backend can activate governance treasury"
+        );
+        isGovernanceTreasuryOnline = _boolean;
+    }
+&nbsp;
+    /// @notice distribute the shares of foundation and governance/juror/validator pools from a platform's content sale revenue
+    /// @param _revenue is the content sale revenue to be shared
+    function _distributeContentCutShares(uint256 _revenue) internal {
+        uint256 goverShare = ((_revenue * contentGoverCut) / contentTotalCut);
+        uint256 jurorShare = ((_revenue * contentJurorCut) / contentTotalCut);
+        uint256 validShare = ((_revenue * contentValidCut) / contentTotalCut);
+        uint256 foundShare = _revenue - (goverShare + jurorShare + validShare);
+&nbsp;
+        foundationBalance += foundShare;
+        governanceBalance += goverShare;
+        jurorBalance += jurorShare;
+        validatorsBalance += validShare;
+    }
+&nbsp;
+    /// @notice distribute the shares of foundation and governance/juror/validator pools from a platform's coaching sale revenue
+    /// @param _revenue is the coaching sale revenue to be shared
+<span class="fstat-no" title="function not covered" >    function _distributeCoachingCutShares(uint256 _revenue) internal {</span>
+<span class="cstat-no" title="statement not covered" >        uint256 goverShare = ((_revenue * coachGoverCut) / coachTotalCut);</span>
+<span class="cstat-no" title="statement not covered" >        uint256 jurorShare = ((_revenue * coachJurorCut) / coachTotalCut);</span>
+<span class="cstat-no" title="statement not covered" >        uint256 validShare = ((_revenue * coachValidCut) / coachTotalCut);</span>
+<span class="cstat-no" title="statement not covered" >        uint256 foundShare = _revenue - (goverShare + jurorShare + validShare);</span>
+&nbsp;
+        foundationBalance += foundShare;
+        governanceBalance += goverShare;
+        jurorBalance += jurorShare;
+        validatorsBalance += validShare;
+    }
+&nbsp;
+    /// @notice calculates the total cut to be applied by the platform in a content purchase.
+    /// @param _priceOf is the price of the content
+    function calculateContentSaleTotalCut(
+        uint256 _priceOf
+    ) public view returns (uint256) {
+        return ((_priceOf * contentTotalCut) / 100000);
+    }
+&nbsp;
+    /// @notice calculates the total cut to be applied by the platform in a coaching purchase.
+    /// @param _priceOf is the price of the coaching
+    function calculateCoachingSaleTotalCut(
+        uint256 _priceOf
+    ) public view returns (uint256) {
+        return ((_priceOf * coachTotalCut) / 100000);
+    }
+&nbsp;
+    /// @notice sets the cut for foundation/governance/juror/validator for a coaching sale
+    /// @param _coachFoundCut new cut for foundation
+    /// @param _coachGoverCut new cut for governance
+    /// @param _coachJurorCut new cut for juror pool
+    /// @param _coachValidCut new cut for validator pool
+<span class="fstat-no" title="function not covered" >    function setCoachCuts(</span>
+        uint256 _coachFoundCut,
+        uint256 _coachGoverCut,
+        uint256 _coachJurorCut,
+        uint256 _coachValidCut
+    ) external {
+<span class="cstat-no" title="statement not covered" >        require(</span>
+            (hasRole(BACKEND_ROLE, msg.sender) ||
+                hasRole(FOUNDATION_ROLE, msg.sender) ||
+                hasRole(GOVERNANCE_ROLE, msg.sender)),
+            "Only admins can set coach cuts"
+        );
+<span class="cstat-no" title="statement not covered" >        uint newTotal = _coachFoundCut +</span>
+            _coachGoverCut +
+            _coachJurorCut +
+            _coachFoundCut;
+&nbsp;
+<span class="cstat-no" title="statement not covered" >        require(newTotal &lt; 100000, "Cuts cant be higher than %100")</span>;
+&nbsp;
+        coachFoundCut = _coachFoundCut;
+        coachGoverCut = _coachGoverCut;
+        coachJurorCut = _coachJurorCut;
+        coachValidCut = _coachValidCut;
+&nbsp;
+        coachTotalCut = newTotal;
+&nbsp;
+<span class="cstat-no" title="statement not covered" >        emit PlatformCutsUpdated(</span>
+            contentFoundCut,
+            contentGoverCut,
+            contentJurorCut,
+            contentValidCut,
+            contentTotalCut,
+            coachFoundCut,
+            coachGoverCut,
+            coachJurorCut,
+            coachValidCut,
+            coachTotalCut
+        );
+    }
+&nbsp;
+    /// @notice sets the cut for foundation/governance/juror/validator for a content sale
+    /// @param _contentFoundCut new cut for foundation
+    /// @param _contentGoverCut new cut for governance
+    /// @param _contentJurorCut new cut for juror pool
+    /// @param _contentValidCut new cut for validator pool
+<span class="fstat-no" title="function not covered" >    function setContentCuts(</span>
+        uint256 _contentFoundCut,
+        uint256 _contentGoverCut,
+        uint256 _contentJurorCut,
+        uint256 _contentValidCut
+    ) external {
+<span class="cstat-no" title="statement not covered" >        require(</span>
+            (hasRole(BACKEND_ROLE, msg.sender) ||
+                hasRole(FOUNDATION_ROLE, msg.sender) ||
+                hasRole(GOVERNANCE_ROLE, msg.sender)),
+            "Only admins can set content cuts"
+        );
+<span class="cstat-no" title="statement not covered" >        uint newTotal = _contentFoundCut +</span>
+            _contentGoverCut +
+            _contentJurorCut +
+            _contentFoundCut;
+<span class="cstat-no" title="statement not covered" >        require(newTotal &lt; 100000, "Cuts cant be higher than %100")</span>;
+&nbsp;
+        contentFoundCut = _contentFoundCut;
+        contentGoverCut = _contentGoverCut;
+        contentJurorCut = _contentJurorCut;
+        contentValidCut = _contentValidCut;
+&nbsp;
+        contentTotalCut = newTotal;
+&nbsp;
+<span class="cstat-no" title="statement not covered" >        emit PlatformCutsUpdated(</span>
+            contentFoundCut,
+            contentGoverCut,
+            contentJurorCut,
+            contentValidCut,
+            contentTotalCut,
+            coachFoundCut,
+            coachGoverCut,
+            coachJurorCut,
+            coachValidCut,
+            coachTotalCut
+        );
+    }
+}
+&nbsp;</pre></td></tr>
+</table></pre>
+<div class='push'></div><!-- for sticky footer -->
+</div><!-- /wrapper -->
+<div class='footer quiet pad2 space-top1 center small'>
+  Code coverage
+  generated by <a href="http://istanbul-js.org/" target="_blank">istanbul</a> at Wed Nov 15 2023 10:12:08 GMT+0300 (GMT+03:00)
+</div>
+</div>
+<script src="../../prettify.js"></script>
+<script>
+window.onload = function () {
+        if (typeof prettyPrint === 'function') {
+            prettyPrint();
+        }
+};
+</script>
+<script src="../../sorter.js"></script>
+</body>
+</html>

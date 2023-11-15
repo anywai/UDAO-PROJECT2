@@ -1,0 +1,704 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>Code coverage report for contracts/PriceGetter.sol</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../prettify.css" />
+    <link rel="stylesheet" href="../base.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style type='text/css'>
+        .coverage-summary .sorter {
+            background-image: url(../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+<body>
+<div class='wrapper'>
+  <div class='pad1'>
+    <h1>
+      <a href="../index.html">all files</a> / <a href="index.html">contracts/</a> PriceGetter.sol
+    </h1>
+    <div class='clearfix'>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">0% </span>
+        <span class="quiet">Statements</span>
+        <span class='fraction'>0/22</span>
+      </div>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">0% </span>
+        <span class="quiet">Branches</span>
+        <span class='fraction'>0/10</span>
+      </div>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">0% </span>
+        <span class="quiet">Functions</span>
+        <span class='fraction'>0/8</span>
+      </div>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">0% </span>
+        <span class="quiet">Lines</span>
+        <span class='fraction'>0/42</span>
+      </div>
+    </div>
+  </div>
+  <div class='status-line low'></div>
+<pre><table class="coverage">
+<tr><td class="line-count quiet">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214</td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">// SPDX-License-Identifier: MIT
+/// @title Gets UDAO-USD conversion rate from oracle
+pragma solidity ^0.8.4;
+&nbsp;
+import "./uniswap-0.8/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
+import "./uniswap-0.8/v3-periphery/contracts/libraries/OracleLibrary.sol";
+import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
+import "./interfaces/IPriceGetter.sol";
+import "./interfaces/IRoleManager.sol";
+import "./RoleNames.sol";
+&nbsp;
+contract PriceGetter is IPriceGetter, RoleNames {
+    IRoleManager roleManager;
+&nbsp;
+    address token0;
+    address token1;
+    address pool;
+    /// fiat name =&gt; aggregator interface
+    mapping(bytes32 =&gt; AggregatorV3Interface) fiatToPriceFeed;
+&nbsp;
+    /// @dev token0 = tokenIn (matic) and token1 = tokenOut(udao)
+<span class="fstat-no" title="function not covered" >    constructor(</span>
+        address _factory,
+        address _token0,
+        address _token1,
+        uint24 _fee,
+        address rmAddress
+    )  {
+        roleManager = IRoleManager(rmAddress);
+&nbsp;
+        token0 = _token0;
+        token1 = _token1;
+&nbsp;
+<span class="cstat-no" title="statement not covered" >        address _pool = IUniswapV3Factory(_factory).getPool(</span>
+            _token0,
+            _token1,
+            _fee
+        );
+<span class="cstat-no" title="statement not covered" >        require(_pool != address(0), "pool doesn't exist")</span>;
+&nbsp;
+        pool = _pool;
+&nbsp;
+        /// Initialize the contract with the price feed addresses
+        fiatToPriceFeed[
+            keccak256(abi.encodePacked("usd"))
+        ] = AggregatorV3Interface(0xAB594600376Ec9fD91F8e885dADF0CE036862dE0);
+        fiatToPriceFeed[
+            keccak256(abi.encodePacked("eur"))
+        ] = AggregatorV3Interface(0x73366Fe0AA0Ded304479862808e02506FE556a98);
+        fiatToPriceFeed[
+            keccak256(abi.encodePacked("jpy"))
+        ] = AggregatorV3Interface(0xD647a6fC9BC6402301583C91decC5989d8Bc382D);
+        fiatToPriceFeed[
+            keccak256(abi.encodePacked("gbp"))
+        ] = AggregatorV3Interface(0x099a2540848573e94fb1Ca0Fa420b00acbBc845a);
+        fiatToPriceFeed[
+            keccak256(abi.encodePacked("aud"))
+        ] = AggregatorV3Interface(0x062Df9C4efd2030e243ffCc398b652e8b8F95C6f);
+        fiatToPriceFeed[
+            keccak256(abi.encodePacked("cad"))
+        ] = AggregatorV3Interface(0xACA44ABb8B04D07D883202F99FA5E3c53ed57Fb5);
+        fiatToPriceFeed[
+            keccak256(abi.encodePacked("chf"))
+        ] = AggregatorV3Interface(0xc76f762CedF0F78a439727861628E0fdfE1e70c2);
+    }
+&nbsp;
+    /// @notice Get fiat to UDAO token amount
+    /// @param amountIn Amount of fiat
+    /// @param fiat Name of the fiat currency
+<span class="fstat-no" title="function not covered" >    function getUdaoOut(</span>
+        uint128 amountIn,
+        bytes32 fiat
+    ) external view returns (uint udaoPayment) {
+        /// @dev Get amount of matic in return of given amount of fiat
+<span class="cstat-no" title="statement not covered" >        uint128 _fiatToMaticAmount = convertFiatToMatic(amountIn, fiat);</span>
+        /// @dev Get amount of udao in return of given amount of matic
+        udaoPayment = convertMaticToUdao(_fiatToMaticAmount);
+<span class="cstat-no" title="statement not covered" >        return (udaoPayment);</span>
+    }
+&nbsp;
+    /// @notice Converts given amount of matic to udao
+    /// @dev token0 = tokenIn (matic) and token1 = tokenOut(udao)
+    /// @param amountIn Amount of matic token to convert
+<span class="fstat-no" title="function not covered" >    function convertMaticToUdao(</span>
+        uint128 amountIn
+    ) public view returns (uint amountOut) {
+<span class="cstat-no" title="statement not covered" >        uint32 secondsAgo = 20;</span>
+&nbsp;
+<span class="cstat-no" title="statement not covered" >        address tokenIn = token0;</span>
+<span class="cstat-no" title="statement not covered" >        address tokenOut = token1;</span>
+&nbsp;
+        /// @dev Consult has calculations that are unnecessary for us. Below is
+        // "consult" but some parts are stripped out
+        // (int24 tick, ) = OracleLibrary.consult(pool, secondsAgo);
+&nbsp;
+        // Code copied from OracleLibrary.sol, consult()
+<span class="cstat-no" title="statement not covered" >        uint32[] memory secondsAgos = new uint32[](2);</span>
+        secondsAgos[0] = secondsAgo;
+        secondsAgos[1] = 0;
+&nbsp;
+        // int56 since tick * time = int24 * uint32
+        // 56 = 24 + 32
+<span class="cstat-no" title="statement not covered" >        (int56[] memory tickCumulatives, ) = IUniswapV3Pool(pool).observe(</span>
+            secondsAgos
+        );
+&nbsp;
+<span class="cstat-no" title="statement not covered" >        int56 tickCumulativesDelta = tickCumulatives[1] - tickCumulatives[0];</span>
+&nbsp;
+        // int56 / uint32 = int24
+<span class="cstat-no" title="statement not covered" >        int24 tick = int24((tickCumulativesDelta / int56(int32(secondsAgo))));</span>
+        // Always round to negative infinity
+        /*
+        int doesn't round down when it is negative
+&nbsp;
+        int56 a = -3
+        -3 / 10 = -3.3333... so round down to -4
+        but we get
+        a / 10 = -3
+&nbsp;
+        so if tickCumulativeDelta &lt; 0 and division has remainder, then round
+        down
+        */
+<span class="cstat-no" title="statement not covered" >        if (</span>
+            tickCumulativesDelta &lt; 0 &amp;&amp;
+            (tickCumulativesDelta % int56(int32(secondsAgo)) != 0)
+        ) {
+            tick--;
+        }
+&nbsp;
+        amountOut = OracleLibrary.getQuoteAtTick(
+            tick,
+            amountIn,
+            tokenIn,
+            tokenOut
+        );
+    }
+&nbsp;
+    /// @notice Returns given amount of fiat currency to matic token
+    /// @param val Amount of fiat currency
+    /// @param fiat Name of the fiat currency
+<span class="fstat-no" title="function not covered" >    function convertFiatToMatic(</span>
+        uint256 val,
+        bytes32 fiat
+    ) public view returns (uint128) {
+<span class="cstat-no" title="statement not covered" >        uint256 msgValueInMATIC = (</span>
+            (((val * 1e8 * 1e18) / (uint256)(getLatestPrice(fiat))))
+        );
+<span class="cstat-no" title="statement not covered" >        return (uint128)(msgValueInMATIC);</span>
+    }
+&nbsp;
+    /// @notice Returns current price of 1 Matic in fiat from chainlink
+    /// @param fiat Name of the fiat currency
+<span class="fstat-no" title="function not covered" >    function getLatestPrice(bytes32 fiat) public view returns (int) {</span>
+        /// @dev MATIC / USD address on Mumbai
+<span class="cstat-no" title="statement not covered" >        AggregatorV3Interface priceFeed = fiatToPriceFeed[</span>
+            keccak256(abi.encodePacked("usd"))
+        ];
+&nbsp;
+<span class="cstat-no" title="statement not covered" >        (</span>
+            ,
+            /* uint80 roundID */ int price /*uint startedAt*/ /*uint timeStamp*/ /*uint80 answeredInRound*/,
+            ,
+            ,
+&nbsp;
+        ) = priceFeed.latestRoundData();
+&nbsp;
+<span class="cstat-no" title="statement not covered" >        if (fiat != keccak256(abi.encodePacked("usd"))) {</span>
+            priceFeed = fiatToPriceFeed[fiat];
+&nbsp;
+<span class="cstat-no" title="statement not covered" >            (</span>
+                ,
+                /* uint80 roundID */ int fiatToUsdPrice /*uint startedAt*/ /*uint timeStamp*/ /*uint80 answeredInRound*/,
+                ,
+                ,
+&nbsp;
+            ) = priceFeed.latestRoundData();
+&nbsp;
+            price = (price * 10 ** 8) / fiatToUsdPrice; // Matic per fiat
+        }
+&nbsp;
+<span class="cstat-no" title="statement not covered" >        return (price);</span>
+    }
+&nbsp;
+    /// @notice Add new fiat currency to the contract can also be used for modifying existing ones
+    /// @param fiat Name of the fiat currency
+    /// @param priceFeedAddress Address of the price feed of the fiat currency
+<span class="fstat-no" title="function not covered" >    function addNewFiat(</span>
+        bytes32 fiat,
+        address priceFeedAddress
+    ) external {
+<span class="cstat-no" title="statement not covered" >        require(</span>
+            roleManager.hasRoles(administrator_roles, msg.sender),
+            "Only admins can add new fiat"
+        );
+        fiatToPriceFeed[fiat] = AggregatorV3Interface(priceFeedAddress);
+    }
+&nbsp;
+    /// @notice Delete fiat currency from the contract
+    /// @param fiat Name of the fiat currency
+<span class="fstat-no" title="function not covered" >    function deleteFiat(bytes32 fiat) external {</span>
+<span class="cstat-no" title="statement not covered" >        require(</span>
+            roleManager.hasRoles(administrator_roles, msg.sender),
+            "Only admins can delete fiat"
+        );
+        delete fiatToPriceFeed[fiat];
+    }
+&nbsp;
+    /// @notice Get the address of the price feed of the given fiat currency
+    /// @param fiat Name of the fiat currency
+<span class="fstat-no" title="function not covered" >    function getPriceFeedAddress(bytes32 fiat) external view returns (address) {</span>
+<span class="cstat-no" title="statement not covered" >        return address(fiatToPriceFeed[fiat]);</span>
+    }
+}
+&nbsp;</pre></td></tr>
+</table></pre>
+<div class='push'></div><!-- for sticky footer -->
+</div><!-- /wrapper -->
+<div class='footer quiet pad2 space-top1 center small'>
+  Code coverage
+  generated by <a href="http://istanbul-js.org/" target="_blank">istanbul</a> at Wed Sep 27 2023 09:30:14 GMT+0300 (GMT+03:00)
+</div>
+</div>
+<script src="../prettify.js"></script>
+<script>
+window.onload = function () {
+        if (typeof prettyPrint === 'function') {
+            prettyPrint();
+        }
+};
+</script>
+<script src="../sorter.js"></script>
+</body>
+</html>

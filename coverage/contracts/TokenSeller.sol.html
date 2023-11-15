@@ -1,0 +1,398 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>Code coverage report for contracts/TokenSeller.sol</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../prettify.css" />
+    <link rel="stylesheet" href="../base.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style type='text/css'>
+        .coverage-summary .sorter {
+            background-image: url(../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+<body>
+<div class='wrapper'>
+  <div class='pad1'>
+    <h1>
+      <a href="../index.html">all files</a> / <a href="index.html">contracts/</a> TokenSeller.sol
+    </h1>
+    <div class='clearfix'>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">0% </span>
+        <span class="quiet">Statements</span>
+        <span class='fraction'>0/20</span>
+      </div>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">0% </span>
+        <span class="quiet">Branches</span>
+        <span class='fraction'>0/22</span>
+      </div>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">0% </span>
+        <span class="quiet">Functions</span>
+        <span class='fraction'>0/9</span>
+      </div>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">0% </span>
+        <span class="quiet">Lines</span>
+        <span class='fraction'>0/26</span>
+      </div>
+    </div>
+  </div>
+  <div class='status-line low'></div>
+<pre><table class="coverage">
+<tr><td class="line-count quiet">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112</td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">// SPDX-License-Identifier: MIT
+/// @title UDAO smart contract's role definitions.
+pragma solidity ^0.8.4;
+import "@openzeppelin/contracts/access/AccessControl.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+&nbsp;
+contract TokenSeller is AccessControl {
+    bytes32 public constant RECORDER_ROLE = keccak256("RECORDER_ROLE");
+    IERC20 public udaoToken;
+    bool public tokenRelased = false;
+&nbsp;
+    // Events
+    event TokensWithdrawn(address user, uint256 amount);
+    event TokensReleased(bool tokenRelased);
+    event BalanceAdded(address user, uint256 amount);
+    event BatchBalanceAdded(address[] users, uint256[] amounts);
+    event BalanceReset(address user);
+    event UDAOSet(address udaoToken);
+    event KYCStatusChanged(address user, bool status);
+&nbsp;
+<span class="fstat-no" title="function not covered" >    constructor() {</span>
+<span class="cstat-no" title="statement not covered" >        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender)</span>;
+<span class="cstat-no" title="statement not covered" >        _grantRole(RECORDER_ROLE, msg.sender)</span>;
+    }
+&nbsp;
+    // user_address =&gt; balance
+    mapping(address =&gt; uint256) public balances;
+    mapping(address =&gt; bool) public KYCList;
+&nbsp;
+    /// @notice DEFAULT_ADMIN_ROLE sets the UDAO token address
+    /// @param _udaoTokenAddress The address of the UDAO token
+<span class="fstat-no" title="function not covered" >    function setUDAO(</span>
+        address _udaoTokenAddress
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        udaoToken = IERC20(_udaoTokenAddress);
+<span class="cstat-no" title="statement not covered" >        emit UDAOSet(_udaoTokenAddress);</span>
+    }
+&nbsp;
+    /// @notice DEFAULT_ADMIN_ROLE resets the balance of the user
+    /// @param _user The address of the user
+<span class="fstat-no" title="function not covered" >    function grantRecorderRole(</span>
+        address _user
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+<span class="cstat-no" title="statement not covered" >        _grantRole(RECORDER_ROLE, _user)</span>;
+    }
+&nbsp;
+    /// @notice DEFAULT_ADMIN_ROLE releases the tokens
+<span class="fstat-no" title="function not covered" >    function releaseTokens() external onlyRole(DEFAULT_ADMIN_ROLE) {</span>
+        tokenRelased = true;
+<span class="cstat-no" title="statement not covered" >        emit TokensReleased(tokenRelased);</span>
+    }
+&nbsp;
+    /// @notice RECORDER_ROLE sets the KYC status of the user
+    /// @param _user The address of the user
+    /// @param _status The KYC status of the user
+<span class="fstat-no" title="function not covered" >    function changeKYCStatus(</span>
+        address _user,
+        bool _status
+    ) public onlyRole(RECORDER_ROLE) {
+        KYCList[_user] = _status;
+<span class="cstat-no" title="statement not covered" >        emit KYCStatusChanged(_user, _status);</span>
+    }
+&nbsp;
+    /// @notice RECORDER_ROLE creates records of the balances of the users
+    /// @param _user The address of the user
+    /// @param _amount The amount of tokens to be added to the user's balance
+<span class="fstat-no" title="function not covered" >    function addBalance(</span>
+        address _user,
+        uint256 _amount
+    ) external onlyRole(RECORDER_ROLE) {
+<span class="cstat-no" title="statement not covered" >        require(_amount &gt; 0, "Amount must be greater than 0!")</span>;
+        balances[_user] += _amount;
+<span class="cstat-no" title="statement not covered" >        changeKYCStatus(_user, true)</span>;
+<span class="cstat-no" title="statement not covered" >        emit BalanceAdded(_user, _amount);</span>
+    }
+&nbsp;
+    /// @notice RECORDER_ROLE creates batch records of the balances of the users
+    /// @param _users The addresses of the users
+    /// @param _amounts The amounts of tokens to be added to the user's balance
+<span class="fstat-no" title="function not covered" >    function batchAddBalance(</span>
+        address[] calldata _users,
+        uint256[] calldata _amounts
+    ) external onlyRole(RECORDER_ROLE) {
+<span class="cstat-no" title="statement not covered" >        require(</span>
+            _users.length == _amounts.length,
+            "Arrays must be the same length!"
+        );
+<span class="cstat-no" title="statement not covered" >        for (uint256 i = 0; i &lt; _users.length; i++) {</span>
+            balances[_users[i]] += _amounts[i];
+<span class="cstat-no" title="statement not covered" >            changeKYCStatus(_users[i], true)</span>;
+        }
+<span class="cstat-no" title="statement not covered" >        emit BatchBalanceAdded(_users, _amounts);</span>
+    }
+&nbsp;
+    /// @notice Returns the balance of the user
+    /// @param _user The address of the user
+<span class="fstat-no" title="function not covered" >    function getBalance(address _user) external view returns (uint256) {</span>
+<span class="cstat-no" title="statement not covered" >        return balances[_user];</span>
+    }
+&nbsp;
+    /// @notice Allows users to withdraw their tokens from the token seller contract
+<span class="fstat-no" title="function not covered" >    function withdraw() external {</span>
+<span class="cstat-no" title="statement not covered" >        require(tokenRelased, "Tokens are not released yet!")</span>;
+<span class="cstat-no" title="statement not covered" >        require(KYCList[msg.sender], "You are not KYCed!")</span>;
+<span class="cstat-no" title="statement not covered" >        uint256 balance = balances[msg.sender];</span>
+<span class="cstat-no" title="statement not covered" >        require(balance &gt; 0, "You have no tokens to withdraw!")</span>;
+        balances[msg.sender] = 0;
+<span class="cstat-no" title="statement not covered" >        udaoToken.transfer(msg.sender, balance)</span>;
+<span class="cstat-no" title="statement not covered" >        emit TokensWithdrawn(msg.sender, balance);</span>
+    }
+}
+&nbsp;</pre></td></tr>
+</table></pre>
+<div class='push'></div><!-- for sticky footer -->
+</div><!-- /wrapper -->
+<div class='footer quiet pad2 space-top1 center small'>
+  Code coverage
+  generated by <a href="http://istanbul-js.org/" target="_blank">istanbul</a> at Wed Nov 01 2023 11:36:12 GMT+0300 (GMT+03:00)
+</div>
+</div>
+<script src="../prettify.js"></script>
+<script>
+window.onload = function () {
+        if (typeof prettyPrint === 'function') {
+            prettyPrint();
+        }
+};
+</script>
+<script src="../sorter.js"></script>
+</body>
+</html>

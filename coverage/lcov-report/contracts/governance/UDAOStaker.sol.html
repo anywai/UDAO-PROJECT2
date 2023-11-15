@@ -1,0 +1,2357 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>Code coverage report for contracts/governance/UDAOStaker.sol</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../../prettify.css" />
+    <link rel="stylesheet" href="../../base.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style type='text/css'>
+        .coverage-summary .sorter {
+            background-image: url(../../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+<body>
+<div class='wrapper'>
+  <div class='pad1'>
+    <h1>
+      <a href="../../index.html">all files</a> / <a href="index.html">contracts/governance/</a> UDAOStaker.sol
+    </h1>
+    <div class='clearfix'>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">34.59% </span>
+        <span class="quiet">Statements</span>
+        <span class='fraction'>46/133</span>
+      </div>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">20.42% </span>
+        <span class="quiet">Branches</span>
+        <span class='fraction'>29/142</span>
+      </div>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">25.81% </span>
+        <span class="quiet">Functions</span>
+        <span class='fraction'>8/31</span>
+      </div>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">35.12% </span>
+        <span class="quiet">Lines</span>
+        <span class='fraction'>72/205</span>
+      </div>
+    </div>
+  </div>
+  <div class='status-line low'></div>
+<pre><table class="coverage">
+<tr><td class="line-count quiet">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283
+284
+285
+286
+287
+288
+289
+290
+291
+292
+293
+294
+295
+296
+297
+298
+299
+300
+301
+302
+303
+304
+305
+306
+307
+308
+309
+310
+311
+312
+313
+314
+315
+316
+317
+318
+319
+320
+321
+322
+323
+324
+325
+326
+327
+328
+329
+330
+331
+332
+333
+334
+335
+336
+337
+338
+339
+340
+341
+342
+343
+344
+345
+346
+347
+348
+349
+350
+351
+352
+353
+354
+355
+356
+357
+358
+359
+360
+361
+362
+363
+364
+365
+366
+367
+368
+369
+370
+371
+372
+373
+374
+375
+376
+377
+378
+379
+380
+381
+382
+383
+384
+385
+386
+387
+388
+389
+390
+391
+392
+393
+394
+395
+396
+397
+398
+399
+400
+401
+402
+403
+404
+405
+406
+407
+408
+409
+410
+411
+412
+413
+414
+415
+416
+417
+418
+419
+420
+421
+422
+423
+424
+425
+426
+427
+428
+429
+430
+431
+432
+433
+434
+435
+436
+437
+438
+439
+440
+441
+442
+443
+444
+445
+446
+447
+448
+449
+450
+451
+452
+453
+454
+455
+456
+457
+458
+459
+460
+461
+462
+463
+464
+465
+466
+467
+468
+469
+470
+471
+472
+473
+474
+475
+476
+477
+478
+479
+480
+481
+482
+483
+484
+485
+486
+487
+488
+489
+490
+491
+492
+493
+494
+495
+496
+497
+498
+499
+500
+501
+502
+503
+504
+505
+506
+507
+508
+509
+510
+511
+512
+513
+514
+515
+516
+517
+518
+519
+520
+521
+522
+523
+524
+525
+526
+527
+528
+529
+530
+531
+532
+533
+534
+535
+536
+537
+538
+539
+540
+541
+542
+543
+544
+545
+546
+547
+548
+549
+550
+551
+552
+553
+554
+555
+556
+557
+558
+559
+560
+561
+562
+563
+564
+565
+566
+567
+568
+569
+570
+571
+572
+573
+574
+575
+576
+577
+578
+579
+580
+581
+582
+583
+584
+585
+586
+587
+588
+589
+590
+591
+592
+593
+594
+595
+596
+597
+598
+599
+600
+601
+602
+603
+604
+605
+606
+607
+608
+609
+610
+611
+612
+613
+614
+615
+616
+617
+618
+619
+620
+621
+622
+623
+624
+625
+626
+627
+628
+629
+630
+631
+632
+633
+634
+635
+636
+637
+638
+639
+640
+641
+642
+643
+644
+645
+646
+647
+648
+649
+650
+651
+652
+653
+654
+655
+656
+657
+658
+659
+660
+661
+662
+663
+664
+665
+666
+667
+668
+669
+670
+671
+672
+673
+674
+675
+676
+677
+678
+679
+680
+681
+682
+683
+684
+685
+686
+687
+688
+689
+690
+691
+692
+693
+694
+695
+696
+697
+698
+699
+700
+701
+702
+703
+704
+705
+706
+707
+708
+709
+710
+711
+712
+713
+714
+715
+716
+717
+718
+719
+720
+721
+722
+723
+724
+725
+726
+727
+728
+729
+730
+731
+732
+733
+734
+735
+736
+737
+738
+739
+740
+741
+742
+743
+744
+745
+746
+747
+748
+749
+750
+751
+752
+753
+754
+755
+756
+757
+758
+759
+760
+761
+762
+763
+764
+765</td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">210×</span>
+<span class="cline-any cline-yes">210×</span>
+<span class="cline-any cline-yes">210×</span>
+<span class="cline-any cline-yes">210×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">420×</span>
+<span class="cline-any cline-yes">420×</span>
+<span class="cline-any cline-yes">420×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">420×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">420×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">420×</span>
+<span class="cline-any cline-yes">420×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">420×</span>
+<span class="cline-any cline-yes">420×</span>
+<span class="cline-any cline-yes">420×</span>
+<span class="cline-any cline-yes">420×</span>
+<span class="cline-any cline-yes">420×</span>
+<span class="cline-any cline-yes">420×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">420×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">350×</span>
+<span class="cline-any cline-yes">350×</span>
+<span class="cline-any cline-yes">350×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">350×</span>
+<span class="cline-any cline-yes">350×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">350×</span>
+<span class="cline-any cline-yes">350×</span>
+<span class="cline-any cline-yes">350×</span>
+<span class="cline-any cline-yes">350×</span>
+<span class="cline-any cline-yes">350×</span>
+<span class="cline-any cline-yes">350×</span>
+<span class="cline-any cline-yes">350×</span>
+<span class="cline-any cline-yes">350×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">350×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">770×</span>
+<span class="cline-any cline-yes">770×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">770×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">770×</span>
+<span class="cline-any cline-yes">770×</span>
+<span class="cline-any cline-yes">770×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">770×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">770×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">420×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">420×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">420×</span>
+<span class="cline-any cline-yes">420×</span>
+<span class="cline-any cline-yes">420×</span>
+<span class="cline-any cline-yes">420×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">350×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">350×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">350×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">350×</span>
+<span class="cline-any cline-yes">350×</span>
+<span class="cline-any cline-yes">350×</span>
+<span class="cline-any cline-yes">350×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">770×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">770×</span>
+<span class="cline-any cline-yes">770×</span>
+<span class="cline-any cline-yes">770×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">770×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">770×</span>
+<span class="cline-any cline-yes">770×</span>
+<span class="cline-any cline-yes">770×</span>
+<span class="cline-any cline-yes">770×</span>
+<span class="cline-any cline-yes">770×</span>
+<span class="cline-any cline-yes">770×</span>
+<span class="cline-any cline-yes">770×</span>
+<span class="cline-any cline-yes">770×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">770×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">770×</span>
+<span class="cline-any cline-yes">770×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">770×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">770×</span>
+<span class="cline-any cline-yes">770×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">// SPDX-License-Identifier: MIT
+/// @title Staking contract for UDAO
+pragma solidity ^0.8.4;
+&nbsp;
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+&nbsp;
+import "@openzeppelin/contracts/governance/utils/IVotes.sol";
+import "@openzeppelin/contracts/utils/Strings.sol";
+import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
+import "../interfaces/IPlatformTreasury.sol";
+import "../interfaces/IRoleManager.sol";
+import "../RoleLegacy.sol";
+import "@openzeppelin/contracts/security/Pausable.sol";
+&nbsp;
+interface IUDAOVP is IVotes, IERC20 {
+    function mint(address to, uint256 amount) external;
+&nbsp;
+    function burnFrom(address account, uint256 amount) external;
+}
+&nbsp;
+contract UDAOStaker is RoleLegacy, EIP712, Pausable {
+    string private constant SIGNING_DOMAIN = "UDAOStaker";
+    string private constant SIGNATURE_VERSION = "1";
+&nbsp;
+    IERC20 udao;
+    IUDAOVP udaovp;
+    IPlatformTreasury platformTreasury;
+&nbsp;
+    /// @notice the required duration to be a validator
+    uint256 public jurorLockTime = 30 days;
+    /// @notice the required duration to be a validator
+    uint256 public validatorLockTime = 90 days;
+    /// @notice the lock duration for applications
+    uint256 public applicationLockTime = 7 days;
+    /// @notice Amount to deduct from validator application
+    uint256 public validatorLockAmount = 1 ether;
+    /// @notice Amount to deduct from juror application
+    uint256 public jurorLockAmount = 1 ether;
+    /// @notice the minimum duration for governance stake
+    uint256 public minimum_stake_days = 7 days; // 1 WEEK
+    /// @notice the maximum duration for governance stake
+    uint256 public maximum_stake_days = 1460 days; // 4 YEARS
+&nbsp;
+    /// @notice Triggered when validator lock amount is updated
+    event SetValidatorLockAmount(uint256 _newAmount);
+    /// @notice Triggered when juror lock amount is updated
+    event SetJurorLockAmount(uint256 _newAmount);
+    /// @notice Triggered when validator lock time is updated
+    event SetValidatorLockTime(uint256 _newLockTime);
+    /// @notice Triggered when juror lock time is updated
+    event SetJurorLockTime(uint256 _newLockTime);
+    /// @notice Triggered when application lock time is updated
+    event SetApplicationLockTime(uint256 _newLockTime);
+    /// @notice Triggered when vote reward is updated
+    event SetVoteReward(uint256 _newAmount);
+    /// @notice Triggered when platform treasury address is updated
+    event SetPlatformTreasuryAddress(address _newAddress);
+    /// @notice Triggered when any role is applied, roleId: 0 validator, 1 juror
+    event RoleApplied(uint256 _roleId, address _user, uint256 _lockAmount);
+    /// @notice Triggered when any role is approved, roleId: 0 validator, 1 juror
+    event RoleApproved(uint256 _roleId, address _user);
+    /// @notice Triggered when any role is rejected, roleId: 0 validator, 1 juror
+    event RoleRejected(uint256 _roleId, address _user);
+    /// @notice Triggered when validator stake is withdrawn
+    event ValidatorStakeWithdrawn(address _validator, uint256 _amount);
+    /// @notice Triggered when juror stake is withdrawn
+    event JurorStakeWithdrawn(address _juror, uint256 _amount);
+    /// @notice Triggered when governance stake is added
+    event GovernanceStake(
+        address _member,
+        uint256 _stakeAmount,
+        uint256 _vpAmount
+    );
+    /// @notice Triggered when governance stake is withdrawn
+    event GovernanceStakeWithdraw(
+        address _member,
+        uint256 _unstakeAmount,
+        uint256 _vpAmount
+    );
+    /// @notice Triggered when vote reward is added to voters reward balance
+    event VoteRewardAdded(address _rewardee, uint256 _amount);
+    /// @notice Triggered when vote reward is withdrawn
+    event VoteRewardsWithdrawn(address _rewardee, uint256 _amount);
+    /// @notice Triggered when governance maximum stake days is updated
+    event SetMaximumStakeDays(uint256 _newAmount);
+    /// @notice Triggered when governance minimum stake days is updated
+    event SetMinimumStakeDays(uint256 _newAmount);
+&nbsp;
+    /// @notice the balance of the validator
+    mapping(address =&gt; uint256) validatorBalanceOf;
+    /// @notice the balance of the juror
+    mapping(address =&gt; uint256) jurorBalanceOf;
+    /* TODO These were 8 months old and never used, why?
+    mapping(address =&gt; uint256) latestValidatorStakeId;
+    mapping(address =&gt; uint256) latestJurorStakeId;
+    mapping(address =&gt; uint256) latestValidationLockId;
+    */
+&nbsp;
+    /// @notice if user has an active application for validator role
+    mapping(address =&gt; bool) public activeApplicationForValidator;
+    /// @notice if user has an active application for juror role
+    mapping(address =&gt; bool) public activeApplicationForJuror;
+    /// @notice Governance lock struct for each governance member
+    struct GovernanceLock {
+        uint256 expire;
+        uint256 amount;
+        uint256 vpamount;
+    }
+    /// @notice Governance lock array for each governance member
+    mapping(address =&gt; GovernanceLock[]) governanceStakes;
+    /// @notice Reward balance of each governance member
+    mapping(address =&gt; uint256) rewardBalanceOf;
+    /// @notice Last reward block of each governance member TODO This is not used??
+    mapping(address =&gt; uint256) lastRewardBlock;
+    /// @notice Reward given to each voter for each vote with respect to their voting power
+    uint256 public voteReward = 0.0001 ether;
+    /// @notice Validator application struct
+    struct ValidatiorApplication {
+        address applicant;
+        bool isFinished;
+        uint256 expire;
+    }
+    /// @notice Array of validator applications
+    ValidatiorApplication[] public validatorApplications;
+    /// @notice Validator application index, a simple counter
+    uint256 private validatiorApplicationIndex;
+    /// @notice Validator application id for each validator
+    mapping(address =&gt; uint256) validatorApplicationId;
+    /// @notice Juror application struct
+    struct JurorApplication {
+        address applicant;
+        bool isFinished;
+        uint256 expire;
+    }
+    /// @notice Array of juror applications
+    JurorApplication[] public jurorApplications;
+    /// @notice Juror application id for each juror
+    mapping(address =&gt; uint256) jurorApplicationId;
+    /// @notice Juror application index, a simple counter
+    uint256 private caseApplicationIndex;
+    /// @notice The total voting power of all governance members
+    uint256 totalVotingPower;
+&nbsp;
+    /// @param roleManagerAddress address of the role manager contract
+    /// @param udaoAddress address of the udao token contract
+    /// @param platformTreasuryAddress address of the platform treasury contract
+    /// @param udaoVpAddress address of the udao voting power token contract
+    constructor(
+        address roleManagerAddress,
+        address udaoAddress,
+        address platformTreasuryAddress,
+        address udaoVpAddress
+    ) EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION) {
+        roleManager = IRoleManager(roleManagerAddress);
+        udao = IERC20(udaoAddress);
+        platformTreasury = IPlatformTreasury(platformTreasuryAddress);
+        udaovp = IUDAOVP(udaoVpAddress);
+    }
+&nbsp;
+    event AddressesUpdated(
+        address RoleManagerAddress,
+        address UdaoAddress,
+        address PlatformTreasuryAddress,
+        address UdaoVpAddress
+    );
+&nbsp;
+    /// @notice Get the updated addresses from contract manager
+<span class="fstat-no" title="function not covered" >    function updateAddresses(</span>
+        address roleManagerAddress,
+        address udaoAddress,
+        address platformTreasuryAddress,
+        address udaoVpAddress
+    ) external {
+<span class="cstat-no" title="statement not covered" >        require(</span>
+            (hasRole(BACKEND_ROLE, msg.sender) ||
+                hasRole(CONTRACT_MANAGER, msg.sender)),
+            "Only backend and contract manager can update addresses"
+        );
+        roleManager = IRoleManager(roleManagerAddress);
+        udao = IERC20(udaoAddress);
+        platformTreasury = IPlatformTreasury(platformTreasuryAddress);
+        udaovp = IUDAOVP(udaoVpAddress);
+&nbsp;
+<span class="cstat-no" title="statement not covered" >        emit AddressesUpdated(</span>
+            roleManagerAddress,
+            udaoAddress,
+            platformTreasuryAddress,
+            udaoVpAddress
+        );
+    }
+&nbsp;
+    /// @notice Allows admins to set validator lock amount
+    /// @param _amount new amount that requried to be locked
+<span class="fstat-no" title="function not covered" >    function setValidatorLockAmount(uint256 _amount) external {</span>
+<span class="cstat-no" title="statement not covered" >        require(</span>
+            roleManager.hasRoles(administrator_roles, msg.sender),
+            "Only admins can set validator lock amount"
+        );
+        validatorLockAmount = _amount;
+<span class="cstat-no" title="statement not covered" >        emit SetValidatorLockAmount(_amount);</span>
+    }
+&nbsp;
+    /// @notice Allows admins to set juror lock amount
+    /// @param _amount new amount that requried to be locked
+<span class="fstat-no" title="function not covered" >    function setJurorLockAmount(uint256 _amount) external {</span>
+<span class="cstat-no" title="statement not covered" >        require(</span>
+            roleManager.hasRoles(administrator_roles, msg.sender),
+            "Only admins can set juror lock amount"
+        );
+        jurorLockAmount = _amount;
+<span class="cstat-no" title="statement not covered" >        emit SetJurorLockAmount(_amount);</span>
+    }
+&nbsp;
+    /// @notice Allows admins to set validator lock time
+    /// @param _lockTime is new lock time for validators
+<span class="fstat-no" title="function not covered" >    function setValidatorLockTime(uint256 _lockTime) external {</span>
+<span class="cstat-no" title="statement not covered" >        require(</span>
+            roleManager.hasRoles(administrator_roles, msg.sender),
+            "Only admins can set validator lock time"
+        );
+        //convert it to unix timestamp
+        _lockTime = _lockTime * (1 days);
+        validatorLockTime = _lockTime;
+<span class="cstat-no" title="statement not covered" >        emit SetValidatorLockTime(_lockTime);</span>
+    }
+&nbsp;
+    /// @notice Allows admins to set juror lock time
+    /// @param _lockTime is new lock time for jurors
+<span class="fstat-no" title="function not covered" >    function setJurorLockTime(uint256 _lockTime) external {</span>
+<span class="cstat-no" title="statement not covered" >        require(</span>
+            roleManager.hasRoles(administrator_roles, msg.sender),
+            "Only admins can set juror lock time"
+        );
+        //convert it to unix timestamp
+        _lockTime = _lockTime * (1 days);
+        jurorLockTime = _lockTime;
+<span class="cstat-no" title="statement not covered" >        emit SetJurorLockTime(_lockTime);</span>
+    }
+&nbsp;
+    /// @notice Allows admins to set application lock time for role applications
+    /// @param _lockTime is new lock time for role applications
+<span class="fstat-no" title="function not covered" >    function setApplicationLockTime(uint256 _lockTime) external {</span>
+<span class="cstat-no" title="statement not covered" >        require(</span>
+            roleManager.hasRoles(administrator_roles, msg.sender),
+            "Only admins can set application lock time"
+        );
+        //convert it to unix timestamp
+        _lockTime = _lockTime * (1 days);
+        applicationLockTime = _lockTime;
+<span class="cstat-no" title="statement not covered" >        emit SetApplicationLockTime(_lockTime);</span>
+    }
+&nbsp;
+    /// @notice sets the vote reward given when governance member votes
+    /// @param _reward new amount of reward
+<span class="fstat-no" title="function not covered" >    function setVoteReward(uint256 _reward) external {</span>
+<span class="cstat-no" title="statement not covered" >        require(</span>
+            roleManager.hasRoles(administrator_roles, msg.sender),
+            "Only admins can set vote reward"
+        );
+        voteReward = _reward;
+<span class="cstat-no" title="statement not covered" >        emit SetVoteReward(_reward);</span>
+    }
+&nbsp;
+    /// @notice sets the platform treasury address
+    /// @param platformTreasuryAddress the address of the new platform treasury
+    /// TODO remove this function and use updateAddresses instead
+<span class="fstat-no" title="function not covered" >    function setPlatformTreasuryAddress(</span>
+        address platformTreasuryAddress
+    ) external {
+<span class="cstat-no" title="statement not covered" >        require(</span>
+            roleManager.hasRoles(administrator_roles, msg.sender),
+            "Only admins can set platform treasury address"
+        );
+        platformTreasury = IPlatformTreasury(platformTreasuryAddress);
+<span class="cstat-no" title="statement not covered" >        emit SetPlatformTreasuryAddress(platformTreasuryAddress);</span>
+    }
+&nbsp;
+    /// @notice sets the maximum stake days for governance members
+    /// @param _maximum_stake_days the new maximum stake days
+<span class="fstat-no" title="function not covered" >    function setMaximumStakeDays(uint256 _maximum_stake_days) external {</span>
+<span class="cstat-no" title="statement not covered" >        require(</span>
+            roleManager.hasRoles(administrator_roles, msg.sender),
+            "Only admins can set maximum stake days"
+        );
+        //convert it to unix timestamp
+        _maximum_stake_days = _maximum_stake_days * (1 days);
+<span class="cstat-no" title="statement not covered" >        require(</span>
+            _maximum_stake_days &gt;= minimum_stake_days,
+            "Maximum stake days must be greater than minimum days"
+        );
+        maximum_stake_days = _maximum_stake_days;
+<span class="cstat-no" title="statement not covered" >        emit SetMaximumStakeDays(_maximum_stake_days);</span>
+    }
+&nbsp;
+    /// @notice sets the minimum stake days for governance members
+    /// @param _minimum_stake_days the new minimum stake days
+<span class="fstat-no" title="function not covered" >    function setMinimumStakeDays(uint256 _minimum_stake_days) external {</span>
+<span class="cstat-no" title="statement not covered" >        require(</span>
+            roleManager.hasRoles(administrator_roles, msg.sender),
+            "Only admins can set minimum stake days"
+        );
+        //convert it to unix timestamp
+        _minimum_stake_days = _minimum_stake_days * (1 days);
+<span class="cstat-no" title="statement not covered" >        require(</span>
+            _minimum_stake_days &lt; maximum_stake_days,
+            "Minimum stake days must be less than maximum days"
+        );
+        minimum_stake_days = _minimum_stake_days;
+<span class="cstat-no" title="statement not covered" >        emit SetMinimumStakeDays(_minimum_stake_days);</span>
+    }
+&nbsp;
+    /// @notice Represents the right to get a role
+    struct RoleVoucher {
+        /// @notice Address of the redeemer
+        address redeemer;
+        /// @notice The date until the voucher is valid
+        uint256 validUntil;
+        /// @notice 0 validator, 1 juror
+        uint256 roleId;
+        /// @notice the EIP-712 signature of all other fields in the RoleVoucher struct.
+        bytes signature;
+    }
+&nbsp;
+    /// @notice allows users to apply for validator role
+    function applyForValidator() external <span class="missing-if-branch" title="else path not taken" >E</span>whenNotPaused {
+        //make sure redeemer is kyced and not banned
+        <span class="missing-if-branch" title="else path not taken" >E</span>require(isKYCed(msg.sender, 5), "You are not KYCed");
+        <span class="missing-if-branch" title="else path not taken" >E</span>require(isNotBanned(msg.sender, 5), "You were banned");
+        <span class="missing-if-branch" title="else path not taken" >E</span>require(
+            udaovp.balanceOf(msg.sender) &gt; 0,
+            "You have to be governance member to apply"
+        );
+        <span class="missing-if-branch" title="else path not taken" >E</span>require(
+            !hasRole(VALIDATOR_ROLE, msg.sender),
+            "Address is already a Validator"
+        );
+        <span class="missing-if-branch" title="else path not taken" >E</span>require(
+            !activeApplicationForValidator[msg.sender],
+            "You already have an active application"
+        );
+        udao.transferFrom(msg.sender, address(this), validatorLockAmount);
+        ValidatiorApplication
+            storage validatorApplication = validatorApplications.push();
+        validatorApplication.applicant = msg.sender;
+        validatorApplication.expire = block.timestamp + applicationLockTime;
+        validatorApplicationId[msg.sender] = validatiorApplicationIndex;
+        validatiorApplicationIndex++;
+        validatorBalanceOf[msg.sender] += validatorLockAmount;
+        activeApplicationForValidator[msg.sender] = true;
+&nbsp;
+        emit RoleApplied(0, msg.sender, validatorLockAmount);
+    }
+&nbsp;
+    /// @notice allows users to apply for juror role
+    function applyForJuror() external <span class="missing-if-branch" title="else path not taken" >E</span>whenNotPaused {
+        //make sure redeemer is kyced and not banned
+        <span class="missing-if-branch" title="else path not taken" >E</span>require(isKYCed(msg.sender, 6), "You are not KYCed");
+        <span class="missing-if-branch" title="else path not taken" >E</span>require(isNotBanned(msg.sender, 6), "You were banned");
+        <span class="missing-if-branch" title="else path not taken" >E</span>require(
+            udaovp.balanceOf(msg.sender) &gt; 0,
+            "You have to be governance member to apply"
+        );
+        <span class="missing-if-branch" title="else path not taken" >E</span>require(!hasRole(JUROR_ROLE, msg.sender), "Address is already a Juror");
+        <span class="missing-if-branch" title="else path not taken" >E</span>require(
+            !activeApplicationForJuror[msg.sender],
+            "You already have an active application"
+        );
+        udao.transferFrom(msg.sender, address(this), jurorLockAmount);
+        JurorApplication storage jurorApplication = jurorApplications.push();
+        jurorApplication.applicant = msg.sender;
+        jurorApplicationId[msg.sender] = caseApplicationIndex;
+        jurorApplication.expire = block.timestamp + applicationLockTime;
+        caseApplicationIndex++;
+        jurorBalanceOf[msg.sender] += jurorLockAmount;
+        activeApplicationForJuror[msg.sender] = true;
+&nbsp;
+        emit RoleApplied(1, msg.sender, jurorLockAmount);
+    }
+&nbsp;
+    /// @notice Users can use this function and assign validator or juror roles to themselves
+    function getApproved(RoleVoucher calldata voucher) external <span class="missing-if-branch" title="else path not taken" >E</span>whenNotPaused {
+        //make sure redeemer is kyced and not banned
+        <span class="missing-if-branch" title="else path not taken" >E</span>require(isKYCed(msg.sender, 7), "You are not KYCed");
+        <span class="missing-if-branch" title="else path not taken" >E</span>require(isNotBanned(msg.sender, 7), "You were banned");
+        // make sure redeemer is redeeming
+        <span class="missing-if-branch" title="else path not taken" >E</span>require(voucher.redeemer == msg.sender, "You are not the redeemer");
+        // make sure signature is valid and get the address of the signer
+        address signer = _verifyRole(voucher);
+        <span class="missing-if-branch" title="else path not taken" >E</span>require(voucher.validUntil &gt;= block.timestamp, "Voucher has expired.");
+        <span class="missing-if-branch" title="else path not taken" >E</span>require(
+            hasRole(VOUCHER_VERIFIER, signer),
+            "Signature invalid or unauthorized"
+        );
+&nbsp;
+        uint256 roleId = voucher.roleId;
+&nbsp;
+        if (roleId == 0) {
+            /// @dev validator role application
+            ValidatiorApplication
+                storage validatorApplication = validatorApplications[
+                    validatorApplicationId[voucher.redeemer]
+                ];
+            <span class="missing-if-branch" title="else path not taken" >E</span>require(
+                validatorApplication.isFinished == false,
+                "Application was already finished"
+            );
+&nbsp;
+            validatorApplication.isFinished = true;
+            validatorApplication.expire = block.timestamp + validatorLockTime;
+            roleManager.grantRoleStaker(VALIDATOR_ROLE, voucher.redeemer);
+            activeApplicationForValidator[voucher.redeemer] = false;
+        } else <span class="missing-if-branch" title="else path not taken" >E</span>if (roleId == 1) {
+            /// @dev juror role application
+            <span class="missing-if-branch" title="else path not taken" >E</span>require(
+                udaovp.balanceOf(voucher.redeemer) &gt; 0,
+                "You are not governance member"
+            );
+            JurorApplication storage jurorApplication = jurorApplications[
+                jurorApplicationId[voucher.redeemer]
+            ];
+            <span class="missing-if-branch" title="else path not taken" >E</span>require(
+                jurorApplication.isFinished == false,
+                "Application was already finished"
+            );
+            jurorApplication.isFinished = true;
+            jurorApplication.expire = block.timestamp + jurorLockTime;
+            roleManager.grantRoleStaker(JUROR_ROLE, voucher.redeemer);
+            activeApplicationForJuror[voucher.redeemer] = false;
+        } else {
+<span class="cstat-no" title="statement not covered" >            revert("Undefined role ID!")</span>;
+        }
+&nbsp;
+        emit RoleApproved(roleId, msg.sender);
+    }
+&nbsp;
+    /// @notice Allows backend to reject role assignment application
+    /// @param _applicant The address of the applicant
+<span class="fstat-no" title="function not covered" >    function rejectApplication(address _applicant, uint256 roleId) external {</span>
+<span class="cstat-no" title="statement not covered" >        require(</span>
+            hasRole(BACKEND_ROLE, msg.sender),
+            "Only backend can reject application"
+        );
+<span class="cstat-no" title="statement not covered" >        if (roleId == 0) {</span>
+<span class="cstat-no" title="statement not covered" >            ValidatiorApplication</span>
+                storage validatorApplication = validatorApplications[
+                    validatorApplicationId[_applicant]
+                ];
+            validatorApplication.expire = 0;
+            validatorApplication.isFinished = true;
+        } else <span class="cstat-no" title="statement not covered" >if (roleId == 1) {</span>
+<span class="cstat-no" title="statement not covered" >            JurorApplication storage jurorApplication = jurorApplications[</span>
+                jurorApplicationId[_applicant]
+            ];
+            jurorApplication.expire = 0;
+            jurorApplication.isFinished = true;
+        } else {
+<span class="cstat-no" title="statement not covered" >            revert("Role Id does not exist!")</span>;
+        }
+&nbsp;
+<span class="cstat-no" title="statement not covered" >        emit RoleRejected(roleId, _applicant);</span>
+    }
+&nbsp;
+    /// @notice Returns expire dates for validator
+    /// @param _user address of the user
+<span class="fstat-no" title="function not covered" >    function checkExpireDateValidator(</span>
+        address _user
+    ) external view returns (uint256 expireDate) {
+        expireDate = validatorApplications[validatorApplicationId[_user]]
+            .expire;
+<span class="cstat-no" title="statement not covered" >        return expireDate;</span>
+    }
+&nbsp;
+    /// @notice Returns expire dates for juror
+    /// @param _user address of the user
+<span class="fstat-no" title="function not covered" >    function checkExpireDateJuror(</span>
+        address _user
+    ) external view returns (uint256 expireDate) {
+        expireDate = jurorApplications[jurorApplicationId[_user]].expire;
+<span class="cstat-no" title="statement not covered" >        return expireDate;</span>
+    }
+&nbsp;
+    /// @notice allows validators to withdraw their staked tokens
+<span class="fstat-no" title="function not covered" >    function withdrawValidatorStake() public whenNotPaused {</span>
+<span class="cstat-no" title="statement not covered" >        uint256 withdrawableBalance;</span>
+<span class="cstat-no" title="statement not covered" >        ValidatiorApplication</span>
+            storage validatorApplication = validatorApplications[
+                validatorApplicationId[msg.sender]
+            ];
+&nbsp;
+<span class="cstat-no" title="statement not covered" >        if (hasRole(VALIDATOR_ROLE, msg.sender)) {</span>
+<span class="cstat-no" title="statement not covered" >            if (</span>
+                validatorApplication.isFinished &amp;&amp;
+                validatorApplication.expire &lt; block.timestamp
+            ) {
+<span class="cstat-no" title="statement not covered" >                roleManager.revokeRoleStaker(VALIDATOR_ROLE, msg.sender)</span>;
+                withdrawableBalance = validatorBalanceOf[msg.sender];
+                validatorBalanceOf[msg.sender] = 0;
+            }
+        } else {
+            // If application not finalized in time or got rejected
+<span class="cstat-no" title="statement not covered" >            if (</span>
+                validatorApplication.expire &lt; block.timestamp ||
+                validatorApplication.isFinished
+            ) {
+                withdrawableBalance = validatorBalanceOf[msg.sender];
+                validatorBalanceOf[msg.sender] = 0;
+            }
+        }
+        validatorApplication.isFinished == true;
+<span class="cstat-no" title="statement not covered" >        _withdrawValidator(msg.sender, withdrawableBalance)</span>;
+    }
+&nbsp;
+    /**
+     * @notice Withdraws desired amounts of tokens to "to" address
+     * @param to address of the redeemer of the tokens
+     * @param withdrawableBalance amount of tokens that will be withdrawn
+     */
+<span class="fstat-no" title="function not covered" >    function _withdrawValidator(address to, uint withdrawableBalance) internal {</span>
+<span class="cstat-no" title="statement not covered" >        require(withdrawableBalance &gt; 0, "You don't have withdrawable token")</span>;
+<span class="cstat-no" title="statement not covered" >        udao.transfer(to, withdrawableBalance)</span>;
+<span class="cstat-no" title="statement not covered" >        emit ValidatorStakeWithdrawn(to, withdrawableBalance);</span>
+    }
+&nbsp;
+    /**
+     * @notice allows jurors to withdraw their staked tokens
+     */
+<span class="fstat-no" title="function not covered" >    function withdrawJurorStake() public whenNotPaused {</span>
+<span class="cstat-no" title="statement not covered" >        uint256 withdrawableBalance;</span>
+<span class="cstat-no" title="statement not covered" >        JurorApplication storage jurorApplication = jurorApplications[</span>
+            jurorApplicationId[msg.sender]
+        ];
+&nbsp;
+<span class="cstat-no" title="statement not covered" >        if (hasRole(JUROR_ROLE, msg.sender)) {</span>
+<span class="cstat-no" title="statement not covered" >            if (</span>
+                jurorApplication.isFinished &amp;&amp;
+                jurorApplication.expire &lt; block.timestamp
+            ) {
+<span class="cstat-no" title="statement not covered" >                roleManager.revokeRoleStaker(JUROR_ROLE, msg.sender)</span>;
+                withdrawableBalance = jurorBalanceOf[msg.sender];
+                jurorBalanceOf[msg.sender] = 0;
+            }
+        } else {
+            // If application not finalized in time or got rejected
+<span class="cstat-no" title="statement not covered" >            if (</span>
+                jurorApplication.expire &lt; block.timestamp ||
+                jurorApplication.isFinished
+            ) {
+                withdrawableBalance = jurorBalanceOf[msg.sender];
+                jurorBalanceOf[msg.sender] = 0;
+            }
+        }
+&nbsp;
+        jurorApplication.isFinished == true;
+<span class="cstat-no" title="statement not covered" >        _withdrawJuror(msg.sender, withdrawableBalance)</span>;
+<span class="cstat-no" title="statement not covered" >        return;</span>
+    }
+&nbsp;
+    /**
+     * @notice Withdraws desired amounts of tokens to "to" address
+     * @param to address of the redeemer of the tokens
+     * @param withdrawableBalance amount of tokens that will be withdrawn
+     */
+<span class="fstat-no" title="function not covered" >    function _withdrawJuror(address to, uint withdrawableBalance) internal {</span>
+<span class="cstat-no" title="statement not covered" >        require(withdrawableBalance &gt; 0, "You don't have withdrawable token")</span>;
+<span class="cstat-no" title="statement not covered" >        udao.transfer(to, withdrawableBalance)</span>;
+<span class="cstat-no" title="statement not covered" >        emit JurorStakeWithdrawn(to, withdrawableBalance);</span>
+    }
+&nbsp;
+    /// @notice Returns the amount of token a validator could withdraw
+<span class="fstat-no" title="function not covered" >    function withdrawableValidatorStake() public view returns (uint256) {</span>
+<span class="cstat-no" title="statement not covered" >        uint256 withdrawableBalance;</span>
+<span class="cstat-no" title="statement not covered" >        ValidatiorApplication</span>
+            storage validatorApplication = validatorApplications[
+                validatorApplicationId[msg.sender]
+            ];
+&nbsp;
+<span class="cstat-no" title="statement not covered" >        if (hasRole(VALIDATOR_ROLE, msg.sender)) {</span>
+<span class="cstat-no" title="statement not covered" >            if (</span>
+                validatorApplication.isFinished &amp;&amp;
+                validatorApplication.expire &lt; block.timestamp
+            ) {
+                withdrawableBalance = validatorBalanceOf[msg.sender];
+            }
+        } else {
+            // If application got rejected
+<span class="cstat-no" title="statement not covered" >            if (validatorApplication.isFinished) {</span>
+                withdrawableBalance = validatorBalanceOf[msg.sender];
+            }
+        }
+<span class="cstat-no" title="statement not covered" >        return withdrawableBalance;</span>
+    }
+&nbsp;
+    /// @notice staking function to become a governance member
+    /// @param _amount amount of UDAO token that will be staked
+    /// @param _days amount of days UDAO token that will be staked for
+    function stakeForGovernance(
+        uint256 _amount,
+        uint256 _days
+    ) public <span class="missing-if-branch" title="else path not taken" >E</span>whenNotPaused {
+        <span class="missing-if-branch" title="else path not taken" >E</span>require(isKYCed(msg.sender, 8), "Address is not KYCed");
+        <span class="missing-if-branch" title="else path not taken" >E</span>require(isNotBanned(msg.sender, 8), "Address is banned");
+        <span class="missing-if-branch" title="else path not taken" >E</span>require(
+            _days * (1 days) &gt;= minimum_stake_days,
+            "Can't stake less than minimum_stake_days"
+        );
+        <span class="missing-if-branch" title="else path not taken" >E</span>require(
+            _days * (1 days) &lt;= maximum_stake_days,
+            "Can't stake more than maximum_stake_days"
+        );
+        udao.transferFrom(msg.sender, address(this), _amount);
+        GovernanceLock storage lock = governanceStakes[msg.sender].push();
+        lock.amount = _amount;
+        lock.expire = block.timestamp + (_days * (1 days));
+        lock.vpamount = _amount * _days;
+        totalVotingPower += lock.vpamount;
+        udaovp.mint(msg.sender, lock.vpamount);
+        emit GovernanceStake(msg.sender, _amount, lock.vpamount);
+    }
+&nbsp;
+    /// @notice withdraw function for released UDAO tokens
+    /// @param _amount amount of UDAO token that will be unstaked
+<span class="fstat-no" title="function not covered" >    function withdrawGovernanceStake(uint256 _amount) public whenNotPaused {</span>
+        /** 
+        Here is the explanation for the code above:
+        1. First we check if the amount is greater than 0 or not. If it is 0 then throw an error.
+        2. Second we declare 2 variables withdrawableBalance and vpBalance. withdrawableBalance is 
+        the amount of udao that can be withdrawn and vpBalance is the amount of voting power that can be withdrawn.
+        3. Then we loop over the governanceStakes[msg.sender] array and check if the lock is expired or not. 
+        If it is expired then we check if the amount is greater than the lock.amount or not. If it is greater 
+        then we add the lock.amount to the withdrawableBalance and lock.vpamount to vpBalance, and then we 
+        remove the lock from the array. If the amount is not greater then we calculate how much udao and 
+        voting power can be withdrawn from the lock and then we reduce the lock.amount and lock.vpamount 
+        by that much and then we add the udao and voting power to withdrawableBalance and vpBalance respectively. 
+        And then we check if the _amount is less than or equal to withdrawableBalance or not. If it is then we burn 
+        the voting power and transfer the udao to the user and then emit an event. If it is not then we revert with an error.
+        4. If we reach the end of the loop and the _amount is still not less than or equal to withdrawableBalance then 
+        it means that the user doesn't have enough withdrawable balance. So we revert with an error. 
+        */
+<span class="cstat-no" title="statement not covered" >        require(_amount &gt; 0, "Unstake amount can't be 0")</span>;
+<span class="cstat-no" title="statement not covered" >        uint256 withdrawableBalance;</span>
+<span class="cstat-no" title="statement not covered" >        uint256 vpBalance;</span>
+<span class="cstat-no" title="statement not covered" >        for (</span>
+            int256 i = 0;
+            uint256(i) &lt; governanceStakes[msg.sender].length;
+            i++
+        ) {
+<span class="cstat-no" title="statement not covered" >            GovernanceLock storage lock = governanceStakes[msg.sender][</span>
+                uint256(i)
+            ];
+<span class="cstat-no" title="statement not covered" >            if (block.timestamp &gt;= lock.expire) {</span>
+<span class="cstat-no" title="statement not covered" >                if ((_amount - withdrawableBalance) &gt;= lock.amount) {</span>
+                    withdrawableBalance += lock.amount;
+                    vpBalance += lock.vpamount;
+                    governanceStakes[msg.sender][uint256(i)] = governanceStakes[
+                        msg.sender
+                    ][governanceStakes[msg.sender].length - 1];
+<span class="cstat-no" title="statement not covered" >                    governanceStakes[msg.sender].pop()</span>;
+                    i--;
+                } else {
+<span class="cstat-no" title="statement not covered" >                    uint256 vpFromLatest = ((lock.vpamount *</span>
+                        (((_amount - withdrawableBalance) * 100) /
+                            lock.amount)) / 100);
+<span class="cstat-no" title="statement not covered" >                    uint256 udaoFromLatest = lock.amount -</span>
+                        (_amount - withdrawableBalance);
+                    lock.amount -= udaoFromLatest;
+                    lock.vpamount -= vpFromLatest;
+                    vpBalance += vpFromLatest;
+                    totalVotingPower -= vpBalance;
+                    withdrawableBalance += udaoFromLatest;
+                }
+<span class="cstat-no" title="statement not covered" >                if (_amount &lt;= withdrawableBalance) {</span>
+<span class="cstat-no" title="statement not covered" >                    udaovp.burnFrom(msg.sender, vpBalance)</span>;
+<span class="cstat-no" title="statement not covered" >                    udao.transfer(msg.sender, _amount)</span>;
+<span class="cstat-no" title="statement not covered" >                    emit GovernanceStakeWithdraw(</span>
+                        msg.sender,
+                        _amount,
+                        vpBalance
+                    );
+<span class="cstat-no" title="statement not covered" >                    return;</span>
+                }
+            }
+        }
+<span class="cstat-no" title="statement not covered" >        revert("You don't have enough withdrawable balance")</span>;
+    }
+&nbsp;
+    /// @notice add vote reward to voters reward count
+    /// @param voter address of the voter
+<span class="fstat-no" title="function not covered" >    function addVoteRewards(address voter) external whenNotPaused {</span>
+<span class="cstat-no" title="statement not covered" >        require(</span>
+            hasRole(GOVERNANCE_CONTRACT, msg.sender),
+            "Only governance contract can add vote rewards"
+        );
+<span class="cstat-no" title="statement not covered" >        require(udaovp.balanceOf(voter) &gt; 0, "Voter has no voting power")</span>;
+<span class="cstat-no" title="statement not covered" >        uint256 votingPowerRatio = (udaovp.balanceOf(voter) * 10000) /</span>
+            totalVotingPower;
+&nbsp;
+        rewardBalanceOf[voter] += (votingPowerRatio * voteReward) / 10000;
+<span class="cstat-no" title="statement not covered" >        emit VoteRewardAdded(voter, (votingPowerRatio * voteReward) / 10000);</span>
+    }
+&nbsp;
+    /// @notice withdraws reward earned from voting
+<span class="fstat-no" title="function not covered" >    function withdrawRewards() external whenNotPaused {</span>
+<span class="cstat-no" title="statement not covered" >        require(</span>
+            rewardBalanceOf[msg.sender] &gt; 0,
+            "You don't have any reward balance"
+        );
+<span class="cstat-no" title="statement not covered" >        uint256 voteRewards = rewardBalanceOf[msg.sender];</span>
+        rewardBalanceOf[msg.sender] = 0;
+<span class="cstat-no" title="statement not covered" >        platformTreasury.transferGovernanceRewards(msg.sender, voteRewards)</span>;
+<span class="cstat-no" title="statement not covered" >        emit VoteRewardsWithdrawn(msg.sender, voteRewards);</span>
+    }
+&nbsp;
+    /// @notice Returns a hash of the given ContentVoucher, prepared using EIP712 typed data hashing rules.
+    /// @param voucher A ContentVoucher to hash.
+    function _hashRole(
+        RoleVoucher calldata voucher
+    ) internal view returns (bytes32) {
+        return
+            _hashTypedDataV4(
+                keccak256(
+                    abi.encode(
+                        keccak256(
+                            "UDAOStaker(address redeemer,uint256 validUntil,uint256 roleId)"
+                        ),
+                        voucher.redeemer,
+                        voucher.validUntil,
+                        voucher.roleId
+                    )
+                )
+            );
+    }
+&nbsp;
+    /// @notice Returns the chain id of the current blockchain.
+    /// @dev This is used to workaround an issue with ganache returning different values from the on-chain chainid() function and
+    ///  the eth_chainId RPC method. See https://github.com/protocol/nft-website/issues/121 for context.
+    function getChainID() external view returns (uint256) {
+        uint256 id;
+        assembly {
+            id := chainid()
+        }
+        return id;
+    }
+&nbsp;
+    /// @notice Verifies the signature for a given ContentVoucher, returning the address of the signer.
+    /// @dev Will revert if the signature is invalid. Does not verify that the signer is authorized to mint NFTs.
+    /// @param voucher A ContentVoucher describing an unminted NFT.
+    function _verifyRole(
+        RoleVoucher calldata voucher
+    ) internal view returns (address) {
+        bytes32 digest = _hashRole(voucher);
+        return ECDSA.recover(digest, voucher.signature);
+    }
+&nbsp;
+<span class="fstat-no" title="function not covered" >    function pause() external {</span>
+<span class="cstat-no" title="statement not covered" >        require(hasRole(BACKEND_ROLE, msg.sender), "Only backend can pause")</span>;
+<span class="cstat-no" title="statement not covered" >        _pause()</span>;
+    }
+&nbsp;
+<span class="fstat-no" title="function not covered" >    function unpause() external {</span>
+<span class="cstat-no" title="statement not covered" >        require(hasRole(BACKEND_ROLE, msg.sender), "Only backend can unpause")</span>;
+<span class="cstat-no" title="statement not covered" >        _unpause()</span>;
+    }
+}
+&nbsp;</pre></td></tr>
+</table></pre>
+<div class='push'></div><!-- for sticky footer -->
+</div><!-- /wrapper -->
+<div class='footer quiet pad2 space-top1 center small'>
+  Code coverage
+  generated by <a href="http://istanbul-js.org/" target="_blank">istanbul</a> at Wed Nov 01 2023 11:36:12 GMT+0300 (GMT+03:00)
+</div>
+</div>
+<script src="../../prettify.js"></script>
+<script>
+window.onload = function () {
+        if (typeof prettyPrint === 'function') {
+            prettyPrint();
+        }
+};
+</script>
+<script src="../../sorter.js"></script>
+</body>
+</html>
