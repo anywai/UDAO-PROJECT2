@@ -64,6 +64,7 @@ async function reDeploy(reApplyRolesViaVoucher = true, isDexRequired = false) {
   const reApplyJurorRoles = [jurorMember, jurorMember1, jurorMember2, jurorMember3, jurorMember4];
   const VALIDATOR_ROLE = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("VALIDATOR_ROLE"));
   const JUROR_ROLE = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("JUROR_ROLE"));
+  contractGovernanceTreasury = replace.contractGovernanceTreasury;
 }
 
 async function createContentVoucher(
@@ -577,5 +578,110 @@ describe("Platform Treasury Contract - Coaching", function () {
     await expect(contractPlatformTreasury.connect(contentCreator).newRefundCoaching(refund_voucher)).to.revertedWith(
       "Refund period over you cant refund"
     );
+  });
+  it("Should allow backend to activate Governance Treasury and transfer funds to governance treasury", async function () {
+    await reDeploy();
+    /// Set KYC
+    await contractRoleManager.setKYC(contentCreator.address, true);
+    await contractRoleManager.setKYC(contentBuyer.address, true);
+    /// activate platform cuts
+    const _contentFoundCut = 4000;
+    const _contentGoverCut = 700;
+    const _contentJurorCut = 100;
+    const _contentValidCut = 200;
+    const _contentTotalCut = _contentFoundCut + _contentGoverCut + _contentJurorCut + _contentValidCut;
+
+    const _coachFoundCut = 4000;
+    const _coachGoverCut = 700;
+    const _coachJurorCut = 100;
+    const _coachValidCut = 200;
+    const _coachTotalCut = _coachFoundCut + _coachGoverCut + _coachJurorCut + _coachValidCut;
+
+    // Set coach cuts
+    const txContentCuts = await contractPlatformTreasury.connect(backend).setContentCuts(_contentFoundCut, _contentGoverCut, _contentJurorCut, _contentValidCut);
+    const txCoachCuts = await contractPlatformTreasury.connect(backend).setCoachCuts(_coachFoundCut, _coachGoverCut, _coachJurorCut, _coachValidCut);
+
+    // expect PlatformCutsUpdated event
+    await expect(txCoachCuts).to.emit(contractPlatformTreasury, "PlatformCutsUpdated").withArgs(
+      _contentFoundCut,
+      _contentGoverCut,
+      _contentJurorCut,
+      _contentValidCut,
+      _contentTotalCut,
+      _coachFoundCut,
+      _coachGoverCut,
+      _coachJurorCut,
+      _coachValidCut,
+      _coachTotalCut,
+    );
+    // Activate governance treasury
+    await contractPlatformTreasury.connect(backend).activateGovernanceTreasury(true);
+
+    /// Send UDAO to the buyer's wallet
+    await contractUDAO.transfer(contentBuyer.address, ethers.utils.parseEther("100.0"));
+    /// Get the amount of UDAO in the buyer's wallet
+    const buyerBalance = await contractUDAO.balanceOf(contentBuyer.address);
+    /// Content buyer needs to give approval to the platformtreasury
+    await contractUDAO
+      .connect(contentBuyer)
+      .approve(contractPlatformTreasury.address, ethers.utils.parseEther("999999999999.0"));
+
+    // Create CoachingVoucher to be able to buy coaching
+    const lazyCoaching = new LazyCoaching({
+      contract: contractVoucherVerifier,
+      signer: backend,
+    });
+    const coachingPrice = ethers.utils.parseEther("1.0");
+    /// Get the current block timestamp
+    const currentBlockTimestamp = (await hre.ethers.provider.getBlock()).timestamp;
+    /// Coaching date is 3 days from now
+    const coachingDate = currentBlockTimestamp + 3 * 24 * 60 * 60;
+    const role_voucher = await lazyCoaching.createVoucher(
+      contentCreator.address,
+      coachingPrice,
+      coachingDate,
+      contentBuyer.address
+    );
+    // Buy coaching
+    const purchaseTx = await contractPlatformTreasury.connect(contentBuyer).buyCoaching(role_voucher);
+    const queueTxReceipt = await purchaseTx.wait();
+    const queueTxEvent = queueTxReceipt.events.find((e) => e.event == "CoachingBought");
+    const coachingSaleID = queueTxEvent.args[0];
+    // Get the amount of UDAO in the buyer's wallet after buying coaching
+    const buyerBalanceAfter = await contractUDAO.balanceOf(contentBuyer.address);
+    // Check if correct amount of UDAO was deducted from the buyer's wallet
+    expect(buyerBalance.sub(buyerBalanceAfter)).to.equal(coachingPrice);
+    // Get coaching struct
+    const coachingStruct = await contractPlatformTreasury.coachSales(coachingSaleID);
+    // Check if returned learner address is the same as the buyer address
+    expect(coachingStruct.contentReceiver).to.equal(contentBuyer.address);
+
+    /// @dev Skip "refund window" days to allow foundation to withdraw funds
+    const refundWindowDays = await contractPlatformTreasury.refundWindow();
+    /// convert big number to number
+    const refundWindowDaysNumber = refundWindowDays.toNumber();
+
+    /// @dev Skip 20'refund window period' days to allow foundation to withdraw funds
+    const numBlocksToMine = Math.ceil((refundWindowDaysNumber * 24 * 60 * 60) / 2);
+    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine.toString(16)}`, "0x2"]);
+    // Update transfer platform balances
+    await contractPlatformTreasury.connect(backend).updateAndTransferPlatformBalances();
+    /// @dev Check if the governance treasury has the correct amount with respect to the platform cut percentages
+    const governanceTreasuryBalance = await contractUDAO.balanceOf(contractGovernanceTreasury.address);
+
+    // Get total price
+    const totalPrice = coachingPrice;
+    // Get coachFoundCut
+    const coachFoundCut = totalPrice.mul(_coachFoundCut).div(100000);
+    // Get coachGoverCut
+    const coachGoverCut = totalPrice.mul(_coachGoverCut).div(100000);
+    // Get conachJurorCut
+    const coachJurorCut = totalPrice.mul(_coachJurorCut).div(100000);
+    // Get coachValidCut
+    const coachValidCut = totalPrice.mul(_coachValidCut).div(100000);
+    // Get total cut
+    const totalCut = coachGoverCut.add(coachJurorCut).add(coachValidCut);
+    // Check if the governance treasury has the correct amount with respect to the platform cut percentages
+    expect(governanceTreasuryBalance).to.equal(totalCut);
   });
 });
