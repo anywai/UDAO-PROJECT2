@@ -466,6 +466,16 @@ abstract contract ContentManager is BasePlatform {
         return ownedParts[_buyer][_tokenId];
     }
 
+    /// @notice Returns the contents owned by buyer 
+    /// @param _buyer The address of the buyer.
+    function getOwnedContents(address _buyer)
+        external
+        view
+        returns (uint256[] memory)
+    {
+        return ownedContents[_buyer];
+    }
+
     /// @notice Update content and coaching CutPools and handle locked payments during the refund window.
     /// @param totalCutContentShare amount of UDAO to be paid to the platform, it is revenue of platform from content sales.
     /// @param totalCutCoachingShare amount of UDAO to be paid to the platform, it is revenue of platform from coaching sales.
@@ -839,16 +849,5 @@ abstract contract ContentManager is BasePlatform {
             (refundItem.instrShare + refundItem.totalCut)
         );
         emit SaleRefunded(voucher.saleID, 1);
-    }
-
-    /// @notice Returns the chain id of the current blockchain.
-    /// @dev This is used to workaround an issue with ganache returning different values from the on-chain chainid() function and
-    /// @dev the eth_chainId RPC method. See https://github.com/protocol/nft-website/issues/121 for context.
-    function getChainID() external view returns (uint256) {
-        uint256 id;
-        assembly {
-            id := chainid()
-        }
-        return id;
     }
 }
