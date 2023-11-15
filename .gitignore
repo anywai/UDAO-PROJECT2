@@ -50,8 +50,6 @@ Thumbs.db
 
 
 node_modules
-coverage
-coverage.json
 typechain
 
 #Hardhat files
