@@ -320,7 +320,7 @@ abstract contract BasePlatform is Pausable {
         uint newTotal = _coachFoundCut +
             _coachGoverCut +
             _coachJurorCut +
-            _coachFoundCut;
+            _coachValidCut;
 
         require(newTotal < 100000, "Cuts cant be higher than %100");
 
@@ -365,7 +365,7 @@ abstract contract BasePlatform is Pausable {
         uint newTotal = _contentFoundCut +
             _contentGoverCut +
             _contentJurorCut +
-            _contentFoundCut;
+            _contentValidCut;
         require(newTotal < 100000, "Cuts cant be higher than %100");
 
         contentFoundCut = _contentFoundCut;
