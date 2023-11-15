@@ -51,6 +51,8 @@ Thumbs.db
 
 node_modules
 typechain
+coverage
+coverage.json
 
 #Hardhat files
 cache
