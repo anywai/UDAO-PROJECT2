@@ -6,6 +6,8 @@
 import "./interfaces/IRoleManager.sol";
 import "./RoleLegacy.sol";
 
+import "hardhat/console.sol";
+
 interface updRoleManager {
     function updateAddresses(address supervisionAddress) external;
 }
@@ -172,7 +174,7 @@ contract ContractManager is RoleLegacy {
     /// @dev This function performs contract wise address updates on UDAO version 1.0 contracts and synchronizes them with the records in this contract.
     function syncVersion1ContractAddresses() external {
         updRoleManager(roleManagerAddress).updateAddresses(supervisionAddress);
-        updUDAOC(udaoAddress).updateAddresses(
+        updUDAOC(udaocAddress).updateAddresses(
             roleManagerAddress,
             supervisionAddress
         );
