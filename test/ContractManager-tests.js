@@ -64,47 +64,8 @@ async function reDeploy(reApplyRolesViaVoucher = true, isDexRequired = false) {
   account1 = replace.account1;
   account2 = replace.account2;
   account3 = replace.account3;
-  const reApplyValidatorRoles = [validator, validator1, validator2, validator3, validator4, validator5];
-  const reApplyJurorRoles = [jurorMember, jurorMember1, jurorMember2, jurorMember3, jurorMember4];
-  const VALIDATOR_ROLE = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("VALIDATOR_ROLE"));
-  const JUROR_ROLE = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("JUROR_ROLE"));
-}
-
-async function grantJurorRole(account, contractRoleManager, contractUDAO, contractUDAOStaker, backend) {
-  await contractRoleManager.setKYC(account.address, true);
-  await contractUDAO.transfer(account.address, ethers.utils.parseEther("100.0"));
-
-  await contractUDAO.connect(account).approve(contractUDAOStaker.address, ethers.utils.parseEther("999999999999.0"));
-
-  // Staking
-
-  await contractUDAOStaker.connect(account).stakeForGovernance(ethers.utils.parseEther("10"), 30);
-  await contractUDAOStaker.connect(account).applyForJuror();
-  const lazyRole = new LazyRole({
-    contract: contractUDAOStaker,
-    signer: backend,
-  });
-  const role_voucher = await lazyRole.createVoucher(account.address, Date.now() + 999999999, 1);
-  await contractUDAOStaker.connect(account).getApproved(role_voucher);
-}
-
-async function checkAccountUDAOVpBalanceAndDelegate(contractUDAOVp, account) {
-  const accountBalance = await contractUDAOVp.balanceOf(account.address);
-  await expect(accountBalance).to.equal(ethers.utils.parseEther("300"));
-  await contractUDAOVp.connect(account).delegate(account.address);
-  const accountVotes = await contractUDAOVp.getVotes(account.address);
-  await expect(accountVotes).to.equal(ethers.utils.parseEther("300"));
-}
-
-async function setupGovernanceMember(contractRoleManager, contractUDAO, contractUDAOStaker, governanceCandidate) {
-  await contractRoleManager.setKYC(governanceCandidate.address, true);
-  await contractUDAO.transfer(governanceCandidate.address, ethers.utils.parseEther("100.0"));
-  await contractUDAO
-    .connect(governanceCandidate)
-    .approve(contractUDAOStaker.address, ethers.utils.parseEther("999999999999.0"));
-  await expect(contractUDAOStaker.connect(governanceCandidate).stakeForGovernance(ethers.utils.parseEther("10"), 30))
-    .to.emit(contractUDAOStaker, "GovernanceStake") // transfer from null address to minter
-    .withArgs(governanceCandidate.address, ethers.utils.parseEther("10"), ethers.utils.parseEther("300"));
+  contractVoucherVerifier = replace.contractVoucherVerifier;
+  contractGovernanceTreasury = replace.contractGovernanceTreasury;
 }
 
 describe("Contract Manager", function () {
@@ -279,6 +240,12 @@ describe("Contract Manager", function () {
         .connect(contentBuyer1)
         .setAddresesCommonInVersion1and2(testAddressGovernanceTreasury, testAddressSupervision)
     ).to.revertedWith("Only backend can bulk set addresses");
+    // bulk set version 2 should be reverted
+    await expect(
+      contractContractManager
+        .connect(contentBuyer1)
+        .setAddresesVersion2GovernanceContracts(testAddressUdaoVp, testAddressUdaoStaker, testAddressUdaoGovernor)
+    ).to.revertedWith("Only backend can bulk set addresses");
   });
 
   it("Should allow backend to bulk set address of UDAO Version 1.0 contracts", async function () {
@@ -334,5 +301,89 @@ describe("Contract Manager", function () {
     expect(await contractContractManager.udaoVpAddress()).to.equal(testAddressUdaoVp);
     expect(await contractContractManager.udaoStakerAddress()).to.equal(testAddressUdaoStaker);
     expect(await contractContractManager.udaoGovernorAddress()).to.equal(testAddressUdaoGovernor);
+  });
+
+  it("Should allow backend to bulk set address and sync after deployment of UDAO Version 1.0", async function () {
+    await reDeploy();
+    // @dev Dummy contract address
+    const testAddressUdao = contractUDAO.address;
+    const testAddressRoleManager = contractRoleManager.address;
+    const testAddressUdaoc = contractUDAOContent.address;
+    const testAddressUdaoCert = contractUDAOCertificate.address;
+    const testAddressVoucherVerifier = contractVoucherVerifier.address;
+    const testAddressPlatformTreasury = contractPlatformTreasury.address;
+
+    await contractContractManager
+      .connect(backend)
+      .setAddresesVersion1Contracts(
+        testAddressUdao,
+        testAddressRoleManager,
+        testAddressUdaoc,
+        testAddressUdaoCert,
+        testAddressVoucherVerifier,
+        testAddressPlatformTreasury
+      );
+    expect(await contractContractManager.udaoAddress()).to.equal(testAddressUdao);
+    expect(await contractContractManager.roleManagerAddress()).to.equal(testAddressRoleManager);
+    expect(await contractContractManager.udaocAddress()).to.equal(testAddressUdaoc);
+    expect(await contractContractManager.udaoCertAddress()).to.equal(testAddressUdaoCert);
+    expect(await contractContractManager.voucherVerifierAddress()).to.equal(testAddressVoucherVerifier);
+    expect(await contractContractManager.platformTreasuryAddress()).to.equal(testAddressPlatformTreasury);
+
+    await reDeploy();
+    // @dev Dummy contract address
+    const testAddressGovernanceTreasury = contractGovernanceTreasury.address;
+    const testAddressSupervision = contractSupervision.address;
+    await contractContractManager
+      .connect(backend)
+      .setAddresesCommonInVersion1and2(testAddressGovernanceTreasury, testAddressSupervision);
+    expect(await contractContractManager.governanceTreasuryAddress()).to.equal(testAddressGovernanceTreasury);
+    expect(await contractContractManager.supervisionAddress()).to.equal(testAddressSupervision);
+
+    // should backend sync version 1 contracts addresses in udao ecosystem
+    await contractContractManager.connect(backend).syncVersion1ContractAddresses();
+  });
+
+  it("Should fail backend-else role to use sync function after deployment of UDAO Version 1.0", async function () {
+    await reDeploy();
+    // @dev Dummy contract address
+    const testAddressUdao = contractUDAO.address;
+    const testAddressRoleManager = contractRoleManager.address;
+    const testAddressUdaoc = contractUDAOContent.address;
+    const testAddressUdaoCert = contractUDAOCertificate.address;
+    const testAddressVoucherVerifier = contractVoucherVerifier.address;
+    const testAddressPlatformTreasury = contractPlatformTreasury.address;
+
+    await contractContractManager
+      .connect(backend)
+      .setAddresesVersion1Contracts(
+        testAddressUdao,
+        testAddressRoleManager,
+        testAddressUdaoc,
+        testAddressUdaoCert,
+        testAddressVoucherVerifier,
+        testAddressPlatformTreasury
+      );
+    expect(await contractContractManager.udaoAddress()).to.equal(testAddressUdao);
+    expect(await contractContractManager.roleManagerAddress()).to.equal(testAddressRoleManager);
+    expect(await contractContractManager.udaocAddress()).to.equal(testAddressUdaoc);
+    expect(await contractContractManager.udaoCertAddress()).to.equal(testAddressUdaoCert);
+    expect(await contractContractManager.voucherVerifierAddress()).to.equal(testAddressVoucherVerifier);
+    expect(await contractContractManager.platformTreasuryAddress()).to.equal(testAddressPlatformTreasury);
+
+    await reDeploy();
+    // @dev Dummy contract address
+    const testAddressGovernanceTreasury = contractGovernanceTreasury.address;
+    const testAddressSupervision = contractSupervision.address;
+    await contractContractManager
+      .connect(backend)
+      .setAddresesCommonInVersion1and2(testAddressGovernanceTreasury, testAddressSupervision);
+    expect(await contractContractManager.governanceTreasuryAddress()).to.equal(testAddressGovernanceTreasury);
+    expect(await contractContractManager.supervisionAddress()).to.equal(testAddressSupervision);
+
+    // should backend sync version 1 contracts addresses in udao ecosystem
+    await expect(contractContractManager.connect(contentBuyer1).syncVersion1ContractAddresses()).to.revertedWith(
+      "Only backend can bulk set addresses"
+    );
   });
 });
