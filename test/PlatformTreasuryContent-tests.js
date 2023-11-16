@@ -169,16 +169,8 @@ describe("Platform Treasury Contract - Content", function () {
     await reDeploy();
 
     await expect(
-      contractPlatformTreasury
-        .connect(foundation)
-        .updateAddresses(
-          contractUDAO.address,
-          contractUDAOContent.address,
-          contractRoleManager.address,
-          contractGovernanceTreasury.address,
-          contractVoucherVerifier.address
-        )
-    ).to.revertedWith("Only backend and contract manager can update addresses");
+      contractPlatformTreasury.connect(contentBuyer).setFoundationAddress(contractUDAO.address)
+    ).to.revertedWith("Only foundation can set foundation wallet address");
   });
   //!!Bu dünkü test
   it("Should a user able to buy the full content", async function () {
@@ -1082,15 +1074,17 @@ describe("Platform Treasury Contract - Content", function () {
       expect(result[i]).to.equal(purchasedParts[0][i]);
     }
     // Check if the buyer has the content part
-    const result2 = await contractPlatformTreasury.connect(contentBuyer1).getOwnedParts(contentBuyer1.address, tokenId2);
+    const result2 = await contractPlatformTreasury
+      .connect(contentBuyer1)
+      .getOwnedParts(contentBuyer1.address, tokenId2);
     // Check if purchasedParts2[0] array same as result2 array
     for (let i = 0; i < purchasedParts[1].length; i++) {
       expect(result2[i]).to.equal(purchasedParts[1][i]);
     }
     // Check if the buyer paid the correct amount
     expect(balanceBefore.sub(balanceAfter)).to.equal(pricesToPay[0].add(pricesToPay[1]));
-
   });
+
   it("Should allow a user to buy multiple contents cart purchase with a single transaction and gift to someone else", async function () {
     await reDeploy();
     /// Set KYC
@@ -1160,7 +1154,9 @@ describe("Platform Treasury Contract - Content", function () {
       expect(result[i]).to.equal(purchasedParts[0][i]);
     }
     // Check if the buyer has the content part
-    const result2 = await contractPlatformTreasury.connect(contentBuyer3).getOwnedParts(contentBuyer3.address, tokenId2);
+    const result2 = await contractPlatformTreasury
+      .connect(contentBuyer3)
+      .getOwnedParts(contentBuyer3.address, tokenId2);
     // Check if purchasedParts2[0] array same as result2 array
     for (let i = 0; i < purchasedParts[1].length; i++) {
       expect(result2[i]).to.equal(purchasedParts[1][i]);
@@ -1189,23 +1185,28 @@ describe("Platform Treasury Contract - Content", function () {
     const _coachTotalCut = _coachFoundCut + _coachGoverCut + _coachJurorCut + _coachValidCut;
 
     // Set coach cuts
-    const txCoachCuts = await contractPlatformTreasury.connect(backend).setCoachCuts(_coachFoundCut, _coachGoverCut, _coachJurorCut, _coachValidCut);
-    const txContentCuts = await contractPlatformTreasury.connect(backend).setContentCuts(_contentFoundCut, _contentGoverCut, _contentJurorCut, _contentValidCut);
-
+    const txCoachCuts = await contractPlatformTreasury
+      .connect(backend)
+      .setCoachCuts(_coachFoundCut, _coachGoverCut, _coachJurorCut, _coachValidCut);
+    const txContentCuts = await contractPlatformTreasury
+      .connect(backend)
+      .setContentCuts(_contentFoundCut, _contentGoverCut, _contentJurorCut, _contentValidCut);
 
     // expect PlatformCutsUpdated event
-    await expect(txContentCuts).to.emit(contractPlatformTreasury, "PlatformCutsUpdated").withArgs(
-      _contentFoundCut,
-      _contentGoverCut,
-      _contentJurorCut,
-      _contentValidCut,
-      _contentTotalCut,
-      _coachFoundCut,
-      _coachGoverCut,
-      _coachJurorCut,
-      _coachValidCut,
-      _coachTotalCut,
-    );
+    await expect(txContentCuts)
+      .to.emit(contractPlatformTreasury, "PlatformCutsUpdated")
+      .withArgs(
+        _contentFoundCut,
+        _contentGoverCut,
+        _contentJurorCut,
+        _contentValidCut,
+        _contentTotalCut,
+        _coachFoundCut,
+        _coachGoverCut,
+        _coachJurorCut,
+        _coachValidCut,
+        _coachTotalCut
+      );
 
     // Create content
     const contentParts = [0, 1, 2, 3, 4];
@@ -1276,9 +1277,6 @@ describe("Platform Treasury Contract - Content", function () {
       expect(result[i]).to.equal(purchasedParts1[0][i]);
     }
 
-
-
-
     // activate governance treasury
     await contractPlatformTreasury.connect(backend).activateGovernanceTreasury(true);
     /// @dev Skip "refund window" days to allow foundation to withdraw funds
@@ -1289,7 +1287,6 @@ describe("Platform Treasury Contract - Content", function () {
     /// @dev Skip 20'refund window period' days to allow foundation to withdraw funds
     const numBlocksToMine = Math.ceil((refundWindowDaysNumber * 24 * 60 * 60) / 2);
     await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine.toString(16)}`, "0x2"]);
-
 
     // Check if the buyer paid the correct amount
     expect(balanceBefore1.sub(balanceAfter1)).to.equal(pricesToPay[0]);
@@ -1343,7 +1340,6 @@ describe("Platform Treasury Contract - Content", function () {
     const totalCut = contentGoverCut.add(contentJurorCut).add(contentValidCut);
     // Check if the governance treasury has the correct amount with respect to the platform cut percentages
     expect(governanceTreasuryBalance).to.equal(totalCut);
-
   });
 
   it("Should allow buyer to refund a full content in refundable window", async function () {
@@ -1437,6 +1433,159 @@ describe("Platform Treasury Contract - Content", function () {
     // Check if the buyer has finalContents
     const result3 = await contractPlatformTreasury.connect(contentBuyer1).getOwnedContents(contentBuyer1.address);
     expect(result3[0]).to.equal(finalContents[0]);
+  });
 
+  it("Should backed change refund window", async function () {
+    await reDeploy();
+    /// Set KYC
+    await contractRoleManager.setKYC(contentCreator.address, true);
+    await contractRoleManager.setKYC(contentBuyer.address, true);
+    await contractRoleManager.setKYC(contentBuyer1.address, true);
+    // Create content
+    const contentParts = [0, 1, 2, 3, 4];
+    // Create content voucher
+    const createContentVoucherSample = await createContentVoucher(
+      contractUDAOContent,
+      backend,
+      contentCreator,
+      contentParts,
+      (redeemType = 1),
+      (validationScore = 1)
+    );
+
+    // Create content with voucher
+    const tx = await contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample);
+    // Get NewContentCreated event and get tokenId
+    const receipt = await tx.wait();
+    const tokenId1 = receipt.events[0].args[2].toNumber();
+    // Create content
+    const contentParts2 = [0, 1, 2, 3, 4, 5, 6];
+    // Create content voucher
+    const createContentVoucherSample2 = await createContentVoucher(
+      contractUDAOContent,
+      backend,
+      contentCreator,
+      contentParts2,
+      (redeemType = 1),
+      (validationScore = 1)
+    );
+
+    // Create content with voucher
+    const tx2 = await contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample2);
+    // Get NewContentCreated event and get tokenId
+    const receipt2 = await tx2.wait();
+    const tokenId2 = receipt2.events[0].args[2].toNumber();
+    // You need to use all parts of the content to buy it. Get all parts of the content
+    const parts1 = await contractUDAOContent.getContentParts(tokenId1);
+    const parts2 = await contractUDAOContent.getContentParts(tokenId2);
+    // Make a content purchase for token 1
+    const tokenIds = [1];
+    const purchasedParts1 = [parts1];
+    const redeemers1 = [contentBuyer1.address];
+    const giftReceiver = [ethers.constants.AddressZero];
+    const fullContentPurchase = [true];
+    const pricesToPay = [ethers.utils.parseEther("3")];
+    const validUntil = Date.now() + 999999999;
+    const balances = await makeContentPurchase(
+      contractPlatformTreasury,
+      contractVoucherVerifier,
+      contentBuyer1,
+      contractRoleManager,
+      contractUDAO,
+      tokenIds,
+      purchasedParts1,
+      pricesToPay,
+      fullContentPurchase,
+      validUntil,
+      redeemers1,
+      giftReceiver
+    );
+    const balanceBefore1 = balances[0];
+    const balanceAfter1 = balances[1];
+    // Check if the buyer has the content part
+    const result = await contractPlatformTreasury.connect(contentBuyer1).getOwnedParts(contentBuyer1.address, tokenId1);
+    // Check if purchasedParts1[0] array same as result array
+    for (let i = 0; i < purchasedParts1[0].length; i++) {
+      expect(result[i]).to.equal(purchasedParts1[0][i]);
+    }
+    // Check if the buyer paid the correct amount
+    expect(balanceBefore1.sub(balanceAfter1)).to.equal(pricesToPay[0]);
+    /// @dev Skip "refund window-1" days to allow foundation to withdraw funds
+    /// @dev Skip "refund window" days to allow foundation to withdraw funds
+    const refundWindowDays = await contractPlatformTreasury.refundWindow();
+    /// convert big number to number
+    const refundWindowDaysNumber = refundWindowDays.toNumber();
+
+    /// @dev Skip 20'refund window period' days to allow foundation to withdraw funds
+    const numBlocksToMine = Math.ceil(((refundWindowDaysNumber - 1) * 24 * 60 * 60) / 2);
+    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine.toString(16)}`, "0x2"]);
+
+    // Make a content purchase for token 2
+    const tokenIds2 = [2];
+    const purchasedParts2 = [parts2];
+    const redeemers2 = [contentBuyer1.address];
+    const giftReceiver2 = [ethers.constants.AddressZero];
+    const fullContentPurchase2 = [true];
+    const pricesToPay2 = [ethers.utils.parseEther("5")];
+    const validUntil2 = Date.now() + 999999999;
+    const balances2 = await makeContentPurchase(
+      contractPlatformTreasury,
+      contractVoucherVerifier,
+      contentBuyer1,
+      contractRoleManager,
+      contractUDAO,
+      tokenIds2,
+      purchasedParts2,
+      pricesToPay2,
+      fullContentPurchase2,
+      validUntil2,
+      redeemers2,
+      giftReceiver2
+    );
+    const balanceBefore2 = balances2[0];
+    const balanceAfter2 = balances2[1];
+    // Check if the buyer has the content part
+    const result2 = await contractPlatformTreasury
+      .connect(contentBuyer1)
+      .getOwnedParts(contentBuyer1.address, tokenId2);
+    // Check if purchasedParts2[0] array same as result2 array
+    for (let i = 0; i < purchasedParts2[0].length; i++) {
+      expect(result2[i]).to.equal(purchasedParts2[0][i]);
+    }
+    // Check if the buyer paid the correct amount
+    expect(balanceBefore2.sub(balanceAfter2)).to.equal(pricesToPay2[0]);
+
+    /// @dev Skip 1 day to complete refund window for first purchase
+    const numBlocksToMine2 = Math.ceil((1 * 24 * 60 * 60) / 2);
+    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine2.toString(16)}`, "0x2"]);
+
+    // change refund window to 7 days
+    const newRefundWindow = 7;
+    await contractPlatformTreasury.connect(backend).changeRefundWindow(newRefundWindow);
+
+    expect(await contractPlatformTreasury.refundWindow()).to.equal(newRefundWindow);
+
+    const _contentFoundCut = await contractPlatformTreasury.contentFoundCut();
+    const totalPrice1 = pricesToPay[0];
+    const contentFoundCut1 = totalPrice1.mul(_contentFoundCut).div(100000);
+    expect(await contractPlatformTreasury.foundationBalance()).to.equal(contentFoundCut1);
+
+    /// @dev Skip new refund window to complete refund window for seccond purchase
+    const numBlocksToMine3 = Math.ceil((newRefundWindow * 24 * 60 * 60) / 2);
+    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine3.toString(16)}`, "0x2"]);
+    const totalPrice2 = pricesToPay2[0];
+    const contentFoundCut2 = totalPrice2.mul(_contentFoundCut).div(100000);
+
+    // Update balances
+    await contractPlatformTreasury.updateAndTransferPlatformBalances();
+    const numBlocksToMine4 = Math.ceil((1 * 24 * 60 * 60) / 2);
+    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine4.toString(16)}`, "0x2"]);
+    expect(await contractPlatformTreasury.foundationBalance()).to.equal(contentFoundCut1.add(contentFoundCut2));
+    // foundation withdraw funds
+    await contractPlatformTreasury.connect(foundation).withdrawFoundation();
+    // expect recorded balance to be zero
+    expect(await contractPlatformTreasury.foundationBalance()).to.equal(0);
+    // Expect UDAO balance of foundation to be equal to the total found cut
+    expect(await contractUDAO.balanceOf(foundation.address)).to.equal(contentFoundCut1.add(contentFoundCut2));
   });
 });

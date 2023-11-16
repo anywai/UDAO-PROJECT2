@@ -363,7 +363,7 @@ describe("Platform Treasury General", function () {
     // new dummy foundation address
     const newFoundation = await ethers.Wallet.createRandom();
     // set new foundation address
-    await expect(contractPlatformTreasury.connect(backend).setFoundationAddress(newFoundation.address))
+    await expect(contractPlatformTreasury.connect(foundation).setFoundationAddress(newFoundation.address))
       .to.emit(contractPlatformTreasury, "FoundationWalletUpdated")
       .withArgs(newFoundation.address);
   });
@@ -411,7 +411,7 @@ describe("Platform Treasury General", function () {
       giftReceiver
     );
     // set foundation wallet address
-    await expect(contractPlatformTreasury.connect(backend).setFoundationAddress(foundation.address))
+    await expect(contractPlatformTreasury.connect(foundation).setFoundationAddress(foundation.address))
       .to.emit(contractPlatformTreasury, "FoundationWalletUpdated")
       .withArgs(foundation.address);
 
@@ -516,7 +516,7 @@ describe("Platform Treasury General", function () {
     );
 
     // set foundation wallet address
-    await expect(contractPlatformTreasury.connect(backend).setFoundationAddress(foundation.address))
+    await expect(contractPlatformTreasury.connect(foundation).setFoundationAddress(foundation.address))
       .to.emit(contractPlatformTreasury, "FoundationWalletUpdated")
       .withArgs(foundation.address);
     /// @dev Skip "refund window" days to allow foundation to withdraw funds
