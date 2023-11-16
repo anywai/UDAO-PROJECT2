@@ -50,9 +50,9 @@ Thumbs.db
 
 
 node_modules
-typechain
 coverage
 coverage.json
+typechain
 
 #Hardhat files
 cache
