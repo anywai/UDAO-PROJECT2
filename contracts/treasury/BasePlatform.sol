@@ -36,7 +36,7 @@ abstract contract BasePlatform is Pausable {
 
     /// @notice during refund windows all payments locked on contract and users can request refund
     /// @dev it initiated as 20 days and locked balance/pool array's size (61) defines the maximum setable refund window.
-    uint256 public refundWindow = 20; 
+    uint256 public refundWindow = 20;
 
     /// @notice instructor address => instructor's balance
     mapping(address => uint) public instBalance;
@@ -173,8 +173,8 @@ abstract contract BasePlatform is Pausable {
     /// @param _newAddress new address of the contract
     function setFoundationAddress(address _newAddress) external {
         require(
-            hasRole(BACKEND_ROLE, msg.sender),
-            "Only backend can set contract address"
+            msg.sender == foundationWallet,
+            "Only foundation can set foundation wallet address"
         );
         foundationWallet = _newAddress;
         emit FoundationWalletUpdated(_newAddress);
