@@ -125,7 +125,7 @@ contract ContractManager is RoleLegacy {
     ) external {
         require(
             hasRole(BACKEND_ROLE, msg.sender),
-            "Only backend can set governance treasury address"
+            "Only backend can bulk set addresses"
         );
         udaoAddress = _udaoAddress;
         roleManagerAddress = _roleManagerAddress;
@@ -145,7 +145,7 @@ contract ContractManager is RoleLegacy {
     ) external {
         require(
             hasRole(BACKEND_ROLE, msg.sender),
-            "Only backend can set governance treasury address"
+            "Only backend can bulk set addresses"
         );
         governanceTreasuryAddress = _governanceTreasuryAddress;
         supervisionAddress = _supervisionAddress;
@@ -163,7 +163,7 @@ contract ContractManager is RoleLegacy {
     ) external {
         require(
             hasRole(BACKEND_ROLE, msg.sender),
-            "Only backend can set governance treasury address"
+            "Only backend can bulk set addresses"
         );
         udaoVpAddress = _udaoVpAddress;
         udaoStakerAddress = _udaoStakerAddress;
@@ -221,7 +221,7 @@ contract ContractManager is RoleLegacy {
     function setAddressUDAOContract(address _udaoAddress) external {
         require(
             hasRole(BACKEND_ROLE, msg.sender),
-            "Only backend can set udao address"
+            "Only backend can set Udao address"
         );
         udaoAddress = _udaoAddress;
     }
@@ -233,7 +233,7 @@ contract ContractManager is RoleLegacy {
     ) external {
         require(
             hasRole(BACKEND_ROLE, msg.sender),
-            "Only backend can set irm address"
+            "Only backend can set RoleManager address"
         );
         roleManagerAddress = _roleManagerAddress;
     }
@@ -243,7 +243,7 @@ contract ContractManager is RoleLegacy {
     function setAddressUDAOCContract(address _udaocAddress) external {
         require(
             hasRole(BACKEND_ROLE, msg.sender),
-            "Only backend can set udaoc address"
+            "Only backend can set Udaoc address"
         );
         udaocAddress = _udaocAddress;
     }
@@ -253,7 +253,7 @@ contract ContractManager is RoleLegacy {
     function setAddressUDAOCertContract(address _udaoCertAddress) external {
         require(
             hasRole(BACKEND_ROLE, msg.sender),
-            "Only backend can set udaoc address"
+            "Only backend can set UdaoCert address"
         );
         udaoCertAddress = _udaoCertAddress;
     }
@@ -265,7 +265,7 @@ contract ContractManager is RoleLegacy {
     ) external {
         require(
             hasRole(BACKEND_ROLE, msg.sender),
-            "Only backend can set voucher verifier address"
+            "Only backend can set VoucherVerifier address"
         );
         voucherVerifierAddress = _voucherVerifierAddress;
     }
@@ -277,7 +277,7 @@ contract ContractManager is RoleLegacy {
     ) external {
         require(
             hasRole(BACKEND_ROLE, msg.sender),
-            "Only backend can set platform treasury address"
+            "Only backend can set PlatformTreasury address"
         );
         platformTreasuryAddress = _platformTreasuryAddress;
     }
@@ -289,7 +289,7 @@ contract ContractManager is RoleLegacy {
     ) external {
         require(
             hasRole(BACKEND_ROLE, msg.sender),
-            "Only backend can set governance treasury address"
+            "Only backend can set GovernanceTreasury address"
         );
         governanceTreasuryAddress = _governanceTreasuryAddress;
     }
@@ -301,7 +301,7 @@ contract ContractManager is RoleLegacy {
     ) external {
         require(
             hasRole(BACKEND_ROLE, msg.sender),
-            "Only backend can set ISupVis address"
+            "Only backend can set Supervision address"
         );
         supervisionAddress = _supervisionAddress;
     }
@@ -311,7 +311,7 @@ contract ContractManager is RoleLegacy {
     function setAddressUDAOvpContract(address _udaoVpAddress) external {
         require(
             hasRole(BACKEND_ROLE, msg.sender),
-            "Only backend can set udao vp address"
+            "Only backend can set UdaoVp address"
         );
         udaoVpAddress = _udaoVpAddress;
     }
@@ -321,7 +321,7 @@ contract ContractManager is RoleLegacy {
     function setAddressUDAOStakerContract(address _udaoStakerAddress) external {
         require(
             hasRole(BACKEND_ROLE, msg.sender),
-            "Only backend can set staking address"
+            "Only backend can set UdaoStaker address"
         );
         udaoStakerAddress = _udaoStakerAddress;
     }
@@ -333,7 +333,7 @@ contract ContractManager is RoleLegacy {
     ) external {
         require(
             hasRole(BACKEND_ROLE, msg.sender),
-            "Only backend can set staking address"
+            "Only backend can set UdaoGovernor address"
         );
         udaoGovernorAddress = _udaoGovernorAddress;
     }
