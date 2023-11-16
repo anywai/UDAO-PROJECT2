@@ -200,6 +200,9 @@ contract PlatformTreasury is ContentManager {
         }
         refundWindow = _newWindow;
         emit RefundWindowUpdated(_newWindow);
+
+        /// @dev transactionLBIndex determines a "transaction time dependent position" in the Locked balanaces array.
+        transactionLBIndex = transactionTime % refundWindow;
         /// @dev update platform cut (coaching&content) pools and platform locked pools
         _updatePlatformCutBalances(
             emptiedContentCutPool,

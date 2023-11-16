@@ -466,13 +466,11 @@ abstract contract ContentManager is BasePlatform {
         return ownedParts[_buyer][_tokenId];
     }
 
-    /// @notice Returns the contents owned by buyer 
+    /// @notice Returns the contents owned by buyer
     /// @param _buyer The address of the buyer.
-    function getOwnedContents(address _buyer)
-        external
-        view
-        returns (uint256[] memory)
-    {
+    function getOwnedContents(
+        address _buyer
+    ) external view returns (uint256[] memory) {
         return ownedContents[_buyer];
     }
 
@@ -569,6 +567,8 @@ abstract contract ContentManager is BasePlatform {
             prevInstRefundWindow[_inst] = refundWindow;
             /// @dev initiate or update the instructor lock time
             instLockTime[_inst] = _transactionTime;
+            /// @dev transactionLBIndex determines a "transaction time dependent position" in the Locked balanaces array.
+            _transactionLBIndex = _transactionTime % refundWindow;
             /// @dev add the "collected old balances" to instructor locked balance according to the new refund window.
             instLockedBalance[_inst][_transactionLBIndex] += tempSafetyBalance;
         }
