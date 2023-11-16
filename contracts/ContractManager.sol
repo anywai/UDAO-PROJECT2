@@ -6,8 +6,6 @@
 import "./interfaces/IRoleManager.sol";
 import "./RoleLegacy.sol";
 
-import "hardhat/console.sol";
-
 interface updRoleManager {
     function updateAddresses(address supervisionAddress) external;
 }
