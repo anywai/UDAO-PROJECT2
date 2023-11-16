@@ -196,8 +196,89 @@ describe("Contract Manager", function () {
     await reDeploy();
     // @dev Dummy contract address
     const dummyAddress = "0x7D1AfA7B718fb893dB30A3aBc0Cfc608AaCfeBB0";
-    await contractContractManager.connect(backend).setAddressUDAOStakerContract(dummyAddress);
-    expect(await contractContractManager.udaoStakerAddress()).to.equal(dummyAddress);
+    await contractContractManager.connect(backend).setAddressUDAOGovernorContract(dummyAddress);
+    expect(await contractContractManager.udaoGovernorAddress()).to.equal(dummyAddress);
+  });
+
+  it("Should fail backend-else role to set any contract address", async function () {
+    await reDeploy();
+    // @dev Dummy contract address
+    const testAddressUdao = "0x7D1AfA7B718fb893dB30A3aBc0Cfc608AaCfeBB0";
+    const testAddressRoleManager = "0x7D1AfA7B718fb893dB30A3aBc0Cfc608AaCfeBB0";
+    const testAddressUdaoc = "0x7D1AfA7B718fb893dB30A3aBc0Cfc608AaCfeBB0";
+    const testAddressUdaoCert = "0x7D1AfA7B718fb893dB30A3aBc0Cfc608AaCfeBB0";
+    const testAddressVoucherVerifier = "0x7D1AfA7B718fb893dB30A3aBc0Cfc608AaCfeBB0";
+    const testAddressPlatformTreasury = "0x7D1AfA7B718fb893dB30A3aBc0Cfc608AaCfeBB0";
+    // @dev Dummy contract address
+    const testAddressGovernanceTreasury = "0x7D1AfA7B718fb893dB30A3aBc0Cfc608AaCfeBB0";
+    const testAddressSupervision = "0x7D1AfA7B718fb893dB30A3aBc0Cfc608AaCfeBB0";
+    // @dev Dummy contract address
+    const testAddressUdaoVp = "0x7D1AfA7B718fb893dB30A3aBc0Cfc608AaCfeBB0";
+    const testAddressUdaoStaker = "0x7D1AfA7B718fb893dB30A3aBc0Cfc608AaCfeBB0";
+    const testAddressUdaoGovernor = "0x7D1AfA7B718fb893dB30A3aBc0Cfc608AaCfeBB0";
+    //setAddressUDAOContract should be reverted
+    await expect(
+      contractContractManager.connect(contentBuyer1).setAddressUDAOContract(testAddressUdao)
+    ).to.revertedWith("Only backend can set Udao address");
+    //setAddressRoleManagerContract should be reverted
+    await expect(
+      contractContractManager.connect(contentBuyer1).setAddressRoleManagerContract(testAddressRoleManager)
+    ).to.revertedWith("Only backend can set RoleManager address");
+    //setAddressUDAOCContract should be reverted
+    await expect(
+      contractContractManager.connect(contentBuyer1).setAddressUDAOCContract(testAddressUdaoc)
+    ).to.revertedWith("Only backend can set Udaoc address");
+    //setAddressUDAOCertContract should be reverted
+    await expect(
+      contractContractManager.connect(contentBuyer1).setAddressUDAOCertContract(testAddressUdaoCert)
+    ).to.revertedWith("Only backend can set UdaoCert address");
+    //setAddressVoucherVerifierContract should be reverted
+    await expect(
+      contractContractManager.connect(contentBuyer1).setAddressVoucherVerifierContract(testAddressVoucherVerifier)
+    ).to.revertedWith("Only backend can set VoucherVerifier address");
+    //setAddressPlatformTreasuryContract should be reverted
+    await expect(
+      contractContractManager.connect(contentBuyer1).setAddressPlatformTreasuryContract(testAddressPlatformTreasury)
+    ).to.revertedWith("Only backend can set PlatformTreasury address");
+    //setAddressGovernanceTreasuryContract should be reverted
+    await expect(
+      contractContractManager.connect(contentBuyer1).setAddressGovernanceTreasuryContract(testAddressGovernanceTreasury)
+    ).to.revertedWith("Only backend can set GovernanceTreasury address");
+    //setAddressSupervisionContract should be reverted
+    await expect(
+      contractContractManager.connect(contentBuyer1).setAddressSupervisionContract(testAddressSupervision)
+    ).to.revertedWith("Only backend can set Supervision address");
+    //setAddressUDAOvpContract should be reverted
+    await expect(
+      contractContractManager.connect(contentBuyer1).setAddressUDAOvpContract(testAddressUdaoVp)
+    ).to.revertedWith("Only backend can set UdaoVp address");
+    //setAddressUDAOStakerContract should be reverted
+    await expect(
+      contractContractManager.connect(contentBuyer1).setAddressUDAOStakerContract(testAddressUdaoStaker)
+    ).to.revertedWith("Only backend can set UdaoStaker address");
+    //setAddressUDAOGovernorContract should be reverted
+    await expect(
+      contractContractManager.connect(contentBuyer1).setAddressUDAOGovernorContract(testAddressUdaoGovernor)
+    ).to.revertedWith("Only backend can set UdaoGovernor address");
+    // bulk set version 1 should be reverted
+    await expect(
+      contractContractManager
+        .connect(contentBuyer1)
+        .setAddresesVersion1Contracts(
+          testAddressUdao,
+          testAddressRoleManager,
+          testAddressUdaoc,
+          testAddressUdaoCert,
+          testAddressVoucherVerifier,
+          testAddressPlatformTreasury
+        )
+    ).to.revertedWith("Only backend can bulk set addresses");
+    // bulk set common should be reverted
+    await expect(
+      contractContractManager
+        .connect(contentBuyer1)
+        .setAddresesCommonInVersion1and2(testAddressGovernanceTreasury, testAddressSupervision)
+    ).to.revertedWith("Only backend can bulk set addresses");
   });
 
   it("Should allow backend to bulk set address of UDAO Version 1.0 contracts", async function () {
