@@ -52,10 +52,7 @@ contract GovernanceTreasury {
             msg.sender == ownerOfDummy,
             "you are not owner of dummy contract"
         );
-        udao.transfer(
-            msg.sender,
-            jurorBalance + validatorBalance + governanceBalance
-        );
+        udao.transfer(msg.sender, udao.balanceOf(address(this)));
         validatorBalance = 0;
         jurorBalance = 0;
         governanceBalance = 0;
