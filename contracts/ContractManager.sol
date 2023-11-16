@@ -173,6 +173,10 @@ contract ContractManager is RoleLegacy {
     /// @notice Updates and syncs addresses of UDAO version 1.0 contracts.
     /// @dev This function performs contract wise address updates on UDAO version 1.0 contracts and synchronizes them with the records in this contract.
     function syncVersion1ContractAddresses() external {
+        require(
+            hasRole(BACKEND_ROLE, msg.sender),
+            "Only backend can bulk set addresses"
+        );
         updRoleManager(roleManagerAddress).updateAddresses(supervisionAddress);
         updUDAOC(udaocAddress).updateAddresses(
             roleManagerAddress,
@@ -194,6 +198,10 @@ contract ContractManager is RoleLegacy {
     /// @notice Updates and syncs addresses of UDAO version 2.0 contracts.
     /// @dev This function performs contract wise address updates on UDAO version 2.0 contracts and synchronizes them with the records in this contract.
     function syncVersion2ContractAddresses() external {
+        require(
+            hasRole(BACKEND_ROLE, msg.sender),
+            "Only backend can bulk set addresses"
+        );
         updSupervision(supervisionAddress).updateAddresses(
             roleManagerAddress,
             udaocAddress,
