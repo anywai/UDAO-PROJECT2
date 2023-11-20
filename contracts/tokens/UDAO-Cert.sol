@@ -133,7 +133,7 @@ contract UDAOCertificate is
         return ECDSA.recover(digest, voucher.signature);
     }
 
-    /// @notice Checks if token transfer is allowed. 
+    /// @notice Checks if token transfer is allowed.
     /// @param from The current token owner
     /// @param to Token to send to
     /// @param tokenId The id of the token to transfer
@@ -169,9 +169,7 @@ contract UDAOCertificate is
             hasRole(BACKEND_ROLE, msg.sender),
             "You don't have right to transfer token"
         );
-        //make sure "to" address is kyced and not banned
-        require(isKYCed(to, 12), "Receiver is not KYCed");
-        require(isNotBanned(to, 12), "Receiver is banned");
+        /// @dev only backend can transfer token in emergency (in beforeTokenTransfer)
         _transfer(from, to, tokenId);
     }
 
