@@ -131,49 +131,89 @@ describe("UDAO Cert Contract", function () {
     );
   });
 
-  // it("Should fail to create certificate if not KYCed", async function () {
-  //   const {
-  //     backend,
-  //     contentCreator,
-  //     contentBuyer,
-  //     validatorCandidate,
-  //     validator,
-  //     superValidatorCandidate,
-  //     superValidator,
-  //     foundation,
-  //     governanceCandidate,
-  //     governanceMember,
-  //     jurorCandidate,
-  //     jurorMember,
-  //     contractUDAO,
-  //     contractRoleManager,
-  //     contractUDAOCertificate,
-  //     contractUDAOContent,
-  //     contractSupervision,
-  //     contractPlatformTreasury,
-  //     contractUDAOVp,
-  //     contractUDAOStaker,
-  //     contractUDAOTimelockController,
-  //     contractUDAOGovernor,
-  //   } = await deploy();
-  //   await contractRoleManager.setKYC(contentBuyer.address, false);
+  it("Should fail to create certificate if not KYCed", async function () {
+    const {
+      backend,
+      contentCreator,
+      contentBuyer,
+      validatorCandidate,
+      validator,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractSupervision,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+    } = await deploy();
+    await contractRoleManager.setKYC(contentBuyer.address, false);
 
-  //   const tx = await contractUDAOCertificate.getChainID();
-  //   const lazyMinter = new LazyUDAOCertMinter({
-  //     contract: contractUDAOCertificate,
-  //     signer: foundation,
-  //   });
-  //   const voucher = await lazyMinter.createVoucher(
-  //     1,
-  //     "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
-  //     contentBuyer.address,
-  //     "Content Name",
-  //     "Content Description"
-  //   );
-  //   await expect(
-  //     contractUDAOCertificate.connect(contentBuyer).redeem(voucher)
-  //   ).to.revertedWith("You are not KYCed");
-  // });
+    const tx = await contractUDAOCertificate.getChainID();
+    const lazyMinter = new LazyUDAOCertMinter({
+      contract: contractUDAOCertificate,
+      signer: foundation,
+    });
+    const voucher = await lazyMinter.createVoucher(
+      1,
+      "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
+      contentBuyer.address,
+      "Content Name",
+      "Content Description"
+    );
+    await expect(contractUDAOCertificate.connect(contentBuyer).redeem(voucher)).to.revertedWith("You are not KYCed");
+  });
+
+  it("Should fail to create certificate if banned", async function () {
+    const {
+      backend,
+      contentCreator,
+      contentBuyer,
+      validatorCandidate,
+      validator,
+      superValidatorCandidate,
+      superValidator,
+      foundation,
+      governanceCandidate,
+      governanceMember,
+      jurorCandidate,
+      jurorMember,
+      contractUDAO,
+      contractRoleManager,
+      contractUDAOCertificate,
+      contractUDAOContent,
+      contractSupervision,
+      contractPlatformTreasury,
+      contractUDAOVp,
+      contractUDAOStaker,
+      contractUDAOTimelockController,
+      contractUDAOGovernor,
+    } = await deploy();
+    await contractRoleManager.setKYC(contentBuyer.address, true);
+    await contractRoleManager.setBan(contentBuyer.address, true);
+    const tx = await contractUDAOCertificate.getChainID();
+    const lazyMinter = new LazyUDAOCertMinter({
+      contract: contractUDAOCertificate,
+      signer: foundation,
+    });
+    const voucher = await lazyMinter.createVoucher(
+      1,
+      "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
+      contentBuyer.address,
+      "Content Name",
+      "Content Description"
+    );
+    await expect(contractUDAOCertificate.connect(contentBuyer).redeem(voucher)).to.revertedWith("You were banned");
+  });
 
   it("Should get token URI of the Content", async function () {
     await reDeploy();
@@ -224,6 +264,62 @@ describe("UDAO Cert Contract", function () {
     )
       .to.emit(contractUDAOCertificate, "Transfer") // transfer from null address to minter
       .withArgs(contentCreator.address, contentBuyer.address, voucher.tokenId);
+  });
+
+  it("Should backend fail to transfer if receiver is not KYCed", async function () {
+    await reDeploy();
+    await contractRoleManager.setKYC(contentCreator.address, true);
+    await contractRoleManager.setKYC(contentBuyer.address, true);
+
+    const tx = await contractUDAOCertificate.getChainID();
+    const lazyMinter = new LazyUDAOCertMinter({
+      contract: contractUDAOCertificate,
+      signer: backend,
+    });
+    const voucher = await lazyMinter.createVoucher(
+      1,
+      "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
+      contentCreator.address,
+      "Content Name",
+      "Content Description"
+    );
+
+    await expect(contractUDAOCertificate.connect(contentCreator).redeem(voucher))
+      .to.emit(contractUDAOCertificate, "Transfer") // transfer from null address to minter
+      .withArgs("0x0000000000000000000000000000000000000000", contentCreator.address, voucher.tokenId);
+
+    await contractRoleManager.setKYC(contentBuyer.address, false);
+    await expect(
+      contractUDAOCertificate.connect(backend).emergencyTransfer(contentCreator.address, contentBuyer.address, 1)
+    ).to.be.revertedWith("Receiver is not KYCed");
+  });
+
+  it("Should backend fail to transfer if receiver is banned", async function () {
+    await reDeploy();
+    await contractRoleManager.setKYC(contentCreator.address, true);
+    await contractRoleManager.setKYC(contentBuyer.address, true);
+
+    const tx = await contractUDAOCertificate.getChainID();
+    const lazyMinter = new LazyUDAOCertMinter({
+      contract: contractUDAOCertificate,
+      signer: backend,
+    });
+    const voucher = await lazyMinter.createVoucher(
+      1,
+      "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
+      contentCreator.address,
+      "Content Name",
+      "Content Description"
+    );
+
+    await expect(contractUDAOCertificate.connect(contentCreator).redeem(voucher))
+      .to.emit(contractUDAOCertificate, "Transfer") // transfer from null address to minter
+      .withArgs("0x0000000000000000000000000000000000000000", contentCreator.address, voucher.tokenId);
+
+    await contractRoleManager.setBan(contentBuyer.address, true);
+    await expect(
+      contractUDAOCertificate.connect(backend).emergencyTransfer(contentCreator.address, contentBuyer.address, 1)
+    ).to.be.revertedWith("Receiver is banned");
   });
 
   it("Should fail emergency transfer certificate if not backend", async function () {
@@ -365,5 +461,43 @@ describe("UDAO Cert Contract", function () {
     await expect(contractUDAOCertificate.pause());
 
     await expect(contractUDAOCertificate.connect(contentBuyer).redeem(voucher)).to.revertedWith("Pausable: paused");
+  });
+
+  it("Should able to create certificate when unpaused", async function () {
+    await reDeploy();
+    await contractRoleManager.setKYC(contentBuyer.address, true);
+
+    const tx = await contractUDAOCertificate.getChainID();
+    const lazyMinter = new LazyUDAOCertMinter({
+      contract: contractUDAOCertificate,
+      signer: backend,
+    });
+    const voucher = await lazyMinter.createVoucher(
+      1,
+      "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
+      contentBuyer.address,
+      "Content Name",
+      "Content Description"
+    );
+
+    await expect(contractUDAOCertificate.pause());
+    await expect(contractUDAOCertificate.unpause());
+
+    await expect(contractUDAOCertificate.connect(contentBuyer).redeem(voucher)).to.emit(
+      contractUDAOCertificate,
+      "Transfer"
+    );
+  });
+
+  it("Should fail to pause if not backend", async function () {
+    await reDeploy();
+    await expect(contractUDAOCertificate.connect(contentBuyer1).pause()).to.revertedWith("Only backend can pause");
+  });
+
+  it("Should fail to unpause if not backend", async function () {
+    await reDeploy();
+    await expect(contractUDAOCertificate.connect(backend).pause());
+
+    await expect(contractUDAOCertificate.connect(contentBuyer1).unpause()).to.revertedWith("Only backend can unpause");
   });
 });
