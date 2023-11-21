@@ -386,4 +386,20 @@ describe("Contract Manager", function () {
       "Only backend can bulk set addresses"
     );
   });
+
+  it("Should allow backend-deployer to set foundation wallet address for contract manager contract", async function () {
+    await reDeploy();
+    await expect(contractContractManager.connect(backend).setFoundationAddress(contentBuyer1.address))
+      .to.emit(contractContractManager, "FoundationWalletUpdated")
+      .withArgs(contentBuyer1.address);
+  });
+
+  it("Should fail backend-deployer to set foundation wallet address if foundation wallet address already changed", async function () {
+    await reDeploy();
+    await contractContractManager.connect(backend).setFoundationAddress(contentBuyer1.address);
+
+    await expect(contractContractManager.connect(backend).setFoundationAddress(contentBuyer1.address)).to.revertedWith(
+      "Only foundation can set foundation wallet address"
+    );
+  });
 });

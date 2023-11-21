@@ -637,4 +637,20 @@ describe("Platform Treasury General", function () {
         .sub(jurorBalance)
     );
   });
+
+  it("Should allow backend-deployer to set foundation wallet address for platform treasury contract", async function () {
+    await reDeploy();
+    await expect(contractPlatformTreasury.connect(foundation).setFoundationAddress(contentBuyer1.address))
+      .to.emit(contractPlatformTreasury, "FoundationWalletUpdated")
+      .withArgs(contentBuyer1.address);
+  });
+
+  it("Should fail backend-deployer to set foundation wallet address if foundation wallet address already changed", async function () {
+    await reDeploy();
+    await contractPlatformTreasury.connect(foundation).setFoundationAddress(contentBuyer1.address);
+
+    await expect(
+      contractPlatformTreasury.connect(foundation).setFoundationAddress(contentBuyer1.address)
+    ).to.revertedWith("Only foundation can set foundation wallet address");
+  });
 });
