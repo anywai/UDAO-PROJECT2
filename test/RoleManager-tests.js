@@ -47,6 +47,7 @@ async function reDeploy(reApplyRolesViaVoucher = true, isDexRequired = false) {
   contractSupervision = replace.contractSupervision;
   GOVERNANCE_ROLE = replace.GOVERNANCE_ROLE;
   BACKEND_ROLE = replace.BACKEND_ROLE;
+  STAKING_CONTRACT = replace.STAKING_CONTRACT;
   contractContractManager = replace.contractContractManager;
   account1 = replace.account1;
   account2 = replace.account2;
@@ -92,5 +93,88 @@ describe("Role Manager", function () {
     );
     // contentBuyer1 has the role DEFAULT_ADMIN_ROLE
     expect(await contractRoleManager.hasRole(ethers.constants.HashZero, contentBuyer1.address)).to.equal(true);
+  });
+
+  it("Should allow foundation to grant backend role by using dedicated function", async function () {
+    await reDeploy();
+    // grant backend role to contentbuyer1
+    await contractRoleManager.connect(foundation).grantBackend(contentBuyer1.address);
+    // check if contentbuyer1 has backend role
+    expect(await contractRoleManager.hasRole(BACKEND_ROLE, contentBuyer1.address)).to.equal(true);
+  });
+
+  it("Should allow to foundation to revoke backend role by using dedicated function", async function () {
+    await reDeploy();
+    // grant backend role to contentbuyer1
+    await contractRoleManager.connect(foundation).grantBackend(contentBuyer1.address);
+    // check if contentbuyer1 has backend role
+    expect(await contractRoleManager.hasRole(BACKEND_ROLE, contentBuyer1.address)).to.equal(true);
+    // revoke backend role from contentbuyer1
+    await contractRoleManager.connect(foundation).revokeBackend(contentBuyer1.address);
+    // check if contentbuyer1 has backend role
+    expect(await contractRoleManager.hasRole(BACKEND_ROLE, contentBuyer1.address)).to.equal(false);
+  });
+
+  it("Should fail grant backend role if caller is not the foundation", async function () {
+    await reDeploy();
+    // try to grant backend role to contentbuyer1 by contentbuyer2
+    await expect(contractRoleManager.connect(contentBuyer2).grantBackend(contentBuyer1.address)).to.revertedWith(
+      "Only foundation can grant backend"
+    );
+    // check if contentbuyer1 has backend role
+    expect(await contractRoleManager.hasRole(BACKEND_ROLE, contentBuyer1.address)).to.equal(false);
+  });
+
+  it("Should fail revoke backend role if caller is not the foundation", async function () {
+    await reDeploy();
+    // try to revoke backend role from backend by contentbuyer2
+    await expect(contractRoleManager.connect(contentBuyer2).revokeBackend(backend.address)).to.revertedWith(
+      "Only foundation can revoke backend"
+    );
+    // check if backen has still backend role
+    expect(await contractRoleManager.hasRole(BACKEND_ROLE, backend.address)).to.equal(true);
+  });
+
+  it("Should allow STAKING_CONTRACT grant roles to users", async function () {
+    await reDeploy();
+    // grant STAKING_CONTRACT role to contentbuyer1 to pretend like a staking contract
+    await contractRoleManager.connect(foundation).grantRole(STAKING_CONTRACT, contentBuyer1.address);
+    expect(await contractRoleManager.hasRole(STAKING_CONTRACT, contentBuyer1.address)).to.equal(true);
+
+    // grant GOVERNANCE_ROLE to contentbuyer2 by using grantRoleStaker function
+    await contractRoleManager.connect(contentBuyer1).grantRoleStaker(GOVERNANCE_ROLE, contentBuyer2.address);
+    // check if contentbuyer2 has GOVERNANCE_ROLE
+    expect(await contractRoleManager.hasRole(GOVERNANCE_ROLE, contentBuyer2.address)).to.equal(true);
+  });
+
+  it("Should allow STAKING_CONTRACT revoke roles from users", async function () {
+    await reDeploy();
+    // grant STAKING_CONTRACT role to contentbuyer1 to pretend like a staking contract
+    await contractRoleManager.connect(foundation).grantRole(STAKING_CONTRACT, contentBuyer1.address);
+    expect(await contractRoleManager.hasRole(STAKING_CONTRACT, contentBuyer1.address)).to.equal(true);
+
+    // grant GOVERNANCE_ROLE to contentbuyer2 by using grantRoleStaker function
+    await contractRoleManager.connect(contentBuyer1).grantRoleStaker(GOVERNANCE_ROLE, contentBuyer2.address);
+    // check if contentbuyer2 has GOVERNANCE_ROLE
+    expect(await contractRoleManager.hasRole(GOVERNANCE_ROLE, contentBuyer2.address)).to.equal(true);
+
+    // revoke GOVERNANCE_ROLE from contentbuyer2 by using revokeRoleStaker function
+    await contractRoleManager.connect(contentBuyer1).revokeRoleStaker(GOVERNANCE_ROLE, contentBuyer2.address);
+    // check if contentbuyer2 has GOVERNANCE_ROLE
+    expect(await contractRoleManager.hasRole(GOVERNANCE_ROLE, contentBuyer2.address)).to.equal(false);
+  });
+
+  it("Should fail grant and revoke role if the caller is not STAKING_CONTRACT", async function () {
+    await reDeploy();
+
+    // try to grant GOVERNANCE_ROLE to backed by using grantRoleStaker function when caller contentbuyer1 is not STAKING_CONTRACT
+    await expect(
+      contractRoleManager.connect(contentBuyer1).grantRoleStaker(GOVERNANCE_ROLE, backend.address)
+    ).to.revertedWith("Only staking contract can grant roles");
+
+    // try to revoke BACKEND_ROLE from backend by using revokeRoleStaker function when caller contentbuyer1 is not STAKING_CONTRACT
+    await expect(
+      contractRoleManager.connect(contentBuyer1).revokeRoleStaker(BACKEND_ROLE, backend.address)
+    ).to.revertedWith("Only staking contract can revoke roles");
   });
 });
