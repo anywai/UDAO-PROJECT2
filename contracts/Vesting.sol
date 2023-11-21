@@ -18,11 +18,21 @@ contract Vesting is AccessControl {
     }
 
     /// @dev Array of VestingLocks
-    VestingLock[] public vestingLocks; 
+    VestingLock[] public vestingLocks;
     /// @dev This event is triggered when tokens are deposited into the contract and lock created.
-    event VestingDeposit(address indexed sender, address indexed beneficiary, uint vestingIndex, uint amount, uint releaseTime);
+    event VestingDeposit(
+        address indexed sender,
+        address indexed beneficiary,
+        uint vestingIndex,
+        uint amount,
+        uint releaseTime
+    );
     /// @dev This event is triggered when tokens are withdrawn from the contract.
-    event VestingWithdrawal(address indexed receiver, uint vestingIndex, uint amount);
+    event VestingWithdrawal(
+        address indexed receiver,
+        uint vestingIndex,
+        uint amount
+    );
     /// @dev This role is used to grant access to deposit tokens and create locks.
     bytes32 public constant DEPOSITOR_ROLE = keccak256("DEPOSITOR_ROLE");
 
@@ -67,8 +77,14 @@ contract Vesting is AccessControl {
         currentVesting.balance = amount;
         currentVesting.releaseTime = releaseTime;
         vestingLocks.push(currentVesting);
-        uint vestingIndex = vestingLocks.length-1;
-        emit VestingDeposit(msg.sender, beneficiary, vestingIndex, amount, releaseTime);
+        uint vestingIndex = vestingLocks.length - 1;
+        emit VestingDeposit(
+            msg.sender,
+            beneficiary,
+            vestingIndex,
+            amount,
+            releaseTime
+        );
         return true;
     }
 
@@ -83,7 +99,8 @@ contract Vesting is AccessControl {
     ) external onlyRole(DEPOSITOR_ROLE) returns (bool success) {
         require(
             beneficiaries.length == amounts.length &&
-                beneficiaries.length == releaseTimes.length
+                beneficiaries.length == releaseTimes.length,
+            "Beneficiaries, amounts and releaseTimes length mismatch"
         );
         for (uint i = 0; i < beneficiaries.length; i++) {
             require(token.transferFrom(msg.sender, address(this), amounts[i]));
@@ -92,19 +109,35 @@ contract Vesting is AccessControl {
             currentVesting.balance = amounts[i];
             currentVesting.releaseTime = releaseTimes[i];
             vestingLocks.push(currentVesting);
-            uint vestingIndex = vestingLocks.length-1;
-            emit VestingDeposit(msg.sender, beneficiaries[i], vestingIndex, amounts[i], releaseTimes[i]);
+            uint vestingIndex = vestingLocks.length - 1;
+            emit VestingDeposit(
+                msg.sender,
+                beneficiaries[i],
+                vestingIndex,
+                amounts[i],
+                releaseTimes[i]
+            );
         }
         return true;
     }
 
     /// @notice Allows beneficiary to withdraw tokens
-    /// @param vestingIndex The index of the lockbox to withdraw from
+    /// @param vestingIndex The index of the vesting lock to withdraw from
     function withdraw(uint vestingIndex) public returns (bool success) {
         VestingLock storage currentVesting = vestingLocks[vestingIndex];
-        require(currentVesting.beneficiary == msg.sender);
-        require(currentVesting.releaseTime <= block.timestamp);
+        require(
+            currentVesting.beneficiary == msg.sender,
+            "You are not the beneficiary of this vesting lock"
+        );
+        require(
+            currentVesting.releaseTime <= block.timestamp,
+            "Your vesting period is not over yet"
+        );
         uint amount = currentVesting.balance;
+        require(
+            amount > 0,
+            "You have already withdrawn your vesting for this index"
+        );
         currentVesting.balance = 0;
         emit VestingWithdrawal(msg.sender, vestingIndex, amount);
         require(token.transfer(msg.sender, amount));
