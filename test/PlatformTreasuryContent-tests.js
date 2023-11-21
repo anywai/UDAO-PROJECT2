@@ -467,6 +467,60 @@ describe("Platform Treasury Contract - Content", function () {
     ).to.revertedWith("You are banned");
   });
 
+  it("Should fail to buy content if buyer is not kyced", async function () {
+    await reDeploy();
+    /// Set KYC
+    await contractRoleManager.setKYC(contentCreator.address, true);
+    //await contractRoleManager.setKYC(contentBuyer1.address, true);
+    // Create content
+    const contentParts = [0, 1, 2, 3, 4, 5];
+    // Create content voucher
+    const createContentVoucherSample = await createContentVoucher(
+      contractUDAOContent,
+      backend,
+      contentCreator,
+      contentParts,
+      (redeemType = 1),
+      (validationScore = 1)
+    );
+    // Create content with voucher
+    const tx = await contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample);
+    // Ban the buyer
+    await contractRoleManager.setBan(contentBuyer1.address, true);
+    // Get NewContentCreated event and get tokenId
+    const receipt = await tx.wait();
+    const tokenId = receipt.events[0].args[2].toNumber();
+    // Make a content purchase
+    const tokenIds = [1];
+    const purchasedParts = [[2, 3, 5]];
+    const redeemers = [contentBuyer1.address];
+    const giftReceiver = [ethers.constants.AddressZero];
+    const fullContentPurchase = [false];
+    const pricesToPay = [ethers.utils.parseEther("1")];
+    const validUntil = Date.now() + 999999999;
+    const contentPurchaseVouchers = [];
+    for (let i = 0; i < tokenIds.length; i++) {
+      const contentPurchaseVoucher = await new DiscountedPurchase({
+        contract: contractVoucherVerifier,
+        signer: backend,
+      }).createVoucher(
+        tokenIds[i],
+        fullContentPurchase[i],
+        purchasedParts[i],
+        pricesToPay[i],
+        validUntil,
+        redeemers[i],
+        giftReceiver[i]
+      );
+      // Save the voucher to the array
+      contentPurchaseVouchers.push(contentPurchaseVoucher);
+    }
+    /// Try to purchase the content with banned buyer
+    await expect(
+      contractPlatformTreasury.connect(contentBuyer1).buyContentWithDiscount(contentPurchaseVouchers)
+    ).to.revertedWith("You are not KYCed");
+  });
+
   it("Should fail to buy content if instructer is banned and isSelleble set to false", async function () {
     await reDeploy();
     /// Set KYC

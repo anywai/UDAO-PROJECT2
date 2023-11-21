@@ -357,7 +357,7 @@ describe("Platform Treasury General", function () {
       );
   });
 
-  it("Should allow backend to set new foundation wallet address", async function () {
+  it("Should allow backend-deployer to set foundation wallet address for platform treasury contract", async function () {
     await reDeploy();
 
     // new dummy foundation address
@@ -366,6 +366,15 @@ describe("Platform Treasury General", function () {
     await expect(contractPlatformTreasury.connect(foundation).setFoundationAddress(newFoundation.address))
       .to.emit(contractPlatformTreasury, "FoundationWalletUpdated")
       .withArgs(newFoundation.address);
+  });
+
+  it("Should fail backend-deployer to set foundation wallet address if foundation wallet address already changed", async function () {
+    await reDeploy();
+    await contractPlatformTreasury.connect(foundation).setFoundationAddress(contentBuyer1.address);
+
+    await expect(
+      contractPlatformTreasury.connect(foundation).setFoundationAddress(contentBuyer1.address)
+    ).to.revertedWith("Only foundation can set foundation wallet address");
   });
 
   it("Should allow foundation to withdraw funds from the treasury after a content purchase", async function () {
@@ -410,10 +419,6 @@ describe("Platform Treasury General", function () {
       redeemers,
       giftReceiver
     );
-    // set foundation wallet address
-    await expect(contractPlatformTreasury.connect(foundation).setFoundationAddress(foundation.address))
-      .to.emit(contractPlatformTreasury, "FoundationWalletUpdated")
-      .withArgs(foundation.address);
 
     /// @dev Skip "refund window" days to allow foundation to withdraw funds
     const refundWindowDays = await contractPlatformTreasury.refundWindow();
@@ -515,10 +520,6 @@ describe("Platform Treasury General", function () {
       giftReceiver
     );
 
-    // set foundation wallet address
-    await expect(contractPlatformTreasury.connect(foundation).setFoundationAddress(foundation.address))
-      .to.emit(contractPlatformTreasury, "FoundationWalletUpdated")
-      .withArgs(foundation.address);
     /// @dev Skip "refund window" days to allow foundation to withdraw funds
     const refundWindowDays = await contractPlatformTreasury.refundWindow();
     /// convert big number to number
@@ -636,5 +637,135 @@ describe("Platform Treasury General", function () {
         .sub(validatorBalance)
         .sub(jurorBalance)
     );
+  });
+
+  it("Should _checkPartReceiver return buyer address if purchase valid", async function () {
+    await reDeploy();
+    // KYC content creator and content buyer
+    await contractRoleManager.setKYC(contentCreator.address, true);
+    await contractRoleManager.setKYC(contentBuyer1.address, true);
+    // Create content
+    const contentParts = [0, 1];
+    // Create content voucher
+    const createContentVoucherSample = await createContentVoucher(
+      contractUDAOContent,
+      backend,
+      contentCreator,
+      contentParts,
+      (redeemType = 1),
+      (validationScore = 1)
+    );
+    // Create content with voucher
+    await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample))
+      .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
+      .withArgs("0x0000000000000000000000000000000000000000", contentCreator.address, 1);
+    // Make a content purchase to gather funds for governance
+    const tokenIds = [1];
+    const purchasedParts = [[1]];
+    const redeemers = [contentBuyer1.address];
+    const giftReceiver = [ethers.constants.AddressZero];
+    const fullContentPurchase = [false];
+    const pricesToPay = [ethers.utils.parseEther("1")];
+    const validUntil = Date.now() + 999999999;
+    // _checkPartReceiver should return the content buyer's address
+    const validAddress = await contractPlatformTreasury._checkPartReceiver(
+      tokenIds,
+      purchasedParts,
+      contentBuyer1.address
+    );
+
+    // valid address should be equal to the content buyer's address
+    await expect(validAddress).to.equal(contentBuyer1.address);
+  });
+
+  it("Should _checkPartReceiver return buyer address if purchase valid while kyc non-required for buyer", async function () {
+    await reDeploy();
+    // KYC content creator and content buyer
+    await contractRoleManager.setKYC(contentCreator.address, true);
+    //await contractRoleManager.setKYC(contentBuyer1.address, true);
+    // Create content
+    const contentParts = [0, 1];
+    // Create content voucher
+    const createContentVoucherSample = await createContentVoucher(
+      contractUDAOContent,
+      backend,
+      contentCreator,
+      contentParts,
+      (redeemType = 1),
+      (validationScore = 1)
+    );
+    // Create content with voucher
+    await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample))
+      .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
+      .withArgs("0x0000000000000000000000000000000000000000", contentCreator.address, 1);
+    // Make a content purchase to gather funds for governance
+    const tokenIds = [1];
+    const purchasedParts = [[1]];
+    const redeemers = [contentBuyer1.address];
+    const giftReceiver = [ethers.constants.AddressZero];
+    const fullContentPurchase = [false];
+    const pricesToPay = [ethers.utils.parseEther("1")];
+    const validUntil = Date.now() + 999999999;
+
+    // 22 is function id for kyc check of buyer in _checkPartReceiver function
+    await contractRoleManager.setActiveKYCFunctions(22, false);
+
+    // _checkPartReceiver should return the content buyer's address
+    const validAddress = await contractPlatformTreasury._checkPartReceiver(
+      tokenIds,
+      purchasedParts,
+      contentBuyer1.address
+    );
+
+    // valid address should be equal to the content buyer's address
+    await expect(validAddress).to.equal(contentBuyer1.address);
+  });
+
+  it("Should _checkPartReceiver return buyer address if purchase valid while ban check disabled for buyer", async function () {
+    await reDeploy();
+    // KYC content creator and content buyer
+    await contractRoleManager.setKYC(contentCreator.address, true);
+    await contractRoleManager.setKYC(contentBuyer1.address, true);
+
+    await contractRoleManager.setBan(contentBuyer1.address, true);
+    // Create content
+    const contentParts = [0, 1];
+    // Create content voucher
+    const createContentVoucherSample = await createContentVoucher(
+      contractUDAOContent,
+      backend,
+      contentCreator,
+      contentParts,
+      (redeemType = 1),
+      (validationScore = 1)
+    );
+    // Create content with voucher
+    await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample))
+      .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
+      .withArgs("0x0000000000000000000000000000000000000000", contentCreator.address, 1);
+    // Make a content purchase to gather funds for governance
+    const tokenIds = [1];
+    const purchasedParts = [[1]];
+    const redeemers = [contentBuyer1.address];
+    const giftReceiver = [ethers.constants.AddressZero];
+    const fullContentPurchase = [false];
+    const pricesToPay = [ethers.utils.parseEther("1")];
+    const validUntil = Date.now() + 999999999;
+
+    // 29 is function id for ban check of buyer in _checkPartReceiver function
+    await contractRoleManager.setActiveBanFunctions(29, false);
+
+    // _checkPartReceiver should return the content buyer's address
+    const validAddress = await contractPlatformTreasury._checkPartReceiver(
+      tokenIds,
+      purchasedParts,
+      contentBuyer1.address
+    );
+
+    //await expect(contractPlatformTreasury._checkPartReceiver(tokenIds, purchasedParts, contentBuyer1.address)).to.equal(
+    //  contentBuyer1.address
+    //);
+    // valid address should be equal to the content buyer's address
+    await expect(validAddress).to.equal(contentBuyer1.address);
   });
 });
