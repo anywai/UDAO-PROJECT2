@@ -121,38 +121,103 @@ contract UDAOContent is
             hasRole(VOUCHER_VERIFIER, signer),
             "Signature invalid or unauthorized"
         );
+
         // Revert if the msg.sender is not the voucher._redeemer or has the CONTENT_PUBLISHER role
-        require(
-            hasRole(CONTENT_PUBLISHER, msg.sender) ||
-                voucher._redeemer == msg.sender,
-            "Only content modifier or redeemer can create content"
-        );
+        if (msg.sender == voucher._redeemer) {
+            //make sure redeemer is kyced
+            require(isKYCed(voucher._redeemer, 13), "You are not KYCed");
+            //make sure redeemer is not banned
+            require(isNotBanned(voucher._redeemer, 13), "Redeemer is banned!");
+        } else {
+            require(
+                hasRole(CONTENT_PUBLISHER, msg.sender),
+                "Only content modifier or redeemer can create content"
+            );
+        }
+        // make sure voucher is not expired
         require(voucher.validUntil >= block.timestamp, "Voucher has expired.");
         /// @dev 1 is new content, 2 is modification
         require(voucher.redeemType == 1, "Redeem type is not new content");
-        uint tokenId = _tokenIds.current();
-        //make sure redeemer is kyced
-        require(isKYCed(voucher._redeemer, 13), "You are not KYCed");
-        //make sure redeemer is not banned
-        require(isNotBanned(voucher._redeemer, 13), "Redeemer is banned!");
-
+        /// @dev every content should have a valid URI
         require(
             !isCalldataStringEmpty(voucher._uri),
             "Content URI cannot be empty"
         );
 
+        _tokenIds.increment();
+        uint tokenId = _tokenIds.current() - 1;
         // save the content parts
         contentParts[tokenId] = voucher._parts;
 
         _mint(voucher._redeemer, tokenId);
         _setTokenURI(tokenId, voucher._uri);
-        _tokenIds.increment();
         isSellable[tokenId] = true;
 
         if (voucher.validationScore != 0) {
             supervision.createValidation(tokenId, voucher.validationScore);
         }
         emit NewContentCreated(tokenId, voucher._redeemer);
+    }
+
+    function createContents(
+        RedeemVoucher[] calldata voucher
+    ) public whenNotPaused {
+        uint256 voucherIdsLength = voucher.length;
+        for (uint256 i; i < voucherIdsLength; i++) {
+            address signer = _verify(voucher[i]);
+            // make sure signature is valid and get the address of the signer
+            require(
+                hasRole(VOUCHER_VERIFIER, signer),
+                "Signature invalid or unauthorized"
+            );
+            // Revert if the msg.sender is not the voucher._redeemer or has the CONTENT_PUBLISHER role
+            if (msg.sender == voucher[i]._redeemer) {
+                //make sure redeemer is kyced
+                require(isKYCed(voucher[i]._redeemer, 59), "You are not KYCed");
+                //make sure redeemer is not banned
+                require(
+                    isNotBanned(voucher[i]._redeemer, 59),
+                    "Redeemer is banned!"
+                );
+            } else {
+                require(
+                    hasRole(CONTENT_PUBLISHER, msg.sender),
+                    "Only content modifier or redeemer can create content"
+                );
+            }
+            // make sure voucher is not expired
+            require(
+                voucher[i].validUntil >= block.timestamp,
+                "Voucher has expired."
+            );
+            /// @dev 1 is new content, 2 is modification
+            require(
+                voucher[i].redeemType == 1,
+                "Redeem type is not new content"
+            );
+            /// @dev every content should have a valid URI
+            require(
+                !isCalldataStringEmpty(voucher[i]._uri),
+                "Content URI cannot be empty"
+            );
+
+            _tokenIds.increment();
+            uint tokenId = _tokenIds.current() - 1;
+            // save the content parts
+            contentParts[tokenId] = voucher[i]._parts;
+
+            _mint(voucher[i]._redeemer, tokenId);
+            _setTokenURI(tokenId, voucher[i]._uri);
+            isSellable[tokenId] = true;
+
+            if (voucher[i].validationScore != 0) {
+                supervision.createValidation(
+                    tokenId,
+                    voucher[i].validationScore
+                );
+            }
+            emit NewContentCreated(tokenId, voucher[i]._redeemer);
+        }
     }
 
     /// @notice Checks if a string is empty

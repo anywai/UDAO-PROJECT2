@@ -141,6 +141,76 @@ describe("UDAOC Contract", function () {
       .withArgs("0x0000000000000000000000000000000000000000", contentCreator.address, 1);
   });
 
+  it("Should batch create Contents", async function () {
+    await reDeploy();
+    await contractRoleManager.setKYC(contentCreator.address, true);
+
+    /// part prices must be determined before creating content
+    const partPricesArray = [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")];
+    const contentPrice = ethers.utils.parseEther("2");
+    /// Create Voucher from redeem.js and use it for creating content
+    // Create content
+    const contentParts1 = [0, 1];
+    const contentParts2 = [0, 1, 2];
+    const contentParts3 = [0, 1, 2, 3];
+
+    const createContentVoucherSample1 = await createContentVoucher(
+      contractUDAOContent,
+      backend,
+      contentCreator,
+      contentParts1,
+      (redeemType = 1),
+      (validationScore = 1)
+    );
+    const createContentVoucherSample2 = await createContentVoucher(
+      contractUDAOContent,
+      backend,
+      contentCreator,
+      contentParts2,
+      (redeemType = 1),
+      (validationScore = 1)
+    );
+    const createContentVoucherSample3 = await createContentVoucher(
+      contractUDAOContent,
+      backend,
+      contentCreator,
+      contentParts3,
+      (redeemType = 1),
+      (validationScore = 1)
+    );
+
+    const createContentVoucherSampleArray = [
+      createContentVoucherSample1,
+      createContentVoucherSample2,
+      createContentVoucherSample3,
+    ];
+    // define token id = 1 as a big number
+    const bigNumber1 = ethers.BigNumber.from(1);
+    // define token id = 2 as a big number
+    const bigNumber2 = ethers.BigNumber.from(2);
+    // define token id = 3 as a big number
+    const bigNumber3 = ethers.BigNumber.from(3);
+
+    // create contents and expect Transfer events to emit
+    await contractUDAOContent.connect(contentCreator).createContents(createContentVoucherSampleArray);
+    // read Transfer events from the transaction
+    const events = await contractUDAOContent.queryFilter("Transfer", "latest");
+    // check if there are 3 events
+    expect(events.length).to.eql(3);
+    // check if the first event is correct
+    expect(events[0].args.from).to.eql("0x0000000000000000000000000000000000000000");
+    expect(events[0].args.to).to.eql(contentCreator.address);
+    expect(events[0].args.tokenId).to.eql(bigNumber1);
+    // check if the second event is correct
+    expect(events[1].args.from).to.eql("0x0000000000000000000000000000000000000000");
+    expect(events[1].args.to).to.eql(contentCreator.address);
+    expect(events[1].args.tokenId).to.eql(bigNumber2);
+    // check if the third event is correct
+    expect(events[2].args.from).to.eql("0x0000000000000000000000000000000000000000");
+    expect(events[2].args.to).to.eql(contentCreator.address);
+    expect(events[2].args.tokenId).to.eql(bigNumber3);
+  });
+
   it("Should get token URI of the Content", async function () {
     await reDeploy();
     await contractRoleManager.setKYC(contentCreator.address, true);
