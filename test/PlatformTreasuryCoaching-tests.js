@@ -150,6 +150,52 @@ describe("Platform Treasury Contract - Coaching", function () {
     expect(coachingStruct.contentReceiver).to.equal(contentBuyer.address);
   });
 
+  it("Should a user able to buy a coaching when coaching voucher created by coach", async function () {
+    await reDeploy();
+    /// Set KYC
+    await contractRoleManager.setKYC(contentCreator.address, true);
+    await contractRoleManager.setKYC(contentBuyer.address, true);
+
+    /// Send UDAO to the buyer's wallet
+    await contractUDAO.transfer(contentBuyer.address, ethers.utils.parseEther("100.0"));
+    /// Get the amount of UDAO in the buyer's wallet
+    const buyerBalance = await contractUDAO.balanceOf(contentBuyer.address);
+    /// Content buyer needs to give approval to the platformtreasury
+    await contractUDAO
+      .connect(contentBuyer)
+      .approve(contractPlatformTreasury.address, ethers.utils.parseEther("999999999999.0"));
+
+    // Create CoachingVoucher to be able to buy coaching
+    const lazyCoaching = new LazyCoaching({
+      contract: contractVoucherVerifier,
+      signer: contentCreator,
+    });
+    const coachingPrice = ethers.utils.parseEther("1.0");
+    /// Get the current block timestamp
+    const currentBlockTimestamp = (await hre.ethers.provider.getBlock()).timestamp;
+    /// Coaching date is 3 days from now
+    const coachingDate = currentBlockTimestamp + 3 * 24 * 60 * 60;
+    const role_voucher = await lazyCoaching.createVoucher(
+      contentCreator.address,
+      coachingPrice,
+      coachingDate,
+      contentBuyer.address
+    );
+    // Buy coaching
+    const purchaseTx = await contractPlatformTreasury.connect(contentBuyer).buyCoaching(role_voucher);
+    const queueTxReceipt = await purchaseTx.wait();
+    const queueTxEvent = queueTxReceipt.events.find((e) => e.event == "CoachingBought");
+    const coachingSaleID = queueTxEvent.args[0];
+    // Get the amount of UDAO in the buyer's wallet after buying coaching
+    const buyerBalanceAfter = await contractUDAO.balanceOf(contentBuyer.address);
+    // Check if correct amount of UDAO was deducted from the buyer's wallet
+    expect(buyerBalance.sub(buyerBalanceAfter)).to.equal(coachingPrice);
+    // Get coaching struct
+    const coachingStruct = await contractPlatformTreasury.coachSales(coachingSaleID);
+    // Check if returned learner address is the same as the buyer address
+    expect(coachingStruct.contentReceiver).to.equal(contentBuyer.address);
+  });
+
   it("Should fail to buy coaching if buyer is banned", async function () {
     await reDeploy();
     /// Set KYC
@@ -280,6 +326,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     // Check if correct amount of UDAO was refunded to the buyer's wallet
     expect(buyerBalanceAfterRefund.sub(buyerBalanceAfter)).to.equal(coachingPrice);
   });
+
   it("Should allow coach to refund anytime in refundablePeriod", async function () {
     await reDeploy();
     /// Set KYC
@@ -337,6 +384,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     // Check if correct amount of UDAO was refunded to the buyer's wallet
     expect(buyerBalanceAfterRefund.sub(buyerBalanceAfter)).to.equal(coachingPrice);
   });
+
   it("Should fail to refund if coach tries to refund after refundablePeriod", async function () {
     await reDeploy();
     /// Set KYC
@@ -390,6 +438,7 @@ describe("Platform Treasury Contract - Coaching", function () {
       contractPlatformTreasury.connect(contentCreator).refundCoachingByInstructorOrLearner(coachingSaleID)
     ).to.revertedWith("Refund period over you cant refund");
   });
+
   it("Should fail to refund payment for coaching requested by buyer if less than 1 day prior to coaching date", async function () {
     await reDeploy();
     /// Set KYC
@@ -437,6 +486,7 @@ describe("Platform Treasury Contract - Coaching", function () {
       contractPlatformTreasury.connect(contentBuyer).refundCoachingByInstructorOrLearner(coachingSaleID)
     ).to.revertedWith("You can't refund less than 1 day prior to coaching date");
   });
+
   it("Should refund coaching with voucher if before refundablePeriod", async function () {
     await reDeploy();
     /// Set KYC
@@ -509,6 +559,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     // Check if correct amount of UDAO was refunded to the buyer's wallet
     expect(buyerBalanceAfterRefund.sub(buyerBalanceAfter)).to.equal(coachingPrice);
   });
+
   it("Should fail to refund coaching with voucher if after refundablePeriod", async function () {
     await reDeploy();
     /// Set KYC
@@ -579,6 +630,7 @@ describe("Platform Treasury Contract - Coaching", function () {
       "Refund period over you cant refund"
     );
   });
+
   it("Should allow backend to activate Governance Treasury and transfer funds to governance treasury", async function () {
     await reDeploy();
     /// Set KYC
@@ -598,22 +650,28 @@ describe("Platform Treasury Contract - Coaching", function () {
     const _coachTotalCut = _coachFoundCut + _coachGoverCut + _coachJurorCut + _coachValidCut;
 
     // Set coach cuts
-    const txContentCuts = await contractPlatformTreasury.connect(backend).setContentCuts(_contentFoundCut, _contentGoverCut, _contentJurorCut, _contentValidCut);
-    const txCoachCuts = await contractPlatformTreasury.connect(backend).setCoachCuts(_coachFoundCut, _coachGoverCut, _coachJurorCut, _coachValidCut);
+    const txContentCuts = await contractPlatformTreasury
+      .connect(backend)
+      .setContentCuts(_contentFoundCut, _contentGoverCut, _contentJurorCut, _contentValidCut);
+    const txCoachCuts = await contractPlatformTreasury
+      .connect(backend)
+      .setCoachCuts(_coachFoundCut, _coachGoverCut, _coachJurorCut, _coachValidCut);
 
     // expect PlatformCutsUpdated event
-    await expect(txCoachCuts).to.emit(contractPlatformTreasury, "PlatformCutsUpdated").withArgs(
-      _contentFoundCut,
-      _contentGoverCut,
-      _contentJurorCut,
-      _contentValidCut,
-      _contentTotalCut,
-      _coachFoundCut,
-      _coachGoverCut,
-      _coachJurorCut,
-      _coachValidCut,
-      _coachTotalCut,
-    );
+    await expect(txCoachCuts)
+      .to.emit(contractPlatformTreasury, "PlatformCutsUpdated")
+      .withArgs(
+        _contentFoundCut,
+        _contentGoverCut,
+        _contentJurorCut,
+        _contentValidCut,
+        _contentTotalCut,
+        _coachFoundCut,
+        _coachGoverCut,
+        _coachJurorCut,
+        _coachValidCut,
+        _coachTotalCut
+      );
     // Activate governance treasury
     await contractPlatformTreasury.connect(backend).activateGovernanceTreasury(true);
 

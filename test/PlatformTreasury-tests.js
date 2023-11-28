@@ -332,29 +332,91 @@ async function makeCoachingPurchase(
 }
 
 describe("Platform Treasury General", function () {
-  it("Should allow backend to set new governance treasury address", async function () {
+  it("Should allow backend to set update addresses", async function () {
     await reDeploy();
-    const newGovernanceTreasury = contractSupervision;
+    const newUdaoAddress = contractUDAO.address;
+    const newUdaocAddress = contractUDAOContent.address;
+    const newRoleManagerAddress = contractRoleManager.address;
+    const newGovernanceTreasuryAddress = contractSupervision.address;
+    const newVoucherVerifierAddress = contractVoucherVerifier.address;
 
     await expect(
       contractPlatformTreasury
         .connect(backend)
         .updateAddresses(
-          contractUDAO.address,
-          contractUDAOContent.address,
-          contractRoleManager.address,
-          newGovernanceTreasury.address,
-          contractVoucherVerifier.address
+          newUdaoAddress,
+          newUdaocAddress,
+          newRoleManagerAddress,
+          newGovernanceTreasuryAddress,
+          newVoucherVerifierAddress
         )
     )
       .to.emit(contractPlatformTreasury, "AddressesUpdated")
       .withArgs(
-        contractUDAO.address,
-        contractUDAOContent.address,
-        contractRoleManager.address,
-        newGovernanceTreasury.address,
-        contractVoucherVerifier.address
+        newUdaoAddress,
+        newUdaocAddress,
+        newRoleManagerAddress,
+        newGovernanceTreasuryAddress,
+        newVoucherVerifierAddress
       );
+  });
+
+  it("Should allow foundation to update addresses after ownership of contract transfered", async function () {
+    await reDeploy();
+    const newUdaoAddress = contractUDAO.address;
+    const newUdaocAddress = contractUDAOContent.address;
+    const newRoleManagerAddress = contractRoleManager.address;
+    const newGovernanceTreasuryAddress = contractSupervision.address;
+    const newVoucherVerifierAddress = contractVoucherVerifier.address;
+
+    await expect(
+      contractPlatformTreasury
+        .connect(foundation)
+        .updateAddresses(
+          newUdaoAddress,
+          newUdaocAddress,
+          newRoleManagerAddress,
+          newGovernanceTreasuryAddress,
+          newVoucherVerifierAddress
+        )
+    )
+      .to.emit(contractPlatformTreasury, "AddressesUpdated")
+      .withArgs(
+        newUdaoAddress,
+        newUdaocAddress,
+        newRoleManagerAddress,
+        newGovernanceTreasuryAddress,
+        newVoucherVerifierAddress
+      );
+  });
+
+  it("Should fail foundation-else or backend-else role to update addresses", async function () {
+    await reDeploy();
+    const newUdaoAddress = contractUDAO.address;
+    const newUdaocAddress = contractUDAOContent.address;
+    const newRoleManagerAddress = contractRoleManager.address;
+    const newGovernanceTreasuryAddress = contractSupervision.address;
+    const newVoucherVerifierAddress = contractVoucherVerifier.address;
+
+    await expect(
+      contractPlatformTreasury
+        .connect(contentBuyer1)
+        .updateAddresses(
+          newUdaoAddress,
+          newUdaocAddress,
+          newRoleManagerAddress,
+          newGovernanceTreasuryAddress,
+          newVoucherVerifierAddress
+        )
+    ).to.be.revertedWith("Only backend and contract manager can update addresses");
+  });
+
+  it("Should fail backend-else role to set governance treasury online", async function () {
+    await reDeploy();
+    /// Set governance treasury online
+    await expect(contractPlatformTreasury.connect(contentBuyer1).activateGovernanceTreasury(true)).to.be.revertedWith(
+      "Only backend can activate governance treasury"
+    );
   });
 
   it("Should allow backend-deployer to set foundation wallet address for platform treasury contract", async function () {

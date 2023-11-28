@@ -56,16 +56,38 @@ async function reDeploy(reApplyRolesViaVoucher = true, isDexRequired = false) {
   account1 = replace.account1;
   account2 = replace.account2;
   account3 = replace.account3;
-  contractPriceGetter = replace.contractPriceGetter;
-  const reApplyValidatorRoles = [validator, validator1, validator2, validator3, validator4, validator5];
-  const reApplyJurorRoles = [jurorMember, jurorMember1, jurorMember2, jurorMember3, jurorMember4];
-  const VALIDATOR_ROLE = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("VALIDATOR_ROLE"));
-  const JUROR_ROLE = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("JUROR_ROLE"));
 }
 
 describe("UDAO Cert Contract", function () {
   it("Should deploy", async function () {
     await reDeploy();
+  });
+
+  it("Should allow backend to set update addresses", async function () {
+    await reDeploy();
+    const newRoleManagerAddress = contractRoleManager.address;
+
+    await expect(contractUDAOCertificate.connect(backend).updateAddresses(newRoleManagerAddress))
+      .to.emit(contractUDAOCertificate, "AddressesUpdated")
+      .withArgs(newRoleManagerAddress);
+  });
+
+  it("Should allow foundation to update addresses after ownership of contract transfered", async function () {
+    await reDeploy();
+    const newRoleManagerAddress = contractRoleManager.address;
+
+    await expect(contractUDAOCertificate.connect(foundation).updateAddresses(newRoleManagerAddress))
+      .to.emit(contractUDAOCertificate, "AddressesUpdated")
+      .withArgs(newRoleManagerAddress);
+  });
+
+  it("Should fail foundation-else or backend-else role to update addresses", async function () {
+    await reDeploy();
+    const newRoleManagerAddress = contractRoleManager.address;
+
+    await expect(
+      contractUDAOCertificate.connect(contentBuyer1).updateAddresses(newRoleManagerAddress)
+    ).to.be.revertedWith("Only backend and contract manager can update addresses");
   });
 
   it("Should create certificate", async function () {

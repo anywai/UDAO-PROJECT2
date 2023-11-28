@@ -76,7 +76,7 @@ contract VoucherVerifier is EIP712, RoleLegacy {
             require(
                 (hasRole(BACKEND_ROLE, msg.sender) ||
                     hasRole(CONTRACT_MANAGER, msg.sender)),
-                "Only backend can update addresses"
+                "Only backend and contract manager can update addresses"
             );
         }
         roleManager = IRoleManager(roleManagerAddress);
@@ -188,12 +188,11 @@ contract VoucherVerifier is EIP712, RoleLegacy {
     ) external view {
         bytes32 digest = _hashCoachingVoucher(voucher);
         address signer = ECDSA.recover(digest, voucher.signature);
-        if (!roleManager.hasRole(VOUCHER_VERIFIER, signer)) {
-            require(
-                signer == voucher.coach,
-                "Signature invalid or unauthorized"
-            );
-        }
+        require(
+            signer == voucher.coach ||
+                roleManager.hasRole(VOUCHER_VERIFIER, signer),
+            "Signature invalid or unauthorized"
+        );
     }
 
     /// @notice Returns the chain id of the current blockchain.
