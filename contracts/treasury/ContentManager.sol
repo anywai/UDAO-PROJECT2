@@ -142,19 +142,18 @@ abstract contract ContentManager is BasePlatform {
         voucherVerifier.verifyCoachingVoucher(voucher);
         require(
             voucher.coachingDate >= block.timestamp + 86400 * 1,
-            "Coaching date must be at least 1 day before."
+            "Coaching date must be at least 1 day before"
         );
         require(
             voucher.coachingDate <= block.timestamp + 86400 * 7,
-            "Coaching date must be at most 7 days before."
+            "Coaching date must be at most 7 days before"
         );
         if (hasRole(BACKEND_ROLE, msg.sender)) {
             learner = voucher.learner;
             isFiatPurchase = true;
-            require(isNotBanned(msg.sender, 32), "Caller is banned");
-            require(isKYCed(msg.sender, 25), "Caller is not KYCed");
+            require(learner != msg.sender, "Fiat purchase requires a learner!");
         } else {
-            require(msg.sender == voucher.learner, "You are not the learner.");
+            require(msg.sender == voucher.learner, "You are not the learner");
             learner = msg.sender;
         }
 
@@ -259,10 +258,7 @@ abstract contract ContentManager is BasePlatform {
         for (uint256 i; i < voucherIdsLength; i++) {
             /// @dev check and verify the voucher is created by platform
             voucherVerifier.verifyDiscountVoucher(vouchers[i]);
-            require(
-                msg.sender == vouchers[i].redeemer,
-                "You are not redeemer."
-            );
+            require(msg.sender == vouchers[i].redeemer, "You are not redeemer");
 
             contentReceiver[i] = _checkPartReceiver(
                 vouchers[i].tokenId,
