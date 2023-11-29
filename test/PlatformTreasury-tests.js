@@ -701,6 +701,120 @@ describe("Platform Treasury General", function () {
     );
   });
 
+  it("Should instructers current balance shouldn't change with a new sale when a refund period completed after withdraw", async function () {
+    await reDeploy();
+    // KYC content creator and content buyers
+    await contractRoleManager.setKYC(contentCreator.address, true);
+    await contractRoleManager.setKYC(contentBuyer1.address, true);
+    await contractRoleManager.setKYC(contentBuyer2.address, true);
+    await contractRoleManager.setKYC(contentBuyer3.address, true);
+    // Create content
+    const contentParts = [0, 1];
+
+    // Create content voucher
+    const createContentVoucherSample = await createContentVoucher(
+      contractUDAOContent,
+      backend,
+      contentCreator,
+      contentParts,
+      (redeemType = 1),
+      (validationScore = 1)
+    );
+    // Create content with voucher
+    await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample))
+      .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
+      .withArgs("0x0000000000000000000000000000000000000000", contentCreator.address, 1);
+    // Make a content purchase to gather funds for governance
+    const tokenIds = [1];
+    const purchasedParts = [[1]];
+    const redeemers = [contentBuyer1.address];
+    const giftReceiver = [ethers.constants.AddressZero];
+    const fullContentPurchase = [false];
+    const pricesToPay = [ethers.utils.parseEther("1")];
+    const validUntil = Date.now() + 999999999;
+    await makeContentPurchase(
+      contractPlatformTreasury,
+      contractVoucherVerifier,
+      contentBuyer1,
+      contractRoleManager,
+      contractUDAO,
+      tokenIds,
+      purchasedParts,
+      pricesToPay,
+      fullContentPurchase,
+      validUntil,
+      redeemers,
+      giftReceiver
+    );
+
+    // Get the instructer balance before withdrawal
+    const instructerBalanceBefore = await contractUDAO.balanceOf(contentCreator.address);
+    // Expect that the instructer balance is 0 before withdrawal
+    await expect(instructerBalanceBefore).to.equal(0);
+    /// @dev Skip "refund window" days to allow foundation to withdraw funds
+    const refundWindowDays = await contractPlatformTreasury.refundWindow();
+    /// convert big number to number
+    const refundWindowDaysNumber = refundWindowDays.toNumber();
+
+    /// @dev Skip 20 days to allow foundation to withdraw funds
+    const numBlocksToMine = Math.ceil((refundWindowDaysNumber * 24 * 60 * 60) / 2);
+    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine.toString(16)}`, "0x2"]);
+    // Instructer should call withdrawInstructor from platformtreasury contract
+    await contractPlatformTreasury.connect(contentCreator).withdrawInstructor();
+    // Get the instructer balance after withdrawal
+    const instructerBalanceAfter = await contractUDAO.balanceOf(contentCreator.address);
+    // Expect that the instructer balance is not 0 after withdrawal
+    await expect(instructerBalanceAfter).to.not.equal(0);
+
+    /// @dev Calculate how much the instructer should receive
+    const contentPrice = pricesToPay[0];
+    // Calculate the foundation cut
+    const currentFoundationCut = await contractPlatformTreasury.contentFoundCut();
+    const expectedFoundationBalanceBeforePercentage = contentPrice.mul(currentFoundationCut);
+    const expectedFoundationBalance = expectedFoundationBalanceBeforePercentage.div(100000);
+    // Calculate the governance cut
+    const currentGovernanceTreasuryCut = await contractPlatformTreasury.contentGoverCut();
+    const expectedGovernanceTreasuryBalanceBeforePercentage = contentPrice.mul(currentGovernanceTreasuryCut);
+    const expectedGovernanceTreasuryBalance = expectedGovernanceTreasuryBalanceBeforePercentage.div(100000);
+    // Calculate the validator cut
+    const validatorCut = await contractPlatformTreasury.contentValidCut();
+    const validatorBalance = contentPrice.mul(validatorCut).div(100000);
+    // Calculate the juror cut
+    const jurorCut = await contractPlatformTreasury.contentJurorCut();
+    const jurorBalance = contentPrice.mul(jurorCut).div(100000);
+    // Expect instructerBalance to be equal to priceToPay minus the sum of all cuts
+    await expect(instructerBalanceAfter).to.equal(
+      contentPrice
+        .sub(expectedFoundationBalance)
+        .sub(expectedGovernanceTreasuryBalance)
+        .sub(validatorBalance)
+        .sub(jurorBalance)
+    );
+    /// @dev Skip 20 days to allow foundation to withdraw funds
+    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine.toString(16)}`, "0x2"]);
+
+    const purchasedParts2 = [[0]];
+    // Make a new content sale
+    await makeContentPurchase(
+      contractPlatformTreasury,
+      contractVoucherVerifier,
+      contentBuyer1,
+      contractRoleManager,
+      contractUDAO,
+      tokenIds,
+      purchasedParts2,
+      pricesToPay,
+      fullContentPurchase,
+      validUntil,
+      redeemers,
+      giftReceiver
+    );
+    /// get instructer balance from platform treasury
+    const instBalance = await contractPlatformTreasury.instBalance(contentCreator.address);
+    /// instructerBalance shouldn't change with a new sale when a refund period completed after withdraw
+    expect(instBalance).to.equal(0);
+  });
+
   it("Should _checkPartReceiver return buyer address if purchase valid", async function () {
     await reDeploy();
     // KYC content creator and content buyer
