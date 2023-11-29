@@ -388,4 +388,17 @@ abstract contract BasePlatform is Pausable {
             coachTotalCut
         );
     }
+
+    /// @notice allows the backend to pause the contract
+    /// @dev pausing the contract will prevent all purchases refunds and withdrawals from the contract
+    function pause() external {
+        require(hasRole(BACKEND_ROLE, msg.sender), "Only backend can pause");
+        _pause();
+    }
+
+    /// @notice allows the backend to unpause the contract
+    function unpause() external {
+        require(hasRole(BACKEND_ROLE, msg.sender), "Only backend can unpause");
+        _unpause();
+    }
 }
