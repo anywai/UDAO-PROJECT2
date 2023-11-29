@@ -94,9 +94,15 @@ contract PlatformTreasury is ContentManager {
 
     /// @notice Allows instructers to withdraw individually.
     function withdrawInstructor() external whenNotPaused {
+        uint positiveBalance;
+        uint refundedBalance;
+        (positiveBalance, refundedBalance) = getWithdrawableBalanceInstructor(
+            msg.sender
+        );
+        require(positiveBalance > 0, "No balance to withdraw");
         require(
-            getWithdrawableBalanceInstructor(msg.sender) > 0,
-            "No balance to withdraw"
+            positiveBalance - refundedBalance > 0,
+            "Debt is larger than or equal to balance"
         );
         /// @dev this is the timestamp of the transaction in days
         uint256 transactionTime = (block.timestamp / 86400);
@@ -119,10 +125,6 @@ contract PlatformTreasury is ContentManager {
             transactionLBIndex
         );
 
-        require(
-            instBalance[msg.sender] >= instRefundedBalance[msg.sender],
-            "Debt is larger than balance"
-        );
         /// @dev calculate the debt(refunded and blocked balance) amount and withdrawable balance of the instructor
         uint debtAmount = instRefundedBalance[msg.sender];
         uint withdrawableBalance = instBalance[msg.sender] - debtAmount;
@@ -140,7 +142,7 @@ contract PlatformTreasury is ContentManager {
     /// @return withdrawableBalance The withdrawable balance of the given instructor
     function getWithdrawableBalanceInstructor(
         address _inst
-    ) public view returns (uint) {
+    ) public view returns (uint, uint) {
         /// @dev this is the timestamp of the transaction in days
         uint256 transactionTime = (block.timestamp / 86400);
         /// @dev transactionLBIndex determines a "transaction time dependent position" in the Locked balanaces array.
@@ -162,12 +164,8 @@ contract PlatformTreasury is ContentManager {
                 refundWindow;
             instPositiveBalance += instLockedBalance[_inst][indexOfPayout];
         }
-        /// @dev if the instructor has a positive balance greater than the refunded and blocked balance, the instructor can withdraw the difference
-        if ((instPositiveBalance - instRefundedBalance[_inst]) > 0) {
-            return instPositiveBalance - instRefundedBalance[_inst];
-        } else {
-            return 0;
-        }
+        /// @dev return the calculated positive balance and refunded balance of the instructor
+        return (instPositiveBalance, instRefundedBalance[_inst]);
     }
 
     /// @notice Allows backend to change platform refun window period
