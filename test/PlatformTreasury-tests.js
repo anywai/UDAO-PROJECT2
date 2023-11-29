@@ -3,8 +3,9 @@ const hardhat = require("hardhat");
 const { ethers } = hardhat;
 const chai = require("chai");
 const BN = require("bn.js");
-const { LazyCoaching } = require("../lib/LazyCoaching");
 const { DiscountedPurchase } = require("../lib/DiscountedPurchase");
+const { LazyCoaching } = require("../lib/LazyCoaching");
+const { RefundVoucher } = require("../lib/RefundVoucher");
 const helpers = require("@nomicfoundation/hardhat-network-helpers");
 const { Redeem } = require("../lib/Redeem");
 const { deploy } = require("../lib/deployments");
@@ -244,7 +245,6 @@ async function makeContentPurchase(
   await contractUDAO
     .connect(contentBuyer)
     .approve(contractPlatformTreasury.address, ethers.utils.parseEther("999999999999.0"));
-
   /// Create content purchase vouchers
   /*
   ContentDiscountVoucher: [
@@ -829,5 +829,470 @@ describe("Platform Treasury General", function () {
     //);
     // valid address should be equal to the content buyer's address
     await expect(validAddress).to.equal(contentBuyer1.address);
+  });
+
+  it("Should fail buy coaching or content when paused", async function () {
+    await reDeploy();
+    /// KYC content creator and content buyer
+    await contractRoleManager.setKYC(contentCreator.address, true);
+    await contractRoleManager.setKYC(contentBuyer1.address, true);
+    /// Pause contract
+    await contractPlatformTreasury.connect(backend).pause();
+    /// Make coaching purchase
+    await expect(
+      makeCoachingPurchase(
+        contractRoleManager,
+        contractUDAO,
+        contractPlatformTreasury,
+        contentBuyer1,
+        contentCreator,
+        1
+      )
+    ).to.be.revertedWith("Pausable: paused");
+    /// Create content
+    const contentParts = [0, 1];
+    /// Create content voucher
+    const createContentVoucherSample = await createContentVoucher(
+      contractUDAOContent,
+      backend,
+      contentCreator,
+      contentParts,
+      (redeemType = 1),
+      (validationScore = 1)
+    );
+
+    // Create content with voucher
+    const tx = await contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample);
+    // Get NewContentCreated event and get tokenId
+    const receipt = await tx.wait();
+    const tokenId = receipt.events[0].args[2].toNumber();
+    // You need to use all parts of the content to buy it. Get all parts of the content
+
+    const parts = await contractUDAOContent.getContentParts(tokenId);
+
+    /// Make content purchase
+    await expect(
+      makeContentPurchase(
+        contractPlatformTreasury,
+        contractVoucherVerifier,
+        contentBuyer1,
+        contractRoleManager,
+        contractUDAO,
+        [tokenId],
+        [parts],
+        [ethers.utils.parseEther("1")],
+        [false],
+        Date.now() + 999999999,
+        [contentBuyer1.address],
+        [ethers.constants.AddressZero]
+      )
+    ).to.be.revertedWith("Pausable: paused");
+  });
+
+  it("Should fail refund coaching by using any refund function when paused", async function () {
+    await reDeploy();
+    /// Set KYC
+    await contractRoleManager.setKYC(contentCreator.address, true);
+    await contractRoleManager.setKYC(contentBuyer.address, true);
+
+    /// Send UDAO to the buyer's wallet
+    await contractUDAO.transfer(contentBuyer.address, ethers.utils.parseEther("100.0"));
+    /// Get the amount of UDAO in the buyer's wallet
+    const buyerBalance = await contractUDAO.balanceOf(contentBuyer.address);
+    /// Content buyer needs to give approval to the platformtreasury
+    await contractUDAO
+      .connect(contentBuyer)
+      .approve(contractPlatformTreasury.address, ethers.utils.parseEther("999999999999.0"));
+
+    // Create CoachingVoucher to be able to buy coaching
+    const lazyCoaching = new LazyCoaching({
+      contract: contractVoucherVerifier,
+      signer: backend,
+    });
+    const coachingPrice = ethers.utils.parseEther("1.0");
+    /// Get the current block timestamp
+    const currentBlockTimestamp = (await hre.ethers.provider.getBlock()).timestamp;
+    /// Coaching date is 3 days from now
+    const coachingDate = currentBlockTimestamp + 3 * 24 * 60 * 60;
+    const role_voucher = await lazyCoaching.createVoucher(
+      contentCreator.address,
+      coachingPrice,
+      coachingDate,
+      contentBuyer.address
+    );
+    // Buy coaching
+    const purchaseTx = await contractPlatformTreasury.connect(contentBuyer).buyCoaching(role_voucher);
+    const queueTxReceipt = await purchaseTx.wait();
+    const queueTxEvent = queueTxReceipt.events.find((e) => e.event == "CoachingBought");
+    const coachingSaleID = queueTxEvent.args[0];
+    // Get the amount of UDAO in the buyer's wallet after buying coaching
+    const buyerBalanceAfter = await contractUDAO.balanceOf(contentBuyer.address);
+    // Check if correct amount of UDAO was deducted from the buyer's wallet
+    expect(buyerBalance.sub(buyerBalanceAfter)).to.equal(coachingPrice);
+    // Get coaching struct
+    const coachingStruct = await contractPlatformTreasury.coachSales(coachingSaleID);
+    // Check if returned learner address is the same as the buyer address
+    expect(coachingStruct.contentReceiver).to.equal(contentBuyer.address);
+    /// Pause contract
+    await contractPlatformTreasury.connect(backend).pause();
+
+    ///// Try to refund coaching by using refundCoachingByInstructorOrLearner function
+    await expect(
+      contractPlatformTreasury.connect(contentCreator).refundCoachingByInstructorOrLearner(coachingSaleID)
+    ).to.be.revertedWith("Pausable: paused");
+
+    //  Create RefundVoucher
+    const refundVoucher = new RefundVoucher({
+      contract: contractVoucherVerifier,
+      signer: backend,
+    });
+    const refundType = 0; // 0 since refund is coaching
+    // Voucher will be valid for 1 day
+    const voucherValidUntil = Date.now() + 86400;
+    const refund_voucher = await refundVoucher.createVoucher(
+      coachingSaleID,
+      contentCreator.address,
+      [],
+      [],
+      voucherValidUntil
+    );
+    /// Try to refund coaching by using newRefundCoaching function
+    await expect(contractPlatformTreasury.connect(contentCreator).newRefundCoaching(refund_voucher)).to.revertedWith(
+      "Pausable: paused"
+    );
+  });
+
+  it("Should fail refund content when paused", async function () {
+    await reDeploy();
+    /// Set KYC
+    await contractRoleManager.setKYC(contentCreator.address, true);
+    await contractRoleManager.setKYC(contentBuyer.address, true);
+    // Create content
+    const contentParts = [0, 1];
+    // Create content voucher
+    const createContentVoucherSample = await createContentVoucher(
+      contractUDAOContent,
+      backend,
+      contentCreator,
+      contentParts,
+      (redeemType = 1),
+      (validationScore = 1)
+    );
+
+    // Create content with voucher
+    const tx = await contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample);
+    // Get NewContentCreated event and get tokenId
+    const receipt = await tx.wait();
+    const tokenId = receipt.events[0].args[2].toNumber();
+    // You need to use all parts of the content to buy it. Get all parts of the content
+    const parts = await contractUDAOContent.getContentParts(tokenId);
+    // Make a content purchase
+    const tokenIds = [1];
+    const purchasedParts = [parts];
+    const redeemers = [contentBuyer1.address];
+    const giftReceiver = [ethers.constants.AddressZero];
+    const fullContentPurchase = [true];
+    const pricesToPay = [ethers.utils.parseEther("1")];
+    const validUntil = Date.now() + 999999999;
+    await makeContentPurchase(
+      contractPlatformTreasury,
+      contractVoucherVerifier,
+      contentBuyer1,
+      contractRoleManager,
+      contractUDAO,
+      tokenIds,
+      purchasedParts,
+      pricesToPay,
+      fullContentPurchase,
+      validUntil,
+      redeemers,
+      giftReceiver
+    );
+
+    /// Check if the buyer has the content part
+    const result = await contractPlatformTreasury.connect(contentBuyer1).getOwnedParts(contentBuyer1.address, tokenId);
+    expect(result[0]).to.equal(purchasedParts[0][0]);
+    const isFullyPurchased = await contractPlatformTreasury.isFullyPurchased(contentBuyer1.address, tokenId);
+    expect(isFullyPurchased).to.equal(true);
+    //  Create RefundVoucher
+    const refundVoucher = new RefundVoucher({
+      contract: contractVoucherVerifier,
+      signer: backend,
+    });
+    const refundType = 1; // 0 since refund is content
+    // Voucher will be valid for 1 day
+    const voucherValidUntil = Date.now() + 86400;
+    const contentSaleId = 0; // 0 since only one content is created and sold
+    const finalParts = []; // Empty since buyer had no parts
+    const finalContents = []; // Empty since buyer had no co
+    const refund_voucher = await refundVoucher.createVoucher(
+      contentSaleId,
+      contentCreator.address,
+      finalParts,
+      finalContents,
+      voucherValidUntil
+    );
+    /// Pause contract
+    await contractPlatformTreasury.connect(backend).pause();
+
+    /// Try to Refund the content
+    await expect(contractPlatformTreasury.connect(contentCreator).newRefundContent(refund_voucher)).to.be.revertedWith(
+      "Pausable: paused"
+    );
+  });
+
+  it("Should fail instructers or foundation to withdraw their earnings when paused", async function () {
+    await reDeploy();
+    // KYC content creator and content buyers
+    await contractRoleManager.setKYC(contentCreator.address, true);
+    await contractRoleManager.setKYC(contentBuyer1.address, true);
+    await contractRoleManager.setKYC(contentBuyer2.address, true);
+    await contractRoleManager.setKYC(contentBuyer3.address, true);
+    // Create content
+    const contentParts = [0, 1];
+
+    // Create content voucher
+    const createContentVoucherSample = await createContentVoucher(
+      contractUDAOContent,
+      backend,
+      contentCreator,
+      contentParts,
+      (redeemType = 1),
+      (validationScore = 1)
+    );
+    // Create content with voucher
+    await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample))
+      .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
+      .withArgs("0x0000000000000000000000000000000000000000", contentCreator.address, 1);
+    // Make a content purchase to gather funds for governance
+    const tokenIds = [1];
+    const purchasedParts = [[1]];
+    const redeemers = [contentBuyer1.address];
+    const giftReceiver = [ethers.constants.AddressZero];
+    const fullContentPurchase = [false];
+    const pricesToPay = [ethers.utils.parseEther("1")];
+    const validUntil = Date.now() + 999999999;
+    await makeContentPurchase(
+      contractPlatformTreasury,
+      contractVoucherVerifier,
+      contentBuyer1,
+      contractRoleManager,
+      contractUDAO,
+      tokenIds,
+      purchasedParts,
+      pricesToPay,
+      fullContentPurchase,
+      validUntil,
+      redeemers,
+      giftReceiver
+    );
+
+    // Get the instructer balance before withdrawal
+    const instructerBalanceBefore = await contractUDAO.balanceOf(contentCreator.address);
+    // Expect that the instructer balance is 0 before withdrawal
+    await expect(instructerBalanceBefore).to.equal(0);
+    /// @dev Skip "refund window" days to allow foundation to withdraw funds
+    const refundWindowDays = await contractPlatformTreasury.refundWindow();
+    /// convert big number to number
+    const refundWindowDaysNumber = refundWindowDays.toNumber();
+
+    /// @dev Skip 20 days to allow foundation to withdraw funds
+    const numBlocksToMine = Math.ceil((refundWindowDaysNumber * 24 * 60 * 60) / 2);
+    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine.toString(16)}`, "0x2"]);
+
+    /// Pause contract
+    await contractPlatformTreasury.connect(backend).pause();
+    // Instructer try to withdrawInstructor from platformtreasury contract
+    await expect(contractPlatformTreasury.connect(contentCreator).withdrawInstructor()).to.be.revertedWith(
+      "Pausable: paused"
+    );
+    // Get the instructer balance after withdrawal
+    const instructerBalanceAfter = await contractUDAO.balanceOf(contentCreator.address);
+
+    // Expect instructerBalance to be equal to priceToPay minus the sum of all cuts
+    await expect(instructerBalanceAfter).to.equal(0);
+
+    /// Foundation try to withdrawFoundation funds from the platformtreasury contract
+    await expect(contractPlatformTreasury.connect(foundation).withdrawFoundation()).to.be.revertedWith(
+      "Pausable: paused"
+    );
+
+    /// Get the current foundation balance
+    const currentFoundationBalance = await contractUDAO.balanceOf(foundation.address);
+
+    /// Check if the governance treasury balance is equal to the expected governance treasury balance
+    await expect(currentFoundationBalance).to.equal(0);
+  });
+
+  it("Should allow backend to pause/unpause contract", async function () {
+    await reDeploy();
+    /// Pause contract
+    await contractPlatformTreasury.connect(backend).pause();
+    /// check if contract is paused
+    const isPausedAfterPause = await contractPlatformTreasury.paused();
+    expect(isPausedAfterPause).to.equal(true);
+    /// Unpause contract
+    await contractPlatformTreasury.connect(backend).unpause();
+    /// check if contract is unpaused
+    const isPausedAfterUnpause = await contractPlatformTreasury.paused();
+    expect(isPausedAfterUnpause).to.equal(false);
+  });
+
+  it("Should fail backend-else role to pause/unpause contract", async function () {
+    await reDeploy();
+    /// Try to Pause contract with non backed role
+    await expect(contractPlatformTreasury.connect(contentBuyer1).pause()).to.be.revertedWith("Only backend can pause");
+    /// pause status should be false
+    const isPausedAfterPause1 = await contractPlatformTreasury.paused();
+    expect(isPausedAfterPause1).to.equal(false);
+
+    /// pause the contract with backend role
+    await contractPlatformTreasury.connect(backend).pause();
+    /// pause status should be true
+    const isPausedAfterPause2 = await contractPlatformTreasury.paused();
+    expect(isPausedAfterPause2).to.equal(true);
+
+    /// Try to Unpause contract with non backed role
+    await expect(contractPlatformTreasury.connect(contentBuyer1).unpause()).to.be.revertedWith(
+      "Only backend can unpause"
+    );
+    /// pause status should be false
+    const isPausedAfterUnpause = await contractPlatformTreasury.paused();
+    expect(isPausedAfterPause1).to.equal(false);
+  });
+
+  it("Should fail foundation-else withdraw foundation funds from the treasury", async function () {
+    await reDeploy();
+    /// try to withdraw foundation funds from the treasury with non foundation role
+    await expect(contractPlatformTreasury.connect(contentBuyer1).withdrawFoundation()).to.be.revertedWith(
+      "Only foundation can withdraw"
+    );
+  });
+
+  it("Should fail instructor to withdraw earnings from treasury if they have no earnings in contract", async function () {
+    await reDeploy();
+    /// try to withdraw foundation funds from the treasury with non foundation role
+    await expect(contractPlatformTreasury.connect(contentCreator).withdrawInstructor()).to.be.revertedWith(
+      "No balance to withdraw"
+    );
+  });
+
+  it("Should fail instructor to widthdraw earning from treasury if they dont have revenue greater than refunded amount", async function () {
+    await reDeploy();
+    // KYC content creator and content buyers
+    await contractRoleManager.setKYC(contentCreator.address, true);
+    await contractRoleManager.setKYC(contentBuyer1.address, true);
+    await contractRoleManager.setKYC(contentBuyer2.address, true);
+    await contractRoleManager.setKYC(contentBuyer3.address, true);
+    // Create content
+    const contentParts = [0, 1];
+
+    // Create content voucher
+    const createContentVoucherSample = await createContentVoucher(
+      contractUDAOContent,
+      backend,
+      contentCreator,
+      contentParts,
+      (redeemType = 1),
+      (validationScore = 1)
+    );
+    // Create content with voucher
+    await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample))
+      .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
+      .withArgs("0x0000000000000000000000000000000000000000", contentCreator.address, 1);
+    // Make a content purchase to gather funds for governance
+    const tokenIds = [1];
+    const purchasedParts = [[1]];
+    const redeemers = [contentBuyer1.address];
+    const giftReceiver = [ethers.constants.AddressZero];
+    const fullContentPurchase = [false];
+    const pricesToPay = [ethers.utils.parseEther("1")];
+    const validUntil = Date.now() + 999999999;
+    await makeContentPurchase(
+      contractPlatformTreasury,
+      contractVoucherVerifier,
+      contentBuyer1,
+      contractRoleManager,
+      contractUDAO,
+      tokenIds,
+      purchasedParts,
+      pricesToPay,
+      fullContentPurchase,
+      validUntil,
+      redeemers,
+      giftReceiver
+    );
+
+    // Get the instructer balance before withdrawal
+    const instructerBalanceBefore = await contractUDAO.balanceOf(contentCreator.address);
+    // Expect that the instructer balance is 0 before withdrawal
+    await expect(instructerBalanceBefore).to.equal(0);
+
+    /// @dev Skip 1 days
+    const numBlocksToMine0 = Math.ceil((1 * 24 * 60 * 60) / 2);
+    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine0.toString(16)}`, "0x2"]);
+
+    /// Check if the buyer has the content part
+    const result = await contractPlatformTreasury
+      .connect(contentBuyer1)
+      .getOwnedParts(contentBuyer1.address, tokenIds[0]);
+    expect(result[0]).to.equal(purchasedParts[0][0]);
+    //  Create RefundVoucher
+    const refundVoucher = new RefundVoucher({
+      contract: contractVoucherVerifier,
+      signer: backend,
+    });
+
+    const refundType = 1; // 0 since refund is content
+    // Voucher will be valid for 1 day
+    const voucherValidUntil = Date.now() + 86400;
+    const contentSaleId = 0; // 0 since only one content is created and sold
+    const finalParts = []; // Empty since buyer had no parts
+    const finalContents = []; // Empty since buyer had no co
+    const refund_voucher = await refundVoucher.createVoucher(
+      contentSaleId,
+      contentCreator.address,
+      finalParts,
+      finalContents,
+      voucherValidUntil
+    );
+
+    /// refund the content
+    await contractPlatformTreasury.connect(contentCreator).newRefundContent(refund_voucher);
+
+    /// @dev Skip "refund window" days to allow foundation to withdraw funds
+    const refundWindowDays = await contractPlatformTreasury.refundWindow();
+    /// convert big number to number
+    const refundWindowDaysNumber = refundWindowDays.toNumber();
+
+    /// @dev Skip 20 days to allow foundation to withdraw funds
+    const numBlocksToMine1 = Math.ceil((refundWindowDaysNumber * 24 * 60 * 60) / 2);
+    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine1.toString(16)}`, "0x2"]);
+
+    /// a new purchase will be update the instructer balance
+    const redeemers2 = [contentBuyer2.address];
+    await makeContentPurchase(
+      contractPlatformTreasury,
+      contractVoucherVerifier,
+      contentBuyer2,
+      contractRoleManager,
+      contractUDAO,
+      tokenIds,
+      purchasedParts,
+      pricesToPay,
+      fullContentPurchase,
+      validUntil,
+      redeemers2,
+      giftReceiver
+    );
+
+    // should fail instructor to withdraw earnings from treasury due to no earnings
+    await expect(contractPlatformTreasury.connect(contentCreator).withdrawInstructor()).to.be.revertedWith(
+      "Debt is larger than or equal to balance"
+    );
+    // Get the instructer balance after withdrawal
+    const instructerBalanceAfter = await contractUDAO.balanceOf(contentCreator.address);
+    // Expect that the instructer balance is not 0 after withdrawal
+    await expect(instructerBalanceAfter).to.equal(0);
   });
 });
