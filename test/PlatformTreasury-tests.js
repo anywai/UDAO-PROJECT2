@@ -1266,7 +1266,7 @@ describe("Platform Treasury General", function () {
     const refundWindowDaysNumber = refundWindowDays.toNumber();
 
     /// @dev Skip 20 days to allow foundation to withdraw funds
-    const numBlocksToMine1 = Math.ceil((refundWindowDaysNumber * 24 * 60 * 60) / 2);
+    const numBlocksToMine1 = Math.ceil((refundWindowDaysNumber * 2 * 24 * 60 * 60) / 2);
     await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine1.toString(16)}`, "0x2"]);
 
     /// a new purchase will be update the instructer balance
@@ -1294,5 +1294,105 @@ describe("Platform Treasury General", function () {
     const instructerBalanceAfter = await contractUDAO.balanceOf(contentCreator.address);
     // Expect that the instructer balance is not 0 after withdrawal
     await expect(instructerBalanceAfter).to.equal(0);
+  });
+
+  it("Should fail to set coach or content cuts if caller have not admin role", async function () {
+    await reDeploy();
+    /// new platform cuts
+    const _contentFoundCut = 4000;
+    const _contentGoverCut = 700;
+    const _contentJurorCut = 100;
+    const _contentValidCut = 200;
+    const _contentTotalCut = _contentFoundCut + _contentGoverCut + _contentJurorCut + _contentValidCut;
+
+    const _coachFoundCut = 4000;
+    const _coachGoverCut = 700;
+    const _coachJurorCut = 100;
+    const _coachValidCut = 200;
+    const _coachTotalCut = _coachFoundCut + _coachGoverCut + _coachJurorCut + _coachValidCut;
+
+    /// try to set coach cut with non admin role
+    await expect(
+      contractPlatformTreasury
+        .connect(contentBuyer1)
+        .setCoachCuts(_coachFoundCut, _coachGoverCut, _coachJurorCut, _coachValidCut)
+    ).to.be.revertedWith("Only admins can set coach cuts");
+    /// try to set content cut with non admin role
+    await expect(
+      contractPlatformTreasury
+        .connect(contentBuyer1)
+        .setContentCuts(_contentFoundCut, _contentGoverCut, _contentJurorCut, _contentValidCut)
+    ).to.be.revertedWith("Only admins can set content cuts");
+    /// FOUNDATION_ROLE have right to set cuts
+    /// try to set coach cut with non admin role
+    await expect(
+      contractPlatformTreasury
+        .connect(foundation)
+        .setCoachCuts(_coachFoundCut, _coachGoverCut, _coachJurorCut, _coachValidCut)
+    ).emit(contractPlatformTreasury, "PlatformCutsUpdated");
+    /// try to set content cut with non admin role
+    await expect(
+      contractPlatformTreasury
+        .connect(foundation)
+        .setContentCuts(_contentFoundCut, _contentGoverCut, _contentJurorCut, _contentValidCut)
+    ).emit(contractPlatformTreasury, "PlatformCutsUpdated");
+    /// grant role to contentBuyer1 to GOVERNANCE_ROLE
+    await contractRoleManager.connect(foundation).grantRole(GOVERNANCE_ROLE, contentBuyer1.address);
+    /// GOVERNANCE_ROLE role have right to set cuts
+    /// try to set coach cut with non admin role
+    await expect(
+      contractPlatformTreasury
+        .connect(contentBuyer1)
+        .setCoachCuts(_coachFoundCut, _coachGoverCut, _coachJurorCut, _coachValidCut)
+    ).emit(contractPlatformTreasury, "PlatformCutsUpdated");
+    /// try to set content cut with non admin role
+    await expect(
+      contractPlatformTreasury
+        .connect(contentBuyer1)
+        .setContentCuts(_contentFoundCut, _contentGoverCut, _contentJurorCut, _contentValidCut)
+    ).emit(contractPlatformTreasury, "PlatformCutsUpdated");
+    /// BACKEND_ROLE have right to set cuts
+    /// try to set coach cut with non admin role
+    await expect(
+      contractPlatformTreasury
+        .connect(backend)
+        .setCoachCuts(_coachFoundCut, _coachGoverCut, _coachJurorCut, _coachValidCut)
+    ).emit(contractPlatformTreasury, "PlatformCutsUpdated");
+    /// try to set content cut with non admin role
+    await expect(
+      contractPlatformTreasury
+        .connect(backend)
+        .setContentCuts(_contentFoundCut, _contentGoverCut, _contentJurorCut, _contentValidCut)
+    ).emit(contractPlatformTreasury, "PlatformCutsUpdated");
+  });
+
+  it("Should fail to set coach or content cuts if total cut greater than 100%", async function () {
+    await reDeploy();
+    /// new platform cuts
+    const _contentFoundCut = 400000;
+    const _contentGoverCut = 700;
+    const _contentJurorCut = 100;
+    const _contentValidCut = 200;
+    const _contentTotalCut = _contentFoundCut + _contentGoverCut + _contentJurorCut + _contentValidCut;
+
+    const _coachFoundCut = 4000;
+    const _coachGoverCut = 700000;
+    const _coachJurorCut = 100;
+    const _coachValidCut = 200;
+    const _coachTotalCut = _coachFoundCut + _coachGoverCut + _coachJurorCut + _coachValidCut;
+
+    /// try to set coach cut with non admin role
+    await expect(
+      contractPlatformTreasury
+        .connect(foundation)
+        .setCoachCuts(_coachFoundCut, _coachGoverCut, _coachJurorCut, _coachValidCut)
+    ).to.be.revertedWith("Cuts cant be higher than %100");
+
+    /// try to set content cut with non admin role
+    await expect(
+      contractPlatformTreasury
+        .connect(foundation)
+        .setContentCuts(_contentFoundCut, _contentGoverCut, _contentJurorCut, _contentValidCut)
+    ).to.be.revertedWith("Cuts cant be higher than %100");
   });
 });

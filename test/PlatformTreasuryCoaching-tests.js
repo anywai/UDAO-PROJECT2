@@ -150,6 +150,80 @@ describe("Platform Treasury Contract - Coaching", function () {
     expect(coachingStruct.contentReceiver).to.equal(contentBuyer.address);
   });
 
+  it("Should fail user to buy a coaching if have not enough udao balance", async function () {
+    await reDeploy();
+    /// Set KYC
+    await contractRoleManager.setKYC(contentCreator.address, true);
+    await contractRoleManager.setKYC(contentBuyer.address, true);
+
+    /// Send UDAO to the buyer's wallet
+    //await contractUDAO.transfer(contentBuyer.address, ethers.utils.parseEther("100.0"));
+    /// Get the amount of UDAO in the buyer's wallet
+    const buyerBalance = await contractUDAO.balanceOf(contentBuyer.address);
+    /// Content buyer needs to give approval to the platformtreasury
+    await contractUDAO
+      .connect(contentBuyer)
+      .approve(contractPlatformTreasury.address, ethers.utils.parseEther("999999999999.0"));
+
+    // Create CoachingVoucher to be able to buy coaching
+    const lazyCoaching = new LazyCoaching({
+      contract: contractVoucherVerifier,
+      signer: backend,
+    });
+    const coachingPrice = ethers.utils.parseEther("1.0");
+    /// Get the current block timestamp
+    const currentBlockTimestamp = (await hre.ethers.provider.getBlock()).timestamp;
+    /// Coaching date is 3 days from now
+    const coachingDate = currentBlockTimestamp + 3 * 24 * 60 * 60;
+    const role_voucher = await lazyCoaching.createVoucher(
+      contentCreator.address,
+      coachingPrice,
+      coachingDate,
+      contentBuyer.address
+    );
+    // Buy coaching
+    const purchaseTx = contractPlatformTreasury.connect(contentBuyer).buyCoaching(role_voucher);
+    // dont enough udao
+    await expect(purchaseTx).to.be.revertedWith("Not enough UDAO sent!");
+  });
+
+  it("Should fail user to buy a coaching if have not enough udao allowance", async function () {
+    await reDeploy();
+    /// Set KYC
+    await contractRoleManager.setKYC(contentCreator.address, true);
+    await contractRoleManager.setKYC(contentBuyer.address, true);
+
+    /// Send UDAO to the buyer's wallet
+    await contractUDAO.transfer(contentBuyer.address, ethers.utils.parseEther("100.0"));
+    /// Get the amount of UDAO in the buyer's wallet
+    const buyerBalance = await contractUDAO.balanceOf(contentBuyer.address);
+    /// Content buyer needs to give approval to the platformtreasury
+    //await contractUDAO
+    //  .connect(contentBuyer)
+    //  .approve(contractPlatformTreasury.address, ethers.utils.parseEther("999999999999.0"));
+
+    // Create CoachingVoucher to be able to buy coaching
+    const lazyCoaching = new LazyCoaching({
+      contract: contractVoucherVerifier,
+      signer: backend,
+    });
+    const coachingPrice = ethers.utils.parseEther("1.0");
+    /// Get the current block timestamp
+    const currentBlockTimestamp = (await hre.ethers.provider.getBlock()).timestamp;
+    /// Coaching date is 3 days from now
+    const coachingDate = currentBlockTimestamp + 3 * 24 * 60 * 60;
+    const role_voucher = await lazyCoaching.createVoucher(
+      contentCreator.address,
+      coachingPrice,
+      coachingDate,
+      contentBuyer.address
+    );
+    // Buy coaching
+    const purchaseTx = contractPlatformTreasury.connect(contentBuyer).buyCoaching(role_voucher);
+    // dont enough udao
+    await expect(purchaseTx).to.be.revertedWith("Not enough allowance!");
+  });
+
   it("Should a user able to buy a coaching when coaching voucher created by coach", async function () {
     await reDeploy();
     /// Set KYC
@@ -196,7 +270,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     expect(coachingStruct.contentReceiver).to.equal(contentBuyer.address);
   });
 
-  it("Should fail to buy coaching if buyer is banned", async function () {
+  it("Should fail to buy coaching if learner is banned", async function () {
     await reDeploy();
     /// Set KYC
     await contractRoleManager.setKYC(contentCreator.address, true);
@@ -231,6 +305,43 @@ describe("Platform Treasury Contract - Coaching", function () {
     // Buy coaching
     await expect(contractPlatformTreasury.connect(contentBuyer).buyCoaching(role_voucher)).to.revertedWith(
       "Learner is banned"
+    );
+  });
+
+  it("Should fail to buy coaching if learner dont have kyc", async function () {
+    await reDeploy();
+    /// Set KYC
+    await contractRoleManager.setKYC(contentCreator.address, true);
+    await contractRoleManager.setKYC(contentBuyer.address, false);
+
+    /// Send UDAO to the buyer's wallet
+    await contractUDAO.transfer(contentBuyer.address, ethers.utils.parseEther("100.0"));
+
+    /// Content buyer needs to give approval to the platformtreasury
+    await contractUDAO
+      .connect(contentBuyer)
+      .approve(contractPlatformTreasury.address, ethers.utils.parseEther("999999999999.0"));
+
+    // Create CoachingVoucher to be able to buy coaching
+    const lazyCoaching = new LazyCoaching({
+      contract: contractVoucherVerifier,
+      signer: backend,
+    });
+    const coachingPrice = ethers.utils.parseEther("1.0");
+    /// Get the current block timestamp
+    const currentBlockTimestamp = (await hre.ethers.provider.getBlock()).timestamp;
+    /// Coaching date is 3 days from now
+    const coachingDate = currentBlockTimestamp + 3 * 24 * 60 * 60;
+    const role_voucher = await lazyCoaching.createVoucher(
+      contentCreator.address,
+      coachingPrice,
+      coachingDate,
+      contentBuyer.address
+    );
+
+    // Buy coaching
+    await expect(contractPlatformTreasury.connect(contentBuyer).buyCoaching(role_voucher)).to.revertedWith(
+      "Learner is not KYCed"
     );
   });
 
@@ -269,6 +380,42 @@ describe("Platform Treasury Contract - Coaching", function () {
     // Buy coaching
     await expect(contractPlatformTreasury.connect(contentBuyer).buyCoaching(role_voucher)).to.revertedWith(
       "Coach is banned"
+    );
+  });
+
+  it("Should fail to buy coaching if instructer dont have kyc", async function () {
+    await reDeploy();
+    /// Set KYC
+    await contractRoleManager.setKYC(contentCreator.address, false);
+    await contractRoleManager.setKYC(contentBuyer.address, true);
+
+    /// Send UDAO to the buyer's wallet
+    await contractUDAO.transfer(contentBuyer.address, ethers.utils.parseEther("100.0"));
+
+    /// Content buyer needs to give approval to the platformtreasury
+    await contractUDAO
+      .connect(contentBuyer)
+      .approve(contractPlatformTreasury.address, ethers.utils.parseEther("999999999999.0"));
+
+    // Create CoachingVoucher to be able to buy coaching
+    const lazyCoaching = new LazyCoaching({
+      contract: contractVoucherVerifier,
+      signer: backend,
+    });
+    const coachingPrice = ethers.utils.parseEther("1.0");
+    /// Get the current block timestamp
+    const currentBlockTimestamp = (await hre.ethers.provider.getBlock()).timestamp;
+    /// Coaching date is 3 days from now
+    const coachingDate = currentBlockTimestamp + 3 * 24 * 60 * 60;
+    const role_voucher = await lazyCoaching.createVoucher(
+      contentCreator.address,
+      coachingPrice,
+      coachingDate,
+      contentBuyer.address
+    );
+    // Buy coaching
+    await expect(contractPlatformTreasury.connect(contentBuyer).buyCoaching(role_voucher)).to.revertedWith(
+      "Coach is not KYCed"
     );
   });
 
@@ -327,6 +474,60 @@ describe("Platform Treasury Contract - Coaching", function () {
     expect(buyerBalanceAfterRefund.sub(buyerBalanceAfter)).to.equal(coachingPrice);
   });
 
+  it("Should fail refund payment for coaching if caller is not payee or coach", async function () {
+    await reDeploy();
+    /// Set KYC
+    await contractRoleManager.setKYC(contentCreator.address, true);
+    await contractRoleManager.setKYC(contentBuyer.address, true);
+
+    /// Send UDAO to the buyer's wallet
+    await contractUDAO.transfer(contentBuyer.address, ethers.utils.parseEther("100.0"));
+    /// Get the amount of UDAO in the buyer's wallet
+    const buyerBalance = await contractUDAO.balanceOf(contentBuyer.address);
+    /// Content buyer needs to give approval to the platformtreasury
+    await contractUDAO
+      .connect(contentBuyer)
+      .approve(contractPlatformTreasury.address, ethers.utils.parseEther("999999999999.0"));
+
+    // Create CoachingVoucher to be able to buy coaching
+    const lazyCoaching = new LazyCoaching({
+      contract: contractVoucherVerifier,
+      signer: backend,
+    });
+    const coachingPrice = ethers.utils.parseEther("1.0");
+    /// Get the current block timestamp
+    const currentBlockTimestamp = (await hre.ethers.provider.getBlock()).timestamp;
+    /// Coaching date is 3 days from now
+    const coachingDate = currentBlockTimestamp + 3 * 24 * 60 * 60;
+    const role_voucher = await lazyCoaching.createVoucher(
+      contentCreator.address,
+      coachingPrice,
+      coachingDate,
+      contentBuyer.address
+    );
+    // Buy coaching
+    const purchaseTx = await contractPlatformTreasury.connect(contentBuyer).buyCoaching(role_voucher);
+    const queueTxReceipt = await purchaseTx.wait();
+    const queueTxEvent = queueTxReceipt.events.find((e) => e.event == "CoachingBought");
+    const coachingSaleID = queueTxEvent.args[0];
+    // Get the amount of UDAO in the buyer's wallet after buying coaching
+    const buyerBalanceAfter = await contractUDAO.balanceOf(contentBuyer.address);
+    // Check if correct amount of UDAO was deducted from the buyer's wallet
+    expect(buyerBalance.sub(buyerBalanceAfter)).to.equal(coachingPrice);
+    // Get coaching struct
+    const coachingStruct = await contractPlatformTreasury.coachSales(coachingSaleID);
+    // Check if returned learner address is the same as the buyer address
+    expect(coachingStruct.contentReceiver).to.equal(contentBuyer.address);
+    // Mine 5 days of blocks
+    const numBlocksToMine = Math.ceil((5 * 86400) / 2);
+    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine.toString(16)}`, "0x2"]);
+    // Refund coaching
+    const refundType = 0; // 0 since refund is coaching
+    await expect(
+      contractPlatformTreasury.connect(contentBuyer2).refundCoachingByInstructorOrLearner(coachingSaleID)
+    ).to.be.revertedWith("You are not the payee or coach");
+  });
+
   it("Should allow coach to refund anytime in refundablePeriod", async function () {
     await reDeploy();
     /// Set KYC
@@ -383,6 +584,68 @@ describe("Platform Treasury Contract - Coaching", function () {
     const buyerBalanceAfterRefund = await contractUDAO.balanceOf(contentBuyer.address);
     // Check if correct amount of UDAO was refunded to the buyer's wallet
     expect(buyerBalanceAfterRefund.sub(buyerBalanceAfter)).to.equal(coachingPrice);
+  });
+
+  it("Should fail refund coaching by instructor or learner if it is already refunded", async function () {
+    await reDeploy();
+    /// Set KYC
+    await contractRoleManager.setKYC(contentCreator.address, true);
+    await contractRoleManager.setKYC(contentBuyer.address, true);
+
+    /// Send UDAO to the buyer's wallet
+    await contractUDAO.transfer(contentBuyer.address, ethers.utils.parseEther("100.0"));
+    /// Get the amount of UDAO in the buyer's wallet
+    const buyerBalance = await contractUDAO.balanceOf(contentBuyer.address);
+    /// Content buyer needs to give approval to the platformtreasury
+    await contractUDAO
+      .connect(contentBuyer)
+      .approve(contractPlatformTreasury.address, ethers.utils.parseEther("999999999999.0"));
+
+    // Create CoachingVoucher to be able to buy coaching
+    const lazyCoaching = new LazyCoaching({
+      contract: contractVoucherVerifier,
+      signer: backend,
+    });
+    const coachingPrice = ethers.utils.parseEther("1.0");
+    /// Get the current block timestamp
+    const currentBlockTimestamp = (await hre.ethers.provider.getBlock()).timestamp;
+    /// Coaching date is 3 days from now
+    const coachingDate = currentBlockTimestamp + 3 * 24 * 60 * 60;
+    const role_voucher = await lazyCoaching.createVoucher(
+      contentCreator.address,
+      coachingPrice,
+      coachingDate,
+      contentBuyer.address
+    );
+    // Buy coaching
+    const purchaseTx = await contractPlatformTreasury.connect(contentBuyer).buyCoaching(role_voucher);
+    const queueTxReceipt = await purchaseTx.wait();
+    const queueTxEvent = queueTxReceipt.events.find((e) => e.event == "CoachingBought");
+    const coachingSaleID = queueTxEvent.args[0];
+    // Get the amount of UDAO in the buyer's wallet after buying coaching
+    const buyerBalanceAfter = await contractUDAO.balanceOf(contentBuyer.address);
+    // Check if correct amount of UDAO was deducted from the buyer's wallet
+    expect(buyerBalance.sub(buyerBalanceAfter)).to.equal(coachingPrice);
+    // Get coaching struct
+    const coachingStruct = await contractPlatformTreasury.coachSales(coachingSaleID);
+    // Check if returned learner address is the same as the buyer address
+    expect(coachingStruct.contentReceiver).to.equal(contentBuyer.address);
+    // Mine 5 days of blocks
+    const numBlocksToMine = Math.ceil((5 * 86400) / 2);
+    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine.toString(16)}`, "0x2"]);
+    // Refund coaching
+    const refundType = 0; // 0 since refund is coaching
+    await expect(contractPlatformTreasury.connect(contentCreator).refundCoachingByInstructorOrLearner(coachingSaleID))
+      .to.emit(contractPlatformTreasury, "SaleRefunded")
+      .withArgs(coachingSaleID, refundType);
+    // Get the amount of UDAO in the buyer's wallet after refunding coaching
+    const buyerBalanceAfterRefund = await contractUDAO.balanceOf(contentBuyer.address);
+    // Check if correct amount of UDAO was refunded to the buyer's wallet
+    expect(buyerBalanceAfterRefund.sub(buyerBalanceAfter)).to.equal(coachingPrice);
+
+    await expect(
+      contractPlatformTreasury.connect(contentCreator).refundCoachingByInstructorOrLearner(coachingSaleID)
+    ).to.be.revertedWith("Already refunded!");
   });
 
   it("Should fail to refund if coach tries to refund after refundablePeriod", async function () {
@@ -558,6 +821,84 @@ describe("Platform Treasury Contract - Coaching", function () {
     const buyerBalanceAfterRefund = await contractUDAO.balanceOf(contentBuyer.address);
     // Check if correct amount of UDAO was refunded to the buyer's wallet
     expect(buyerBalanceAfterRefund.sub(buyerBalanceAfter)).to.equal(coachingPrice);
+  });
+
+  it("Should fail refund coaching with voucher if it is already refunded", async function () {
+    await reDeploy();
+    /// Set KYC
+    await contractRoleManager.setKYC(contentCreator.address, true);
+    await contractRoleManager.setKYC(contentBuyer.address, true);
+
+    /// Send UDAO to the buyer's wallet
+    await contractUDAO.transfer(contentBuyer.address, ethers.utils.parseEther("100.0"));
+
+    /// Content buyer needs to give approval to the platformtreasury
+    await contractUDAO
+      .connect(contentBuyer)
+      .approve(contractPlatformTreasury.address, ethers.utils.parseEther("999999999999.0"));
+
+    // Create CoachingVoucher to be able to buy coaching
+    const lazyCoaching = new LazyCoaching({
+      contract: contractVoucherVerifier,
+      signer: backend,
+    });
+    const coachingPrice = ethers.utils.parseEther("1.0");
+    /// Get the current block timestamp
+    const currentBlockTimestamp = (await hre.ethers.provider.getBlock()).timestamp;
+    /// Coaching date is 3 days from now
+    const coachingDate = currentBlockTimestamp + 3 * 24 * 60 * 60;
+    const role_voucher = await lazyCoaching.createVoucher(
+      contentCreator.address,
+      coachingPrice,
+      coachingDate,
+      contentBuyer.address
+    );
+    // Get buyer's UDAO balance
+    const buyerBalance = await contractUDAO.balanceOf(contentBuyer.address);
+    // Buy coaching
+    const purchaseTx = await contractPlatformTreasury.connect(contentBuyer).buyCoaching(role_voucher);
+    const queueTxReceipt = await purchaseTx.wait();
+    const queueTxEvent = queueTxReceipt.events.find((e) => e.event == "CoachingBought");
+    const coachingSaleID = queueTxEvent.args[0];
+    // Get buyer's UDAO balance after buying coaching
+    const buyerBalanceAfter = await contractUDAO.balanceOf(contentBuyer.address);
+    // Check if correct amount of UDAO was deducted from the buyer's wallet
+    expect(buyerBalance.sub(buyerBalanceAfter)).to.equal(coachingPrice);
+    // Get coaching struct
+    const coachingStruct = await contractPlatformTreasury.coachSales(coachingSaleID);
+    // Check if returned learner address is the same as the buyer address
+    expect(coachingStruct.contentReceiver).to.equal(contentBuyer.address);
+    // Mine 2 days of blocks
+    const numBlocksToMine = Math.ceil((2 * 86400) / 2);
+    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine.toString(16)}`, "0x2"]);
+    //  Create RefundVoucher
+    const refundVoucher = new RefundVoucher({
+      contract: contractVoucherVerifier,
+      signer: backend,
+    });
+    const refundType = 0; // 0 since refund is coaching
+    // Voucher will be valid for 1 day
+    const voucherValidUntil = Date.now() + 86400;
+    const refund_voucher = await refundVoucher.createVoucher(
+      coachingSaleID,
+      contentCreator.address,
+      [],
+      [],
+      voucherValidUntil
+    );
+    // Refund coaching
+    await expect(contractPlatformTreasury.connect(contentCreator).newRefundCoaching(refund_voucher))
+      .to.emit(contractPlatformTreasury, "SaleRefunded")
+      .withArgs(coachingSaleID, refundType);
+    // Get buyer's UDAO balance after refunding coaching
+    const buyerBalanceAfterRefund = await contractUDAO.balanceOf(contentBuyer.address);
+    // Check if correct amount of UDAO was refunded to the buyer's wallet
+    expect(buyerBalanceAfterRefund.sub(buyerBalanceAfter)).to.equal(coachingPrice);
+
+    // Refund coaching
+    await expect(contractPlatformTreasury.connect(contentCreator).newRefundCoaching(refund_voucher)).to.be.revertedWith(
+      "Already refunded!"
+    );
   });
 
   it("Should fail to refund coaching with voucher if after refundablePeriod", async function () {
@@ -741,5 +1082,179 @@ describe("Platform Treasury Contract - Coaching", function () {
     const totalCut = coachGoverCut.add(coachJurorCut).add(coachValidCut);
     // Check if the governance treasury has the correct amount with respect to the platform cut percentages
     expect(governanceTreasuryBalance).to.equal(totalCut);
+
+    /// @dev Skip 20 days to allow foundation to withdraw funds
+    const numBlocksToMine2 = Math.ceil((refundWindowDaysNumber * 24 * 60 * 60) / 2);
+    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine2.toString(16)}`, "0x2"]);
+    await contractPlatformTreasury.updateAndTransferPlatformBalances();
+  });
+
+  it("Should fail buy a coaching if there isnt time to the scheduled coaching date at least 1 day and at most 7 days", async function () {
+    await reDeploy();
+    /// Set KYC
+    await contractRoleManager.setKYC(contentCreator.address, true);
+    await contractRoleManager.setKYC(contentBuyer.address, true);
+    /// Send UDAO to the buyer's wallet
+    await contractUDAO.transfer(contentBuyer.address, ethers.utils.parseEther("100.0"));
+    /// Get the amount of UDAO in the buyer's wallet
+    const buyerBalance = await contractUDAO.balanceOf(contentBuyer.address);
+    /// Content buyer needs to give approval to the platformtreasury
+    await contractUDAO
+      .connect(contentBuyer)
+      .approve(contractPlatformTreasury.address, ethers.utils.parseEther("999999999999.0"));
+
+    // Create CoachingVoucher to be able to buy coaching
+    const lazyCoaching = new LazyCoaching({
+      contract: contractVoucherVerifier,
+      signer: backend,
+    });
+    const coachingPrice = ethers.utils.parseEther("1.0");
+    /// Get the current block timestamp
+    const currentBlockTimestamp = (await hre.ethers.provider.getBlock()).timestamp;
+    /// Coaching date is 3 days from now
+    const coachingDate1 = currentBlockTimestamp;
+    const role_voucher1 = await lazyCoaching.createVoucher(
+      contentCreator.address,
+      coachingPrice,
+      coachingDate1,
+      contentBuyer.address
+    );
+    // Buy coaching revety
+    await expect(contractPlatformTreasury.connect(contentBuyer).buyCoaching(role_voucher1)).to.revertedWith(
+      "Coaching date must be at least 1 day before"
+    );
+    /// Coaching date is 3 days from now
+    const coachingDate2 = currentBlockTimestamp + 8 * 24 * 60 * 60;
+    const role_voucher2 = await lazyCoaching.createVoucher(
+      contentCreator.address,
+      coachingPrice,
+      coachingDate2,
+      contentBuyer.address
+    );
+    // Buy coaching revety
+    await expect(contractPlatformTreasury.connect(contentBuyer).buyCoaching(role_voucher2)).to.revertedWith(
+      "Coaching date must be at most 7 days before"
+    );
+  });
+
+  it("Should fail buy a coaching if learner in voucher is not the caller", async function () {
+    await reDeploy();
+    /// Set KYC
+    await contractRoleManager.setKYC(contentCreator.address, true);
+    await contractRoleManager.setKYC(contentBuyer.address, true);
+    /// Send UDAO to the buyer's wallet
+    await contractUDAO.transfer(contentBuyer.address, ethers.utils.parseEther("100.0"));
+    /// Get the amount of UDAO in the buyer's wallet
+    const buyerBalance = await contractUDAO.balanceOf(contentBuyer.address);
+    /// Content buyer needs to give approval to the platformtreasury
+    await contractUDAO
+      .connect(contentBuyer)
+      .approve(contractPlatformTreasury.address, ethers.utils.parseEther("999999999999.0"));
+
+    // Create CoachingVoucher to be able to buy coaching
+    const lazyCoaching = new LazyCoaching({
+      contract: contractVoucherVerifier,
+      signer: backend,
+    });
+    const coachingPrice = ethers.utils.parseEther("1.0");
+    /// Get the current block timestamp
+    const currentBlockTimestamp = (await hre.ethers.provider.getBlock()).timestamp;
+    /// Coaching date is 3 days from now
+    const coachingDate1 = currentBlockTimestamp + 3 * 24 * 60 * 60;
+    const role_voucher1 = await lazyCoaching.createVoucher(
+      contentCreator.address,
+      coachingPrice,
+      coachingDate1,
+      contentBuyer.address
+    );
+    // Buy coaching revety
+    await expect(contractPlatformTreasury.connect(contentBuyer2).buyCoaching(role_voucher1)).to.revertedWith(
+      "You are not the learner"
+    );
+  });
+
+  it("Should backend can buy coaching behalf of user if it is a fiat payment", async function () {
+    await reDeploy();
+    /// Set KYC
+    await contractRoleManager.setKYC(contentCreator.address, true);
+    await contractRoleManager.setKYC(contentBuyer.address, true);
+
+    /// Send UDAO to the buyer's wallet
+    await contractUDAO.transfer(backend.address, ethers.utils.parseEther("100.0"));
+    /// Get the amount of UDAO in the buyer's wallet
+    const buyerBalance = await contractUDAO.balanceOf(backend.address);
+    /// Content buyer needs to give approval to the platformtreasury
+    await contractUDAO
+      .connect(backend)
+      .approve(contractPlatformTreasury.address, ethers.utils.parseEther("999999999999.0"));
+    // Create CoachingVoucher to be able to buy coaching
+    const lazyCoaching = new LazyCoaching({
+      contract: contractVoucherVerifier,
+      signer: contentCreator,
+    });
+    const coachingPrice = ethers.utils.parseEther("1.0");
+    /// Get the current block timestamp
+    const currentBlockTimestamp = (await hre.ethers.provider.getBlock()).timestamp;
+    /// Coaching date is 3 days from now
+    const coachingDate = currentBlockTimestamp + 3 * 24 * 60 * 60;
+    const role_voucher = await lazyCoaching.createVoucher(
+      contentCreator.address,
+      coachingPrice,
+      coachingDate,
+      contentBuyer.address
+    );
+    // Buy coaching
+    const purchaseTx = await contractPlatformTreasury.connect(backend).buyCoaching(role_voucher);
+    const queueTxReceipt = await purchaseTx.wait();
+    const queueTxEvent = queueTxReceipt.events.find((e) => e.event == "CoachingBought");
+    const coachingSaleID = queueTxEvent.args[0];
+    // Get the amount of UDAO in the buyer's wallet after buying coaching
+    const buyerBalanceAfter = await contractUDAO.balanceOf(backend.address);
+    const changeOnBalance = buyerBalance.sub(buyerBalanceAfter);
+    // Get total price
+    const totalCutRatio = await contractPlatformTreasury.coachTotalCut();
+    const totalCut = coachingPrice.mul(totalCutRatio).div(100000);
+    // Check if correct amount of UDAO was deducted from the buyer's wallet
+    expect(changeOnBalance).to.equal(totalCut);
+    // Get coaching struct
+    const coachingStruct = await contractPlatformTreasury.coachSales(coachingSaleID);
+    // Check if returned learner address is the same as the buyer address
+    expect(coachingStruct.contentReceiver).to.equal(contentBuyer.address);
+  });
+
+  it("Should fail backend buy coaching to ownself if it is a fiat payment", async function () {
+    await reDeploy();
+    /// Set KYC
+    await contractRoleManager.setKYC(contentCreator.address, true);
+    await contractRoleManager.setKYC(contentBuyer.address, true);
+
+    /// Send UDAO to the buyer's wallet
+    await contractUDAO.transfer(backend.address, ethers.utils.parseEther("100.0"));
+    /// Get the amount of UDAO in the buyer's wallet
+    const buyerBalance = await contractUDAO.balanceOf(backend.address);
+    /// Content buyer needs to give approval to the platformtreasury
+    await contractUDAO
+      .connect(backend)
+      .approve(contractPlatformTreasury.address, ethers.utils.parseEther("999999999999.0"));
+    // Create CoachingVoucher to be able to buy coaching
+    const lazyCoaching = new LazyCoaching({
+      contract: contractVoucherVerifier,
+      signer: contentCreator,
+    });
+    const coachingPrice = ethers.utils.parseEther("1.0");
+    /// Get the current block timestamp
+    const currentBlockTimestamp = (await hre.ethers.provider.getBlock()).timestamp;
+    /// Coaching date is 3 days from now
+    const coachingDate = currentBlockTimestamp + 3 * 24 * 60 * 60;
+    const role_voucher = await lazyCoaching.createVoucher(
+      contentCreator.address,
+      coachingPrice,
+      coachingDate,
+      backend.address
+    );
+    // Buy coaching
+    const purchaseTx = contractPlatformTreasury.connect(backend).buyCoaching(role_voucher);
+    //Fiat purchase requires a learner!
+    expect(purchaseTx).to.be.revertedWith("Fiat purchase requires a learner!");
   });
 });
