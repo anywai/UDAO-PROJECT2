@@ -2319,6 +2319,144 @@ describe("Platform Treasury Contract - Content", function () {
     expect(await contractUDAO.balanceOf(foundation.address)).to.equal(contentFoundCut1.add(contentFoundCut2));
   });
 
+  it("Should instructers locked balances preserved after the refund window change", async function () {
+    await reDeploy();
+    /// Set KYC
+    await contractRoleManager.setKYC(contentCreator.address, true);
+    await contractRoleManager.setKYC(contentBuyer.address, true);
+    await contractRoleManager.setKYC(contentBuyer1.address, true);
+    await contractRoleManager.setKYC(contentBuyer2.address, true);
+    // Create content
+    const contentParts = [0, 1, 2, 3, 4];
+    // Create content voucher
+    const createContentVoucherSample = await createContentVoucher(
+      contractUDAOContent,
+      backend,
+      contentCreator,
+      contentParts,
+      (redeemType = 1),
+      (validationScore = 1)
+    );
+
+    // Create content with voucher
+    const tx = await contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample);
+    // Get NewContentCreated event and get tokenId
+    const receipt = await tx.wait();
+    const tokenId1 = receipt.events[0].args[2].toNumber();
+    // Create content
+    const contentParts2 = [0, 1, 2, 3, 4, 5, 6];
+    // Create content voucher
+    const createContentVoucherSample2 = await createContentVoucher(
+      contractUDAOContent,
+      backend,
+      contentCreator,
+      contentParts2,
+      (redeemType = 1),
+      (validationScore = 1)
+    );
+
+    // Create content with voucher
+    const tx2 = await contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample2);
+    // Get NewContentCreated event and get tokenId
+    const receipt2 = await tx2.wait();
+    const tokenId2 = receipt2.events[0].args[2].toNumber();
+    // You need to use all parts of the content to buy it. Get all parts of the content
+    const parts1 = await contractUDAOContent.getContentParts(tokenId1);
+    const parts2 = await contractUDAOContent.getContentParts(tokenId2);
+    // Make a content purchase for token 1
+    const tokenIds = [1];
+    const purchasedParts1 = [parts1];
+    const redeemers1 = [contentBuyer1.address];
+    const giftReceiver = [ethers.constants.AddressZero];
+    const fullContentPurchase = [true];
+    const pricesToPay = [ethers.utils.parseEther("3")];
+    const validUntil = Date.now() + 999999999;
+    const balances = await makeContentPurchase(
+      contractPlatformTreasury,
+      contractVoucherVerifier,
+      contentBuyer1,
+      contractRoleManager,
+      contractUDAO,
+      tokenIds,
+      purchasedParts1,
+      pricesToPay,
+      fullContentPurchase,
+      validUntil,
+      redeemers1,
+      giftReceiver
+    );
+    const balanceBefore1 = balances[0];
+    const balanceAfter1 = balances[1];
+    // Check if the buyer has the content part
+    const result = await contractPlatformTreasury.connect(contentBuyer1).getOwnedParts(contentBuyer1.address, tokenId1);
+    // Check if purchasedParts1[0] array same as result array
+    for (let i = 0; i < purchasedParts1[0].length; i++) {
+      expect(result[i]).to.equal(purchasedParts1[0][i]);
+    }
+    // Check if the buyer paid the correct amount
+    expect(balanceBefore1.sub(balanceAfter1)).to.equal(pricesToPay[0]);
+    /// @dev Skip "refund window-1" days to allow foundation to withdraw funds
+    /// @dev Skip "refund window" days to allow foundation to withdraw funds
+    const refundWindowDays = await contractPlatformTreasury.refundWindow();
+    /// convert big number to number
+    const refundWindowDaysNumber = refundWindowDays.toNumber();
+
+    /// @dev Skip 20'refund window period' days to allow foundation to withdraw funds
+    const numBlocksToMine = Math.ceil(((refundWindowDaysNumber - 0) * 24 * 60 * 60) / 2);
+    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine.toString(16)}`, "0x2"]);
+
+    //calculate total inst locked balance
+    let totalInstLB = ethers.BigNumber.from(0);
+    for (let i = 0; i < refundWindowDaysNumber; i++) {
+      let temp;
+      temp = await contractPlatformTreasury.instLockedBalance(contentCreator.address, i);
+      //add big number temp to number totalInstLB
+      totalInstLB = totalInstLB.add(temp);
+    }
+    // change refund window to 7 days
+    const newRefundWindow = 7;
+    await contractPlatformTreasury.connect(backend).changeRefundWindow(newRefundWindow);
+
+    expect(await contractPlatformTreasury.refundWindow()).to.equal(newRefundWindow);
+
+    const _contentFoundCut = await contractPlatformTreasury.contentFoundCut();
+    const totalPrice1 = pricesToPay[0];
+    const contentFoundCut1 = totalPrice1.mul(_contentFoundCut).div(100000);
+    expect(await contractPlatformTreasury.foundationBalance()).to.equal(contentFoundCut1);
+
+    /// a new sale occur
+    const redeemers2 = [contentBuyer2.address];
+    const balances2 = await makeContentPurchase(
+      contractPlatformTreasury,
+      contractVoucherVerifier,
+      contentBuyer2,
+      contractRoleManager,
+      contractUDAO,
+      tokenIds,
+      purchasedParts1,
+      pricesToPay,
+      fullContentPurchase,
+      validUntil,
+      redeemers2,
+      giftReceiver
+    );
+    //calculate total inst locked balance
+    let totalInstLB2 = ethers.BigNumber.from(0);
+    for (let i = 0; i < newRefundWindow; i++) {
+      let temp;
+      temp = await contractPlatformTreasury.instLockedBalance(contentCreator.address, i);
+      //add big number temp to number totalInstLB
+      totalInstLB2 = totalInstLB2.add(temp);
+    }
+
+    //calculate total instructor share from new sale
+    const totalCutRate = await contractPlatformTreasury.contentTotalCut();
+    const newSaleRevenue = pricesToPay[0].sub(pricesToPay[0].mul(totalCutRate).div(100000));
+
+    // new sale revenue + old sale revenue is must bu inst locked balance
+    expect(totalInstLB2).to.equal(totalInstLB.add(newSaleRevenue));
+  });
+
   it("Should fail to change refund window if not backed", async function () {
     await reDeploy();
     /// try to change refund window
