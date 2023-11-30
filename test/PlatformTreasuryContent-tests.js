@@ -2045,7 +2045,7 @@ describe("Platform Treasury Contract - Content", function () {
     const voucherValidUntil = Date.now() + 86400;
     const contentSaleId = 0; // 0 since only one content is created and sold
     const finalParts = []; // Empty since buyer had no parts
-    const finalContents = []; // Empty since buyer had no co
+    const finalContents = [2]; // Empty since buyer had no co
     const refund_voucher = await refundVoucher.createVoucher(
       contentSaleId,
       contentCreator.address,

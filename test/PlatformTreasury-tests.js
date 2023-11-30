@@ -1361,8 +1361,8 @@ describe("Platform Treasury General", function () {
     // Voucher will be valid for 1 day
     const voucherValidUntil = Date.now() + 86400;
     const contentSaleId = 0; // 0 since only one content is created and sold
-    const finalParts = []; // Empty since buyer had no parts
-    const finalContents = []; // Empty since buyer had no co
+    const finalParts = [0]; // Empty since buyer had no parts
+    const finalContents = [1]; // Empty since buyer had no co
     const refund_voucher = await refundVoucher.createVoucher(
       contentSaleId,
       contentCreator.address,
