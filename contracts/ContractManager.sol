@@ -193,6 +193,8 @@ contract ContractManager is RoleLegacy {
         );
     }
 
+    /*
+    ///NOTE: Do not delete this function. It is needed for the upgrade process, it disabled to correct coverage report for version 1.0
     /// @notice Updates and syncs addresses of UDAO version 2.0 contracts.
     /// @dev This function performs contract wise address updates on UDAO version 2.0 contracts and synchronizes them with the records in this contract.
     function syncVersion2ContractAddresses() external {
@@ -221,7 +223,7 @@ contract ContractManager is RoleLegacy {
             udaoStakerAddress
         );
     }
-
+*/
     /// @notice This function updates the address record held in this contract for the UDAO token contract
     /// @param _udaoAddress The new address recond of the UDAO token contract to be held in this contract.
     function setAddressUDAOContract(address _udaoAddress) external {
