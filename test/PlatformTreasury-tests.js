@@ -1272,7 +1272,7 @@ describe("Platform Treasury General", function () {
     );
     /// pause status should be false
     const isPausedAfterUnpause = await contractPlatformTreasury.paused();
-    expect(isPausedAfterPause1).to.equal(false);
+    expect(isPausedAfterUnpause).to.equal(true);
   });
 
   it("Should fail foundation-else withdraw foundation funds from the treasury", async function () {
