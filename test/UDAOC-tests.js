@@ -627,4 +627,164 @@ describe("UDAOC Contract", function () {
       contractUDAOContent.connect(contentCreator).modifyContent(createModifyContentVoucherSample)
     ).to.be.revertedWith("You are banned");
   });
+
+  it("Should allow backend to pause/unpause contract", async function () {
+    await reDeploy();
+    /// Pause contract
+    await contractUDAOContent.connect(backend).pause();
+    /// check if contract is paused
+    const isPausedAfterPause = await contractUDAOContent.paused();
+    expect(isPausedAfterPause).to.equal(true);
+    /// Unpause contract
+    await contractUDAOContent.connect(backend).unpause();
+    /// check if contract is unpaused
+    const isPausedAfterUnpause = await contractUDAOContent.paused();
+    expect(isPausedAfterUnpause).to.equal(false);
+  });
+
+  it("Should fail backend-else role to pause/unpause contract", async function () {
+    await reDeploy();
+    /// Try to Pause contract with non backed role
+    await expect(contractUDAOContent.connect(contentBuyer1).pause()).to.be.revertedWith("Only backend can pause");
+    /// pause status should be false
+    const isPausedAfterPause1 = await contractUDAOContent.paused();
+    expect(isPausedAfterPause1).to.equal(false);
+
+    /// pause the contract with backend role
+    await contractUDAOContent.connect(backend).pause();
+    /// pause status should be true
+    const isPausedAfterPause2 = await contractUDAOContent.paused();
+    expect(isPausedAfterPause2).to.equal(true);
+
+    /// Try to Unpause contract with non backed role
+    await expect(contractUDAOContent.connect(contentBuyer1).unpause()).to.be.revertedWith("Only backend can unpause");
+    /// pause status should be false
+    const isPausedAfterUnpause = await contractUDAOContent.paused();
+    expect(isPausedAfterUnpause).to.equal(true);
+  });
+
+  it("Should fail create content when paused", async function () {
+    await reDeploy();
+    /// KYC content creator and content buyer
+    await contractRoleManager.setKYC(contentCreator.address, true);
+    await contractRoleManager.setKYC(contentBuyer1.address, true);
+    /// Pause contract
+    await contractUDAOContent.connect(backend).pause();
+
+    /// Create Voucher from redeem.js and use it for creating content
+    // Create content
+    const contentParts = [0, 1];
+    const createContentVoucherSample = await createContentVoucher(
+      contractUDAOContent,
+      backend,
+      contentCreator,
+      contentParts,
+      (redeemType = 1),
+      (validationScore = 1)
+    );
+    await expect(
+      contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample)
+    ).to.be.revertedWith("Pausable: paused");
+  });
+
+  it("Should fail batch create content when paused", async function () {
+    await reDeploy();
+    /// KYC content creator and content buyer
+    await contractRoleManager.setKYC(contentCreator.address, true);
+    await contractRoleManager.setKYC(contentBuyer1.address, true);
+    /// Pause contract
+    await contractUDAOContent.connect(backend).pause();
+
+    /// Define Content Parts
+    const contentParts1 = [0, 1];
+    const contentParts2 = [0, 1, 2];
+    const contentParts3 = [0, 1, 2, 3];
+    /// Create Voucher from redeem.js and use it for creating content
+
+    const createContentVoucherSample1 = await createContentVoucher(
+      contractUDAOContent,
+      backend,
+      contentCreator,
+      contentParts1,
+      (redeemType = 1),
+      (validationScore = 1)
+    );
+    const createContentVoucherSample2 = await createContentVoucher(
+      contractUDAOContent,
+      backend,
+      contentCreator,
+      contentParts2,
+      (redeemType = 1),
+      (validationScore = 1)
+    );
+    const createContentVoucherSample3 = await createContentVoucher(
+      contractUDAOContent,
+      backend,
+      contentCreator,
+      contentParts3,
+      (redeemType = 1),
+      (validationScore = 1)
+    );
+    /// Create content voucher array
+    const createContentVoucherSampleArray = [
+      createContentVoucherSample1,
+      createContentVoucherSample2,
+      createContentVoucherSample3,
+    ];
+    /// Create content
+
+    await expect(
+      contractUDAOContent.connect(contentCreator).createContents(createContentVoucherSampleArray)
+    ).to.be.revertedWith("Pausable: paused");
+  });
+
+  it("Should fail to modify content when paused", async function () {
+    await reDeploy();
+    await contractRoleManager.setKYC(contentCreator.address, true);
+
+    /// part prices must be determined before creating content
+    const partPricesArray = [ethers.utils.parseEther("1"), ethers.utils.parseEther("2"), ethers.utils.parseEther("3")];
+    const contentPrice = ethers.utils.parseEther("10");
+    // Create content
+    const contentParts = [0, 1, 2];
+    /// Create Voucher from redeem.js and use it for creating content
+    const createContentVoucherSample = await createContentVoucher(
+      contractUDAOContent,
+      backend,
+      contentCreator,
+      contentParts,
+      (redeemType = 1),
+      (validationScore = 1)
+    );
+
+    await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample))
+      .to.emit(contractUDAOContent, "Transfer") // transfer from null address to min
+      .withArgs("0x0000000000000000000000000000000000000000", contentCreator.address, 1);
+
+    // new part information
+    const tokenId = 1;
+    // Create content
+    const contentParts2 = [0, 1, 2, 3];
+    /// Create Voucher from redeem.js and use it for modifying content
+    const redeemType2 = 2;
+    const createModifyVoucherSample = await createContentVoucher(
+      contractUDAOContent,
+      backend,
+      contentCreator,
+      contentParts2,
+      redeemType2,
+      (validationScore = 0)
+    );
+    // add new part and expect ContentModified event to emit
+    await expect(contractUDAOContent.connect(contentCreator).modifyContent(createModifyVoucherSample)).to.emit(
+      contractUDAOContent,
+      "ContentModified"
+    );
+    // Convert contentParts2 values to bignumbers
+    const contentParts2BigNumbers = contentParts2.map((x) => ethers.BigNumber.from(x));
+    // wait 1 seconds
+    await new Promise((r) => setTimeout(r, 1000));
+    // Check if getContentParts returns the correct part array
+    expect(await contractUDAOContent.getContentParts(tokenId)).to.eql(contentParts2BigNumbers);
+  });
 });
