@@ -13,6 +13,8 @@ import "../interfaces/IRoleManager.sol";
 import "../RoleLegacy.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 
+import "hardhat/console.sol";
+
 contract UDAOContent is
     Pausable,
     RoleLegacy,
@@ -69,6 +71,8 @@ contract UDAOContent is
         uint256 tokenId;
         /// @notice The metadata URI to associate with this token.
         string _uri;
+        /// @notice Address of the content creator
+        address _contentCreator;
         /// @notice Address of the redeemer
         address _redeemer;
         /// @notice Whether new content or modification, 0 undefined, 1 new content, 2 modification
@@ -122,18 +126,30 @@ contract UDAOContent is
             "Signature invalid or unauthorized"
         );
 
-        // Revert if the msg.sender is not the voucher._redeemer or has the CONTENT_PUBLISHER role
+        // Revert if the msg.sender is not the voucher._contentCreator or has the CONTENT_PUBLISHER role
         if (msg.sender == voucher._redeemer) {
             //make sure redeemer is kyced
-            require(isKYCed(voucher._redeemer, 13), "You are not KYCed");
+            require(isKYCed(voucher._redeemer, 13), "Redeemer isnt KYCed");
             //make sure redeemer is not banned
             require(isNotBanned(voucher._redeemer, 13), "Redeemer is banned!");
         } else {
             require(
                 hasRole(CONTENT_PUBLISHER, msg.sender),
-                "Only content modifier or redeemer can create content"
+                "Only content publisher or redeemer can create content"
             );
         }
+
+        //make sure contentCreator is kyced
+        require(
+            isKYCed(voucher._contentCreator, 70),
+            "Content creator isnt KYCed"
+        );
+        //make sure contentCreator is not banned
+        require(
+            isNotBanned(voucher._contentCreator, 70),
+            "Content creator is banned!"
+        );
+
         // make sure voucher is not expired
         require(voucher.validUntil >= block.timestamp, "Voucher has expired.");
         /// @dev 1 is new content, 2 is modification
@@ -149,17 +165,17 @@ contract UDAOContent is
         // save the content parts
         contentParts[tokenId] = voucher._parts;
 
-        _mint(voucher._redeemer, tokenId);
+        _mint(voucher._contentCreator, tokenId);
         _setTokenURI(tokenId, voucher._uri);
         isSellable[tokenId] = true;
 
         if (voucher.validationScore != 0) {
             supervision.createValidation(tokenId, voucher.validationScore);
         }
-        emit NewContentCreated(tokenId, voucher._redeemer);
+        emit NewContentCreated(tokenId, voucher._contentCreator);
     }
 
-    function createContents(
+    function batchCreateContents(
         RedeemVoucher[] calldata voucher
     ) public whenNotPaused {
         uint256 voucherIdsLength = voucher.length;
@@ -170,10 +186,13 @@ contract UDAOContent is
                 hasRole(VOUCHER_VERIFIER, signer),
                 "Signature invalid or unauthorized"
             );
-            // Revert if the msg.sender is not the voucher._redeemer or has the CONTENT_PUBLISHER role
+            // Revert if the msg.sender is not the voucher._contentCreator or has the CONTENT_PUBLISHER role
             if (msg.sender == voucher[i]._redeemer) {
                 //make sure redeemer is kyced
-                require(isKYCed(voucher[i]._redeemer, 59), "You are not KYCed");
+                require(
+                    isKYCed(voucher[i]._redeemer, 59),
+                    "Redeemer isnt KYCed"
+                );
                 //make sure redeemer is not banned
                 require(
                     isNotBanned(voucher[i]._redeemer, 59),
@@ -182,9 +201,20 @@ contract UDAOContent is
             } else {
                 require(
                     hasRole(CONTENT_PUBLISHER, msg.sender),
-                    "Only content modifier or redeemer can create content"
+                    "Only content publisher or redeemer can create content"
                 );
             }
+
+            //make sure contentCreator is kyced
+            require(
+                isKYCed(voucher[i]._contentCreator, 71),
+                "Content creator isnt KYCed"
+            );
+            //make sure contentCreator is not banned
+            require(
+                isNotBanned(voucher[i]._contentCreator, 71),
+                "Content creator is banned!"
+            );
             // make sure voucher is not expired
             require(
                 voucher[i].validUntil >= block.timestamp,
@@ -206,7 +236,7 @@ contract UDAOContent is
             // save the content parts
             contentParts[tokenId] = voucher[i]._parts;
 
-            _mint(voucher[i]._redeemer, tokenId);
+            _mint(voucher[i]._contentCreator, tokenId);
             _setTokenURI(tokenId, voucher[i]._uri);
             isSellable[tokenId] = true;
 
@@ -216,7 +246,7 @@ contract UDAOContent is
                     voucher[i].validationScore
                 );
             }
-            emit NewContentCreated(tokenId, voucher[i]._redeemer);
+            emit NewContentCreated(tokenId, voucher[i]._contentCreator);
         }
     }
 
@@ -245,16 +275,16 @@ contract UDAOContent is
         require(
             hasRole(CONTENT_PUBLISHER, msg.sender) ||
                 ownerOf(voucher.tokenId) == msg.sender,
-            "Only content modifier or owner can modify content"
+            "Only content publisher or content owner can modify content"
         );
         require(voucher.validUntil >= block.timestamp, "Voucher has expired.");
         /// @dev 1 is new content, 2 is modification
         require(voucher.redeemType == 2, "Redeem type is not modification");
         address instructor = ownerOf(voucher.tokenId);
         //make sure redeemer is kyced
-        require(isKYCed(instructor, 14), "You are not KYCed");
+        require(isKYCed(instructor, 14), "Content creator isnt KYCed");
         // make sure caller is not banned
-        require(isNotBanned(instructor, 14), "You are banned");
+        require(isNotBanned(instructor, 14), "Content creator is banned");
         // A content can be modified only if it is not in validation
         if (voucher.validationScore != 0) {
             require(
@@ -277,7 +307,7 @@ contract UDAOContent is
 
         emit ContentModified(
             voucher.tokenId,
-            voucher._redeemer,
+            voucher._contentCreator,
             voucher._parts.length
         );
     }
@@ -362,12 +392,13 @@ contract UDAOContent is
                 keccak256(
                     abi.encode(
                         keccak256(
-                            "RedeemVoucher(uint256 validUntil,uint256[] _parts,uint256 tokenId,string _uri,address _redeemer,uint256 redeemType,uint256 validationScore)"
+                            "RedeemVoucher(uint256 validUntil,uint256[] _parts,uint256 tokenId,string _uri,address _contentCreator,address _redeemer,uint256 redeemType,uint256 validationScore)"
                         ),
                         voucher.validUntil,
                         keccak256(abi.encodePacked(voucher._parts)),
                         voucher.tokenId,
                         keccak256(bytes(voucher._uri)),
+                        voucher._contentCreator,
                         voucher._redeemer,
                         voucher.redeemType,
                         voucher.validationScore

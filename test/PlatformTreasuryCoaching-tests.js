@@ -67,42 +67,6 @@ async function reDeploy(reApplyRolesViaVoucher = true, isDexRequired = false) {
   contractGovernanceTreasury = replace.contractGovernanceTreasury;
 }
 
-async function createContentVoucher(
-  contractUDAOContent,
-  backend,
-  contentCreator,
-  partPrices,
-  coachingEnabled = true,
-  coachingRefundable = true,
-  redeemType = 1,
-  validationScore = 1
-) {
-  // Get the current block timestamp
-  const block = await ethers.provider.getBlock("latest");
-  // add some minutes to it and convert it to a BigNumber
-  const futureBlock = block.timestamp + 1000;
-  // convert it to a BigNumber
-  const futureBlockBigNumber = ethers.BigNumber.from(futureBlock);
-
-  return await new Redeem({
-    contract: contractUDAOContent,
-    signer: backend,
-  }).createVoucher(
-    futureBlockBigNumber,
-    partPrices,
-    0,
-    "udao",
-    "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
-    contentCreator.address,
-    ethers.utils.parseEther("1"),
-    "udao",
-    coachingEnabled,
-    coachingRefundable,
-    redeemType,
-    validationScore
-  );
-}
-
 describe("Platform Treasury Contract - Coaching", function () {
   it("Should a user able to buy a coaching", async function () {
     await reDeploy();

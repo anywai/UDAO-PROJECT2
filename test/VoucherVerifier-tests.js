@@ -62,6 +62,7 @@ async function createContentVoucher(
   contractUDAOContent,
   backend,
   contentCreator,
+  redeemer,
   contentParts,
   partPrices,
   redeemType = 1,
@@ -82,6 +83,7 @@ async function createContentVoucher(
     0,
     "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
     contentCreator.address,
+    redeemer.address,
     redeemType,
     validationScore
   );
@@ -126,11 +128,13 @@ describe("Voucher Verifier", function () {
     await contractRoleManager.setKYC(contentBuyer.address, true);
     // Create content
     const contentParts = [0, 1];
+    const redeemer = contentCreator;
     // Create content voucher
     const createContentVoucherSample = await createContentVoucher(
       contractUDAOContent,
       backend,
       contentCreator,
+      redeemer,
       contentParts,
       (redeemType = 1),
       (validationScore = 1)
@@ -216,11 +220,13 @@ describe("Voucher Verifier", function () {
     await contractRoleManager.setKYC(contentBuyer.address, true);
     // Create content
     const contentParts = [0, 1];
+    const redeemer = contentCreator;
     // Create content voucher
     const createContentVoucherSample = await createContentVoucher(
       contractUDAOContent,
       backend,
       contentCreator,
+      redeemer,
       contentParts,
       (redeemType = 1),
       (validationScore = 1)
@@ -307,11 +313,13 @@ describe("Voucher Verifier", function () {
     await contractRoleManager.setKYC(contentBuyer.address, true);
     // Create content
     const contentParts = [0, 1];
+    const redeemer = contentCreator;
     // Create content voucher
     const createContentVoucherSample = await createContentVoucher(
       contractUDAOContent,
       backend,
       contentCreator,
+      redeemer,
       contentParts,
       (redeemType = 1),
       (validationScore = 1)

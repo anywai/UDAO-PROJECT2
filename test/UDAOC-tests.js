@@ -66,6 +66,7 @@ async function createContentVoucher(
   contractUDAOContent,
   backend,
   contentCreator,
+  redeemer,
   contentParts,
   redeemType = 1,
   validationScore = 1
@@ -85,6 +86,7 @@ async function createContentVoucher(
     1,
     "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
     contentCreator.address,
+    redeemer.address,
     redeemType,
     validationScore
   );
@@ -125,6 +127,8 @@ describe("UDAOC Contract", function () {
     /// part prices must be determined before creating content
     const partPricesArray = [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")];
     const contentPrice = ethers.utils.parseEther("2");
+    const redeemer = contentCreator;
+
     /// Create Voucher from redeem.js and use it for creating content
     // Create content
     const contentParts = [0, 1];
@@ -132,6 +136,7 @@ describe("UDAOC Contract", function () {
       contractUDAOContent,
       backend,
       contentCreator,
+      redeemer,
       contentParts,
       (redeemType = 1),
       (validationScore = 1)
@@ -148,6 +153,7 @@ describe("UDAOC Contract", function () {
     /// part prices must be determined before creating content
     const partPricesArray = [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")];
     const contentPrice = ethers.utils.parseEther("2");
+    const redeemer = contentCreator;
     /// Create Voucher from redeem.js and use it for creating content
     // Create content
     const contentParts1 = [0, 1];
@@ -158,6 +164,7 @@ describe("UDAOC Contract", function () {
       contractUDAOContent,
       backend,
       contentCreator,
+      redeemer,
       contentParts1,
       (redeemType = 1),
       (validationScore = 1)
@@ -166,6 +173,7 @@ describe("UDAOC Contract", function () {
       contractUDAOContent,
       backend,
       contentCreator,
+      redeemer,
       contentParts2,
       (redeemType = 1),
       (validationScore = 1)
@@ -174,6 +182,7 @@ describe("UDAOC Contract", function () {
       contractUDAOContent,
       backend,
       contentCreator,
+      redeemer,
       contentParts3,
       (redeemType = 1),
       (validationScore = 1)
@@ -192,7 +201,7 @@ describe("UDAOC Contract", function () {
     const bigNumber3 = ethers.BigNumber.from(3);
 
     // create contents and expect Transfer events to emit
-    await contractUDAOContent.connect(contentCreator).createContents(createContentVoucherSampleArray);
+    await contractUDAOContent.connect(contentCreator).batchCreateContents(createContentVoucherSampleArray);
     // read Transfer events from the transaction
     const events = await contractUDAOContent.queryFilter("Transfer", "latest");
     // check if there are 3 events
@@ -218,6 +227,7 @@ describe("UDAOC Contract", function () {
     /// part prices must be determined before creating content
     const partPricesArray = [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")];
     const contentPrice = ethers.utils.parseEther("2");
+    const redeemer = contentCreator;
     // Create content
     const contentParts = [0, 1];
     /// Create Voucher from redeem.js and use it for creating content
@@ -225,6 +235,7 @@ describe("UDAOC Contract", function () {
       contractUDAOContent,
       backend,
       contentCreator,
+      redeemer,
       contentParts,
       (redeemType = 1),
       (validationScore = 1)
@@ -246,6 +257,7 @@ describe("UDAOC Contract", function () {
     /// part prices must be determined before creating content
     const partPricesArray = [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")];
     const contentPrice = ethers.utils.parseEther("2");
+    const redeemer = contentCreator;
     // Create content
     const contentParts = [0, 1];
     /// Create Voucher from redeem.js and use it for creating content
@@ -253,6 +265,7 @@ describe("UDAOC Contract", function () {
       contractUDAOContent,
       backend,
       contentCreator,
+      redeemer,
       contentParts,
       (redeemType = 1),
       (validationScore = 1)
@@ -276,6 +289,7 @@ describe("UDAOC Contract", function () {
     /// part prices must be determined before creating content
     const partPricesArray = [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")];
     const contentPrice = ethers.utils.parseEther("2");
+    const redeemer = contentCreator;
     // Create content
     const contentParts = [0, 1];
     /// Create Voucher from redeem.js and use it for creating content
@@ -283,6 +297,7 @@ describe("UDAOC Contract", function () {
       contractUDAOContent,
       backend,
       contentCreator,
+      redeemer,
       contentParts,
       (redeemType = 1),
       (validationScore = 1)
@@ -307,6 +322,7 @@ describe("UDAOC Contract", function () {
     /// part prices must be determined before creating content
     const partPricesArray = [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")];
     const contentPrice = ethers.utils.parseEther("2");
+    const redeemer = contentCreator;
     // Create content
     const contentParts = [0, 1];
     /// Create Voucher from redeem.js and use it for creating content
@@ -314,6 +330,7 @@ describe("UDAOC Contract", function () {
       contractUDAOContent,
       backend,
       contentCreator,
+      redeemer,
       contentParts,
       (redeemType = 1),
       (validationScore = 1)
@@ -339,6 +356,7 @@ describe("UDAOC Contract", function () {
     /// part prices must be determined before creating content
     const partPricesArray = [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")];
     const contentPrice = ethers.utils.parseEther("2");
+    const redeemer = contentCreator;
     // Create content
     const contentParts = [0, 1];
     /// Create Voucher from redeem.js and use it for creating content
@@ -346,6 +364,7 @@ describe("UDAOC Contract", function () {
       contractUDAOContent,
       backend,
       contentCreator,
+      redeemer,
       contentParts,
       (redeemType = 1),
       (validationScore = 1)
@@ -368,6 +387,7 @@ describe("UDAOC Contract", function () {
     /// part prices must be determined before creating content
     const partPricesArray = [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")];
     const contentPrice = ethers.utils.parseEther("2");
+    const redeemer = contentCreator;
     // Create content
     const contentParts = [0, 1];
     /// Create Voucher from redeem.js and use it for creating content
@@ -375,6 +395,7 @@ describe("UDAOC Contract", function () {
       contractUDAOContent,
       backend,
       contentCreator,
+      redeemer,
       contentParts,
       (redeemType = 1),
       (validationScore = 1)
@@ -398,6 +419,7 @@ describe("UDAOC Contract", function () {
     /// part prices must be determined before creating content
     const partPricesArray = [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")];
     const contentPrice = ethers.utils.parseEther("2");
+    const redeemer = contentCreator;
     // Create content
     const contentParts = [0, 1];
     /// Create Voucher from redeem.js and use it for creating content
@@ -405,6 +427,7 @@ describe("UDAOC Contract", function () {
       contractUDAOContent,
       backend,
       contentCreator,
+      redeemer,
       contentParts,
       (redeemType = 1),
       (validationScore = 1)
@@ -439,6 +462,7 @@ describe("UDAOC Contract", function () {
     /// part prices must be determined before creating content
     const partPricesArray = [ethers.utils.parseEther("1"), ethers.utils.parseEther("2"), ethers.utils.parseEther("3")];
     const contentPrice = ethers.utils.parseEther("10");
+    const redeemer = contentCreator;
     // Create content
     const contentParts = [0, 1, 2];
     /// Create Voucher from redeem.js and use it for creating content
@@ -446,6 +470,7 @@ describe("UDAOC Contract", function () {
       contractUDAOContent,
       backend,
       contentCreator,
+      redeemer,
       contentParts,
       (redeemType = 1),
       (validationScore = 1)
@@ -465,6 +490,7 @@ describe("UDAOC Contract", function () {
       contractUDAOContent,
       backend,
       contentCreator,
+      redeemer,
       contentParts2,
       redeemType2,
       (validationScore = 0)
@@ -482,7 +508,7 @@ describe("UDAOC Contract", function () {
     expect(await contractUDAOContent.getContentParts(tokenId)).to.eql(contentParts2BigNumbers);
   });
 
-  it("Should revert modify content if caller is not owner of content", async function () {
+  it("Should revert modify content if caller is not redeemer", async function () {
     await reDeploy();
     await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer.address, true);
@@ -490,6 +516,7 @@ describe("UDAOC Contract", function () {
     /// part prices must be determined before creating content
     const partPricesArray = [ethers.utils.parseEther("1"), ethers.utils.parseEther("2"), ethers.utils.parseEther("3")];
     const contentPrice = ethers.utils.parseEther("10");
+    const redeemer = contentCreator;
 
     // Create content
     const contentParts = [0, 1, 2];
@@ -499,6 +526,7 @@ describe("UDAOC Contract", function () {
       contractUDAOContent,
       backend,
       contentCreator,
+      redeemer,
       contentParts,
       (redeemType = 1),
       (validationScore = 1)
@@ -519,6 +547,7 @@ describe("UDAOC Contract", function () {
       contractUDAOContent,
       backend,
       contentBuyer,
+      redeemer,
       contentParts2,
       (redeemType = 2),
       (validationScore = 0)
@@ -526,7 +555,7 @@ describe("UDAOC Contract", function () {
     // modify content and expect it to revert
     await expect(
       contractUDAOContent.connect(contentBuyer).modifyContent(createModifyContentVoucherSample)
-    ).to.be.revertedWith("Only content modifier or owner can modify content");
+    ).to.be.revertedWith("Only content publisher or content owner can modify content");
   });
 
   it("Should revert modify content if content creator is not kyced", async function () {
@@ -534,12 +563,13 @@ describe("UDAOC Contract", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
 
     const contentParts3 = [0, 1, 2];
-
+    const redeemer = contentCreator;
     /// Create Voucher from redeem.js and use it for creating content
     const createContentVoucherSample = await createContentVoucher(
       contractUDAOContent,
       backend,
       contentCreator,
+      redeemer,
       contentParts3,
       (redeemType = 1),
       (validationScore = 1)
@@ -566,6 +596,7 @@ describe("UDAOC Contract", function () {
       contractUDAOContent,
       backend,
       contentCreator,
+      redeemer,
       contentParts,
       (redeemType = 2),
       (validationScore = 0)
@@ -574,7 +605,7 @@ describe("UDAOC Contract", function () {
     // modify content and expect it to revert
     await expect(
       contractUDAOContent.connect(contentCreator).modifyContent(createModifyContentVoucherSample)
-    ).to.be.revertedWith("You are not KYCed");
+    ).to.be.revertedWith("Content creator isnt KYCed");
   });
 
   it("Should revert modify content if content creator is banned", async function () {
@@ -584,6 +615,7 @@ describe("UDAOC Contract", function () {
     /// part prices must be determined before creating content
     const partPricesArray = [ethers.utils.parseEther("1"), ethers.utils.parseEther("2"), ethers.utils.parseEther("3")];
     const contentPrice = ethers.utils.parseEther("10");
+    const redeemer = contentCreator;
     // Create content
     const contentParts = [0, 1, 2];
     /// Create Voucher from redeem.js and use it for creating content
@@ -591,6 +623,7 @@ describe("UDAOC Contract", function () {
       contractUDAOContent,
       backend,
       contentCreator,
+      redeemer,
       contentParts,
       (redeemType = 1),
       (validationScore = 1)
@@ -617,6 +650,7 @@ describe("UDAOC Contract", function () {
       contractUDAOContent,
       backend,
       contentCreator,
+      redeemer,
       contentParts2,
       (redeemType = 2),
       (validationScore = 0)
@@ -625,7 +659,7 @@ describe("UDAOC Contract", function () {
     // modify content and expect it to revert
     await expect(
       contractUDAOContent.connect(contentCreator).modifyContent(createModifyContentVoucherSample)
-    ).to.be.revertedWith("You are banned");
+    ).to.be.revertedWith("Content creator is banned");
   });
 
   it("Should allow backend to pause/unpause contract", async function () {
@@ -674,10 +708,12 @@ describe("UDAOC Contract", function () {
     /// Create Voucher from redeem.js and use it for creating content
     // Create content
     const contentParts = [0, 1];
+    const redeemer = contentCreator;
     const createContentVoucherSample = await createContentVoucher(
       contractUDAOContent,
       backend,
       contentCreator,
+      redeemer,
       contentParts,
       (redeemType = 1),
       (validationScore = 1)
@@ -699,12 +735,14 @@ describe("UDAOC Contract", function () {
     const contentParts1 = [0, 1];
     const contentParts2 = [0, 1, 2];
     const contentParts3 = [0, 1, 2, 3];
+    const redeemer = contentCreator;
     /// Create Voucher from redeem.js and use it for creating content
 
     const createContentVoucherSample1 = await createContentVoucher(
       contractUDAOContent,
       backend,
       contentCreator,
+      redeemer,
       contentParts1,
       (redeemType = 1),
       (validationScore = 1)
@@ -713,6 +751,7 @@ describe("UDAOC Contract", function () {
       contractUDAOContent,
       backend,
       contentCreator,
+      redeemer,
       contentParts2,
       (redeemType = 1),
       (validationScore = 1)
@@ -721,6 +760,7 @@ describe("UDAOC Contract", function () {
       contractUDAOContent,
       backend,
       contentCreator,
+      redeemer,
       contentParts3,
       (redeemType = 1),
       (validationScore = 1)
@@ -734,7 +774,7 @@ describe("UDAOC Contract", function () {
     /// Create content
 
     await expect(
-      contractUDAOContent.connect(contentCreator).createContents(createContentVoucherSampleArray)
+      contractUDAOContent.connect(contentCreator).batchCreateContents(createContentVoucherSampleArray)
     ).to.be.revertedWith("Pausable: paused");
   });
 
@@ -745,6 +785,7 @@ describe("UDAOC Contract", function () {
     /// part prices must be determined before creating content
     const partPricesArray = [ethers.utils.parseEther("1"), ethers.utils.parseEther("2"), ethers.utils.parseEther("3")];
     const contentPrice = ethers.utils.parseEther("10");
+    const redeemer = contentCreator;
     // Create content
     const contentParts = [0, 1, 2];
     /// Create Voucher from redeem.js and use it for creating content
@@ -752,6 +793,7 @@ describe("UDAOC Contract", function () {
       contractUDAOContent,
       backend,
       contentCreator,
+      redeemer,
       contentParts,
       (redeemType = 1),
       (validationScore = 1)
@@ -771,6 +813,7 @@ describe("UDAOC Contract", function () {
       contractUDAOContent,
       backend,
       contentCreator,
+      redeemer,
       contentParts2,
       redeemType2,
       (validationScore = 0)

@@ -150,6 +150,7 @@ async function createContentVoucher(
   contractUDAOContent,
   backend,
   contentCreator,
+  redeemer,
   contentParts,
   partPrices,
   redeemType = 1,
@@ -171,6 +172,7 @@ async function createContentVoucher(
     0,
     "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
     contentCreator.address,
+    redeemer.address,
     redeemType,
     validationScore
   );
@@ -196,11 +198,13 @@ async function _createContent(
   await contractRoleManager.setKYC(contentCreator.address, true);
 
   const contentParts = [0, 1];
+  const redeemer = contentCreator;
   /// Create Voucher from redeem.js and use it for creating content
   const createContentVoucherSample = await createContentVoucher(
     contractUDAOContent,
     backend,
     contentCreator,
+    redeemer,
     contentParts,
     redeemType,
     validationScore
@@ -446,19 +450,23 @@ describe("Platform Treasury General", function () {
     await contractRoleManager.setKYC(contentBuyer1.address, true);
     // Create content
     const contentParts = [0, 1];
+    const redeemer = contentCreator;
     // Create content voucher
     const createContentVoucherSample = await createContentVoucher(
       contractUDAOContent,
       backend,
       contentCreator,
+      redeemer,
       contentParts,
       (redeemType = 1),
       (validationScore = 1)
     );
+
     // Create content with voucher
     await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample))
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs("0x0000000000000000000000000000000000000000", contentCreator.address, 1);
+
     // Make a content purchase to gather funds for governance
     const tokenIds = [1];
     const purchasedParts = [[1]];
@@ -515,12 +523,14 @@ describe("Platform Treasury General", function () {
     await contractRoleManager.setKYC(contentBuyer3.address, true);
     // Create content
     const contentParts = [0, 1];
+    const redeemer = contentCreator;
 
     // Create content voucher
     const createContentVoucherSample = await createContentVoucher(
       contractUDAOContent,
       backend,
       contentCreator,
+      redeemer,
       contentParts,
       (redeemType = 1),
       (validationScore = 1)
@@ -619,12 +629,14 @@ describe("Platform Treasury General", function () {
     await contractRoleManager.setKYC(contentBuyer3.address, true);
     // Create content
     const contentParts = [0, 1];
+    const redeemer = contentCreator;
 
     // Create content voucher
     const createContentVoucherSample = await createContentVoucher(
       contractUDAOContent,
       backend,
       contentCreator,
+      redeemer,
       contentParts,
       (redeemType = 1),
       (validationScore = 1)
@@ -710,12 +722,14 @@ describe("Platform Treasury General", function () {
     await contractRoleManager.setKYC(contentBuyer3.address, true);
     // Create content
     const contentParts = [0, 1];
+    const redeemer = contentCreator;
 
     // Create content voucher
     const createContentVoucherSample = await createContentVoucher(
       contractUDAOContent,
       backend,
       contentCreator,
+      redeemer,
       contentParts,
       (redeemType = 1),
       (validationScore = 1)
@@ -822,11 +836,13 @@ describe("Platform Treasury General", function () {
     await contractRoleManager.setKYC(contentBuyer1.address, true);
     // Create content
     const contentParts = [0, 1];
+    const redeemer = contentCreator;
     // Create content voucher
     const createContentVoucherSample = await createContentVoucher(
       contractUDAOContent,
       backend,
       contentCreator,
+      redeemer,
       contentParts,
       (redeemType = 1),
       (validationScore = 1)
@@ -861,11 +877,13 @@ describe("Platform Treasury General", function () {
     //await contractRoleManager.setKYC(contentBuyer1.address, true);
     // Create content
     const contentParts = [0, 1];
+    const redeemer = contentCreator;
     // Create content voucher
     const createContentVoucherSample = await createContentVoucher(
       contractUDAOContent,
       backend,
       contentCreator,
+      redeemer,
       contentParts,
       (redeemType = 1),
       (validationScore = 1)
@@ -906,11 +924,13 @@ describe("Platform Treasury General", function () {
     await contractRoleManager.setBan(contentBuyer1.address, true);
     // Create content
     const contentParts = [0, 1];
+    const redeemer = contentCreator;
     // Create content voucher
     const createContentVoucherSample = await createContentVoucher(
       contractUDAOContent,
       backend,
       contentCreator,
+      redeemer,
       contentParts,
       (redeemType = 1),
       (validationScore = 1)
@@ -965,11 +985,13 @@ describe("Platform Treasury General", function () {
     ).to.be.revertedWith("Pausable: paused");
     /// Create content
     const contentParts = [0, 1];
+    const redeemer = contentCreator;
     /// Create content voucher
     const createContentVoucherSample = await createContentVoucher(
       contractUDAOContent,
       backend,
       contentCreator,
+      redeemer,
       contentParts,
       (redeemType = 1),
       (validationScore = 1)
@@ -1083,11 +1105,13 @@ describe("Platform Treasury General", function () {
     await contractRoleManager.setKYC(contentBuyer.address, true);
     // Create content
     const contentParts = [0, 1];
+    const redeemer = contentCreator;
     // Create content voucher
     const createContentVoucherSample = await createContentVoucher(
       contractUDAOContent,
       backend,
       contentCreator,
+      redeemer,
       contentParts,
       (redeemType = 1),
       (validationScore = 1)
@@ -1164,12 +1188,14 @@ describe("Platform Treasury General", function () {
     await contractRoleManager.setKYC(contentBuyer3.address, true);
     // Create content
     const contentParts = [0, 1];
+    const redeemer = contentCreator;
 
     // Create content voucher
     const createContentVoucherSample = await createContentVoucher(
       contractUDAOContent,
       backend,
       contentCreator,
+      redeemer,
       contentParts,
       (redeemType = 1),
       (validationScore = 1)
@@ -1300,12 +1326,14 @@ describe("Platform Treasury General", function () {
     await contractRoleManager.setKYC(contentBuyer3.address, true);
     // Create content
     const contentParts = [0, 1];
+    const redeemer = contentCreator;
 
     // Create content voucher
     const createContentVoucherSample = await createContentVoucher(
       contractUDAOContent,
       backend,
       contentCreator,
+      redeemer,
       contentParts,
       (redeemType = 1),
       (validationScore = 1)
