@@ -43,6 +43,9 @@ contract UDAOContent is
         _tokenIds.increment();
     }
 
+    /// @dev isAllowedToBurn is a bool variable that controls whether the backend is allowed to burn a content or not.
+    bool public isAllowedToBurn = false;
+
     /// @dev tokenId => true/false (is sellable)
     mapping(uint256 => bool) public isSellable;
     /// @dev tokenId => partIds
@@ -94,6 +97,14 @@ contract UDAOContent is
         isSellable[_tokenId] = _isSellable;
     }
 
+    function setIsAllowedToBurn(bool status) external {
+        require(
+            hasRole(GOVERNANCE_ROLE, msg.sender),
+            "Only governance can allow to burning"
+        );
+        isAllowedToBurn = status;
+    }
+
     /// @notice Get the updated addresses from contract manager
     /// @param roleManagerAddress The address of the role manager contract
     /// @param supervisionAddress The address of the supervision contract
@@ -105,7 +116,7 @@ contract UDAOContent is
             require(
                 (hasRole(BACKEND_ROLE, msg.sender) ||
                     hasRole(CONTRACT_MANAGER, msg.sender)),
-                "Only backend can update addresses"
+                "Only backend and contract manager can update addresses"
             );
         }
         roleManager = IRoleManager(roleManagerAddress);
@@ -151,7 +162,7 @@ contract UDAOContent is
         );
 
         // make sure voucher is not expired
-        require(voucher.validUntil >= block.timestamp, "Voucher has expired.");
+        require(voucher.validUntil >= block.timestamp, "Voucher has expired");
         /// @dev 1 is new content, 2 is modification
         require(voucher.redeemType == 1, "Redeem type is not new content");
         /// @dev every content should have a valid URI
@@ -218,7 +229,7 @@ contract UDAOContent is
             // make sure voucher is not expired
             require(
                 voucher[i].validUntil >= block.timestamp,
-                "Voucher has expired."
+                "Voucher has expired"
             );
             /// @dev 1 is new content, 2 is modification
             require(
@@ -277,10 +288,15 @@ contract UDAOContent is
                 ownerOf(voucher.tokenId) == msg.sender,
             "Only content publisher or content owner can modify content"
         );
-        require(voucher.validUntil >= block.timestamp, "Voucher has expired.");
+        require(voucher.validUntil >= block.timestamp, "Voucher has expired");
         /// @dev 1 is new content, 2 is modification
         require(voucher.redeemType == 2, "Redeem type is not modification");
         address instructor = ownerOf(voucher.tokenId);
+        /// @dev every content should have a valid URI
+        require(
+            !isCalldataStringEmpty(voucher._uri),
+            "Content URI cannot be empty"
+        );
         //make sure redeemer is kyced
         require(isKYCed(instructor, 14), "Content creator isnt KYCed");
         // make sure caller is not banned
@@ -321,15 +337,15 @@ contract UDAOContent is
     }
 
     /// @notice Returns the part numbers that a content has
-    function _getPartNumberOfContent(
-        uint tokenId
-    ) internal view returns (uint) {
+    function getPartNumberOfContent(uint tokenId) external view returns (uint) {
         return contentParts[tokenId].length;
     }
 
-    /// @notice Returns the part numbers that a content has
-    function getPartNumberOfContent(uint tokenId) external view returns (uint) {
-        return contentParts[tokenId].length;
+    /// @notice Burns a content which is not allowed
+    /// @param tokenId The id of the token to burn
+    function burn(uint256 tokenId) external {
+        require(isAllowedToBurn, "Burning is not allowed by governance");
+        _burn(tokenId);
     }
 
     /// @notice Burns a content which is not allowed
@@ -369,7 +385,7 @@ contract UDAOContent is
     function existsBatch(
         uint[] memory tokenIds
     ) external view returns (bool[] memory) {
-        bool[] memory existanceResult;
+        bool[] memory existanceResult = new bool[](tokenIds.length);
         for (uint i = 0; i < tokenIds.length; i++) {
             existanceResult[i] = _exists(tokenIds[i]);
         }
