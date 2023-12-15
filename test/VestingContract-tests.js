@@ -480,4 +480,84 @@ describe("Vesting Contract", function () {
         await expect(contractVesting.connect(backend).depositInBatch([beneficiary1, beneficiary2, beneficiary3], [amount, amount, amount], [releaseTime, releaseTime, releaseTime])).to.be.revertedWith("ERC20: transfer amount exceeds balance");
     }
     );
+    it("Should allow a beneficiary to withdraw his vested amount if vesting period is over and he has multiple vesting deposits with withdrawFromBatch", async function () {
+        await reDeploy();
+        const currentBalanceOfBackend = await contractUDAO.balanceOf(backend.address);
+        const currentVestingIndex = 0;
+        const beneficiary1 = account1.address;
+        const amount1 = ethers.utils.parseEther("1000");
+        const amount2 = ethers.utils.parseEther("2000");
+        const amount3 = ethers.utils.parseEther("3000");
+        /// Backend should give allowance to contractVesting
+        await contractUDAO.connect(backend).approve(contractVesting.address, amount1.add(amount2).add(amount3));
+        /// @dev releaseTime is 1 day from now
+        /// @dev Get the current block number
+        const currentBlockNumber = await hre.ethers.provider.getBlockNumber();
+        const releaseTime1 = (await hre.ethers.provider.getBlock(currentBlockNumber)).timestamp + 86400;
+        const releaseTime2 = (await hre.ethers.provider.getBlock(currentBlockNumber)).timestamp + 86400 * 2;
+        const releaseTime3 = (await hre.ethers.provider.getBlock(currentBlockNumber)).timestamp + 86400 * 3;
+        await contractVesting.connect(backend).deposit(beneficiary1, amount1, releaseTime1);
+        await contractVesting.connect(backend).deposit(beneficiary1, amount2, releaseTime2);
+        await contractVesting.connect(backend).deposit(beneficiary1, amount3, releaseTime3);
+        // Check balance of backend
+        expect(await contractUDAO.balanceOf(backend.address)).to.be.equal(currentBalanceOfBackend.sub(amount1).sub(amount2).sub(amount3));
+        // Check balance of contractVesting
+        expect(await contractUDAO.balanceOf(contractVesting.address)).to.be.equal(amount1.add(amount2).add(amount3));
+        // Check balance of beneficiary1 before withdraw
+        expect(await contractUDAO.balanceOf(beneficiary1)).to.be.equal(0);
+        // Wait for 3 days
+        await hre.ethers.provider.send('evm_increaseTime', [
+            3 * 24 * 60 * 60
+        ]);
+        // Beneficiary1 should be able to withdraw all amounts
+        await expect(contractVesting.connect(account1).withdrawFromBatch([currentVestingIndex, currentVestingIndex + 1, currentVestingIndex + 2])).to.emit(contractVesting, "VestingsWithdrawal").withArgs(beneficiary1, [currentVestingIndex, currentVestingIndex +1, currentVestingIndex + 2], amount1.add(amount2).add(amount3));
+        // Check balance of beneficiary1 after withdraw
+        expect(await contractUDAO.balanceOf(account1.address)).to.be.equal(amount1.add(amount2).add(amount3));
+    }
+    );
+    it("Should allow a beneficiary to withdraw his vested amount if vesting period is over and he has multiple vesting deposits with withdrawFromBatch except locks that release time hasn't met yet", async function () {
+        await reDeploy();
+        const currentBalanceOfBackend = await contractUDAO.balanceOf(backend.address);
+        const currentVestingIndex = 0;
+        const beneficiary1 = account1.address;
+        const amount1 = ethers.utils.parseEther("1000");
+        const amount2 = ethers.utils.parseEther("2000");
+        const amount3 = ethers.utils.parseEther("3000");
+        /// Backend should give allowance to contractVesting
+        await contractUDAO.connect(backend).approve(contractVesting.address, amount1.add(amount2).add(amount3));
+        /// @dev releaseTime is 1 day from now
+        /// @dev Get the current block number
+        const currentBlockNumber = await hre.ethers.provider.getBlockNumber();
+        const releaseTime1 = (await hre.ethers.provider.getBlock(currentBlockNumber)).timestamp + 86400;
+        const releaseTime2 = (await hre.ethers.provider.getBlock(currentBlockNumber)).timestamp + 86400 * 2;
+        const releaseTime3 = (await hre.ethers.provider.getBlock(currentBlockNumber)).timestamp + 86400 * 3;
+        await contractVesting.connect(backend).deposit(beneficiary1, amount1, releaseTime1);
+        await contractVesting.connect(backend).deposit(beneficiary1, amount2, releaseTime2);
+        await contractVesting.connect(backend).deposit(beneficiary1, amount3, releaseTime3);
+        // Check balance of backend
+        expect(await contractUDAO.balanceOf(backend.address)).to.be.equal(currentBalanceOfBackend.sub(amount1).sub(amount2).sub(amount3));
+        // Check balance of contractVesting
+        expect(await contractUDAO.balanceOf(contractVesting.address)).to.be.equal(amount1.add(amount2).add(amount3));
+        // Check balance of beneficiary1 before withdraw
+        expect(await contractUDAO.balanceOf(beneficiary1)).to.be.equal(0);
+        // Wait for 2 days
+        await hre.ethers.provider.send('evm_increaseTime', [
+            2 * 24 * 60 * 60
+        ]);
+        // Beneficiary1 should be able to withdraw amount1 and amount2
+        await expect(contractVesting.connect(account1).withdrawFromBatch([currentVestingIndex, currentVestingIndex + 1, currentVestingIndex + 2])).to.emit(contractVesting, "VestingsWithdrawal").withArgs(beneficiary1, [currentVestingIndex, currentVestingIndex + 1], amount1.add(amount2));
+        // Check balance of beneficiary1 after withdraw
+        expect(await contractUDAO.balanceOf(account1.address)).to.be.equal(amount1.add(amount2));
+        // Wait for 1 more day
+        await hre.ethers.provider.send('evm_increaseTime', [
+            1 * 24 * 60 * 60
+        ]);
+        // Beneficiary1 should be able to withdraw amount3
+        await expect(contractVesting.connect(account1).withdrawFromBatch([currentVestingIndex + 2])).to.emit(contractVesting, "VestingsWithdrawal").withArgs(beneficiary1, [currentVestingIndex + 2], amount3);
+        // Check balance of beneficiary1 after withdraw
+        expect(await contractUDAO.balanceOf(account1.address)).to.be.equal(amount1.add(amount2).add(amount3));
+        
+    }
+    );
 });
+    
