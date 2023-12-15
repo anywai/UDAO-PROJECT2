@@ -8,6 +8,9 @@ contract DummySupervision {
     ///@notice Placeholder empty mapping to disable hardhat warnings.
     mapping(uint => uint) emptyMapping;
 
+    /// @notice Event emitted when a validation is created
+    event ValidationCreated(uint256 indexed tokenId, uint256 score);
+
     /// @notice Returns the validation result of a token
     /// @param tokenId The ID of a token
     function getIsValidated(uint tokenId) external view returns (uint256) {
@@ -17,7 +20,9 @@ contract DummySupervision {
     /// @notice starts new validation for content
     /// @param tokenId id of the content that will be validated
     /// @param score validation score of the content
-    function createValidation(uint256 tokenId, uint256 score) external {}
+    function createValidation(uint256 tokenId, uint256 score) external {
+        emit ValidationCreated(tokenId, score);
+    }
 
     /// @notice allows validators to be fired or resigned from a validation job
     /// @param demissionAddress is the address that will be revoked from validation job

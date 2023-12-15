@@ -28,6 +28,9 @@ async function createContentVoucher(
   const futureBlock = block.timestamp + 1000;
   // convert it to a BigNumber
   const futureBlockBigNumber = ethers.BigNumber.from(futureBlock);
+
+  const redeemer = contentCreator;
+
   return await new Redeem({
     contract: contractUDAOContent,
     signer: backend,
@@ -37,6 +40,7 @@ async function createContentVoucher(
     0,
     "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
     contentCreator.address,
+    redeemer.address,
     redeemType,
     validationScore
   );
