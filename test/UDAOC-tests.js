@@ -1244,7 +1244,7 @@ describe("UDAOC Contract", function () {
       "Signature invalid or unauthorized"
     );
   });
-  //BATU
+
   it("Should fail create content and batch create if caller is not redeemer", async function () {
     await reDeploy();
     await contractRoleManager.setKYC(contentCreator.address, true);

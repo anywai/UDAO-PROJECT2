@@ -13,8 +13,6 @@ import "../interfaces/IRoleManager.sol";
 import "../RoleLegacy.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 
-import "hardhat/console.sol";
-
 contract UDAOContent is
     Pausable,
     RoleLegacy,

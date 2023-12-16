@@ -151,30 +151,25 @@ contract Vesting is AccessControl {
 
     /// @notice Allows beneficiary to withdraw tokens from multiple vesting locks
     /// @param vestingIndices The indices of the vesting locks to withdraw from
-    function withdrawFromBatch(uint[] calldata vestingIndices)
-        external
-        returns (bool success)
-    {
-        /// @dev This is only used to emit the event
+    function withdrawFromBatch(
+        uint[] calldata vestingIndices
+    ) external returns (bool success) {
         uint256 totalRelease;
-        /// @dev Loop through the vesting indices and withdraw from each one
         for (uint i = 0; i < vestingIndices.length; i++) {
-            VestingLock storage currentVesting = vestingLocks[vestingIndices[i]];
-            /// @dev Check that the beneficiary is the sender
+            VestingLock storage currentVesting = vestingLocks[
+                vestingIndices[i]
+            ];
             require(
                 currentVesting.beneficiary == msg.sender,
                 "You are not the beneficiary of this vesting lock"
             );
-            /// @dev Get the amount from locks ONLY IF the release time has passed
             if (currentVesting.releaseTime <= block.timestamp) {
                 uint amount = currentVesting.balance;
                 currentVesting.balance = 0;
                 totalRelease += amount;
-                /// @dev Transfer the tokens to the beneficiary
                 require(token.transfer(msg.sender, amount));
             }
         }
-        /// @dev Emit the event
         emit VestingsWithdrawal(msg.sender, vestingIndices, totalRelease);
         return true;
     }
