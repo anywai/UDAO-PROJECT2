@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: MIT
 /// @title Dummy version of the supervision contract. This contract will be replaced at UDAO version 2.0.
 /// @dev This contract only serves as a placeholder so that other contracts can be compiled and work.
+import "../interfaces/IUDAOC.sol";
+import "../interfaces/IPlatformTreasury.sol";
+import "../interfaces/IRoleManager.sol";
 
 pragma solidity ^0.8.4;
 
@@ -10,6 +13,16 @@ contract DummySupervision {
 
     /// @notice Event emitted when a validation is created
     event ValidationCreated(uint256 indexed tokenId, uint256 score);
+
+    /// @notice UDAOC (ERC721) Token is defines contents and used for content ownership
+    IUDAOC udaoc;
+    /// @notice Role manager contract address
+    IRoleManager roleManager;
+
+    constructor(address roleManagerAddress, address udaocAddress) {
+        roleManager = IRoleManager(roleManagerAddress);
+        udaoc = IUDAOC(udaocAddress);
+    }
 
     /// @notice Returns the validation result of a token
     /// @param tokenId The ID of a token

@@ -13,7 +13,7 @@ const { latestBlock } = require("@nomicfoundation/hardhat-network-helpers/dist/s
 
 // Enable and inject BN dependency
 chai.use(require("chai-bn")(BN));
-const TEST_DISABLED = true;
+const TEST_DISABLED = false;
 
 // @dev Proposal states
 /*

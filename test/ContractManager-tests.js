@@ -57,6 +57,10 @@ async function reDeploy(reApplyRolesViaVoucher = true, isDexRequired = false) {
   contractUDAOContent = replace.contractUDAOContent;
   contractSupervision = replace.contractSupervision;
   contractPlatformTreasury = replace.contractPlatformTreasury;
+  contractUDAOVp = replace.contractUDAOVp;
+  contractUDAOStaker = replace.contractUDAOStaker;
+  contractUDAOTimelockController = replace.contractUDAOTimelockController;
+  contractUDAOGovernor = replace.contractUDAOGovernor;
   contractSupervision = replace.contractSupervision;
   GOVERNANCE_ROLE = replace.GOVERNANCE_ROLE;
   BACKEND_ROLE = replace.BACKEND_ROLE;
