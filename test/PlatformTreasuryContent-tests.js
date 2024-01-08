@@ -101,7 +101,7 @@ async function makeContentPurchase(
   /// Buy content
   const purchaseTx = await contractPlatformTreasury
     .connect(contentBuyer)
-    .buyContentWithDiscount(contentPurchaseVouchers);
+    .buyContent(contentPurchaseVouchers);
   const queueTxReceipt = await purchaseTx.wait();
   const queueTxEvent = queueTxReceipt.events.find((e) => e.event == "ContentBought");
   const contentSaleID = queueTxEvent.args[0];
@@ -305,7 +305,7 @@ describe("Platform Treasury Contract - Content", function () {
       contentPurchaseVouchers.push(contentPurchaseVoucher);
     }
     /// Buy content
-    const purchaseTx = await contractPlatformTreasury.connect(backend).buyContentWithDiscount(contentPurchaseVouchers);
+    const purchaseTx = await contractPlatformTreasury.connect(backend).buyContent(contentPurchaseVouchers);
     const queueTxReceipt = await purchaseTx.wait();
     const queueTxEvent = queueTxReceipt.events.find((e) => e.event == "ContentBought");
     const contentSaleID = queueTxEvent.args[0];
@@ -394,7 +394,7 @@ describe("Platform Treasury Contract - Content", function () {
       contentPurchaseVouchers.push(contentPurchaseVoucher);
     }
     /// Buy content
-    const purchaseTx = contractPlatformTreasury.connect(contentBuyer1).buyContentWithDiscount(contentPurchaseVouchers);
+    const purchaseTx = contractPlatformTreasury.connect(contentBuyer1).buyContent(contentPurchaseVouchers);
     //not enough udao balance
     await expect(purchaseTx).to.be.revertedWith("Not enough UDAO sent!");
   });
@@ -461,7 +461,7 @@ describe("Platform Treasury Contract - Content", function () {
       contentPurchaseVouchers.push(contentPurchaseVoucher);
     }
     /// Buy content
-    const purchaseTx = contractPlatformTreasury.connect(contentBuyer1).buyContentWithDiscount(contentPurchaseVouchers);
+    const purchaseTx = contractPlatformTreasury.connect(contentBuyer1).buyContent(contentPurchaseVouchers);
     //not enough udao balance
     await expect(purchaseTx).to.be.revertedWith("Not enough allowance!");
   });
@@ -529,7 +529,7 @@ describe("Platform Treasury Contract - Content", function () {
       contentPurchaseVouchers.push(contentPurchaseVoucher);
     }
     /// Buy content
-    const purchaseTx = contractPlatformTreasury.connect(backend).buyContentWithDiscount(contentPurchaseVouchers);
+    const purchaseTx = contractPlatformTreasury.connect(backend).buyContent(contentPurchaseVouchers);
     expect(purchaseTx).to.be.revertedWith("Fiat purchase requires a gift receiver!");
   });
 
@@ -661,7 +661,7 @@ describe("Platform Treasury Contract - Content", function () {
     }
     /// Buy content
     await expect(
-      contractPlatformTreasury.connect(contentBuyer1).buyContentWithDiscount(contentPurchaseVouchers)
+      contractPlatformTreasury.connect(contentBuyer1).buyContent(contentPurchaseVouchers)
     ).to.revertedWith("Part is already owned!");
   });
 
@@ -738,7 +738,7 @@ describe("Platform Treasury Contract - Content", function () {
     }
     /// Buy content
     await expect(
-      contractPlatformTreasury.connect(contentBuyer2).buyContentWithDiscount(contentPurchaseVouchers)
+      contractPlatformTreasury.connect(contentBuyer2).buyContent(contentPurchaseVouchers)
     ).to.revertedWith("You are not redeemer");
   });
 
@@ -781,7 +781,7 @@ describe("Platform Treasury Contract - Content", function () {
     }
     /// Try to purchase the content
     await expect(
-      contractPlatformTreasury.connect(contentBuyer1).buyContentWithDiscount(contentPurchaseVouchers)
+      contractPlatformTreasury.connect(contentBuyer1).buyContent(contentPurchaseVouchers)
     ).to.revertedWith("Content not exist!");
   });
 
@@ -835,7 +835,7 @@ describe("Platform Treasury Contract - Content", function () {
     }
     /// Try to purchase the content with banned buyer
     await expect(
-      contractPlatformTreasury.connect(contentBuyer1).buyContentWithDiscount(contentPurchaseVouchers)
+      contractPlatformTreasury.connect(contentBuyer1).buyContent(contentPurchaseVouchers)
     ).to.revertedWith("You are banned");
   });
 
@@ -889,7 +889,7 @@ describe("Platform Treasury Contract - Content", function () {
     }
     /// Try to purchase the content with banned buyer
     await expect(
-      contractPlatformTreasury.connect(contentBuyer1).buyContentWithDiscount(contentPurchaseVouchers)
+      contractPlatformTreasury.connect(contentBuyer1).buyContent(contentPurchaseVouchers)
     ).to.revertedWith("You are not KYCed");
   });
 
@@ -946,7 +946,7 @@ describe("Platform Treasury Contract - Content", function () {
     }
     /// Try to purchase the content with banned instructor
     await expect(
-      contractPlatformTreasury.connect(contentBuyer1).buyContentWithDiscount(contentPurchaseVouchers)
+      contractPlatformTreasury.connect(contentBuyer1).buyContent(contentPurchaseVouchers)
     ).to.revertedWith("Not sellable");
   });
 

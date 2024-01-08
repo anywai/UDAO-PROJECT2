@@ -281,7 +281,7 @@ async function makeContentPurchase(
   /// Buy content
   const purchaseTx = await contractPlatformTreasury
     .connect(contentBuyer)
-    .buyContentWithDiscount(contentPurchaseVouchers);
+    .buyContent(contentPurchaseVouchers);
   const queueTxReceipt = await purchaseTx.wait();
   const queueTxEvent = queueTxReceipt.events.find((e) => e.event == "ContentBought");
   const contentSaleID = queueTxEvent.args[0];

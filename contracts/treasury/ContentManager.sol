@@ -228,7 +228,7 @@ abstract contract ContentManager is BasePlatform {
 
     /// @notice Allows users to purchase multiple contents for the caller or gift receiver with discount vouchers
     /// @param vouchers buy discount content voucher array
-    function buyContentWithDiscount(
+    function buyContent(
         IVoucherVerifier.ContentDiscountVoucher[] calldata vouchers
     ) external whenNotPaused {
         /// @dev Determine the number of items in the cart

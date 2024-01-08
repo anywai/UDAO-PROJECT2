@@ -204,7 +204,7 @@ describe("Voucher Verifier", function () {
     /// Try to buy content and revert with "Signature invalid or unauthorized"
     const transaction = contractPlatformTreasury
       .connect(contentCreator)
-      .buyContentWithDiscount(contentPurchaseVouchers);
+      .buyContent(contentPurchaseVouchers);
     await expect(transaction).to.be.revertedWith("Signature invalid or unauthorized");
 
     const transaction2 = contractVoucherVerifier
@@ -297,7 +297,7 @@ describe("Voucher Verifier", function () {
     /// Try to buy content and revert with "Signature invalid or unauthorized"
     const transaction = contractPlatformTreasury
       .connect(contentCreator)
-      .buyContentWithDiscount(contentPurchaseVouchers);
+      .buyContent(contentPurchaseVouchers);
     await expect(transaction).to.be.revertedWith("Voucher has expired.");
 
     const transaction2 = contractVoucherVerifier
@@ -390,7 +390,7 @@ describe("Voucher Verifier", function () {
     /// Buy content
     const purchaseTx = await contractPlatformTreasury
       .connect(contentBuyer)
-      .buyContentWithDiscount(contentPurchaseVouchers);
+      .buyContent(contentPurchaseVouchers);
     const queueTxReceipt = await purchaseTx.wait();
     const queueTxEvent = queueTxReceipt.events.find((e) => e.event == "ContentBought");
     const contentSaleID = queueTxEvent.args[0];
