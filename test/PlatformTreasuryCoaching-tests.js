@@ -97,7 +97,8 @@ describe("Platform Treasury Contract - Coaching", function () {
       contentCreator.address,
       coachingPrice,
       coachingDate,
-      contentBuyer.address
+      contentBuyer.address,
+      "c8d53630-233a-4f95-90cb-4df253ae9283"
     );
     // Buy coaching
     const purchaseTx = await contractPlatformTreasury.connect(contentBuyer).buyCoaching(role_voucher);
@@ -143,7 +144,8 @@ describe("Platform Treasury Contract - Coaching", function () {
       contentCreator.address,
       coachingPrice,
       coachingDate,
-      contentBuyer.address
+      contentBuyer.address,
+      "c8d53630-233a-4f95-90cb-4df253ae9283"
     );
     // Buy coaching
     const purchaseTx = contractPlatformTreasury.connect(contentBuyer).buyCoaching(role_voucher);
@@ -180,7 +182,8 @@ describe("Platform Treasury Contract - Coaching", function () {
       contentCreator.address,
       coachingPrice,
       coachingDate,
-      contentBuyer.address
+      contentBuyer.address,
+      "c8d53630-233a-4f95-90cb-4df253ae9283"
     );
     // Buy coaching
     const purchaseTx = contractPlatformTreasury.connect(contentBuyer).buyCoaching(role_voucher);
@@ -217,7 +220,8 @@ describe("Platform Treasury Contract - Coaching", function () {
       contentCreator.address,
       coachingPrice,
       coachingDate,
-      contentBuyer.address
+      contentBuyer.address,
+      "c8d53630-233a-4f95-90cb-4df253ae9283"
     );
     // Buy coaching
     const purchaseTx = await contractPlatformTreasury.connect(contentBuyer).buyCoaching(role_voucher);
@@ -262,7 +266,8 @@ describe("Platform Treasury Contract - Coaching", function () {
       contentCreator.address,
       coachingPrice,
       coachingDate,
-      contentBuyer.address
+      contentBuyer.address,
+      "c8d53630-233a-4f95-90cb-4df253ae9283"
     );
     // Set BAN
     await contractRoleManager.setBan(contentBuyer.address, true);
@@ -300,7 +305,8 @@ describe("Platform Treasury Contract - Coaching", function () {
       contentCreator.address,
       coachingPrice,
       coachingDate,
-      contentBuyer.address
+      contentBuyer.address,
+      "c8d53630-233a-4f95-90cb-4df253ae9283"
     );
 
     // Buy coaching
@@ -337,7 +343,8 @@ describe("Platform Treasury Contract - Coaching", function () {
       contentCreator.address,
       coachingPrice,
       coachingDate,
-      contentBuyer.address
+      contentBuyer.address,
+      "c8d53630-233a-4f95-90cb-4df253ae9283"
     );
     // Set BAN
     await contractRoleManager.setBan(contentCreator.address, true);
@@ -375,7 +382,8 @@ describe("Platform Treasury Contract - Coaching", function () {
       contentCreator.address,
       coachingPrice,
       coachingDate,
-      contentBuyer.address
+      contentBuyer.address,
+      "c8d53630-233a-4f95-90cb-4df253ae9283"
     );
     // Buy coaching
     await expect(contractPlatformTreasury.connect(contentBuyer).buyCoaching(role_voucher)).to.revertedWith(
@@ -412,7 +420,8 @@ describe("Platform Treasury Contract - Coaching", function () {
       contentCreator.address,
       coachingPrice,
       coachingDate,
-      contentBuyer.address
+      contentBuyer.address,
+      "c8d53630-233a-4f95-90cb-4df253ae9283"
     );
     // Buy coaching
     const purchaseTx = await contractPlatformTreasury.connect(contentBuyer).buyCoaching(role_voucher);
@@ -467,7 +476,8 @@ describe("Platform Treasury Contract - Coaching", function () {
       contentCreator.address,
       coachingPrice,
       coachingDate,
-      contentBuyer.address
+      contentBuyer.address,
+      "c8d53630-233a-4f95-90cb-4df253ae9283"
     );
     // Buy coaching
     const purchaseTx = await contractPlatformTreasury.connect(contentBuyer).buyCoaching(role_voucher);
@@ -521,7 +531,8 @@ describe("Platform Treasury Contract - Coaching", function () {
       contentCreator.address,
       coachingPrice,
       coachingDate,
-      contentBuyer.address
+      contentBuyer.address,
+      "c8d53630-233a-4f95-90cb-4df253ae9283"
     );
     // Buy coaching
     const purchaseTx = await contractPlatformTreasury.connect(contentBuyer).buyCoaching(role_voucher);
@@ -579,7 +590,8 @@ describe("Platform Treasury Contract - Coaching", function () {
       contentCreator.address,
       coachingPrice,
       coachingDate,
-      contentBuyer.address
+      contentBuyer.address,
+      "c8d53630-233a-4f95-90cb-4df253ae9283"
     );
     // Buy coaching
     const purchaseTx = await contractPlatformTreasury.connect(contentBuyer).buyCoaching(role_voucher);
@@ -641,7 +653,8 @@ describe("Platform Treasury Contract - Coaching", function () {
       contentCreator.address,
       coachingPrice,
       coachingDate,
-      contentBuyer.address
+      contentBuyer.address,
+      "c8d53630-233a-4f95-90cb-4df253ae9283"
     );
     // Buy coaching
     const purchaseTx = await contractPlatformTreasury.connect(contentBuyer).buyCoaching(role_voucher);
@@ -694,7 +707,8 @@ describe("Platform Treasury Contract - Coaching", function () {
       contentCreator.address,
       coachingPrice,
       coachingDate,
-      contentBuyer.address
+      contentBuyer.address,
+      "c8d53630-233a-4f95-90cb-4df253ae9283"
     );
     // Buy coaching
     const purchaseTx = await contractPlatformTreasury.connect(contentBuyer).buyCoaching(role_voucher);
@@ -742,7 +756,8 @@ describe("Platform Treasury Contract - Coaching", function () {
       contentCreator.address,
       coachingPrice,
       coachingDate,
-      contentBuyer.address
+      contentBuyer.address,
+      "c8d53630-233a-4f95-90cb-4df253ae9283"
     );
     // Get buyer's UDAO balance
     const buyerBalance = await contractUDAO.balanceOf(contentBuyer.address);
@@ -815,7 +830,8 @@ describe("Platform Treasury Contract - Coaching", function () {
       contentCreator.address,
       coachingPrice,
       coachingDate,
-      contentBuyer.address
+      contentBuyer.address,
+      "c8d53630-233a-4f95-90cb-4df253ae9283"
     );
     // Get buyer's UDAO balance
     const buyerBalance = await contractUDAO.balanceOf(contentBuyer.address);
@@ -893,7 +909,8 @@ describe("Platform Treasury Contract - Coaching", function () {
       contentCreator.address,
       coachingPrice,
       coachingDate,
-      contentBuyer.address
+      contentBuyer.address,
+      "c8d53630-233a-4f95-90cb-4df253ae9283"
     );
     // Get buyer's UDAO balance
     const buyerBalance = await contractUDAO.balanceOf(contentBuyer.address);
@@ -1003,7 +1020,8 @@ describe("Platform Treasury Contract - Coaching", function () {
       contentCreator.address,
       coachingPrice,
       coachingDate,
-      contentBuyer.address
+      contentBuyer.address,
+      "c8d53630-233a-4f95-90cb-4df253ae9283"
     );
     // Buy coaching
     const purchaseTx = await contractPlatformTreasury.connect(contentBuyer).buyCoaching(role_voucher);
@@ -1081,7 +1099,8 @@ describe("Platform Treasury Contract - Coaching", function () {
       contentCreator.address,
       coachingPrice,
       coachingDate1,
-      contentBuyer.address
+      contentBuyer.address,
+      "c8d53630-233a-4f95-90cb-4df253ae9283"
     );
     // Buy coaching revety
     await expect(contractPlatformTreasury.connect(contentBuyer).buyCoaching(role_voucher1)).to.revertedWith(
@@ -1093,7 +1112,8 @@ describe("Platform Treasury Contract - Coaching", function () {
       contentCreator.address,
       coachingPrice,
       coachingDate2,
-      contentBuyer.address
+      contentBuyer.address,
+      "c8d53630-233a-4f95-90cb-4df253ae9283"
     );
     // Buy coaching revety
     await expect(contractPlatformTreasury.connect(contentBuyer).buyCoaching(role_voucher2)).to.revertedWith(
@@ -1129,7 +1149,8 @@ describe("Platform Treasury Contract - Coaching", function () {
       contentCreator.address,
       coachingPrice,
       coachingDate1,
-      contentBuyer.address
+      contentBuyer.address,
+      "c8d53630-233a-4f95-90cb-4df253ae9283"
     );
     // Buy coaching revety
     await expect(contractPlatformTreasury.connect(contentBuyer2).buyCoaching(role_voucher1)).to.revertedWith(
@@ -1165,7 +1186,8 @@ describe("Platform Treasury Contract - Coaching", function () {
       contentCreator.address,
       coachingPrice,
       coachingDate,
-      contentBuyer.address
+      contentBuyer.address,
+      "c8d53630-233a-4f95-90cb-4df253ae9283"
     );
     // Buy coaching
     const purchaseTx = await contractPlatformTreasury.connect(backend).buyCoaching(role_voucher);
@@ -1214,7 +1236,8 @@ describe("Platform Treasury Contract - Coaching", function () {
       contentCreator.address,
       coachingPrice,
       coachingDate,
-      backend.address
+      backend.address,
+      "c8d53630-233a-4f95-90cb-4df253ae9283"
     );
     // Buy coaching
     const purchaseTx = contractPlatformTreasury.connect(backend).buyCoaching(role_voucher);

@@ -239,7 +239,8 @@ async function makeContentPurchase(
   fullContentPurchase,
   validUntil,
   redeemers,
-  giftReceiver
+  giftReceiver,
+  userIds
 ) {
   /// Set KYC
   await contractRoleManager.setKYC(contentBuyer.address, true);
@@ -259,6 +260,7 @@ async function makeContentPurchase(
         { name: "validUntil", type: "uint256" },
         { name: "redeemer", type: "address" },
         { name: "giftReceiver", type: "address" },
+        { name: "userId", type: "string"}
       ],
   */
   const contentPurchaseVouchers = [];
@@ -273,7 +275,8 @@ async function makeContentPurchase(
       pricesToPay[i],
       validUntil,
       redeemers[i],
-      giftReceiver[i]
+      giftReceiver[i],
+      userIds[i]
     );
     // Save the voucher to the array
     contentPurchaseVouchers.push(contentPurchaseVoucher);
@@ -321,13 +324,19 @@ async function makeCoachingPurchase(
     contentCreator.address,
     coachingPrice,
     coachingDate,
-    contentBuyer.address
+    contentBuyer.address,
+    "c8d53630-233a-4f95-90cb-4df253ae9283"
   );
   // Buy coaching
+  console.log("DNEME")
   const purchaseTx = await contractPlatformTreasury.connect(contentBuyer).buyCoaching(role_voucher);
+  console.log("step 2")
   const queueTxReceipt = await purchaseTx.wait();
+  console.log("step 3")
   const queueTxEvent = queueTxReceipt.events.find((e) => e.event == "CoachingBought");
+  console.log("BUMU?")
   const coachingSaleID = queueTxEvent.args[0];
+  console.log("HAYIR")
   // Get coaching struct
   const coachingStruct = await contractPlatformTreasury.coachSales(coachingSaleID);
   // Check if returned learner address is the same as the buyer address
@@ -475,6 +484,7 @@ describe("Platform Treasury General", function () {
     const fullContentPurchase = [false];
     const pricesToPay = [ethers.utils.parseEther("1")];
     const validUntil = Date.now() + 999999999;
+    const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
     await makeContentPurchase(
       contractPlatformTreasury,
       contractVoucherVerifier,
@@ -487,7 +497,8 @@ describe("Platform Treasury General", function () {
       fullContentPurchase,
       validUntil,
       redeemers,
-      giftReceiver
+      giftReceiver,
+      userIds
     );
 
     /// @dev Skip "refund window" days to allow foundation to withdraw funds
@@ -549,6 +560,7 @@ describe("Platform Treasury General", function () {
     const fullContentPurchase = [false];
     const pricesToPay = [ethers.utils.parseEther("1")];
     const validUntil = Date.now() + 999999999;
+    const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
     await makeContentPurchase(
       contractPlatformTreasury,
       contractVoucherVerifier,
@@ -561,7 +573,8 @@ describe("Platform Treasury General", function () {
       fullContentPurchase,
       validUntil,
       redeemers1,
-      giftReceiver
+      giftReceiver,
+      userIds
     );
     await makeContentPurchase(
       contractPlatformTreasury,
@@ -575,7 +588,8 @@ describe("Platform Treasury General", function () {
       fullContentPurchase,
       validUntil,
       redeemers2,
-      giftReceiver
+      giftReceiver,
+      userIds
     );
     await makeContentPurchase(
       contractPlatformTreasury,
@@ -589,7 +603,8 @@ describe("Platform Treasury General", function () {
       fullContentPurchase,
       validUntil,
       redeemers3,
-      giftReceiver
+      giftReceiver,
+      userIds
     );
 
     /// @dev Skip "refund window" days to allow foundation to withdraw funds
@@ -653,6 +668,7 @@ describe("Platform Treasury General", function () {
     const fullContentPurchase = [false];
     const pricesToPay = [ethers.utils.parseEther("1")];
     const validUntil = Date.now() + 999999999;
+    const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
     await makeContentPurchase(
       contractPlatformTreasury,
       contractVoucherVerifier,
@@ -665,7 +681,8 @@ describe("Platform Treasury General", function () {
       fullContentPurchase,
       validUntil,
       redeemers,
-      giftReceiver
+      giftReceiver,
+      userIds
     );
 
     // Get the instructer balance before withdrawal
@@ -746,6 +763,7 @@ describe("Platform Treasury General", function () {
     const fullContentPurchase = [false];
     const pricesToPay = [ethers.utils.parseEther("1")];
     const validUntil = Date.now() + 999999999;
+    const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
     await makeContentPurchase(
       contractPlatformTreasury,
       contractVoucherVerifier,
@@ -758,7 +776,8 @@ describe("Platform Treasury General", function () {
       fullContentPurchase,
       validUntil,
       redeemers,
-      giftReceiver
+      giftReceiver,
+      userIds
     );
 
     // Get the instructer balance before withdrawal
@@ -808,6 +827,7 @@ describe("Platform Treasury General", function () {
     await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine.toString(16)}`, "0x2"]);
 
     const purchasedParts2 = [[0]];
+    
     // Make a new content sale
     await makeContentPurchase(
       contractPlatformTreasury,
@@ -821,7 +841,8 @@ describe("Platform Treasury General", function () {
       fullContentPurchase,
       validUntil,
       redeemers,
-      giftReceiver
+      giftReceiver,
+      userIds
     );
     /// get instructer balance from platform treasury
     const instBalance = await contractPlatformTreasury.instBalance(contentCreator.address);
@@ -1005,6 +1026,7 @@ describe("Platform Treasury General", function () {
     // You need to use all parts of the content to buy it. Get all parts of the content
 
     const parts = await contractUDAOContent.getContentParts(tokenId);
+    const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
 
     /// Make content purchase
     await expect(
@@ -1132,6 +1154,7 @@ describe("Platform Treasury General", function () {
     const fullContentPurchase = [true];
     const pricesToPay = [ethers.utils.parseEther("1")];
     const validUntil = Date.now() + 999999999;
+    const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
     await makeContentPurchase(
       contractPlatformTreasury,
       contractVoucherVerifier,
@@ -1144,7 +1167,8 @@ describe("Platform Treasury General", function () {
       fullContentPurchase,
       validUntil,
       redeemers,
-      giftReceiver
+      giftReceiver,
+      userIds
     );
 
     /// Check if the buyer has the content part
@@ -1212,6 +1236,7 @@ describe("Platform Treasury General", function () {
     const fullContentPurchase = [false];
     const pricesToPay = [ethers.utils.parseEther("1")];
     const validUntil = Date.now() + 999999999;
+    const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
     await makeContentPurchase(
       contractPlatformTreasury,
       contractVoucherVerifier,
@@ -1224,7 +1249,8 @@ describe("Platform Treasury General", function () {
       fullContentPurchase,
       validUntil,
       redeemers,
-      giftReceiver
+      giftReceiver,
+      userIds
     );
 
     // Get the instructer balance before withdrawal
@@ -1350,6 +1376,7 @@ describe("Platform Treasury General", function () {
     const fullContentPurchase = [false];
     const pricesToPay = [ethers.utils.parseEther("1")];
     const validUntil = Date.now() + 999999999;
+    const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
     await makeContentPurchase(
       contractPlatformTreasury,
       contractVoucherVerifier,
@@ -1362,7 +1389,8 @@ describe("Platform Treasury General", function () {
       fullContentPurchase,
       validUntil,
       redeemers,
-      giftReceiver
+      giftReceiver,
+      userIds
     );
 
     // Get the instructer balance before withdrawal
@@ -1413,6 +1441,7 @@ describe("Platform Treasury General", function () {
 
     /// a new purchase will be update the instructer balance
     const redeemers2 = [contentBuyer2.address];
+    
     await makeContentPurchase(
       contractPlatformTreasury,
       contractVoucherVerifier,
@@ -1425,7 +1454,8 @@ describe("Platform Treasury General", function () {
       fullContentPurchase,
       validUntil,
       redeemers2,
-      giftReceiver
+      giftReceiver,
+      userIds
     );
 
     // should fail instructor to withdraw earnings from treasury due to no earnings

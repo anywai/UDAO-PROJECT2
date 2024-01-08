@@ -28,6 +28,7 @@ contract VoucherVerifier is EIP712, RoleLegacy {
     /// @param validUntil date until the voucher is valid
     /// @param redeemer address of the redeemer
     /// @param giftReceiver address of the gift receiver if purchase is a gift or fiat purchase
+    /// @param userId user id of the redeemer
     /// @param signature the EIP-712 signature of all other fields in the ContentDiscountVoucher struct.
     struct ContentDiscountVoucher {
         uint256 tokenId;
@@ -37,6 +38,7 @@ contract VoucherVerifier is EIP712, RoleLegacy {
         uint256 validUntil;
         address redeemer;
         address giftReceiver;
+        string userId;
         bytes signature;
     }
     /// @notice Represents a refund voucher for a coaching
@@ -60,12 +62,14 @@ contract VoucherVerifier is EIP712, RoleLegacy {
     /// @param priceToPay price to pay
     /// @param coachingDate date of the coaching
     /// @param learner address of the learner
+    /// @param userId user id of the learner
     /// @param signature the EIP-712 signature of all other fields in the CoachingVoucher struct.
     struct CoachingVoucher {
         address coach;
         uint256 priceToPay;
         uint256 coachingDate;
         address learner;
+        string userId;
         bytes signature;
     }
 
@@ -94,7 +98,7 @@ contract VoucherVerifier is EIP712, RoleLegacy {
                 keccak256(
                     abi.encode(
                         keccak256(
-                            "ContentDiscountVoucher(uint256 tokenId,bool fullContentPurchase,uint256[] purchasedParts,uint256 priceToPay,uint256 validUntil,address redeemer,address giftReceiver)"
+                            "ContentDiscountVoucher(uint256 tokenId,bool fullContentPurchase,uint256[] purchasedParts,uint256 priceToPay,uint256 validUntil,address redeemer,address giftReceiver,string userId)"
                         ),
                         voucher.tokenId,
                         voucher.fullContentPurchase,
@@ -102,7 +106,8 @@ contract VoucherVerifier is EIP712, RoleLegacy {
                         voucher.priceToPay,
                         voucher.validUntil,
                         voucher.redeemer,
-                        voucher.giftReceiver
+                        voucher.giftReceiver,
+                        keccak256(bytes(voucher.userId))
                     )
                 )
             );
@@ -140,12 +145,13 @@ contract VoucherVerifier is EIP712, RoleLegacy {
                 keccak256(
                     abi.encode(
                         keccak256(
-                            "CoachingVoucher(address coach,uint256 priceToPay,uint256 coachingDate,address learner)"
+                            "CoachingVoucher(address coach,uint256 priceToPay,uint256 coachingDate,address learner,string userId)"
                         ),
                         voucher.coach,
                         voucher.priceToPay,
                         voucher.coachingDate,
-                        voucher.learner
+                        voucher.learner,
+                        keccak256(bytes(voucher.userId))
                     )
                 )
             );
