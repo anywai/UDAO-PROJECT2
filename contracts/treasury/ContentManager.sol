@@ -298,7 +298,7 @@ abstract contract ContentManager is BasePlatform {
         /// @dev Save the sale on a list for future use (e.g refund)
         cartSaleID.increment();
         for (uint256 i; i < voucherIdsLength; i++) {
-            _buyContentwithUDAO(
+            _buyContent(
                 vouchers[i].tokenId,
                 vouchers[i].fullContentPurchase,
                 vouchers[i].purchasedParts,
@@ -321,7 +321,7 @@ abstract contract ContentManager is BasePlatform {
     /// @param totalCut The total platform cut applied to the content sale.
     /// @param instrShare The instructor's share from the the content sale.
     /// @param _cartSaleID The ID of the cart sale.
-    function _buyContentwithUDAO(
+    function _buyContent(
         uint256 tokenId,
         bool fullContentPurchase,
         uint256[] calldata purchasedParts,
