@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
-/// @title Dummy version of the governance treasury contract.
-/// @notice This contract is only a placeholder to enable compilation and interaction for other contracts, and will be replaced at UDAO version 2.0 with a functional contract.
+/// @title Treasury for governance related roles.
 /// @dev This contract is intended to distribute the accumulated pool balances for jurors, validators, and governance to respective individuals in future functionalities.
 pragma solidity ^0.8.4;
 
