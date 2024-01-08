@@ -228,6 +228,7 @@ abstract contract ContentManager is BasePlatform {
 
     /// @notice Allows users to purchase multiple contents for the caller or gift receiver with discount vouchers
     /// @param vouchers buy discount content voucher array
+    /// TODO Rename this function to buyContent
     function buyContentWithDiscount(
         IVoucherVerifier.ContentDiscountVoucher[] calldata vouchers
     ) external whenNotPaused {
@@ -653,6 +654,7 @@ abstract contract ContentManager is BasePlatform {
         }
 
         /// @dev Transfer the governance role shares to the governance treasury if governance treasury is online
+        /// TODO Remove isGovernanceTreasuryOnline 
         if (isGovernanceTreasuryOnline == true) {
             bool aBalanceUpdated;
             /// @dev if jurorBalance is positive, transfer the juror balance to the governance treasury
