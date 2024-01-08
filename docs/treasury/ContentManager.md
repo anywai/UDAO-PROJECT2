@@ -242,10 +242,10 @@ Allows users to buy coaching with a voucher created by instructor
 | ---- | ---- | ----------- |
 | voucher | struct IVoucherVerifier.CoachingVoucher | buy coaching voucher |
 
-### buyContentWithDiscount
+### buyContent
 
 ```solidity
-function buyContentWithDiscount(struct IVoucherVerifier.ContentDiscountVoucher[] vouchers) external
+function buyContent(struct IVoucherVerifier.ContentDiscountVoucher[] vouchers) external
 ```
 
 Allows users to purchase multiple contents for the caller or gift receiver with discount vouchers
@@ -256,10 +256,10 @@ Allows users to purchase multiple contents for the caller or gift receiver with 
 | ---- | ---- | ----------- |
 | vouchers | struct IVoucherVerifier.ContentDiscountVoucher[] | buy discount content voucher array |
 
-### _buyContentwithUDAO
+### _buyContent
 
 ```solidity
-function _buyContentwithUDAO(uint256 tokenId, bool fullContentPurchase, uint256[] purchasedParts, address contentReceiver, uint256 totalCut, uint256 instrShare, uint256 _cartSaleID) internal
+function _buyContent(uint256 tokenId, bool fullContentPurchase, uint256[] purchasedParts, address contentReceiver, uint256 totalCut, uint256 instrShare, uint256 _cartSaleID) internal
 ```
 
 Used by buy content functions to receive payment from user and deliver the content to user
