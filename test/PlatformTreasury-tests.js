@@ -328,15 +328,10 @@ async function makeCoachingPurchase(
     "c8d53630-233a-4f95-90cb-4df253ae9283"
   );
   // Buy coaching
-  console.log("DNEME")
   const purchaseTx = await contractPlatformTreasury.connect(contentBuyer).buyCoaching(role_voucher);
-  console.log("step 2")
   const queueTxReceipt = await purchaseTx.wait();
-  console.log("step 3")
   const queueTxEvent = queueTxReceipt.events.find((e) => e.event == "CoachingBought");
-  console.log("BUMU?")
   const coachingSaleID = queueTxEvent.args[0];
-  console.log("HAYIR")
   // Get coaching struct
   const coachingStruct = await contractPlatformTreasury.coachSales(coachingSaleID);
   // Check if returned learner address is the same as the buyer address
@@ -827,7 +822,7 @@ describe("Platform Treasury General", function () {
     await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine.toString(16)}`, "0x2"]);
 
     const purchasedParts2 = [[0]];
-    
+
     // Make a new content sale
     await makeContentPurchase(
       contractPlatformTreasury,
@@ -1042,7 +1037,8 @@ describe("Platform Treasury General", function () {
         [false],
         Date.now() + 999999999,
         [contentBuyer1.address],
-        [ethers.constants.AddressZero]
+        [ethers.constants.AddressZero],
+        userIds
       )
     ).to.be.revertedWith("Pausable: paused");
   });
@@ -1068,6 +1064,7 @@ describe("Platform Treasury General", function () {
       signer: backend,
     });
     const coachingPrice = ethers.utils.parseEther("1.0");
+
     /// Get the current block timestamp
     const currentBlockTimestamp = (await hre.ethers.provider.getBlock()).timestamp;
     /// Coaching date is 3 days from now
@@ -1076,7 +1073,8 @@ describe("Platform Treasury General", function () {
       contentCreator.address,
       coachingPrice,
       coachingDate,
-      contentBuyer.address
+      contentBuyer.address,
+      "c8d53630-233a-4f95-90cb-4df253ae9283"
     );
     // Buy coaching
     const purchaseTx = await contractPlatformTreasury.connect(contentBuyer).buyCoaching(role_voucher);
@@ -1441,7 +1439,7 @@ describe("Platform Treasury General", function () {
 
     /// a new purchase will be update the instructer balance
     const redeemers2 = [contentBuyer2.address];
-    
+
     await makeContentPurchase(
       contractPlatformTreasury,
       contractVoucherVerifier,
