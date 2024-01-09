@@ -1546,6 +1546,7 @@ describe("Platform Treasury Contract - Content", function () {
     const fullContentPurchase = [true];
     const pricesToPay = [ethers.utils.parseEther("1")];
     const validUntil = Date.now() + 999999999;
+    const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
     const balances = await makeContentPurchase(
       contractPlatformTreasury,
       contractVoucherVerifier,
@@ -1576,7 +1577,7 @@ describe("Platform Treasury Contract - Content", function () {
     const purchasedParts2 = [parts2];
     const redeemers2 = [contentBuyer1.address];
     const giftReceiver2 = [ethers.constants.AddressZero];
-    const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
+    
 
     const fullContentPurchase2 = [true];
     const pricesToPay2 = [ethers.utils.parseEther("1")];
@@ -1655,6 +1656,7 @@ describe("Platform Treasury Contract - Content", function () {
     const fullContentPurchase = [true, true];
     const pricesToPay = [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")];
     const validUntil = Date.now() + 999999999;
+    const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283", "c8d53630-233a-4f95-90cb-4df253ae9283"];
     const balances = await makeContentPurchase(
       contractPlatformTreasury,
       contractVoucherVerifier,
@@ -1733,7 +1735,7 @@ describe("Platform Treasury Contract - Content", function () {
     const purchasedParts = [parts1, parts2];
     const redeemers = [contentBuyer1.address, contentBuyer1.address];
     const giftReceiver = [contentBuyer3.address, contentBuyer3.address];
-    const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
+    const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283", "c8d53630-233a-4f95-90cb-4df253ae9283"];
 
     const fullContentPurchase = [true, true];
     const pricesToPay = [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")];
