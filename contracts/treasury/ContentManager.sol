@@ -8,15 +8,18 @@ import "./BasePlatform.sol";
 
 abstract contract ContentManager is BasePlatform {
     /// @notice Emitted when a content is bought
+    /// @param userId The ID of the user
     /// @param cartSaleID The ID of the cart sale
     /// @param contentSaleID The ID of the content sale
     event ContentBought(
+        string userId,
         uint256 indexed cartSaleID,
         uint256 indexed contentSaleID
     );
     /// @notice Emitted when a coaching is bought
+    /// @param userId The ID of the user
     /// @param coachingSaleID The ID of the coaching sale
-    event CoachingBought(uint256 indexed coachingSaleID);
+    event CoachingBought(string userId, uint256 indexed coachingSaleID);
     /// @notice Emitted when refund is requested. saleType: 0=coaching, 1=content
     /// @param saleID The ID of the coaching or content sale to be refunded
     /// @param saleType The type of the sale 0=coaching, 1=content
@@ -223,7 +226,7 @@ abstract contract ContentManager is BasePlatform {
         /// @dev if there is any revenue in platform cut pools, distribute role shares to roles and transfer governance role shares to governance treasury
         _transferPlatformCutstoGovernance();
 
-        emit CoachingBought(coachingSaleID.current() - 1);
+        emit CoachingBought(voucher.userId, coachingSaleID.current() - 1);
     }
 
     /// @notice Allows users to purchase multiple contents for the caller or gift receiver with discount vouchers
@@ -298,15 +301,16 @@ abstract contract ContentManager is BasePlatform {
         /// @dev Save the sale on a list for future use (e.g refund)
         cartSaleID.increment();
         for (uint256 i; i < voucherIdsLength; i++) {
+            uint256 contentID =
             _buyContent(
                 vouchers[i].tokenId,
                 vouchers[i].fullContentPurchase,
                 vouchers[i].purchasedParts,
                 contentReceiver[i],
                 totalCut[i],
-                instrShare[i],
-                cartSaleID.current() - 1
+                instrShare[i]
             );
+            emit ContentBought(vouchers[i].userId, cartSaleID.current() - 1, contentID);
         }
 
         /// @dev if there is any revenue in platform cut pools, distribute role shares to roles and transfer governance role shares to governance treasury
@@ -320,16 +324,14 @@ abstract contract ContentManager is BasePlatform {
     /// @param contentReceiver The address of the content receiver.
     /// @param totalCut The total platform cut applied to the content sale.
     /// @param instrShare The instructor's share from the the content sale.
-    /// @param _cartSaleID The ID of the cart sale.
     function _buyContent(
         uint256 tokenId,
         bool fullContentPurchase,
         uint256[] calldata purchasedParts,
         address contentReceiver,
         uint256 totalCut,
-        uint256 instrShare,
-        uint256 _cartSaleID
-    ) internal {
+        uint256 instrShare    
+        ) internal returns (uint256 _contentID) {
         address instructor = udaoc.ownerOf(tokenId);
 
         /// @dev Transfer UDAO payment from buyer to contract
@@ -399,7 +401,7 @@ abstract contract ContentManager is BasePlatform {
             fullPurchase: fullContentPurchase
         });
 
-        emit ContentBought(_cartSaleID, contentSaleID.current() - 1);
+        return (contentSaleID.current() - 1);
     }
 
     /// @notice Checks if there is nothing wrong with the content purchase related to content receiver

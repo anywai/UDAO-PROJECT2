@@ -11,6 +11,7 @@ interface IVoucherVerifier {
     /// @param validUntil date until the voucher is valid
     /// @param redeemer address of the redeemer
     /// @param giftReceiver address of the gift receiver if purchase is a gift
+    /// @param userId user id of the redeemer
     /// @param signature the EIP-712 signature of all other fields in the ContentDiscountVoucher struct.
     struct ContentDiscountVoucher {
         uint256 tokenId;
@@ -20,6 +21,7 @@ interface IVoucherVerifier {
         uint256 validUntil;
         address redeemer;
         address giftReceiver;
+        string userId;
         bytes signature;
     }
     /// @notice Represents a refund voucher for a coaching
@@ -38,6 +40,7 @@ interface IVoucherVerifier {
         uint256 priceToPay;
         uint256 coachingDate;
         address learner;
+        string userId;
         bytes signature;
     }
 
