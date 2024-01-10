@@ -17,8 +17,9 @@ abstract contract ContentManager is BasePlatform {
         uint256 indexed contentSaleID
     );
     /// @notice Emitted when a coaching is bought
+    /// @param userId The ID of the user
     /// @param coachingSaleID The ID of the coaching sale
-    event CoachingBought(uint256 indexed coachingSaleID);
+    event CoachingBought(string userId, uint256 indexed coachingSaleID);
     /// @notice Emitted when refund is requested. saleType: 0=coaching, 1=content
     /// @param saleID The ID of the coaching or content sale to be refunded
     /// @param saleType The type of the sale 0=coaching, 1=content
@@ -225,7 +226,7 @@ abstract contract ContentManager is BasePlatform {
         /// @dev if there is any revenue in platform cut pools, distribute role shares to roles and transfer governance role shares to governance treasury
         _transferPlatformCutstoGovernance();
 
-        emit CoachingBought(coachingSaleID.current() - 1);
+        emit CoachingBought(voucher.userId, coachingSaleID.current() - 1);
     }
 
     /// @notice Allows users to purchase multiple contents for the caller or gift receiver with discount vouchers
