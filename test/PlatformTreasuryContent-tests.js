@@ -107,7 +107,10 @@ async function makeContentPurchase(
     .buyContent(contentPurchaseVouchers);
   const queueTxReceipt = await purchaseTx.wait();
   const queueTxEvent = queueTxReceipt.events.find((e) => e.event == "ContentBought");
-  const contentSaleID = queueTxEvent.args[0];
+  const contentSaleID = queueTxEvent.args[2];
+  const userId = queueTxEvent.args[0];
+  // expect to get the same userId
+  expect(userIds[0]).to.equal(userId);
   // Get content struct
   const contentStruct = await contractPlatformTreasury.contentSales(contentSaleID);
   // Check if returned learner address is the same as the buyer address
@@ -316,7 +319,7 @@ describe("Platform Treasury Contract - Content", function () {
     const purchaseTx = await contractPlatformTreasury.connect(backend).buyContent(contentPurchaseVouchers);
     const queueTxReceipt = await purchaseTx.wait();
     const queueTxEvent = queueTxReceipt.events.find((e) => e.event == "ContentBought");
-    const contentSaleID = queueTxEvent.args[0];
+    const contentSaleID = queueTxEvent.args[2];
     // Get content struct
     const contentStruct = await contractPlatformTreasury.contentSales(contentSaleID);
     const balanceAfter = await contractUDAO.balanceOf(backend.address);

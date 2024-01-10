@@ -287,7 +287,11 @@ async function makeContentPurchase(
     .buyContent(contentPurchaseVouchers);
   const queueTxReceipt = await purchaseTx.wait();
   const queueTxEvent = queueTxReceipt.events.find((e) => e.event == "ContentBought");
-  const contentSaleID = queueTxEvent.args[0];
+  const contentSaleID = queueTxEvent.args[2];
+  const userId = queueTxEvent.args[0];
+  // Expect that the userId is equal to the userId of the first voucher
+  expect(userIds[0]).to.equal(userId);
+
   // Get content struct
   const contentStruct = await contractPlatformTreasury.contentSales(contentSaleID);
   // Check if returned learner address is the same as the buyer address

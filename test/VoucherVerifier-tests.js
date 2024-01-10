@@ -381,7 +381,7 @@ describe("Voucher Verifier", function () {
       .buyContent(contentPurchaseVouchers);
     const queueTxReceipt = await purchaseTx.wait();
     const queueTxEvent = queueTxReceipt.events.find((e) => e.event == "ContentBought");
-    const contentSaleID = queueTxEvent.args[0];
+    const contentSaleID = queueTxEvent.args[2];
     // Get content struct
     const contentStruct = await contractPlatformTreasury.contentSales(contentSaleID);
     // Check if returned learner address is the same as the buyer address
