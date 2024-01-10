@@ -21,7 +21,7 @@ Emitted when a content is bought
 ### CoachingBought
 
 ```solidity
-event CoachingBought(uint256 coachingSaleID)
+event CoachingBought(string userId, uint256 coachingSaleID)
 ```
 
 Emitted when a coaching is bought
@@ -30,6 +30,7 @@ Emitted when a coaching is bought
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
+| userId | string | The user id of the learner |
 | coachingSaleID | uint256 | The ID of the coaching sale |
 
 ### SaleRefunded
