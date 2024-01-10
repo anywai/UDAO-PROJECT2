@@ -335,7 +335,7 @@ async function makeCoachingPurchase(
   const purchaseTx = await contractPlatformTreasury.connect(contentBuyer).buyCoaching(role_voucher);
   const queueTxReceipt = await purchaseTx.wait();
   const queueTxEvent = queueTxReceipt.events.find((e) => e.event == "CoachingBought");
-  const coachingSaleID = queueTxEvent.args[0];
+  const coachingSaleID = queueTxEvent.args[1];
   // Get coaching struct
   const coachingStruct = await contractPlatformTreasury.coachSales(coachingSaleID);
   // Check if returned learner address is the same as the buyer address
@@ -1084,7 +1084,7 @@ describe("Platform Treasury General", function () {
     const purchaseTx = await contractPlatformTreasury.connect(contentBuyer).buyCoaching(role_voucher);
     const queueTxReceipt = await purchaseTx.wait();
     const queueTxEvent = queueTxReceipt.events.find((e) => e.event == "CoachingBought");
-    const coachingSaleID = queueTxEvent.args[0];
+    const coachingSaleID = queueTxEvent.args[1];
     // Get the amount of UDAO in the buyer's wallet after buying coaching
     const buyerBalanceAfter = await contractUDAO.balanceOf(contentBuyer.address);
     // Check if correct amount of UDAO was deducted from the buyer's wallet
