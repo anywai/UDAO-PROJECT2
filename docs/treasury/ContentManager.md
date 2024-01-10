@@ -5,7 +5,7 @@
 ### ContentBought
 
 ```solidity
-event ContentBought(uint256 cartSaleID, uint256 contentSaleID)
+event ContentBought(string userID, uint256 cartSaleID, uint256 contentSaleID)
 ```
 
 Emitted when a content is bought
@@ -14,6 +14,7 @@ Emitted when a content is bought
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
+| userId | string | The ID of the user |
 | cartSaleID | uint256 | The ID of the cart sale |
 | contentSaleID | uint256 | The ID of the content sale |
 
