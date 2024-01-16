@@ -20,6 +20,7 @@ interface IUDAOVP is IVotes, IERC20 {
 }
 
 contract UDAOStaker is RoleLegacy, EIP712, Pausable {
+    ///TODO: Why we have domain and version here?? is it still necessary?
     string private constant SIGNING_DOMAIN = "UDAOStaker";
     string private constant SIGNATURE_VERSION = "1";
 
