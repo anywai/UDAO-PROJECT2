@@ -4,44 +4,47 @@ pragma solidity ^0.8.4;
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
 import "../interfaces/IUDAOC.sol";
-import "../interfaces/IPlatformTreasury.sol";
+import "../interfaces/IGovernanceTreasury.sol";
+import "../interfaces/IStaker.sol";
 import "../interfaces/IRoleManager.sol";
 import "hardhat/console.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "../RoleLegacy.sol";
 
-interface IStakingContract {
-    function checkExpireDateValidator(
-        address _user
-    ) external view returns (uint256 expireDate);
-
-    function checkExpireDateJuror(
-        address _user
-    ) external view returns (uint256 expireDate);
-}
-
 contract Supervision is Pausable, RoleLegacy {
     IUDAOC udaoc;
-    IPlatformTreasury platformTreasury;
-    IStakingContract udaoStaker;
+    IGovernanceTreasury governanceTreasury;
+    IStaker udaoStaker;
 
-    /// @dev Events
-    // Juror events
-    event EndDispute(uint256 caseId, address[] jurors, uint256 totalJurorScore);
+    //////////////////////////////////////////////////////////////////////////
+    //I wantto carry this variables to governance treasury contract
     event NextRound(uint256 newRoundId);
+    uint256 public distributionRound;
+    // validator => (round => score)
+    mapping(address => mapping(uint256 => uint256))
+        public validatorScorePerRound;
+    // juror => (round => score)
+    mapping(address => mapping(uint256 => uint256)) public jurorScorePerRound;
+
+    uint256 public totalJurorScore;
+    uint256 public totalValidationScore;
+    //////////////////////////////////////////////////////////////////////////
+
+    /// EVENTS
+    event AddressesUpdated(
+        address roleManagerAddress,
+        address udaocAddress,
+        address governanceTreasuryAddress,
+        address udaoStakerAddres
+    );
+    /// Juror Events
+    event EndDispute(uint256 caseId, address[] jurors, uint256 totalJurorScore);
     event DisputeCreated(uint256 caseId, uint256 caseScope, string question);
     event DisputeAssigned(uint256 caseId, address juror);
     event DisputeResultSent(uint256 caseId, bool result, address juror);
     event DisputeEnded(uint256 caseId, bool verdict);
     event LateJurorScoreRecorded(uint256 caseId, address juror);
-    event AddressesUpdated(
-        address roleManagerAddress,
-        address udaocAddress,
-        address platformTreasuryAddress,
-        address udaoStakerAddres
-    );
-
-    // Validation events
+    /// Validation Events
     event ValidationCreated(uint256 tokenId, uint256 validationId);
     event ValidationAssigned(
         uint256 tokenId,
@@ -54,36 +57,30 @@ contract Supervision is Pausable, RoleLegacy {
         address validator,
         bool result
     );
+    event ValidationEnded(uint256 tokenId, uint256 validationId, bool result);
+    /// Removal Events
     event ValidatorRemovedFromValidation(
         uint256 tokenId,
         address validator,
         uint256 validationId
     );
-
     event JurorRemovedFromDispute(
         uint256 caseId,
         address juror,
         uint256 disputeId
     );
 
-    event ValidationEnded(uint256 tokenId, uint256 validationId, bool result);
-
-    /// @dev MAPPINGS
-    // JUROR MAPPINGS
-    // juror => (round => score)
-    mapping(address => mapping(uint256 => uint256)) public jurorScorePerRound;
+    /// MAPPINGS
+    /// Juror Mappings
     // juror => caseId
     mapping(address => uint256) activeDispute;
     mapping(address => uint) public successfulDispute;
     mapping(address => uint) public unsuccessfulDispute;
-    // VALIDATION MAPPINGS
+    /// Validation Mappings
     // tokenId => validation status (0: rejected, 1: validated, 2: in validation)
     mapping(uint256 => uint256) public isValidated;
     // tokenId => validationId
     mapping(uint256 => uint256) public latestValidationOfToken;
-    // validator => (round => score)
-    mapping(address => mapping(uint256 => uint256))
-        public validatorScorePerRound;
     mapping(address => uint) public validationCount;
     // validator => validationId
     mapping(address => uint) public activeValidation;
@@ -92,7 +89,7 @@ contract Supervision is Pausable, RoleLegacy {
     mapping(address => uint) public unsuccessfulValidation;
     // token id => objection count
     mapping(uint256 => uint256) objectionCount;
-    /// @dev Structs
+    /// STRUCTS
     struct Dispute {
         /// @dev The id of the case
         uint256 caseId;
@@ -150,22 +147,16 @@ contract Supervision is Pausable, RoleLegacy {
     }
     Validation[] validations;
 
-    /// @dev Variables
-    // Juror variables
-    uint256 public distributionRound;
+    /// VARIABLES
     uint256 public totalCaseScore;
-    uint128 public requiredJurors = 3;
-    // TODO change below parameter name to minAcceptVoteJuror
-    uint128 public minMajortyVote = 2;
-    uint256 public totalJurorScore;
-    // Validation variables
-    uint128 public requiredValidators = 5;
-    uint128 public minAcceptVoteValidation = 3;
-    /// @dev is used during the calculation of a validator score
-    uint256 public totalValidationScore;
     uint256 maxObjection = 3;
 
-    /// @dev Constructor
+    uint128 public requiredJurors = 3;
+    uint128 minJurorVoteToFormMajority = (requiredJurors / 2) + 1;
+    uint128 public requiredValidators = 5;
+    uint128 minValidatorVoteToFormMajority = (requiredValidators / 2) + 1;
+
+    /// CONSTRUCTOR
     constructor(address roleManagerAddress, address udaocAddress) {
         roleManager = IRoleManager(roleManagerAddress);
         udaoc = IUDAOC(udaocAddress);
@@ -176,11 +167,13 @@ contract Supervision is Pausable, RoleLegacy {
         validations.push();
     }
 
+    /// SETTERS
+
     /// @notice Get the updated addresses from contract manager
     function updateAddresses(
         address roleManagerAddress,
         address udaocAddress,
-        address platformTreasuryAddress,
+        address governanceTreasuryAddress,
         address udaoStakerAddres
     ) external {
         if (msg.sender != foundationWallet) {
@@ -192,35 +185,18 @@ contract Supervision is Pausable, RoleLegacy {
         }
         roleManager = IRoleManager(roleManagerAddress);
         udaoc = IUDAOC(udaocAddress);
-        platformTreasury = IPlatformTreasury(platformTreasuryAddress);
-        udaoStaker = IStakingContract(udaoStakerAddres);
+        governanceTreasury = IGovernanceTreasury(governanceTreasuryAddress);
+        udaoStaker = IStaker(udaoStakerAddres);
 
         emit AddressesUpdated(
             roleManagerAddress,
             udaocAddress,
-            platformTreasuryAddress,
+            governanceTreasuryAddress,
             udaoStakerAddres
         );
     }
 
-    /// @dev Setters
-    // Juror setters
-
-    /// TODO remove this function update address function is enough
-    function setPlatformTreasury(address _platformTreasury) external {
-        require(
-            hasRole(BACKEND_ROLE, msg.sender),
-            "Only backend can set platform treasury"
-        );
-        platformTreasury = IPlatformTreasury(_platformTreasury);
-    }
-
-    function checkApplicationN(address _user) public view returns (uint256) {
-        return udaoStaker.checkExpireDateJuror(_user);
-    }
-
-    /// TODO Wth is this function.
-    /// @notice sets required juror count per dispute
+    /// @notice It is used to determine "the total number of jurors" required to "vote for a dispute".
     /// @param _requiredJurors new required juror count
     function setRequiredJurors(uint128 _requiredJurors) external {
         require(
@@ -228,30 +204,10 @@ contract Supervision is Pausable, RoleLegacy {
             "Only governance can set required juror count"
         );
         requiredJurors = _requiredJurors;
+        minJurorVoteToFormMajority = (requiredJurors / 2) + 1;
     }
 
-    // Validation setters
-    /// TODO remove this function update address function is enough
-    function setUDAOC(address udaocAddress) external {
-        require(
-            hasRole(BACKEND_ROLE, msg.sender),
-            "Only backend can set UDAOC"
-        );
-        udaoc = IUDAOC(udaocAddress);
-    }
-
-    /// @notice creates a validation for a token
-    /// @param udaoStakerAddress address of staking contract
-    /// TODO remove this function update address function is enough
-    function setAddressStaking(address udaoStakerAddress) external {
-        require(
-            hasRole(BACKEND_ROLE, msg.sender),
-            "Only backend can set staking contract"
-        );
-        udaoStaker = IStakingContract(udaoStakerAddress);
-    }
-
-    /// @notice sets required validator vote count per content
+    /// @notice It is used to determine "the total number of validators" required to "vote for a validation".
     /// @param _requiredValidators new required vote count
     function setRequiredValidators(uint128 _requiredValidators) external {
         require(
@@ -259,6 +215,7 @@ contract Supervision is Pausable, RoleLegacy {
             "Only governance can set required validator count"
         );
         requiredValidators = _requiredValidators;
+        minValidatorVoteToFormMajority = (requiredValidators / 2) + 1;
     }
 
     /// @notice sets maximum objection count per latest validation
@@ -271,15 +228,24 @@ contract Supervision is Pausable, RoleLegacy {
         maxObjection = _maxObjection;
     }
 
-    /// @dev Getters
-    // Juror getters
-    /// @notice returns successful and unsuccessful case count of the account
-    /// @param account wallet address of the account that wanted to be checked
-    function getCaseResults(
-        address account
-    ) external view returns (uint[2] memory results) {
-        results[0] = successfulDispute[account];
-        results[1] = unsuccessfulDispute[account];
+    /// GETTERS
+
+    ////////////////////////////////////////////////////////////////
+    // I wantto carry this functions to governance treasury contract
+
+    /// @notice Returns the score of a validator for a specific round
+    /// @param _validator The address of the validator
+    /// @param _round Reward round ID
+    function getValidatorScore(
+        address _validator,
+        uint256 _round
+    ) external view returns (uint256) {
+        return validatorScorePerRound[_validator][_round];
+    }
+
+    /// @notice returns total successful validation count
+    function getTotalValidationScore() external view returns (uint) {
+        return totalValidationScore;
     }
 
     /// @notice Returns the score of a juror for a speficied round
@@ -295,26 +261,32 @@ contract Supervision is Pausable, RoleLegacy {
         return totalJurorScore;
     }
 
-    // Validation getters
+    /////////////////////////////////////////////////////////////////
 
-    function getValidatorsOfVal(
+    /// @notice returns successful and unsuccessful validation count of the validator
+    /// @param _validator wallet address that is wanted to be checked
+    function getSuccesCountOfAValidator(
+        address _validator
+    ) external view returns (uint[2] memory results) {
+        results[0] = successfulValidation[_validator];
+        results[1] = unsuccessfulValidation[_validator];
+    }
+
+    /// @notice returns successful and unsuccessful case count of the juror
+    /// @param _juror wallet address that is wanted to be checked
+    function getSuccesCountOfAJuror(
+        address _juror
+    ) external view returns (uint[2] memory results) {
+        results[0] = successfulDispute[_juror];
+        results[1] = unsuccessfulDispute[_juror];
+    }
+
+    /// @notice returns the validators that are assigned to the validation
+    /// @param validationId id of the validation
+    function getValidatorsOfAValidation(
         uint validationId
     ) public view returns (address[] memory) {
         return validations[validationId].validators;
-    }
-
-    /// @notice returns successful and unsuccessful validation count of the account
-    /// @param account wallet address of the account that wanted to be checked
-    function getValidationResults(
-        address account
-    ) external view returns (uint[2] memory results) {
-        results[0] = successfulValidation[account];
-        results[1] = unsuccessfulValidation[account];
-    }
-
-    /// @notice returns total successful validation count
-    function getTotalValidationScore() external view returns (uint) {
-        return totalValidationScore;
     }
 
     /// @notice Returns the validation result of a token
@@ -331,18 +303,13 @@ contract Supervision is Pausable, RoleLegacy {
         return latestValidationOfToken[tokenId];
     }
 
-    /// @notice Returns the score of a validator for a specific round
-    /// @param _validator The address of the validator
-    /// @param _round Reward round ID
-    function getValidatorScore(
-        address _validator,
-        uint256 _round
-    ) external view returns (uint256) {
-        return validatorScorePerRound[_validator][_round];
+    /// TODO WHAT IS THIS?
+    function checkApplicationN(address _user) public view returns (uint256) {
+        return udaoStaker.checkExpireDateJuror(_user);
     }
 
-    /// @dev General functions
-    // Juror functions
+    /// GENERAL FUNCTIONS - JUROR
+
     /// @notice starts new dispute case
     function createDispute(
         uint128 caseScope,
@@ -419,7 +386,7 @@ contract Supervision is Pausable, RoleLegacy {
         uint validationId = getLatestValidationIdOfToken(
             disputes[caseId].tokenId
         );
-        address[] memory validators = getValidatorsOfVal(validationId);
+        address[] memory validators = getValidatorsOfAValidation(validationId);
         uint validatorLength = validators.length;
         for (uint i = 0; i < validatorLength; i++) {
             if (juror == validators[i]) {
@@ -477,8 +444,9 @@ contract Supervision is Pausable, RoleLegacy {
             if (
                 /// @dev Dispute can be finalized if majority of jurors voted in favor or against
                 disputes[caseId].voteCount >= requiredJurors ||
-                disputes[caseId].acceptVoteCount >= minMajortyVote ||
-                disputes[caseId].rejectVoteCount >= minMajortyVote
+                disputes[caseId].acceptVoteCount >=
+                minJurorVoteToFormMajority ||
+                disputes[caseId].rejectVoteCount >= minJurorVoteToFormMajority
             ) {
                 _finalizeDispute(caseId);
             }
@@ -493,7 +461,7 @@ contract Supervision is Pausable, RoleLegacy {
     function _finalizeDispute(uint256 caseId) internal {
         /// @dev Check if the caller is in the list of jurors
         //_checkJuror(disputes[caseId].jurors);
-        if (disputes[caseId].acceptVoteCount >= minMajortyVote) {
+        if (disputes[caseId].acceptVoteCount >= minJurorVoteToFormMajority) {
             disputes[caseId].verdict = true;
             // Call a function from a contract
             address contractAddress = disputes[caseId].targetContract;
@@ -553,8 +521,9 @@ contract Supervision is Pausable, RoleLegacy {
         emit LateJurorScoreRecorded(caseId, juror);
     }
 
-    // Validation functions
-    /// Sends validation result of validator to blockchain
+    /// GENERAL FUNCTIONS - VALIDATOR
+
+    /// @notice Sends validation result of validator to blockchain
     /// @param validationId id of validation
     /// @param result result of validation
     function sendValidation(uint validationId, bool result) external {
@@ -601,7 +570,8 @@ contract Supervision is Pausable, RoleLegacy {
         );
         validations[validationId].isFinalized = true;
         if (
-            validations[validationId].acceptVoteCount >= minAcceptVoteValidation
+            validations[validationId].acceptVoteCount >=
+            minValidatorVoteToFormMajority
         ) {
             validations[validationId].finalValidationResult = true;
             /// @dev Easier to check the validation result with token Id
