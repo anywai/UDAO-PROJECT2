@@ -16,20 +16,6 @@ contract Supervision is Pausable, RoleLegacy {
     IGovernanceTreasury governanceTreasury;
     IStaker udaoStaker;
 
-    //////////////////////////////////////////////////////////////////////////
-    //I wantto carry this variables to governance treasury contract
-    event NextRound(uint256 newRoundId);
-    uint256 public distributionRound;
-    // validator => (round => score)
-    mapping(address => mapping(uint256 => uint256))
-        public validatorScorePerRound;
-    // juror => (round => score)
-    mapping(address => mapping(uint256 => uint256)) public jurorScorePerRound;
-
-    uint256 public totalJurorScore;
-    uint256 public totalValidationScore;
-    //////////////////////////////////////////////////////////////////////////
-
     /// EVENTS
     event AddressesUpdated(
         address roleManagerAddress,
@@ -37,8 +23,9 @@ contract Supervision is Pausable, RoleLegacy {
         address governanceTreasuryAddress,
         address udaoStakerAddres
     );
+
     /// Juror Events
-    event EndDispute(uint256 caseId, address[] jurors, uint256 totalJurorScore);
+    event EndDispute(uint256 caseId, address[] jurors, uint256 totalJurorScore); //--> TODO unused event
     event DisputeCreated(uint256 caseId, uint256 caseScope, string question);
     event DisputeAssigned(uint256 caseId, address juror);
     event DisputeResultSent(uint256 caseId, bool result, address juror);
@@ -229,39 +216,6 @@ contract Supervision is Pausable, RoleLegacy {
     }
 
     /// GETTERS
-
-    ////////////////////////////////////////////////////////////////
-    // I wantto carry this functions to governance treasury contract
-
-    /// @notice Returns the score of a validator for a specific round
-    /// @param _validator The address of the validator
-    /// @param _round Reward round ID
-    function getValidatorScore(
-        address _validator,
-        uint256 _round
-    ) external view returns (uint256) {
-        return validatorScorePerRound[_validator][_round];
-    }
-
-    /// @notice returns total successful validation count
-    function getTotalValidationScore() external view returns (uint) {
-        return totalValidationScore;
-    }
-
-    /// @notice Returns the score of a juror for a speficied round
-    function getJurorScore(
-        address _juror,
-        uint _round
-    ) external view returns (uint) {
-        return jurorScorePerRound[_juror][_round];
-    }
-
-    /// @notice returns total juror scores
-    function getTotalJurorScore() external view returns (uint) {
-        return totalJurorScore;
-    }
-
-    /////////////////////////////////////////////////////////////////
 
     /// @notice returns successful and unsuccessful validation count of the validator
     /// @param _validator wallet address that is wanted to be checked
@@ -491,10 +445,9 @@ contract Supervision is Pausable, RoleLegacy {
                     disputes[caseId].verdict ==
                     disputes[caseId].vote[disputes[caseId].jurors[i]]
                 ) {
-                    jurorScorePerRound[disputes[caseId].jurors[i]][
-                        distributionRound
-                    ]++;
-                    totalJurorScore++;
+                    governanceTreasury.incJurorScorePerRound(
+                        disputes[caseId].jurors[i]
+                    );
                     /// @dev Record success point of a juror
                     successfulDispute[disputes[caseId].jurors[i]]++;
                 } else {
@@ -510,8 +463,7 @@ contract Supervision is Pausable, RoleLegacy {
     /// @param juror address of the juror
     function _recordLateJurorScore(uint caseId, address juror) internal {
         if (disputes[caseId].verdict == disputes[caseId].vote[juror]) {
-            jurorScorePerRound[juror][distributionRound]++;
-            totalJurorScore++;
+            governanceTreasury.incJurorScorePerRound(juror);
             /// @dev Record success point of a juror
             successfulDispute[juror]++;
         } else {
@@ -593,11 +545,9 @@ contract Supervision is Pausable, RoleLegacy {
                 ]
             ) {
                 /// @dev Record score of a validator in this round
-                validatorScorePerRound[validations[validationId].validators[i]][
-                    distributionRound
-                ] += validations[validationId].validationScore;
-                totalValidationScore += validations[validationId]
-                    .validationScore;
+                governanceTreasury.incValidatorScorePerRound(
+                    validations[validationId].validators[i]
+                );
                 /// @dev Record success point of a validator
                 successfulValidation[validations[validationId].validators[i]]++;
             } else {
@@ -843,17 +793,6 @@ contract Supervision is Pausable, RoleLegacy {
         );
 
         isValidated[tokenId] = status;
-    }
-
-    /// @dev Common functions
-    /// @notice Starts the new reward round
-    function nextRound() external whenNotPaused {
-        require(
-            hasRole(TREASURY_CONTRACT, msg.sender),
-            "Only treasury contract can start new round"
-        );
-        distributionRound++;
-        emit NextRound(distributionRound);
     }
 
     function pause() external {

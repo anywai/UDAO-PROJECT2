@@ -8,4 +8,16 @@ interface IGovernanceTreasury {
     function validatorBalanceUpdate(uint _balance) external;
 
     function governanceBalanceUpdate(uint _balance) external;
+
+    function incValidatorScorePerRound(address _validator) external;
+
+    function incJurorScorePerRound(address _juror) external;
+
+    function decValidatorScorePerRound(address _validator) external;
+
+    function decJurorScorePerRound(address _juror) external;
+
+    function nextValidatorDistributionRound() external;
+
+    function nextJurorDistributionRound() external;
 }
