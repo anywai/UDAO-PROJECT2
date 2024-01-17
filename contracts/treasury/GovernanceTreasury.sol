@@ -27,6 +27,7 @@ contract GovernanceTreasury is Pausable, RoleLegacy {
     constructor(address udaoAddress) {
         udao = IERC20(udaoAddress);
         ownerOfDummy = msg.sender;
+        validatorDistributionRound = block.timestamp;
     }
 
     /// @notice Updates the jurors balance in this treasury.
@@ -38,7 +39,21 @@ contract GovernanceTreasury is Pausable, RoleLegacy {
     /// @notice Updates the validators balance in this treasury.
     /// @param _balance The balance to update.
     function validatorBalanceUpdate(uint _balance) external {
+        require(
+            roleManager.hasRole(SUPERVISION_CONTRACT, msg.sender),
+            "Only supervision contract can update validator balance"
+        );
+
         validatorPool += _balance;
+        //star the next round
+        if (autoStartRound) {
+            if (
+                block.timestamp - lastCreatedRoundValidatorTimestamp >
+                autoNextRoundDuration
+            ) {
+                _nextValidatorDistributionRound();
+            }
+        }
     }
 
     /// @notice Updates the governance balance in this treasury.
@@ -47,7 +62,6 @@ contract GovernanceTreasury is Pausable, RoleLegacy {
         governancePool += _balance;
     }
 
-    //NEW CODE
     /// @notice rounds of distribution
     uint public validatorDistributionRound;
     uint public jurorDistributionRound;
@@ -61,6 +75,7 @@ contract GovernanceTreasury is Pausable, RoleLegacy {
     mapping(uint256 => uint256) public totalJurorScorePerRound;
 
     // round => total payment
+    // TODO Kanka bu roundPayoutsValidator ve roundPayoutsJuror millet para çektiğinde düşürmemiz lazım!!!
     mapping(uint256 => uint256) public roundPayoutsValidator;
     mapping(uint256 => uint256) public roundPayoutsJuror;
 
@@ -68,13 +83,15 @@ contract GovernanceTreasury is Pausable, RoleLegacy {
     mapping(address => uint256) public validatorLastClaimedRound; // --> it is not last claimed actually, it should be next claimable round
     mapping(address => uint256) public jurorLastClaimedRound; // --> it is not last claimed actually, it should be next claimable round
 
-    //// round => round creating timestamp
-    //mapping(uint256 => uint256) public roundTimestampValidator;
-    //mapping(uint256 => uint256) public roundTimestampJuror;
-    //uint lastExpiredRoundValidator;
-    //uint lastExpiredRoundJuror;
-    //
-    //uint expireDuration = 180 days;
+    uint lastCreatedRoundValidatorTimestamp;
+    uint lastCreatedRoundJurorTimestamp;
+
+    uint lastExpiredRoundValidator;
+    uint lastExpiredRoundJuror;
+
+    uint autoNextRoundDuration = 30 days;
+
+    bool autoStartRound = true;
 
     function incValidatorScorePerRound(address _validator) external {
         totalValidatorScorePerRound[validatorDistributionRound]++;
@@ -99,10 +116,43 @@ contract GovernanceTreasury is Pausable, RoleLegacy {
     }
 
     function nextValidatorDistributionRound() external {
+        require(
+            roleManager.hasRole(BACKEND_ROLE, msg.sender),
+            "Only backend can start next round"
+        );
+        require(
+            block.timestamp - lastCreatedRoundValidatorTimestamp >
+                autoNextRoundDuration,
+            "Too early to start next round"
+        );
+        _nextValidatorDistributionRound();
+    }
+
+    function _nextValidatorDistributionRound() internal {
         validatorDistributionRound++;
+        lastCreatedRoundValidatorTimestamp = block.timestamp;
         uint temp = validatorPool;
         validatorPool = 0;
         roundPayoutsValidator[validatorDistributionRound - 1] = temp;
+
+        transferExpiredDistributionRoundValidator();
+    }
+
+    function transferExpiredDistributionRoundValidator() internal {
+        for (
+            uint i = lastExpiredRoundValidator;
+            i < validatorDistributionRound;
+            i++
+        ) {
+            if (validatorDistributionRound - lastExpiredRoundValidator == 6) {
+                lastExpiredRoundValidator = i + 1; //?
+                uint temp = roundPayoutsValidator[i];
+                roundPayoutsValidator[i] = 0;
+                validatorPool += temp;
+            } else {
+                break;
+            }
+        }
     }
 
     function nextJurorDistributionRound() external {
