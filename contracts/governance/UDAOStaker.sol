@@ -12,7 +12,6 @@ import "../RoleLegacy.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 
 contract UDAOStaker is RoleLegacy, EIP712, Pausable {
-    ///TODO: Why we have domain and version here?? is it still necessary?
     string private constant SIGNING_DOMAIN = "UDAOStaker";
     string private constant SIGNATURE_VERSION = "1";
 
@@ -20,9 +19,9 @@ contract UDAOStaker is RoleLegacy, EIP712, Pausable {
     IUDAOVP udaovp;
     IPlatformTreasury platformTreasury;
 
-    /// @notice the required duration to be a validator
+    /// @notice the required UDAO lock duration to be a validator
     uint256 public jurorLockTime = 30 days;
-    /// @notice the required duration to be a validator
+    /// @notice the required UDAO lock duration to be a validator
     uint256 public validatorLockTime = 90 days;
     /// @notice the lock duration for applications
     uint256 public applicationLockTime = 7 days;
