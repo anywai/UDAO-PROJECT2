@@ -19,11 +19,11 @@ contract UDAOStaker is RoleLegacy, EIP712, Pausable {
     IUDAOVP udaovp;
     IPlatformTreasury platformTreasury;
 
-    /// @notice the required UDAO lock duration to be a validator
+    /// @notice the required UDAO lock duration to be a juror
     uint256 public jurorLockTime = 30 days;
     /// @notice the required UDAO lock duration to be a validator
     uint256 public validatorLockTime = 90 days;
-    /// @notice the lock duration for applications
+    /// @notice the lock duration for applicants to wait for approval/rejection
     uint256 public applicationLockTime = 7 days;
     /// @notice Amount to deduct from validator application
     uint256 public validatorLockAmount = 1 ether;
