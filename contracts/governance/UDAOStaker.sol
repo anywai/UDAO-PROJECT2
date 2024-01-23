@@ -1,23 +1,15 @@
 // SPDX-License-Identifier: MIT
-/// @title Staking contract for UDAO
+/// @title Staking contract for UDAO TODO Explain more
 pragma solidity ^0.8.4;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-
-import "@openzeppelin/contracts/governance/utils/IVotes.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
 import "../interfaces/IPlatformTreasury.sol";
 import "../interfaces/IRoleManager.sol";
+import "../interfaces/IUDAOVP.sol";
 import "../RoleLegacy.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
-
-interface IUDAOVP is IVotes, IERC20 {
-    function mint(address to, uint256 amount) external;
-
-    function burnFrom(address account, uint256 amount) external;
-}
 
 contract UDAOStaker is RoleLegacy, EIP712, Pausable {
     ///TODO: Why we have domain and version here?? is it still necessary?
