@@ -103,8 +103,7 @@ contract UDAOStaker is RoleLegacy, EIP712, Pausable {
     mapping(address => GovernanceLock[]) governanceStakes;
     /// @notice Reward balance of each governance member
     mapping(address => uint256) rewardBalanceOf;
-    /// @notice Last reward block of each governance member TODO This is not used??
-    mapping(address => uint256) lastRewardBlock;
+
     /// @notice Reward given to each voter for each vote with respect to their voting power
     uint256 public voteReward = 0.0001 ether;
     /// @notice Validator application struct
@@ -316,7 +315,7 @@ contract UDAOStaker is RoleLegacy, EIP712, Pausable {
         bytes signature;
     }
 
-    /// @notice allows users to apply for validator role
+    /// @notice allows governance members to apply for validator role
     function applyForValidator() external whenNotPaused {
         //make sure redeemer is kyced and not banned
         require(isKYCed(msg.sender, 5), "You are not KYCed");
@@ -346,7 +345,7 @@ contract UDAOStaker is RoleLegacy, EIP712, Pausable {
         emit RoleApplied(0, msg.sender, validatorLockAmount);
     }
 
-    /// @notice allows users to apply for juror role
+    /// @notice allows governance members to apply for juror role
     function applyForJuror() external whenNotPaused {
         //make sure redeemer is kyced and not banned
         require(isKYCed(msg.sender, 6), "You are not KYCed");
@@ -428,7 +427,9 @@ contract UDAOStaker is RoleLegacy, EIP712, Pausable {
         emit RoleApproved(roleId, msg.sender);
     }
 
-    /// @notice Allows backend to reject role assignment application
+    /// @notice Allows backend to reject role assignment application.
+    /// @dev This function changes the isFinished to true and
+    /// @dev the expire date to zero so that users can withdraw their locked tokens.
     /// @param _applicant The address of the applicant
     function rejectApplication(address _applicant, uint256 roleId) external {
         require(
@@ -455,7 +456,7 @@ contract UDAOStaker is RoleLegacy, EIP712, Pausable {
         emit RoleRejected(roleId, _applicant);
     }
 
-    /// @notice Returns expire dates for validator
+    /// @notice Returns expire date for a validator
     /// @param _user address of the user
     function checkExpireDateValidator(
         address _user
@@ -465,7 +466,7 @@ contract UDAOStaker is RoleLegacy, EIP712, Pausable {
         return expireDate;
     }
 
-    /// @notice Returns expire dates for juror
+    /// @notice Returns expire date for a juror
     /// @param _user address of the user
     function checkExpireDateJuror(
         address _user
@@ -476,6 +477,8 @@ contract UDAOStaker is RoleLegacy, EIP712, Pausable {
 
     /// @notice allows validators to withdraw their staked tokens
     function withdrawValidatorStake() public whenNotPaused {
+        // TODO: add this to contract: require(validatorBalanceOf[msg.sender] != 0);
+
         uint256 withdrawableBalance;
         ValidatiorApplication
             storage validatorApplication = validatorApplications[
@@ -505,20 +508,16 @@ contract UDAOStaker is RoleLegacy, EIP712, Pausable {
         _withdrawValidator(msg.sender, withdrawableBalance);
     }
 
-    /**
-     * @notice Withdraws desired amounts of tokens to "to" address
-     * @param to address of the redeemer of the tokens
-     * @param withdrawableBalance amount of tokens that will be withdrawn
-     */
+    /// @notice Withdraws desired amounts of tokens to "to" address
+    /// @param to address of the redeemer of the tokens
+    /// @param withdrawableBalance amount of tokens that will be withdrawn
     function _withdrawValidator(address to, uint withdrawableBalance) internal {
         require(withdrawableBalance > 0, "You don't have withdrawable token");
         udao.transfer(to, withdrawableBalance);
         emit ValidatorStakeWithdrawn(to, withdrawableBalance);
     }
 
-    /**
-     * @notice allows jurors to withdraw their staked tokens
-     */
+    /// @notice allows jurors to withdraw their staked tokens
     function withdrawJurorStake() public whenNotPaused {
         uint256 withdrawableBalance;
         JurorApplication storage jurorApplication = jurorApplications[
@@ -623,7 +622,8 @@ contract UDAOStaker is RoleLegacy, EIP712, Pausable {
         3. Then we loop over the governanceStakes[msg.sender] array and check if the lock is expired or not. 
         If it is expired then we check if the amount is greater than the lock.amount or not. If it is greater 
         then we add the lock.amount to the withdrawableBalance and lock.vpamount to vpBalance, and then we 
-        remove the lock from the array. If the amount is not greater then we calculate how much udao and 
+        remove the lock from the array. 
+        3.1 If the amount is not greater then we calculate how much udao and 
         voting power can be withdrawn from the lock and then we reduce the lock.amount and lock.vpamount 
         by that much and then we add the udao and voting power to withdrawableBalance and vpBalance respectively. 
         And then we check if the _amount is less than or equal to withdrawableBalance or not. If it is then we burn 
@@ -635,6 +635,8 @@ contract UDAOStaker is RoleLegacy, EIP712, Pausable {
         uint256 withdrawableBalance;
         uint256 vpBalance;
         for (
+            //TODO: This for loop loops through all stakes made to become a governance member. Maybe thousands of stakes may have been made.
+            //We cannot use this due to risk of exceeding the block size limit and revert. SOLUTION: Limit the total number of stakes each person can make for governance.
             int256 i = 0;
             uint256(i) < governanceStakes[msg.sender].length;
             i++
@@ -652,9 +654,11 @@ contract UDAOStaker is RoleLegacy, EIP712, Pausable {
                     governanceStakes[msg.sender].pop();
                     i--;
                 } else {
+                    /// @dev vpFromLatest: You withdrew x% of udao from a stake. It keeps the percentage of udao remaining in the stake compared to the initial situation.
                     uint256 vpFromLatest = ((lock.vpamount *
                         (((_amount - withdrawableBalance) * 100) /
                             lock.amount)) / 100);
+                    /// @dev udaoFromLatest: You withdrew some of udao from a stake. It hols remaining on stake.
                     uint256 udaoFromLatest = lock.amount -
                         (_amount - withdrawableBalance);
                     lock.amount -= udaoFromLatest;
