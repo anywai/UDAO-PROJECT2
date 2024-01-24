@@ -581,7 +581,10 @@ contract UDAOStaker is RoleLegacy, EIP712, Pausable {
             }
         } else {
             // If application got rejected
-            if (validatorApplication.isFinished) {
+            if (
+                validatorApplication.expire < block.timestamp ||
+                validatorApplication.isFinished
+            ) {
                 withdrawableBalance = validatorBalanceOf[msg.sender];
             }
         }
