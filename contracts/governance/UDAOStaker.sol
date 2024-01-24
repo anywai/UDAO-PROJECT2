@@ -717,8 +717,8 @@ contract UDAOStaker is RoleLegacy, EIP712, Pausable {
         emit VoteRewardsWithdrawn(msg.sender, voteRewards);
     }
 
-    /// @notice Returns a hash of the given ContentVoucher, prepared using EIP712 typed data hashing rules.
-    /// @param voucher A ContentVoucher to hash.
+    /// @notice Returns a hash of the given RoleVoucher, prepared using EIP712 typed data hashing rules.
+    /// @param voucher A RoleVoucher to hash.
     function _hashRole(
         RoleVoucher calldata voucher
     ) internal view returns (bytes32) {
@@ -748,9 +748,9 @@ contract UDAOStaker is RoleLegacy, EIP712, Pausable {
         return id;
     }
 
-    /// @notice Verifies the signature for a given ContentVoucher, returning the address of the signer.
+    /// @notice Verifies the signature for a given RoleVoucher, returning the address of the signer.
     /// @dev Will revert if the signature is invalid. Does not verify that the signer is authorized to mint NFTs.
-    /// @param voucher A ContentVoucher describing an unminted NFT.
+    /// @param voucher A RoleVoucher describing an unminted NFT.
     function _verifyRole(
         RoleVoucher calldata voucher
     ) internal view returns (address) {
