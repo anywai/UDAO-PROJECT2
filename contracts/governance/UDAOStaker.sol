@@ -477,7 +477,10 @@ contract UDAOStaker is RoleLegacy, EIP712, Pausable {
 
     /// @notice allows validators to withdraw their staked tokens
     function withdrawValidatorStake() public whenNotPaused {
-        // TODO: add this to contract: require(validatorBalanceOf[msg.sender] != 0);
+        require(
+            validatorBalanceOf[msg.sender] != 0,
+            "You don't have any stake to withdraw"
+        );
 
         uint256 withdrawableBalance;
         ValidatiorApplication
@@ -512,13 +515,16 @@ contract UDAOStaker is RoleLegacy, EIP712, Pausable {
     /// @param to address of the redeemer of the tokens
     /// @param withdrawableBalance amount of tokens that will be withdrawn
     function _withdrawValidator(address to, uint withdrawableBalance) internal {
-        require(withdrawableBalance > 0, "You don't have withdrawable token");
         udao.transfer(to, withdrawableBalance);
         emit ValidatorStakeWithdrawn(to, withdrawableBalance);
     }
 
     /// @notice allows jurors to withdraw their staked tokens
     function withdrawJurorStake() public whenNotPaused {
+        require(
+            jurorBalanceOf[msg.sender] != 0,
+            "You don't have any stake to withdraw"
+        );
         uint256 withdrawableBalance;
         JurorApplication storage jurorApplication = jurorApplications[
             jurorApplicationId[msg.sender]
@@ -546,7 +552,6 @@ contract UDAOStaker is RoleLegacy, EIP712, Pausable {
 
         jurorApplication.isFinished == true;
         _withdrawJuror(msg.sender, withdrawableBalance);
-        return;
     }
 
     /**
@@ -555,7 +560,6 @@ contract UDAOStaker is RoleLegacy, EIP712, Pausable {
      * @param withdrawableBalance amount of tokens that will be withdrawn
      */
     function _withdrawJuror(address to, uint withdrawableBalance) internal {
-        require(withdrawableBalance > 0, "You don't have withdrawable token");
         udao.transfer(to, withdrawableBalance);
         emit JurorStakeWithdrawn(to, withdrawableBalance);
     }
