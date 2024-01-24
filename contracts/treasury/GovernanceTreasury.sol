@@ -223,11 +223,11 @@ contract GovernanceTreasury is Pausable, RoleLegacy {
         address _to,
         uint _amount
     ) external whenNotPaused {
-        //require(
-        //    roleManager.hasRole(STAKING_CONTRACT, msg.sender),
-        //    "Only staking contract can transfer governance rewards"
-        //);
-        //udao.transfer(_to, _amount);
+        require(
+            roleManager.hasRole(STAKING_CONTRACT, msg.sender),
+            "Only staking contract can transfer governance rewards"
+        );
+        udao.transfer(_to, _amount);
     }
 
     /// TODO: Bu fonksiyon dummy versiona yanlışlıkla para aktarılması durumunda kullanılması için tasarlandı kaldırılması lazım!

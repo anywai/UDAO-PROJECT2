@@ -20,4 +20,6 @@ interface IGovernanceTreasury {
     function nextValidatorDistributionRound() external;
 
     function nextJurorDistributionRound() external;
+
+    function transferGovernanceRewards(address _to, uint _amount) external;
 }

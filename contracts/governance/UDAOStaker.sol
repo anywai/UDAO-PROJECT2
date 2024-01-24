@@ -5,7 +5,7 @@ pragma solidity ^0.8.4;
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
-import "../interfaces/IPlatformTreasury.sol";
+import "../interfaces/IGovernanceTreasury.sol";
 import "../interfaces/IRoleManager.sol";
 import "../interfaces/IUDAOVP.sol";
 import "../RoleLegacy.sol";
@@ -17,7 +17,7 @@ contract UDAOStaker is RoleLegacy, EIP712, Pausable {
 
     IERC20 udao;
     IUDAOVP udaovp;
-    IPlatformTreasury platformTreasury;
+    IGovernanceTreasury governanceTreasury;
 
     /// @notice the required UDAO lock duration to be a juror
     uint256 public jurorLockTime = 30 days;
@@ -47,7 +47,7 @@ contract UDAOStaker is RoleLegacy, EIP712, Pausable {
     /// @notice Triggered when vote reward is updated
     event SetVoteReward(uint256 _newAmount);
     /// @notice Triggered when platform treasury address is updated
-    event SetPlatformTreasuryAddress(address _newAddress);
+    event SetGovernanceTreasuryAddress(address _newAddress);
     /// @notice Triggered when any role is applied, roleId: 0 validator, 1 juror
     event RoleApplied(uint256 _roleId, address _user, uint256 _lockAmount);
     /// @notice Triggered when any role is approved, roleId: 0 validator, 1 juror
@@ -135,24 +135,24 @@ contract UDAOStaker is RoleLegacy, EIP712, Pausable {
 
     /// @param roleManagerAddress address of the role manager contract
     /// @param udaoAddress address of the udao token contract
-    /// @param platformTreasuryAddress address of the platform treasury contract
+    /// @param governanceTreasuryAddress address of the platform treasury contract
     /// @param udaoVpAddress address of the udao voting power token contract
     constructor(
         address roleManagerAddress,
         address udaoAddress,
-        address platformTreasuryAddress,
+        address governanceTreasuryAddress,
         address udaoVpAddress
     ) EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION) {
         roleManager = IRoleManager(roleManagerAddress);
         udao = IERC20(udaoAddress);
-        platformTreasury = IPlatformTreasury(platformTreasuryAddress);
+        governanceTreasury = IGovernanceTreasury(governanceTreasuryAddress);
         udaovp = IUDAOVP(udaoVpAddress);
     }
 
     event AddressesUpdated(
         address RoleManagerAddress,
         address UdaoAddress,
-        address PlatformTreasuryAddress,
+        address GovernanceTreasuryAddress,
         address UdaoVpAddress
     );
 
@@ -160,7 +160,7 @@ contract UDAOStaker is RoleLegacy, EIP712, Pausable {
     function updateAddresses(
         address roleManagerAddress,
         address udaoAddress,
-        address platformTreasuryAddress,
+        address governanceTreasuryAddress,
         address udaoVpAddress
     ) external {
         if (msg.sender != foundationWallet) {
@@ -172,13 +172,13 @@ contract UDAOStaker is RoleLegacy, EIP712, Pausable {
         }
         roleManager = IRoleManager(roleManagerAddress);
         udao = IERC20(udaoAddress);
-        platformTreasury = IPlatformTreasury(platformTreasuryAddress);
+        governanceTreasury = IGovernanceTreasury(governanceTreasuryAddress);
         udaovp = IUDAOVP(udaoVpAddress);
 
         emit AddressesUpdated(
             roleManagerAddress,
             udaoAddress,
-            platformTreasuryAddress,
+            governanceTreasuryAddress,
             udaoVpAddress
         );
     }
@@ -256,17 +256,17 @@ contract UDAOStaker is RoleLegacy, EIP712, Pausable {
     }
 
     /// @notice sets the platform treasury address
-    /// @param platformTreasuryAddress the address of the new platform treasury
+    /// @param governanceTreasuryAddress the address of the new platform treasury
     /// TODO remove this function and use updateAddresses instead
-    function setPlatformTreasuryAddress(
-        address platformTreasuryAddress
+    function setGovernanceTreasuryAddress(
+        address governanceTreasuryAddress
     ) external {
         require(
             roleManager.hasRoles(administrator_roles, msg.sender),
             "Only admins can set platform treasury address"
         );
-        platformTreasury = IPlatformTreasury(platformTreasuryAddress);
-        emit SetPlatformTreasuryAddress(platformTreasuryAddress);
+        governanceTreasury = IGovernanceTreasury(governanceTreasuryAddress);
+        emit SetGovernanceTreasuryAddress(governanceTreasuryAddress);
     }
 
     /// @notice sets the maximum stake days for governance members
@@ -701,6 +701,7 @@ contract UDAOStaker is RoleLegacy, EIP712, Pausable {
             totalVotingPower;
 
         rewardBalanceOf[voter] += (votingPowerRatio * voteReward) / 10000;
+        /// TODO Add current total reward (rewardBalanceOf[voter]) to event
         emit VoteRewardAdded(voter, (votingPowerRatio * voteReward) / 10000);
     }
 
@@ -712,7 +713,7 @@ contract UDAOStaker is RoleLegacy, EIP712, Pausable {
         );
         uint256 voteRewards = rewardBalanceOf[msg.sender];
         rewardBalanceOf[msg.sender] = 0;
-        platformTreasury.transferGovernanceRewards(msg.sender, voteRewards);
+        governanceTreasury.transferGovernanceRewards(msg.sender, voteRewards);
         emit VoteRewardsWithdrawn(msg.sender, voteRewards);
     }
 
