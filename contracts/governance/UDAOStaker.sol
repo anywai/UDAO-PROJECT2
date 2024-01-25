@@ -49,7 +49,11 @@ contract UDAOStaker is RoleLegacy, EIP712, Pausable {
     /// @notice Triggered when platform treasury address is updated
     event SetGovernanceTreasuryAddress(address _newAddress);
     /// @notice Triggered when any role is applied, roleId: 0 validator, 1 juror
-    event RoleApplied(uint256 _roleId, address indexed _user, uint256 _lockAmount);
+    event RoleApplied(
+        uint256 _roleId,
+        address indexed _user,
+        uint256 _lockAmount
+    );
     /// @notice Triggered when any role is approved, roleId: 0 validator, 1 juror
     event RoleApproved(uint256 _roleId, address indexed _user);
     /// @notice Triggered when any role is rejected, roleId: 0 validator, 1 juror
@@ -71,7 +75,11 @@ contract UDAOStaker is RoleLegacy, EIP712, Pausable {
         uint256 _vpAmount
     );
     /// @notice Triggered when vote reward is added to voters reward balance
-    event VoteRewardAdded(address indexed _rewardee, uint256 _amount, uint256 _totalReward);
+    event VoteRewardAdded(
+        address indexed _rewardee,
+        uint256 _amount,
+        uint256 _totalReward
+    );
     /// @notice Triggered when vote reward is withdrawn
     event VoteRewardsWithdrawn(address indexed _rewardee, uint256 _amount);
     /// @notice Triggered when governance maximum stake days is updated
@@ -695,7 +703,11 @@ contract UDAOStaker is RoleLegacy, EIP712, Pausable {
             totalVotingPower;
 
         rewardBalanceOf[voter] += (votingPowerRatio * voteReward) / 10000;
-        emit VoteRewardAdded(voter, (votingPowerRatio * voteReward) / 10000, rewardBalanceOf[voter]);
+        emit VoteRewardAdded(
+            voter,
+            (votingPowerRatio * voteReward) / 10000,
+            rewardBalanceOf[voter]
+        );
     }
 
     /// @notice withdraws reward earned from voting
