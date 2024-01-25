@@ -49,31 +49,31 @@ contract UDAOStaker is RoleLegacy, EIP712, Pausable {
     /// @notice Triggered when platform treasury address is updated
     event SetGovernanceTreasuryAddress(address _newAddress);
     /// @notice Triggered when any role is applied, roleId: 0 validator, 1 juror
-    event RoleApplied(uint256 _roleId, address _user, uint256 _lockAmount);
+    event RoleApplied(uint256 _roleId, address indexed _user, uint256 _lockAmount);
     /// @notice Triggered when any role is approved, roleId: 0 validator, 1 juror
-    event RoleApproved(uint256 _roleId, address _user);
+    event RoleApproved(uint256 _roleId, address indexed _user);
     /// @notice Triggered when any role is rejected, roleId: 0 validator, 1 juror
-    event RoleRejected(uint256 _roleId, address _user);
+    event RoleRejected(uint256 _roleId, address indexed _user);
     /// @notice Triggered when validator stake is withdrawn
-    event ValidatorStakeWithdrawn(address _validator, uint256 _amount);
+    event ValidatorStakeWithdrawn(address indexed _validator, uint256 _amount);
     /// @notice Triggered when juror stake is withdrawn
-    event JurorStakeWithdrawn(address _juror, uint256 _amount);
+    event JurorStakeWithdrawn(address indexed _juror, uint256 _amount);
     /// @notice Triggered when governance stake is added
     event GovernanceStake(
-        address _member,
+        address indexed _member,
         uint256 _stakeAmount,
         uint256 _vpAmount
     );
     /// @notice Triggered when governance stake is withdrawn
     event GovernanceStakeWithdraw(
-        address _member,
+        address indexed _member,
         uint256 _unstakeAmount,
         uint256 _vpAmount
     );
     /// @notice Triggered when vote reward is added to voters reward balance
-    event VoteRewardAdded(address _rewardee, uint256 _amount);
+    event VoteRewardAdded(address indexed _rewardee, uint256 _amount);
     /// @notice Triggered when vote reward is withdrawn
-    event VoteRewardsWithdrawn(address _rewardee, uint256 _amount);
+    event VoteRewardsWithdrawn(address indexed _rewardee, uint256 _amount);
     /// @notice Triggered when governance maximum stake days is updated
     event SetMaximumStakeDays(uint256 _newAmount);
     /// @notice Triggered when governance minimum stake days is updated
