@@ -71,7 +71,7 @@ contract UDAOStaker is RoleLegacy, EIP712, Pausable {
         uint256 _vpAmount
     );
     /// @notice Triggered when vote reward is added to voters reward balance
-    event VoteRewardAdded(address indexed _rewardee, uint256 _amount);
+    event VoteRewardAdded(address indexed _rewardee, uint256 _amount, uint256 _totalReward);
     /// @notice Triggered when vote reward is withdrawn
     event VoteRewardsWithdrawn(address indexed _rewardee, uint256 _amount);
     /// @notice Triggered when governance maximum stake days is updated
@@ -701,8 +701,7 @@ contract UDAOStaker is RoleLegacy, EIP712, Pausable {
             totalVotingPower;
 
         rewardBalanceOf[voter] += (votingPowerRatio * voteReward) / 10000;
-        /// TODO Add current total reward (rewardBalanceOf[voter]) to event
-        emit VoteRewardAdded(voter, (votingPowerRatio * voteReward) / 10000);
+        emit VoteRewardAdded(voter, (votingPowerRatio * voteReward) / 10000, rewardBalanceOf[voter]);
     }
 
     /// @notice withdraws reward earned from voting
