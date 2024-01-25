@@ -67,6 +67,13 @@ interface updUDAOGovernor {
     ) external;
 }
 
+interface updGovernanceTreasury {
+    function updateAddresses(
+        address udaoAddress,
+        address udaoStakerAddress
+    ) external;
+}
+
 pragma solidity ^0.8.0;
 
 contract ContractManager is RoleLegacy {
@@ -205,6 +212,10 @@ contract ContractManager is RoleLegacy {
             roleManagerAddress,
             udaocAddress,
             platformTreasuryAddress,
+            udaoStakerAddress
+        );
+        updGovernanceTreasury(governanceTreasuryAddress).updateAddresses(
+            udaoAddress,
             udaoStakerAddress
         );
         updUDAOvp(udaoVpAddress).updateAddresses(
