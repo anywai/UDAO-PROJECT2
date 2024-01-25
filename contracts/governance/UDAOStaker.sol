@@ -83,12 +83,6 @@ contract UDAOStaker is RoleLegacy, EIP712, Pausable {
     mapping(address => uint256) validatorBalanceOf;
     /// @notice the balance of the juror
     mapping(address => uint256) jurorBalanceOf;
-    /* TODO These were 8 months old and never used, why?
-    mapping(address => uint256) latestValidatorStakeId;
-    mapping(address => uint256) latestJurorStakeId;
-    mapping(address => uint256) latestValidationLockId;
-    */
-
     /// @notice if user has an active application for validator role
     mapping(address => bool) public activeApplicationForValidator;
     /// @notice if user has an active application for juror role
