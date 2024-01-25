@@ -30,6 +30,26 @@ contract GovernanceTreasury is Pausable, RoleLegacy {
         validatorDistributionRound = block.timestamp;
     }
 
+    event AddressesUpdated(address RoleManagerAddress, address UdaoAddress);
+
+    /// @notice Get the updated addresses from contract manager
+    function updateAddresses(
+        address roleManagerAddress,
+        address udaoAddress
+    ) external {
+        if (msg.sender != foundationWallet) {
+            require(
+                (hasRole(BACKEND_ROLE, msg.sender) ||
+                    hasRole(CONTRACT_MANAGER, msg.sender)),
+                "Only backend and contract manager can update addresses"
+            );
+        }
+        roleManager = IRoleManager(roleManagerAddress);
+        udao = IERC20(udaoAddress);
+
+        emit AddressesUpdated(roleManagerAddress, udaoAddress);
+    }
+
     /// @notice Updates the jurors balance in this treasury.
     /// @param _balance The balance to update.
     function jurorBalanceUpdate(uint _balance) external {
