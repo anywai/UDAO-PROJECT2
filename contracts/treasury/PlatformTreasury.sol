@@ -143,29 +143,41 @@ contract PlatformTreasury is ContentManager {
     function getWithdrawableBalanceInstructor(
         address _inst
     ) public view returns (uint, uint) {
-        /// @dev this is the timestamp of the transaction in days
-        uint256 transactionTime = (block.timestamp / 86400);
-        /// @dev transactionLBIndex determines a "transaction time dependent position" in the Locked balanaces array.
-        uint256 transactionLBIndex = transactionTime % refundWindow;
-        uint instPositiveBalance;
+        uint instPositiveBalanceOnLock = 0;
+        uint instCurrentPositiveBalance = instBalance[_inst];
 
-        uint256 dayPassedInst = transactionTime - instLockTime[_inst];
-        uint256 dayPassedInstMod;
-        /// @dev if the instructor is locked for more than 2 refund window, the instructor will be able to withdraw all the locked balance
-        if (dayPassedInst >= (refundWindow * 2)) {
-            dayPassedInstMod = refundWindow - 1;
-        } else {
-            dayPassedInstMod = dayPassedInst % refundWindow;
-        }
-        /// @dev calculate the positive balance of the instructor
-        for (uint256 i = 0; i <= dayPassedInstMod; i++) {
-            //Index of the day to be payout to instructor.
-            uint256 indexOfPayout = ((transactionLBIndex + refundWindow) - i) %
-                refundWindow;
-            instPositiveBalance += instLockedBalance[_inst][indexOfPayout];
+        if (prevInstRefundWindow[_inst] == refundWindow) {
+            /// @dev this is the timestamp of the transaction in days
+            uint256 transactionTime = (block.timestamp / 86400);
+            /// @dev transactionLBIndex determines a "transaction time dependent position" in the Locked balanaces array.
+            uint256 transactionLBIndex = transactionTime % refundWindow;
+
+            uint256 dayPassedInst = transactionTime - instLockTime[_inst];
+            if (dayPassedInst >= refundWindow) {
+                uint256 dayPassedInstMod;
+                /// @dev if the instructor is locked for more than 2 refund window, the instructor will be able to withdraw all the locked balance
+                if (dayPassedInst >= (refundWindow * 2)) {
+                    dayPassedInstMod = refundWindow - 1;
+                } else {
+                    dayPassedInstMod = dayPassedInst % refundWindow;
+                }
+                /// @dev calculate the positive balance of the instructor
+                for (uint256 i = 0; i <= dayPassedInstMod; i++) {
+                    //Index of the day to be payout to instructor.
+                    uint256 indexOfPayout = ((transactionLBIndex +
+                        refundWindow) - i) % refundWindow;
+                    //console.log("indexOfPayout: %s", indexOfPayout);
+                    instPositiveBalanceOnLock += instLockedBalance[_inst][
+                        indexOfPayout
+                    ];
+                }
+            }
         }
         /// @dev return the calculated positive balance and refunded balance of the instructor
-        return (instPositiveBalance, instRefundedBalance[_inst]);
+        return (
+            instCurrentPositiveBalance + instPositiveBalanceOnLock,
+            instRefundedBalance[_inst]
+        );
     }
 
     /// @notice Allows backend to change platform refun window period
