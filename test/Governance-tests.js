@@ -31,8 +31,8 @@ States starts from 0
 */
 /// HELPERS---------------------------------------------------------------------
 /// @dev Deploy contracts and assign them
-async function reDeploy(reApplyRolesViaVoucher = true, isDexRequired = false) {
-  const replace = await deploy(isDexRequired);
+async function reDeploy(reApplyRolesViaVoucher = true, isGovernanceContractsReplaced = false) {
+  const replace = await deploy(true);
   backend = replace.backend;
   contentCreator = replace.contentCreator;
   contentBuyer = replace.contentBuyer;
@@ -232,7 +232,130 @@ describe("Governance Contract", function () {
     await expect(targetInfo).to.deep.equal([tokenAddress]);
     await expect(returnedCallData).to.deep.equal([transferCalldata]);
   });
+  it("Should allow governance members to withdraw their staked tokens after a proposal created", async function () {
+    await reDeploy();
+    /// @dev Setup governance member
+    await setupGovernanceMember(contractRoleManager, contractUDAO, contractUDAOStaker, governanceCandidate);
+    await setupGovernanceMember(contractRoleManager, contractUDAO, contractUDAOStaker, superValidator);
+    /// @dev Check if the governance candidate has the correct amount of UDAO-vp tokens
+    const governanceCandidateBalance = await contractUDAOVp.balanceOf(governanceCandidate.address);
+    await expect(governanceCandidateBalance).to.equal(ethers.utils.parseEther("300"));
+    /// @dev delegate governance candidate's UDAO-vp tokens to himself
+    await contractUDAOVp.connect(governanceCandidate).delegate(governanceCandidate.address);
+    /// @dev delegate superValidator UDAO-vp tokens to himself
+    await contractUDAOVp.connect(superValidator).delegate(superValidator.address);
+    /// @dev Check votes for governance candidate on latest block
+    const governanceCandidateVotes = await contractUDAOVp.getVotes(governanceCandidate.address);
+    await expect(governanceCandidateVotes).to.equal(ethers.utils.parseEther("300"));
+    /// @dev Check votes for superValidator on latest block
+    const superValidatorVotes = await contractUDAOVp.getVotes(superValidator.address);
+    await expect(superValidatorVotes).to.equal(ethers.utils.parseEther("300"));
+    /// @dev Proposal settings
+    const tokenAddress = contractUDAO.address;
+    const token = await ethers.getContractAt("ERC20", tokenAddress);
+    const teamAddress = foundation.address;
+    const grantAmount = ethers.utils.parseEther("1");
+    const transferCalldata = token.interface.encodeFunctionData("transfer", [teamAddress, grantAmount]);
+    /// @dev Propose a new proposal
+    const proposeTx = await contractUDAOGovernor
+      .connect(governanceCandidate)
+      .propose([tokenAddress], [0], [transferCalldata], "Proposal #1: Give grant to team");
+    /// @dev Wait for the transaction to be mined
+    const tx = await proposeTx.wait();
+    const proposalId = tx.events.find((e) => e.event == "ProposalCreated").args.proposalId;
+    /// @dev Check the current UDAO-vp balance of the governance candidate
+    const governanceCandidateVPBeforeWithdraw = await contractUDAOVp.balanceOf(governanceCandidate.address);
+    await expect(governanceCandidateVPBeforeWithdraw).to.equal(ethers.utils.parseEther("300"));
+    /// @dev Check current balance of governance candidate
+    const governanceCandidateBalanceBeforeWithdraw = await contractUDAO.balanceOf(governanceCandidate.address);
+    /// @dev Withdraw staked tokens
+    await contractUDAOStaker.connect(governanceCandidate).withdrawGovernanceStake(ethers.utils.parseEther("10"));
+    /// @dev Check if the governance candidate has the correct amount of UDAO tokens
+    const governanceCandidateBalanceAfterWithdraw = await contractUDAO.balanceOf(governanceCandidate.address);
+    await expect(governanceCandidateBalanceAfterWithdraw).to.equal(
+      governanceCandidateBalanceBeforeWithdraw.add(ethers.utils.parseEther("10"))
+    );
+    /// @dev Check if the governance candidate has the correct amount of UDAO-vp tokens
+    const governanceCandidateVPAfterWithdraw = await contractUDAOVp.balanceOf(governanceCandidate.address);
+    await expect(governanceCandidateVPAfterWithdraw).to.equal(ethers.utils.parseEther("0"));
 
+    /// @dev Check current balance of superValidator
+    const superValidatorBalanceBeforeWithdraw = await contractUDAO.balanceOf(superValidator.address);
+    /// @dev Withdraw superValidator staked tokens
+    await contractUDAOStaker.connect(superValidator).withdrawGovernanceStake(ethers.utils.parseEther("10"));
+    /// @dev Check if the superValidator has the correct amount of UDAO tokens
+    const superValidatorBalanceAfterWithdraw = await contractUDAO.balanceOf(superValidator.address);
+    await expect(superValidatorBalanceAfterWithdraw).to.equal(
+      superValidatorBalanceBeforeWithdraw.add(ethers.utils.parseEther("10"))
+    );
+    /// @dev Check if the superValidator has the correct amount of UDAO-vp tokens
+    const superValidatorVPAfterWithdraw = await contractUDAOVp.balanceOf(superValidator.address);
+    await expect(superValidatorVPAfterWithdraw).to.equal(ethers.utils.parseEther("0"));
+  });
+
+  it("Should allow governance members to withdraw their staked tokens after a proposal created and 1 day passed", async function () {
+    await reDeploy();
+    /// @dev Setup governance member
+    await setupGovernanceMember(contractRoleManager, contractUDAO, contractUDAOStaker, governanceCandidate);
+    await setupGovernanceMember(contractRoleManager, contractUDAO, contractUDAOStaker, superValidator);
+    /// @dev Check if the governance candidate has the correct amount of UDAO-vp tokens
+    const governanceCandidateBalance = await contractUDAOVp.balanceOf(governanceCandidate.address);
+    await expect(governanceCandidateBalance).to.equal(ethers.utils.parseEther("300"));
+    /// @dev delegate governance candidate's UDAO-vp tokens to himself
+    await contractUDAOVp.connect(governanceCandidate).delegate(governanceCandidate.address);
+    /// @dev delegate superValidator UDAO-vp tokens to himself
+    await contractUDAOVp.connect(superValidator).delegate(superValidator.address);
+    /// @dev Check votes for governance candidate on latest block
+    const governanceCandidateVotes = await contractUDAOVp.getVotes(governanceCandidate.address);
+    await expect(governanceCandidateVotes).to.equal(ethers.utils.parseEther("300"));
+    /// @dev Check votes for superValidator on latest block
+    const superValidatorVotes = await contractUDAOVp.getVotes(superValidator.address);
+    await expect(superValidatorVotes).to.equal(ethers.utils.parseEther("300"));
+    /// @dev Proposal settings
+    const tokenAddress = contractUDAO.address;
+    const token = await ethers.getContractAt("ERC20", tokenAddress);
+    const teamAddress = foundation.address;
+    const grantAmount = ethers.utils.parseEther("1");
+    const transferCalldata = token.interface.encodeFunctionData("transfer", [teamAddress, grantAmount]);
+    /// @dev Propose a new proposal
+    const proposeTx = await contractUDAOGovernor
+      .connect(governanceCandidate)
+      .propose([tokenAddress], [0], [transferCalldata], "Proposal #1: Give grant to team");
+    /// @dev Wait for the transaction to be mined
+    const tx = await proposeTx.wait();
+    const proposalId = tx.events.find((e) => e.event == "ProposalCreated").args.proposalId;
+    /// @dev Check the current UDAO-vp balance of the governance candidate
+    const governanceCandidateVPBeforeWithdraw = await contractUDAOVp.balanceOf(governanceCandidate.address);
+    await expect(governanceCandidateVPBeforeWithdraw).to.equal(ethers.utils.parseEther("300"));
+    /// @dev Check current balance of governance candidate
+    const governanceCandidateBalanceBeforeWithdraw = await contractUDAO.balanceOf(governanceCandidate.address);
+    /// @dev Skip 1 day
+    const numBlocksToMine = Math.ceil((1 * 24 * 60 * 60) / 2);
+    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine.toString(16)}`, "0x2"]);
+    /// @dev Withdraw staked tokens
+    await contractUDAOStaker.connect(governanceCandidate).withdrawGovernanceStake(ethers.utils.parseEther("10"));
+    /// @dev Check if the governance candidate has the correct amount of UDAO tokens
+    const governanceCandidateBalanceAfterWithdraw = await contractUDAO.balanceOf(governanceCandidate.address);
+    await expect(governanceCandidateBalanceAfterWithdraw).to.equal(
+      governanceCandidateBalanceBeforeWithdraw.add(ethers.utils.parseEther("10"))
+    );
+    /// @dev Check if the governance candidate has the correct amount of UDAO-vp tokens
+    const governanceCandidateVPAfterWithdraw = await contractUDAOVp.balanceOf(governanceCandidate.address);
+    await expect(governanceCandidateVPAfterWithdraw).to.equal(ethers.utils.parseEther("0"));
+
+    /// @dev Check current balance of superValidator
+    const superValidatorBalanceBeforeWithdraw = await contractUDAO.balanceOf(superValidator.address);
+    /// @dev Withdraw superValidator staked tokens
+    await contractUDAOStaker.connect(superValidator).withdrawGovernanceStake(ethers.utils.parseEther("10"));
+    /// @dev Check if the superValidator has the correct amount of UDAO tokens
+    const superValidatorBalanceAfterWithdraw = await contractUDAO.balanceOf(superValidator.address);
+    await expect(superValidatorBalanceAfterWithdraw).to.equal(
+      superValidatorBalanceBeforeWithdraw.add(ethers.utils.parseEther("10"))
+    );
+    /// @dev Check if the superValidator has the correct amount of UDAO-vp tokens
+    const superValidatorVPAfterWithdraw = await contractUDAOVp.balanceOf(superValidator.address);
+    await expect(superValidatorVPAfterWithdraw).to.equal(ethers.utils.parseEther("0"));
+  });
   it("Should allow governance members to vote on created proposal", async function () {
     await reDeploy();
     /// @dev Setup governance member
@@ -283,7 +406,69 @@ describe("Governance Contract", function () {
     const proposalState = await contractUDAOGovernor.state(proposalId);
     await expect(proposalState).to.equal(1);
   });
+  it("Should allow governance members to vote on created proposal and unstake before the end of the voting period", async function () {
+    await reDeploy();
+    /// @dev Setup governance member
+    //const governanceCandidateVotesBefore = await contractUDAOVp.getVotes(governanceCandidate.address);
+    //console.log("governanceCandidateVotesBefore", governanceCandidateVotesBefore.toString());
+    await setupGovernanceMember(contractRoleManager, contractUDAO, contractUDAOStaker, governanceCandidate);
+    await setupGovernanceMember(contractRoleManager, contractUDAO, contractUDAOStaker, superValidator);
+    //const governanceCandidateVotesAfter = await contractUDAOVp.getVotes(governanceCandidate.address);
+   //console.log("governanceCandidateVotesAfter", governanceCandidateVotesAfter.toString());
+    /// @dev Check if the governance candidate has the correct amount of UDAO-vp tokens
+    const governanceCandidateBalance = await contractUDAOVp.balanceOf(governanceCandidate.address);
+    await expect(governanceCandidateBalance).to.equal(ethers.utils.parseEther("300"));
+    /// @dev delegate superValidator UDAO-vp tokens to himself
+    await contractUDAOVp.connect(governanceCandidate).delegate(governanceCandidate.address);
+    /// @dev Check votes for governance candidate on latest block
+    const governanceCandidateVotes = await contractUDAOVp.getVotes(governanceCandidate.address);
+    await expect(governanceCandidateVotes).to.equal(ethers.utils.parseEther("300"));
 
+    /// @dev Check if the superValidator has the correct amount of UDAO-vp tokens
+    const superValidatorBalance = await contractUDAOVp.balanceOf(superValidator.address);
+    await expect(superValidatorBalance).to.equal(ethers.utils.parseEther("300"));
+    /// @dev delegate superValidator UDAO-vp tokens to himself
+    await contractUDAOVp.connect(superValidator).delegate(superValidator.address);
+    /// @dev Check votes for superValidator on latest block
+    const superValidatorVotes = await contractUDAOVp.getVotes(superValidator.address);
+    await expect(superValidatorVotes).to.equal(ethers.utils.parseEther("300"));
+
+    /// @dev Proposal settings
+    const tokenAddress = contractUDAO.address;
+    const token = await ethers.getContractAt("ERC20", tokenAddress);
+    const teamAddress = foundation.address;
+    const grantAmount = ethers.utils.parseEther("1");
+    const transferCalldata = token.interface.encodeFunctionData("transfer", [teamAddress, grantAmount]);
+    /// @dev Propose a new proposal
+    const proposeTx = await contractUDAOGovernor
+      .connect(governanceCandidate)
+      .propose([tokenAddress], [0], [transferCalldata], "Proposal #1: Give grant to team");
+    /// @dev Wait for the transaction to be mined
+    const tx = await proposeTx.wait();
+    const proposalId = tx.events.find((e) => e.event == "ProposalCreated").args.proposalId;
+
+    // @dev (7 * 24 * 60 * 60) calculates the total number of seconds in 7 days.
+    // @dev 2 is the number of seconds per block
+    // @dev We divide the total number of seconds in 7 days by the number of seconds per block
+    // @dev We then round up to the nearest whole number
+    // @dev This is the number of blocks we need to mine to get to the start of the voting period
+    const numBlocksToMine = Math.ceil((7 * 24 * 60 * 60) / 2);
+    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine.toString(16)}`, "0x2"]);
+    /// @dev Vote on the proposal
+    await contractUDAOGovernor.connect(superValidator).castVote(proposalId, 1);
+    /// @dev Check if the vote was casted
+    const proposalState = await contractUDAOGovernor.state(proposalId);
+    await expect(proposalState).to.equal(1);
+    /// @dev Check current balance of superValidator
+    const superValidatorBalanceBeforeWithdraw = await contractUDAO.balanceOf(superValidator.address);
+    /// @dev Withdraw superValidator staked tokens
+    await contractUDAOStaker.connect(superValidator).withdrawGovernanceStake(ethers.utils.parseEther("10"));
+    /// @dev Check if the superValidator has the correct amount of UDAO tokens
+    const superValidatorBalanceAfterWithdraw = await contractUDAO.balanceOf(superValidator.address);
+    await expect(superValidatorBalanceAfterWithdraw).to.equal(
+      superValidatorBalanceBeforeWithdraw.add(ethers.utils.parseEther("10"))
+    );
+  });
   it("Should allow anyone to execute a successful proposal (setRequiredValidators)", async function () {
     await reDeploy();
     /// @dev Setup governance member
