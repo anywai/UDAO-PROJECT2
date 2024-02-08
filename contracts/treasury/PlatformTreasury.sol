@@ -66,6 +66,11 @@ contract PlatformTreasury is ContentManager {
     /// @notice withdraws foundation balance to foundation wallet
     function withdrawFoundation() external whenNotPaused {
         require(
+            block.timestamp > precautionWithdrawalTimestamp,
+            "Precaution withdrawal period is not over"
+        );
+
+        require(
             hasRole(FOUNDATION_ROLE, msg.sender),
             "Only foundation can withdraw"
         );
@@ -94,6 +99,11 @@ contract PlatformTreasury is ContentManager {
 
     /// @notice Allows instructers to withdraw individually.
     function withdrawInstructor() external whenNotPaused {
+        require(
+            block.timestamp > precautionWithdrawalTimestamp,
+            "Precaution withdrawal period is not over"
+        );
+
         uint positiveBalance;
         uint refundedBalance;
         (positiveBalance, refundedBalance) = getWithdrawableBalanceInstructor(
@@ -167,7 +177,6 @@ contract PlatformTreasury is ContentManager {
                     //Index of the day to be payout to instructor.
                     uint256 indexOfPayout = ((transactionLBIndex +
                         refundWindow) - i) % refundWindow;
-                    //console.log("indexOfPayout: %s", indexOfPayout);
                     instPositiveBalanceOnLock += instLockedBalance[_inst][
                         indexOfPayout
                     ];
@@ -199,6 +208,8 @@ contract PlatformTreasury is ContentManager {
             transactionTime,
             transactionLBIndex
         );
+        /// @dev if there is any revenue in platform cut pools, distribute role shares to roles and transfer governance role shares to governance treasury
+        _transferPlatformCutstoGovernance();
         /// @dev locked balances will be emptied and re-added to the platform cut pools
         uint256 emptiedContentCutPool;
         uint256 emptiedCoachingCutPool;
@@ -209,6 +220,14 @@ contract PlatformTreasury is ContentManager {
             emptiedCoachingCutPool += coachingCutLockedPool[i];
             coachingCutLockedPool[i] = 0;
         }
+
+        if (refundWindow > _newWindow) {
+            uint temp = block.timestamp + (refundWindow * 86400);
+            if (temp > precautionWithdrawalTimestamp) {
+                precautionWithdrawalTimestamp = temp;
+            }
+        }
+
         refundWindow = _newWindow;
         emit RefundWindowUpdated(_newWindow);
 
@@ -221,7 +240,5 @@ contract PlatformTreasury is ContentManager {
             transactionTime,
             transactionLBIndex
         );
-        /// @dev if there is any revenue in platform cut pools, distribute role shares to roles and transfer governance role shares to governance treasury
-        _transferPlatformCutstoGovernance();
     }
 }

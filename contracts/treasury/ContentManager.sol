@@ -301,8 +301,7 @@ abstract contract ContentManager is BasePlatform {
         /// @dev Save the sale on a list for future use (e.g refund)
         cartSaleID.increment();
         for (uint256 i; i < voucherIdsLength; i++) {
-            uint256 contentID =
-            _buyContent(
+            uint256 contentID = _buyContent(
                 vouchers[i].tokenId,
                 vouchers[i].fullContentPurchase,
                 vouchers[i].purchasedParts,
@@ -310,7 +309,11 @@ abstract contract ContentManager is BasePlatform {
                 totalCut[i],
                 instrShare[i]
             );
-            emit ContentBought(vouchers[i].userId, cartSaleID.current() - 1, contentID);
+            emit ContentBought(
+                vouchers[i].userId,
+                cartSaleID.current() - 1,
+                contentID
+            );
         }
 
         /// @dev if there is any revenue in platform cut pools, distribute role shares to roles and transfer governance role shares to governance treasury
@@ -330,8 +333,8 @@ abstract contract ContentManager is BasePlatform {
         uint256[] calldata purchasedParts,
         address contentReceiver,
         uint256 totalCut,
-        uint256 instrShare    
-        ) internal returns (uint256 _contentID) {
+        uint256 instrShare
+    ) internal returns (uint256 _contentID) {
         address instructor = udaoc.ownerOf(tokenId);
 
         /// @dev Transfer UDAO payment from buyer to contract
@@ -616,42 +619,44 @@ abstract contract ContentManager is BasePlatform {
 
     /// @notice Distributes platform revenue to platform roles and transfers governance role shares to the governance treasury.
     function _transferPlatformCutstoGovernance() internal {
-        /// @dev if there is any revenue in contentCutPool which is completed the refund window, distribute role shares to roles and transfer governance role shares to governance treasury
-        if (contentCutPool > contentCutRefundedBalance) {
-            /// @dev reduce the refunded and blocked balance from the content cut pool
-            uint positiveContentCutPool = contentCutPool -
-                contentCutRefundedBalance;
-            contentCutPool = 0;
-            contentCutRefundedBalance = 0;
-            emit ContentCutPoolUpdated(contentCutPool);
+        if (block.timestamp > precautionWithdrawalTimestamp) {
+            /// @dev if there is any revenue in contentCutPool which is completed the refund window, distribute role shares to roles and transfer governance role shares to governance treasury
+            if (contentCutPool > contentCutRefundedBalance) {
+                /// @dev reduce the refunded and blocked balance from the content cut pool
+                uint positiveContentCutPool = contentCutPool -
+                    contentCutRefundedBalance;
+                contentCutPool = 0;
+                contentCutRefundedBalance = 0;
+                emit ContentCutPoolUpdated(contentCutPool);
 
-            /// @dev Distribute the content cut shares to platform roles
-            _distributeContentCutShares(positiveContentCutPool);
-            emit RoleBalancesUpdated(
-                foundationBalance,
-                jurorBalance,
-                validatorsBalance,
-                governanceBalance
-            );
-        }
+                /// @dev Distribute the content cut shares to platform roles
+                _distributeContentCutShares(positiveContentCutPool);
+                emit RoleBalancesUpdated(
+                    foundationBalance,
+                    jurorBalance,
+                    validatorsBalance,
+                    governanceBalance
+                );
+            }
 
-        /// @dev if there is any revenue in coachingCutPool which is completed the refund window, distribute role shares to roles and transfer governance role shares to governance treasury
-        if (coachingCutPool > coachingCutRefundedBalance) {
-            /// @dev reduce the refunded and blocked balance from the coaching cut pool
-            uint positiveCoachingCutPool = coachingCutPool -
-                coachingCutRefundedBalance;
-            coachingCutPool = 0;
-            coachingCutRefundedBalance = 0;
-            emit CoachingCutPoolUpdated(coachingCutPool);
+            /// @dev if there is any revenue in coachingCutPool which is completed the refund window, distribute role shares to roles and transfer governance role shares to governance treasury
+            if (coachingCutPool > coachingCutRefundedBalance) {
+                /// @dev reduce the refunded and blocked balance from the coaching cut pool
+                uint positiveCoachingCutPool = coachingCutPool -
+                    coachingCutRefundedBalance;
+                coachingCutPool = 0;
+                coachingCutRefundedBalance = 0;
+                emit CoachingCutPoolUpdated(coachingCutPool);
 
-            /// @dev Distribute the coaching cut shares to platform roles
-            _distributeCoachingCutShares(positiveCoachingCutPool);
-            emit RoleBalancesUpdated(
-                foundationBalance,
-                jurorBalance,
-                validatorsBalance,
-                governanceBalance
-            );
+                /// @dev Distribute the coaching cut shares to platform roles
+                _distributeCoachingCutShares(positiveCoachingCutPool);
+                emit RoleBalancesUpdated(
+                    foundationBalance,
+                    jurorBalance,
+                    validatorsBalance,
+                    governanceBalance
+                );
+            }
         }
 
         /// @dev Transfer the governance role shares to the governance treasury if governance treasury is online
