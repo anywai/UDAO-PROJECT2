@@ -143,8 +143,9 @@ contract PlatformTreasury is ContentManager {
     function getWithdrawableBalanceInstructor(
         address _inst
     ) public view returns (uint, uint) {
-        uint instPositiveBalanceOnLock = 0;
-        uint instCurrentPositiveBalance = instBalance[_inst];
+        uint instPositiveBalanceOnLock;
+        uint instCurrentPositiveBalance;
+        instCurrentPositiveBalance += instBalance[_inst];
 
         if (prevInstRefundWindow[_inst] == refundWindow) {
             /// @dev this is the timestamp of the transaction in days
