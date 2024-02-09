@@ -619,7 +619,7 @@ abstract contract ContentManager is BasePlatform {
 
     /// @notice Distributes platform revenue to platform roles and transfers governance role shares to the governance treasury.
     function _transferPlatformCutstoGovernance() internal {
-        if (block.timestamp > precautionWithdrawalTimestamp) {
+        if (block.timestamp >= precautionWithdrawalTimestamp) {
             /// @dev if there is any revenue in contentCutPool which is completed the refund window, distribute role shares to roles and transfer governance role shares to governance treasury
             if (contentCutPool > contentCutRefundedBalance) {
                 /// @dev reduce the refunded and blocked balance from the content cut pool
@@ -726,7 +726,7 @@ abstract contract ContentManager is BasePlatform {
         CoachingSale storage refundItem = coachSales[_refCoachSaleID];
         /// @dev a sale only be refunded in the refund window period after the purchase date
         require(
-            refundItem.refundablePeriod >= (block.timestamp / 86400),
+            refundItem.refundablePeriod > (block.timestamp / 86400),
             "Refund period over you cant refund"
         );
         if (msg.sender == refundItem.payee) {
@@ -763,7 +763,7 @@ abstract contract ContentManager is BasePlatform {
         CoachingSale storage refundItem = coachSales[voucher.saleID];
         /// @dev a sale only be refunded in the refund window period after the purchase date
         require(
-            refundItem.refundablePeriod >= (block.timestamp / 86400),
+            refundItem.refundablePeriod > (block.timestamp / 86400),
             "Refund period over you cant refund"
         );
         /// @dev a sale can only be refunded once
@@ -792,7 +792,7 @@ abstract contract ContentManager is BasePlatform {
         ContentSale storage refundItem = contentSales[voucher.saleID];
         /// @dev a sale only be refunded in the refund window period after the purchase date
         require(
-            refundItem.refundablePeriod >= (block.timestamp / 86400),
+            refundItem.refundablePeriod > (block.timestamp / 86400),
             "refund period over you cant refund"
         );
         /// @dev a sale can only be refunded once
