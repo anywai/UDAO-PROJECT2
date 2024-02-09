@@ -102,9 +102,7 @@ async function makeContentPurchase(
     contentPurchaseVouchers.push(contentPurchaseVoucher);
   }
   /// Buy content
-  const purchaseTx = await contractPlatformTreasury
-    .connect(contentBuyer)
-    .buyContent(contentPurchaseVouchers);
+  const purchaseTx = await contractPlatformTreasury.connect(contentBuyer).buyContent(contentPurchaseVouchers);
   const queueTxReceipt = await purchaseTx.wait();
   const queueTxEvent = queueTxReceipt.events.find((e) => e.event == "ContentBought");
   const contentSaleID = queueTxEvent.args[2];
@@ -651,7 +649,7 @@ describe("Platform Treasury Contract - Content", function () {
       validUntil,
       redeemers,
       giftReceiver,
-      userIds,
+      userIds
     );
     const balanceBefore = balances[0];
     const balanceAfter = balances[1];
@@ -682,9 +680,9 @@ describe("Platform Treasury Contract - Content", function () {
       contentPurchaseVouchers.push(contentPurchaseVoucher);
     }
     /// Buy content
-    await expect(
-      contractPlatformTreasury.connect(contentBuyer1).buyContent(contentPurchaseVouchers)
-    ).to.revertedWith("Part is already owned!");
+    await expect(contractPlatformTreasury.connect(contentBuyer1).buyContent(contentPurchaseVouchers)).to.revertedWith(
+      "Part is already owned!"
+    );
   });
 
   it("Should fail to buy a content if caller is not redeemer", async function () {
@@ -763,9 +761,9 @@ describe("Platform Treasury Contract - Content", function () {
       contentPurchaseVouchers.push(contentPurchaseVoucher);
     }
     /// Buy content
-    await expect(
-      contractPlatformTreasury.connect(contentBuyer2).buyContent(contentPurchaseVouchers)
-    ).to.revertedWith("You are not redeemer");
+    await expect(contractPlatformTreasury.connect(contentBuyer2).buyContent(contentPurchaseVouchers)).to.revertedWith(
+      "You are not redeemer"
+    );
   });
 
   it("Should fail to buy a content if content does not exists", async function () {
@@ -808,9 +806,9 @@ describe("Platform Treasury Contract - Content", function () {
       contentPurchaseVouchers.push(contentPurchaseVoucher);
     }
     /// Try to purchase the content
-    await expect(
-      contractPlatformTreasury.connect(contentBuyer1).buyContent(contentPurchaseVouchers)
-    ).to.revertedWith("Content not exist!");
+    await expect(contractPlatformTreasury.connect(contentBuyer1).buyContent(contentPurchaseVouchers)).to.revertedWith(
+      "Content not exist!"
+    );
   });
 
   it("Should fail to buy content if buyer is banned", async function () {
@@ -864,9 +862,9 @@ describe("Platform Treasury Contract - Content", function () {
       contentPurchaseVouchers.push(contentPurchaseVoucher);
     }
     /// Try to purchase the content with banned buyer
-    await expect(
-      contractPlatformTreasury.connect(contentBuyer1).buyContent(contentPurchaseVouchers)
-    ).to.revertedWith("You are banned");
+    await expect(contractPlatformTreasury.connect(contentBuyer1).buyContent(contentPurchaseVouchers)).to.revertedWith(
+      "You are banned"
+    );
   });
 
   it("Should fail to buy content if buyer is not kyced", async function () {
@@ -920,9 +918,9 @@ describe("Platform Treasury Contract - Content", function () {
       contentPurchaseVouchers.push(contentPurchaseVoucher);
     }
     /// Try to purchase the content with banned buyer
-    await expect(
-      contractPlatformTreasury.connect(contentBuyer1).buyContent(contentPurchaseVouchers)
-    ).to.revertedWith("You are not KYCed");
+    await expect(contractPlatformTreasury.connect(contentBuyer1).buyContent(contentPurchaseVouchers)).to.revertedWith(
+      "You are not KYCed"
+    );
   });
 
   it("Should fail to buy content if instructer is banned and isSelleble set to false", async function () {
@@ -979,9 +977,9 @@ describe("Platform Treasury Contract - Content", function () {
       contentPurchaseVouchers.push(contentPurchaseVoucher);
     }
     /// Try to purchase the content with banned instructor
-    await expect(
-      contractPlatformTreasury.connect(contentBuyer1).buyContent(contentPurchaseVouchers)
-    ).to.revertedWith("Not sellable");
+    await expect(contractPlatformTreasury.connect(contentBuyer1).buyContent(contentPurchaseVouchers)).to.revertedWith(
+      "Not sellable"
+    );
   });
 
   it("Should allow to buy content if instructer is banned and isSelleble set to true", async function () {
@@ -1106,7 +1104,7 @@ describe("Platform Treasury Contract - Content", function () {
     /// Check if the buyer paid the correct amount
     expect(balanceBefore.sub(balanceAfter)).to.equal(priceToPay);
     /// Try to buy the same content part again
-    
+
     await expect(
       makeContentPurchase(
         contractPlatformTreasury,
@@ -1350,7 +1348,7 @@ describe("Platform Treasury Contract - Content", function () {
     const purchasedParts = [parts];
     const redeemers = [contentBuyer1.address];
     const giftReceiver = [contentBuyer3.address];
-    
+
     const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
 
     const fullContentPurchase = [true];
@@ -1371,7 +1369,7 @@ describe("Platform Treasury Contract - Content", function () {
         validUntil,
         redeemers,
         giftReceiver,
-        userIds,
+        userIds
       )
     ).to.revertedWith("Gift receiver is banned");
   });
@@ -1580,7 +1578,6 @@ describe("Platform Treasury Contract - Content", function () {
     const purchasedParts2 = [parts2];
     const redeemers2 = [contentBuyer1.address];
     const giftReceiver2 = [ethers.constants.AddressZero];
-    
 
     const fullContentPurchase2 = [true];
     const pricesToPay2 = [ethers.utils.parseEther("1")];
@@ -2384,6 +2381,7 @@ describe("Platform Treasury Contract - Content", function () {
     await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine2.toString(16)}`, "0x2"]);
 
     // change refund window to 7 days
+    const oldRefundWindow = refundWindowDaysNumber;
     const newRefundWindow = 7;
     await contractPlatformTreasury.connect(backend).changeRefundWindow(newRefundWindow);
 
@@ -2395,7 +2393,7 @@ describe("Platform Treasury Contract - Content", function () {
     expect(await contractPlatformTreasury.foundationBalance()).to.equal(contentFoundCut1);
 
     /// @dev Skip new refund window to complete refund window for seccond purchase
-    const numBlocksToMine3 = Math.ceil((newRefundWindow * 24 * 60 * 60) / 2);
+    const numBlocksToMine3 = Math.ceil((oldRefundWindow * 24 * 60 * 60) / 2);
     await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine3.toString(16)}`, "0x2"]);
     const totalPrice2 = pricesToPay2[0];
     const contentFoundCut2 = totalPrice2.mul(_contentFoundCut).div(100000);
