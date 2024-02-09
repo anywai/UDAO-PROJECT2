@@ -363,7 +363,9 @@ describe("Platform Treasury Updated General", function () {
     // wait end of previous refund window to handle precaution withdraw time
     const numBlocksToMine20 = Math.ceil((firstRefundWindow * 24 * 60 * 60) / 2);
     await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine20.toString(16)}`, "0x2"]);
-    console.log("----End of precaution withdrawal period 20day----");
+    if (consoleLogOn) {
+      console.log("----End of precaution withdrawal period 20day----");
+    }
 
     //Empty space
     if (consoleLogOn) {
@@ -865,7 +867,9 @@ describe("Platform Treasury Updated General", function () {
     // wait end of previous refund window to handle precaution withdraw time
     const numBlocksToMine20 = Math.ceil((firstRefundWindow * 24 * 60 * 60) / 2);
     await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine20.toString(16)}`, "0x2"]);
-    console.log("----End of precaution withdrawal period 20day----");
+    if (consoleLogOn) {
+      console.log("----End of precaution withdrawal period 20day----");
+    }
 
     //Empty space
     if (consoleLogOn) {
@@ -1215,7 +1219,9 @@ describe("Platform Treasury Updated General", function () {
     // wait end of previous refund window to handle precaution withdraw time
     const numBlocksToMine30 = Math.ceil((5 * 24 * 60 * 60) / 2);
     await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine30.toString(16)}`, "0x2"]);
-    console.log("----End of precaution withdrawal period 5day----");
+    if (consoleLogOn) {
+      console.log("----End of precaution withdrawal period 5day----");
+    }
 
     refundWindow = (await contractPlatformTreasury.refundWindow()).toNumber();
     if (consoleLogOn) {
