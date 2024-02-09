@@ -59,6 +59,13 @@ contract PlatformTreasury is ContentManager {
             transactionTime,
             transactionLBIndex
         );
+        /// @dev update instructor balance and instructor locked balances,
+        _updateInstructorBalances(
+            0, //instShare=0 due to there is no new revenue on this transaction
+            msg.sender,
+            transactionTime,
+            transactionLBIndex
+        );
         /// @dev if there is any revenue in platform cut pools, distribute role shares to roles and transfer governance role shares to governance treasury
         _transferPlatformCutstoGovernance();
     }
