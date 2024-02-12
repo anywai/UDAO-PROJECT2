@@ -342,7 +342,7 @@ async function makeCoachingPurchase(
 }
 
 describe("Platform Treasury Updated General", function () {
-  it("Should create a record in the correct index of the instructor payment", async function () {
+  it("Should put the instructor earnings in the correct index with correct amount", async function () {
     const consoleLogOn = true;
     await reDeploy();
     /// KYC content creator and content buyers
@@ -440,6 +440,8 @@ describe("Platform Treasury Updated General", function () {
     // Use total cut to get what instructor should receive and check if it is recorded in the correct index
     expect(instructorLockedBalanceArrayBN[currentBlockTimestampIndex]).to.equal(ethers.utils.formatEther(pricesToPay[0].sub(totalCut)));
   });
+  /// TODO BELOW TEST
+  it("Should put the instructor refunds in the correct index with correct amount", async function () {});
   it("Should instructor earn correct amount of UDAO from sales", async function () {
     const consoleLogOn = false;
     await reDeploy();
