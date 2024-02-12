@@ -342,6 +342,89 @@ async function makeCoachingPurchase(
 }
 
 describe("Platform Treasury Updated General", function () {
+  it("Should create a record in the correct index of the instructor payment", async function () {
+    const consoleLogOn = true;
+    await reDeploy();
+    /// KYC content creator and content buyers
+    await contractRoleManager.setKYC(contentCreator.address, true);
+    await contractRoleManager.setKYC(contentBuyer1.address, true);
+    await contractRoleManager.setKYC(contentBuyer2.address, true);
+    await contractRoleManager.setKYC(contentBuyer3.address, true);
+    await contractRoleManager.setKYC(validator1.address, true);
+    await contractRoleManager.setKYC(validator2.address, true);
+    await contractRoleManager.setKYC(validator3.address, true);
+    await contractRoleManager.setKYC(validator4.address, true);
+    await contractRoleManager.setKYC(validator5.address, true);
+
+    // Define the instructer balance variables
+    let currentBlockTimestampIndex;
+
+    /// Create content
+    // Create content
+    const contentParts = [0, 1];
+    const redeemer = contentCreator;
+    // Create content voucher
+    const createContentVoucherSample = await createContentVoucher(
+      contractUDAOContent,
+      backend,
+      contentCreator,
+      redeemer,
+      contentParts,
+      (redeemType = 1),
+      (validationScore = 1)
+    );
+    // Create content with voucher
+    await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample))
+      .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
+      .withArgs("0x0000000000000000000000000000000000000000", contentCreator.address, 1);
+
+    // common parts in the purchase voucher
+    const tokenIds = [1];
+    const purchasedParts = [[1]];
+    const giftReceiver = [ethers.constants.AddressZero];
+    const fullContentPurchase = [false];
+    const pricesToPay = [ethers.utils.parseEther("1")];
+    const validUntil = Date.now() + 999999999;
+    const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
+
+    // Make a content purchase
+    const redeemers = [contentBuyer1.address];
+    await makeContentPurchase(
+      contractPlatformTreasury,
+      contractVoucherVerifier,
+      contentBuyer1,
+      contractRoleManager,
+      contractUDAO,
+      tokenIds,
+      purchasedParts,
+      pricesToPay,
+      fullContentPurchase,
+      validUntil,
+      redeemers,
+      giftReceiver,
+      userIds
+    );
+
+    // Get current refund window
+    const refundWindow = await contractPlatformTreasury.refundWindow();
+
+    // Get the instructer balance array before withdrawal
+    let instructorLockedBalanceArrayBN = [];
+    for (let i = 0; i < refundWindow; i++) {
+      instructorLockedBalanceArrayBN[i] = ethers.utils.formatEther(
+        await contractPlatformTreasury.instLockedBalance(contentCreator.address, i)
+      );
+      console.log(instructorLockedBalanceArrayBN[i]);
+    }
+
+    // Get current blocks timestamp
+    currentBlockTimestampIndex = Math.floor(
+      ((await hre.ethers.provider.getBlock()).timestamp % (refundWindow * 86400)) / 86400
+    );
+    console.log("index", currentBlockTimestampIndex);
+    console.log(instructorLockedBalanceArrayBN[currentBlockTimestampIndex]);
+    expect(instructorLockedBalanceArrayBN[currentBlockTimestampIndex]).to.equal(0.0);
+  });
   it("Should instructor earn correct amount of UDAO from sales", async function () {
     const consoleLogOn = false;
     await reDeploy();
@@ -1794,8 +1877,11 @@ describe("Platform Treasury Updated General", function () {
       console.log();
     }
   });
+
   it("Should allow refund of a content based on the old refund window", async function () {});
+
   it("Should not allow refund of a content based on the new refund window", async function () {});
+
   it("Should not allow refund if refund window is increased after a sale and old refund window is already reached", async function () {});
   it("Should not allow instructor to withdraw if refund window is reduced after a sale and old refund window is not reached", async function () {});
   it("Should allow instructor to withdraw if refund window is reduced after a sale and old refund window is reached", async function () {});
