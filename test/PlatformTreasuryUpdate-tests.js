@@ -414,16 +414,31 @@ describe("Platform Treasury Updated General", function () {
       instructorLockedBalanceArrayBN[i] = ethers.utils.formatEther(
         await contractPlatformTreasury.instLockedBalance(contentCreator.address, i)
       );
-      console.log(instructorLockedBalanceArrayBN[i]);
     }
 
     // Get current blocks timestamp
     currentBlockTimestampIndex = Math.floor(
       ((await hre.ethers.provider.getBlock()).timestamp % (refundWindow * 86400)) / 86400
     );
-    console.log("index", currentBlockTimestampIndex);
-    console.log(instructorLockedBalanceArrayBN[currentBlockTimestampIndex]);
-    expect(instructorLockedBalanceArrayBN[currentBlockTimestampIndex]).to.equal(0.0);
+    /// @dev Calculate amount of instructor should have receive
+    // Get total price
+    const totalPrice = pricesToPay[0];
+    // Get contentFoundCut
+    const _contentFoundCut = await contractPlatformTreasury.contentFoundCut()
+    const contentFoundCut = totalPrice.mul(_contentFoundCut).div(100000);
+    // Get contentGoverCut
+    const _contentGoverCut = await contractPlatformTreasury.contentGoverCut()
+    const contentGoverCut = totalPrice.mul(_contentGoverCut).div(100000);
+    // Get contentJurorCut
+    const _contentJurorCut = await contractPlatformTreasury.contentJurorCut()
+    const contentJurorCut = totalPrice.mul(_contentJurorCut).div(100000);
+    // Get contentValidCut
+    const _contentValidCut = await contractPlatformTreasury.contentValidCut()
+    const contentValidCut = totalPrice.mul(_contentValidCut).div(100000);
+    // Get total cut
+    const totalCut = contentGoverCut.add(contentJurorCut).add(contentValidCut).add(contentFoundCut);
+    // Use total cut to get what instructor should receive and check if it is recorded in the correct index
+    expect(instructorLockedBalanceArrayBN[currentBlockTimestampIndex]).to.equal(ethers.utils.formatEther(pricesToPay[0].sub(totalCut)));
   });
   it("Should instructor earn correct amount of UDAO from sales", async function () {
     const consoleLogOn = false;
