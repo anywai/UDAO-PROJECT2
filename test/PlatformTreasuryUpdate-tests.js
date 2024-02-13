@@ -424,21 +424,23 @@ describe("Platform Treasury Updated General", function () {
     // Get total price
     const totalPrice = pricesToPay[0];
     // Get contentFoundCut
-    const _contentFoundCut = await contractPlatformTreasury.contentFoundCut()
+    const _contentFoundCut = await contractPlatformTreasury.contentFoundCut();
     const contentFoundCut = totalPrice.mul(_contentFoundCut).div(100000);
     // Get contentGoverCut
-    const _contentGoverCut = await contractPlatformTreasury.contentGoverCut()
+    const _contentGoverCut = await contractPlatformTreasury.contentGoverCut();
     const contentGoverCut = totalPrice.mul(_contentGoverCut).div(100000);
     // Get contentJurorCut
-    const _contentJurorCut = await contractPlatformTreasury.contentJurorCut()
+    const _contentJurorCut = await contractPlatformTreasury.contentJurorCut();
     const contentJurorCut = totalPrice.mul(_contentJurorCut).div(100000);
     // Get contentValidCut
-    const _contentValidCut = await contractPlatformTreasury.contentValidCut()
+    const _contentValidCut = await contractPlatformTreasury.contentValidCut();
     const contentValidCut = totalPrice.mul(_contentValidCut).div(100000);
     // Get total cut
     const totalCut = contentGoverCut.add(contentJurorCut).add(contentValidCut).add(contentFoundCut);
     // Use total cut to get what instructor should receive and check if it is recorded in the correct index
-    expect(instructorLockedBalanceArrayBN[currentBlockTimestampIndex]).to.equal(ethers.utils.formatEther(pricesToPay[0].sub(totalCut)));
+    expect(instructorLockedBalanceArrayBN[currentBlockTimestampIndex]).to.equal(
+      ethers.utils.formatEther(pricesToPay[0].sub(totalCut))
+    );
   });
   it("Should put the instructor's 2nd sale that happened 1 day after the 1st sale in the correct index", async function () {
     const consoleLogOn = true;
@@ -539,21 +541,23 @@ describe("Platform Treasury Updated General", function () {
     // Get total price
     const totalPrice = pricesToPay[0];
     // Get contentFoundCut
-    const _contentFoundCut = await contractPlatformTreasury.contentFoundCut()
+    const _contentFoundCut = await contractPlatformTreasury.contentFoundCut();
     const contentFoundCut = totalPrice.mul(_contentFoundCut).div(100000);
     // Get contentGoverCut
-    const _contentGoverCut = await contractPlatformTreasury.contentGoverCut()
+    const _contentGoverCut = await contractPlatformTreasury.contentGoverCut();
     const contentGoverCut = totalPrice.mul(_contentGoverCut).div(100000);
     // Get contentJurorCut
-    const _contentJurorCut = await contractPlatformTreasury.contentJurorCut()
+    const _contentJurorCut = await contractPlatformTreasury.contentJurorCut();
     const contentJurorCut = totalPrice.mul(_contentJurorCut).div(100000);
     // Get contentValidCut
-    const _contentValidCut = await contractPlatformTreasury.contentValidCut()
+    const _contentValidCut = await contractPlatformTreasury.contentValidCut();
     const contentValidCut = totalPrice.mul(_contentValidCut).div(100000);
     // Get total cut
     const totalCut = contentGoverCut.add(contentJurorCut).add(contentValidCut).add(contentFoundCut);
     // Use total cut to get what instructor should receive and check if it is recorded in the correct index
-    expect(instructorLockedBalanceArrayBN[currentBlockTimestampIndex]).to.equal(ethers.utils.formatEther(pricesToPay[0].sub(totalCut)));
+    expect(instructorLockedBalanceArrayBN[currentBlockTimestampIndex]).to.equal(
+      ethers.utils.formatEther(pricesToPay[0].sub(totalCut))
+    );
     // skip 1 day
     const numBlocksToMine0 = Math.ceil((1 * 24 * 60 * 60) / 2);
     await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine0.toString(16)}`, "0x2"]);
@@ -561,7 +565,6 @@ describe("Platform Treasury Updated General", function () {
     // common parts in the purchase voucher
     const tokenIds2 = [2];
     const pricesToPay2 = [ethers.utils.parseEther("2")];
-
 
     // Make a content purchase
     await makeContentPurchase(
@@ -605,7 +608,9 @@ describe("Platform Treasury Updated General", function () {
     // Get total cut
     const totalCut2 = contentGoverCut2.add(contentJurorCut2).add(contentValidCut2).add(contentFoundCut2);
     // Use total cut to get what instructor should receive and check if it is recorded in the correct index
-    expect(instructorLockedBalanceArrayBN2[currentBlockTimestampIndex]).to.equal(ethers.utils.formatEther(pricesToPay2[0].sub(totalCut2)));
+    expect(instructorLockedBalanceArrayBN2[currentBlockTimestampIndex]).to.equal(
+      ethers.utils.formatEther(pricesToPay2[0].sub(totalCut2))
+    );
   });
   it("Should put the instructor's 3rd sale that happened 1 day after the 2nd sale in the correct index", async function () {
     const consoleLogOn = true;
@@ -723,21 +728,23 @@ describe("Platform Treasury Updated General", function () {
     // Get total price
     const totalPrice = pricesToPay[0];
     // Get contentFoundCut
-    const _contentFoundCut = await contractPlatformTreasury.contentFoundCut()
+    const _contentFoundCut = await contractPlatformTreasury.contentFoundCut();
     const contentFoundCut = totalPrice.mul(_contentFoundCut).div(100000);
     // Get contentGoverCut
-    const _contentGoverCut = await contractPlatformTreasury.contentGoverCut()
+    const _contentGoverCut = await contractPlatformTreasury.contentGoverCut();
     const contentGoverCut = totalPrice.mul(_contentGoverCut).div(100000);
     // Get contentJurorCut
-    const _contentJurorCut = await contractPlatformTreasury.contentJurorCut()
+    const _contentJurorCut = await contractPlatformTreasury.contentJurorCut();
     const contentJurorCut = totalPrice.mul(_contentJurorCut).div(100000);
     // Get contentValidCut
-    const _contentValidCut = await contractPlatformTreasury.contentValidCut()
+    const _contentValidCut = await contractPlatformTreasury.contentValidCut();
     const contentValidCut = totalPrice.mul(_contentValidCut).div(100000);
     // Get total cut
     const totalCut = contentGoverCut.add(contentJurorCut).add(contentValidCut).add(contentFoundCut);
     // Use total cut to get what instructor should receive and check if it is recorded in the correct index
-    expect(instructorLockedBalanceArrayBN[currentBlockTimestampIndex]).to.equal(ethers.utils.formatEther(pricesToPay[0].sub(totalCut)));
+    expect(instructorLockedBalanceArrayBN[currentBlockTimestampIndex]).to.equal(
+      ethers.utils.formatEther(pricesToPay[0].sub(totalCut))
+    );
     // skip 1 day
     const numBlocksToMine0 = Math.ceil((1 * 24 * 60 * 60) / 2);
     await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine0.toString(16)}`, "0x2"]);
@@ -788,7 +795,9 @@ describe("Platform Treasury Updated General", function () {
     // Get total cut
     const totalCut2 = contentGoverCut2.add(contentJurorCut2).add(contentValidCut2).add(contentFoundCut2);
     // Use total cut to get what instructor should receive and check if it is recorded in the correct index
-    expect(instructorLockedBalanceArrayBN2[currentBlockTimestampIndex]).to.equal(ethers.utils.formatEther(pricesToPay2[0].sub(totalCut2)));
+    expect(instructorLockedBalanceArrayBN2[currentBlockTimestampIndex]).to.equal(
+      ethers.utils.formatEther(pricesToPay2[0].sub(totalCut2))
+    );
     // skip 1 day
     const numBlocksToMine1 = Math.ceil((1 * 24 * 60 * 60) / 2);
     await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine1.toString(16)}`, "0x2"]);
@@ -839,7 +848,9 @@ describe("Platform Treasury Updated General", function () {
     // Get total cut
     const totalCut3 = contentGoverCut3.add(contentJurorCut3).add(contentValidCut3).add(contentFoundCut3);
     // Use total cut to get what instructor should receive and check if it is recorded in the correct index
-    expect(instructorLockedBalanceArrayBN3[currentBlockTimestampIndex]).to.equal(ethers.utils.formatEther(pricesToPay3[0].sub(totalCut3)));
+    expect(instructorLockedBalanceArrayBN3[currentBlockTimestampIndex]).to.equal(
+      ethers.utils.formatEther(pricesToPay3[0].sub(totalCut3))
+    );
   });
 
   it("Should put the instructor's 1st sale into the correct index even after a refund window change and before precaution withdrawal period", async function () {
@@ -877,7 +888,7 @@ describe("Platform Treasury Updated General", function () {
     await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample))
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs("0x0000000000000000000000000000000000000000", contentCreator.address, 1);
-    
+
     /// @dev Change the refund window to 5 days
     await contractPlatformTreasury.connect(backend).changeRefundWindow(5);
     // common parts in the purchase voucher
@@ -906,7 +917,7 @@ describe("Platform Treasury Updated General", function () {
       giftReceiver,
       userIds
     );
-    
+
     // Get current refund window
     const refundWindow = await contractPlatformTreasury.refundWindow();
 
@@ -917,6 +928,11 @@ describe("Platform Treasury Updated General", function () {
         await contractPlatformTreasury.instLockedBalance(contentCreator.address, i)
       );
     }
+    // Get the content locked pool array before withdrawal
+    let contentLockedBalanceArrayBN = [];
+    for (let i = 0; i < refundWindow; i++) {
+      contentLockedBalanceArrayBN[i] = ethers.utils.formatEther(await contractPlatformTreasury.contentCutLockedPool(i));
+    }
 
     // Get current blocks timestamp
     currentBlockTimestampIndex = Math.floor(
@@ -926,24 +942,446 @@ describe("Platform Treasury Updated General", function () {
     // Get total price
     const totalPrice = pricesToPay[0];
     // Get contentFoundCut
-    const _contentFoundCut = await contractPlatformTreasury.contentFoundCut()
+    const _contentFoundCut = await contractPlatformTreasury.contentFoundCut();
     const contentFoundCut = totalPrice.mul(_contentFoundCut).div(100000);
     // Get contentGoverCut
-    const _contentGoverCut = await contractPlatformTreasury.contentGoverCut()
+    const _contentGoverCut = await contractPlatformTreasury.contentGoverCut();
     const contentGoverCut = totalPrice.mul(_contentGoverCut).div(100000);
     // Get contentJurorCut
-    const _contentJurorCut = await contractPlatformTreasury.contentJurorCut()
+    const _contentJurorCut = await contractPlatformTreasury.contentJurorCut();
     const contentJurorCut = totalPrice.mul(_contentJurorCut).div(100000);
     // Get contentValidCut
-    const _contentValidCut = await contractPlatformTreasury.contentValidCut()
+    const _contentValidCut = await contractPlatformTreasury.contentValidCut();
     const contentValidCut = totalPrice.mul(_contentValidCut).div(100000);
     // Get total cut
     const totalCut = contentGoverCut.add(contentJurorCut).add(contentValidCut).add(contentFoundCut);
     // Use total cut to get what instructor should receive and check if it is recorded in the correct index
-    expect(instructorLockedBalanceArrayBN[currentBlockTimestampIndex]).to.equal(ethers.utils.formatEther(pricesToPay[0].sub(totalCut)));
-    console.log("1st sale:", instructorLockedBalanceArrayBN)
+    expect(instructorLockedBalanceArrayBN[currentBlockTimestampIndex]).to.equal(
+      ethers.utils.formatEther(pricesToPay[0].sub(totalCut))
+    );
+    expect(contentLockedBalanceArrayBN[currentBlockTimestampIndex]).to.equal(ethers.utils.formatEther(totalCut));
   });
+  it("Should put the instructor's 2nd sale in the correct index after a refund window change", async function () {
+    const consoleLogOn = true;
+    await reDeploy();
+    /// KYC content creator and content buyers
+    await contractRoleManager.setKYC(contentCreator.address, true);
+    await contractRoleManager.setKYC(contentBuyer1.address, true);
+    await contractRoleManager.setKYC(contentBuyer2.address, true);
+    await contractRoleManager.setKYC(contentBuyer3.address, true);
+    await contractRoleManager.setKYC(validator1.address, true);
+    await contractRoleManager.setKYC(validator2.address, true);
+    await contractRoleManager.setKYC(validator3.address, true);
+    await contractRoleManager.setKYC(validator4.address, true);
+    await contractRoleManager.setKYC(validator5.address, true);
 
+    // Define the instructer balance variables
+    let currentBlockTimestampIndex;
+
+    /// @dev Create 2 contents
+    // Create content 1
+    const contentParts = [0, 1];
+    const redeemer = contentCreator;
+    // Create content voucher
+    const createContentVoucherSample = await createContentVoucher(
+      contractUDAOContent,
+      backend,
+      contentCreator,
+      redeemer,
+      contentParts,
+      (redeemType = 1),
+      (validationScore = 1)
+    );
+    // Create content with voucher
+    await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample))
+      .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
+      .withArgs("0x0000000000000000000000000000000000000000", contentCreator.address, 1);
+    // Create content 2
+    const contentParts2 = [0, 1];
+    const redeemer2 = contentCreator;
+    // Create content voucher
+    const createContentVoucherSample2 = await createContentVoucher(
+      contractUDAOContent,
+      backend,
+      contentCreator,
+      redeemer2,
+      contentParts2,
+      (redeemType = 1),
+      (validationScore = 1)
+    );
+    // Create content with voucher
+    await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample2))
+      .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
+      .withArgs("0x0000000000000000000000000000000000000000", contentCreator.address, 2);
+
+    // common parts in the purchase voucher
+    const tokenIds = [1];
+    const purchasedParts = [[1]];
+    const giftReceiver = [ethers.constants.AddressZero];
+    const fullContentPurchase = [true];
+    const pricesToPay = [ethers.utils.parseEther("1")];
+    const validUntil = Date.now() + 999999999;
+    const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
+
+    // Make a content purchase
+    const redeemers = [contentBuyer1.address];
+    await makeContentPurchase(
+      contractPlatformTreasury,
+      contractVoucherVerifier,
+      contentBuyer1,
+      contractRoleManager,
+      contractUDAO,
+      tokenIds,
+      purchasedParts,
+      pricesToPay,
+      fullContentPurchase,
+      validUntil,
+      redeemers,
+      giftReceiver,
+      userIds
+    );
+
+    // Get current refund window
+    const refundWindow = await contractPlatformTreasury.refundWindow();
+
+    // Get the instructer balance array before withdrawal
+    let instructorLockedBalanceArrayBN = [];
+    for (let i = 0; i < refundWindow; i++) {
+      instructorLockedBalanceArrayBN[i] = ethers.utils.formatEther(
+        await contractPlatformTreasury.instLockedBalance(contentCreator.address, i)
+      );
+    }
+    // Get the content locked pool array before withdrawal
+    let contentLockedBalanceArrayBN = [];
+    for (let i = 0; i < refundWindow; i++) {
+      contentLockedBalanceArrayBN[i] = ethers.utils.formatEther(await contractPlatformTreasury.contentCutLockedPool(i));
+    }
+
+    // Get current blocks timestamp
+    currentBlockTimestampIndex = Math.floor(
+      ((await hre.ethers.provider.getBlock()).timestamp % (refundWindow * 86400)) / 86400
+    );
+    /// @dev Calculate amount of instructor should have receive
+    // Get total price
+    const totalPrice = pricesToPay[0];
+    // Get contentFoundCut
+    const _contentFoundCut = await contractPlatformTreasury.contentFoundCut();
+    const contentFoundCut = totalPrice.mul(_contentFoundCut).div(100000);
+    // Get contentGoverCut
+    const _contentGoverCut = await contractPlatformTreasury.contentGoverCut();
+    const contentGoverCut = totalPrice.mul(_contentGoverCut).div(100000);
+    // Get contentJurorCut
+    const _contentJurorCut = await contractPlatformTreasury.contentJurorCut();
+    const contentJurorCut = totalPrice.mul(_contentJurorCut).div(100000);
+    // Get contentValidCut
+    const _contentValidCut = await contractPlatformTreasury.contentValidCut();
+    const contentValidCut = totalPrice.mul(_contentValidCut).div(100000);
+    // Get total cut
+    const totalCut = contentGoverCut.add(contentJurorCut).add(contentValidCut).add(contentFoundCut);
+    // Use total cut to get what instructor should receive and check if it is recorded in the correct index
+    expect(instructorLockedBalanceArrayBN[currentBlockTimestampIndex]).to.equal(
+      ethers.utils.formatEther(pricesToPay[0].sub(totalCut))
+    );
+    expect(contentLockedBalanceArrayBN[currentBlockTimestampIndex]).to.equal(ethers.utils.formatEther(totalCut));
+    /// @dev Change the refund window to 5 days
+    await contractPlatformTreasury.connect(backend).changeRefundWindow(5);
+    // Get the current refund window
+    const refundWindow2 = await contractPlatformTreasury.refundWindow();
+    /// @dev Check the current instructer locked balance according to old refund window since it is not updated yet
+    const instructorLockedBalanceArrayBN2 = [];
+    for (let i = 0; i < refundWindow; i++) {
+      instructorLockedBalanceArrayBN2[i] = ethers.utils.formatEther(
+        await contractPlatformTreasury.instLockedBalance(contentCreator.address, i)
+      );
+    }
+    /// @dev Check the current content locked pool
+    const contentLockedBalanceArrayBN2 = [];
+    for (let i = 0; i < refundWindow2; i++) {
+      contentLockedBalanceArrayBN2[i] = ethers.utils.formatEther(
+        await contractPlatformTreasury.contentCutLockedPool(i)
+      );
+    }
+    expect(instructorLockedBalanceArrayBN2[currentBlockTimestampIndex]).to.equal(
+      ethers.utils.formatEther(pricesToPay[0].sub(totalCut))
+    );
+    // Get current blocks timestamp to check if the content cut is recorded in the correct index
+    currentBlockTimestampIndex = Math.floor(
+      ((await hre.ethers.provider.getBlock()).timestamp % (refundWindow2 * 86400)) / 86400
+    );
+    expect(contentLockedBalanceArrayBN2[currentBlockTimestampIndex]).to.equal(ethers.utils.formatEther(totalCut));
+    // Make a content purchase
+    const redeemers2 = [contentBuyer1.address];
+    const tokenIds2 = [2];
+    const pricesToPay2 = [ethers.utils.parseEther("2")];
+    await makeContentPurchase(
+      contractPlatformTreasury,
+      contractVoucherVerifier,
+      contentBuyer1,
+      contractRoleManager,
+      contractUDAO,
+      tokenIds2,
+      purchasedParts,
+      pricesToPay2,
+      fullContentPurchase,
+      validUntil,
+      redeemers2,
+      giftReceiver,
+      userIds
+    );
+
+    // Get the instructer balance array before withdrawal
+    let instructorLockedBalanceArrayBN3 = [];
+    for (let i = 0; i < refundWindow2; i++) {
+      instructorLockedBalanceArrayBN3[i] = ethers.utils.formatEther(
+        await contractPlatformTreasury.instLockedBalance(contentCreator.address, i)
+      );
+    }
+    // Get the content locked pool array before withdrawal
+    let contentLockedBalanceArrayBN3 = [];
+    for (let i = 0; i < refundWindow2; i++) {
+      contentLockedBalanceArrayBN3[i] = ethers.utils.formatEther(
+        await contractPlatformTreasury.contentCutLockedPool(i)
+      );
+    }
+    // Get current blocks timestamp to check if the content cut is recorded in the correct index
+    currentBlockTimestampIndex = Math.floor(
+      ((await hre.ethers.provider.getBlock()).timestamp % (refundWindow2 * 86400)) / 86400
+    );
+
+    /// @dev Calculate amount of instructor should have receive
+    // Get total price
+    const totalPrice2 = pricesToPay2[0];
+    // Get contentFoundCut
+    const contentFoundCut2 = totalPrice2.mul(_contentFoundCut).div(100000);
+    // Get contentGoverCut
+    const contentGoverCut2 = totalPrice2.mul(_contentGoverCut).div(100000);
+    // Get contentJurorCut
+    const contentJurorCut2 = totalPrice2.mul(_contentJurorCut).div(100000);
+    // Get contentValidCut
+    const contentValidCut2 = totalPrice2.mul(_contentValidCut).div(100000);
+    // Get total cut
+    const totalCut2 = contentGoverCut2.add(contentJurorCut2).add(contentValidCut2).add(contentFoundCut2);
+
+    expect(instructorLockedBalanceArrayBN3[currentBlockTimestampIndex]).to.equal(
+      ethers.utils.formatEther(pricesToPay2[0].sub(totalCut2).add(pricesToPay[0].sub(totalCut)))
+    );
+    expect(contentLockedBalanceArrayBN3[currentBlockTimestampIndex]).to.equal(
+      ethers.utils.formatEther(totalCut.add(totalCut2))
+    );
+  });
+  it("Should put the instructor's 2nd sale in the correct index after a refund window change and 1 day later", async function () {
+    const consoleLogOn = true;
+    await reDeploy();
+    /// KYC content creator and content buyers
+    await contractRoleManager.setKYC(contentCreator.address, true);
+    await contractRoleManager.setKYC(contentBuyer1.address, true);
+    await contractRoleManager.setKYC(contentBuyer2.address, true);
+    await contractRoleManager.setKYC(contentBuyer3.address, true);
+    await contractRoleManager.setKYC(validator1.address, true);
+    await contractRoleManager.setKYC(validator2.address, true);
+    await contractRoleManager.setKYC(validator3.address, true);
+    await contractRoleManager.setKYC(validator4.address, true);
+    await contractRoleManager.setKYC(validator5.address, true);
+
+    // Define the instructer balance variables
+    let currentBlockTimestampIndex;
+
+    /// @dev Create 2 contents
+    // Create content 1
+    const contentParts = [0, 1];
+    const redeemer = contentCreator;
+    // Create content voucher
+    const createContentVoucherSample = await createContentVoucher(
+      contractUDAOContent,
+      backend,
+      contentCreator,
+      redeemer,
+      contentParts,
+      (redeemType = 1),
+      (validationScore = 1)
+    );
+    // Create content with voucher
+    await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample))
+      .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
+      .withArgs("0x0000000000000000000000000000000000000000", contentCreator.address, 1);
+    // Create content 2
+    const contentParts2 = [0, 1];
+    const redeemer2 = contentCreator;
+    // Create content voucher
+    const createContentVoucherSample2 = await createContentVoucher(
+      contractUDAOContent,
+      backend,
+      contentCreator,
+      redeemer2,
+      contentParts2,
+      (redeemType = 1),
+      (validationScore = 1)
+    );
+    // Create content with voucher
+    await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample2))
+      .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
+      .withArgs("0x0000000000000000000000000000000000000000", contentCreator.address, 2);
+
+    // common parts in the purchase voucher
+    const tokenIds = [1];
+    const purchasedParts = [[1]];
+    const giftReceiver = [ethers.constants.AddressZero];
+    const fullContentPurchase = [true];
+    const pricesToPay = [ethers.utils.parseEther("1")];
+    const validUntil = Date.now() + 999999999;
+    const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
+
+    // Make a content purchase
+    const redeemers = [contentBuyer1.address];
+    await makeContentPurchase(
+      contractPlatformTreasury,
+      contractVoucherVerifier,
+      contentBuyer1,
+      contractRoleManager,
+      contractUDAO,
+      tokenIds,
+      purchasedParts,
+      pricesToPay,
+      fullContentPurchase,
+      validUntil,
+      redeemers,
+      giftReceiver,
+      userIds
+    );
+
+    // Get current refund window
+    const refundWindow = await contractPlatformTreasury.refundWindow();
+
+    // Get the instructer balance array before withdrawal
+    let instructorLockedBalanceArrayBN = [];
+    for (let i = 0; i < refundWindow; i++) {
+      instructorLockedBalanceArrayBN[i] = ethers.utils.formatEther(
+        await contractPlatformTreasury.instLockedBalance(contentCreator.address, i)
+      );
+    }
+    // Get the content locked pool array before withdrawal
+    let contentLockedBalanceArrayBN = [];
+    for (let i = 0; i < refundWindow; i++) {
+      contentLockedBalanceArrayBN[i] = ethers.utils.formatEther(await contractPlatformTreasury.contentCutLockedPool(i));
+    }
+
+    // Get current blocks timestamp
+    currentBlockTimestampIndex = Math.floor(
+      ((await hre.ethers.provider.getBlock()).timestamp % (refundWindow * 86400)) / 86400
+    );
+    /// @dev Calculate amount of instructor should have receive
+    // Get total price
+    const totalPrice = pricesToPay[0];
+    // Get contentFoundCut
+    const _contentFoundCut = await contractPlatformTreasury.contentFoundCut();
+    const contentFoundCut = totalPrice.mul(_contentFoundCut).div(100000);
+    // Get contentGoverCut
+    const _contentGoverCut = await contractPlatformTreasury.contentGoverCut();
+    const contentGoverCut = totalPrice.mul(_contentGoverCut).div(100000);
+    // Get contentJurorCut
+    const _contentJurorCut = await contractPlatformTreasury.contentJurorCut();
+    const contentJurorCut = totalPrice.mul(_contentJurorCut).div(100000);
+    // Get contentValidCut
+    const _contentValidCut = await contractPlatformTreasury.contentValidCut();
+    const contentValidCut = totalPrice.mul(_contentValidCut).div(100000);
+    // Get total cut
+    const totalCut = contentGoverCut.add(contentJurorCut).add(contentValidCut).add(contentFoundCut);
+    // Use total cut to get what instructor should receive and check if it is recorded in the correct index
+    expect(instructorLockedBalanceArrayBN[currentBlockTimestampIndex]).to.equal(
+      ethers.utils.formatEther(pricesToPay[0].sub(totalCut))
+    );
+    expect(contentLockedBalanceArrayBN[currentBlockTimestampIndex]).to.equal(ethers.utils.formatEther(totalCut));
+    /// @dev Change the refund window to 5 days
+    await contractPlatformTreasury.connect(backend).changeRefundWindow(5);
+    // Get the current refund window
+    const refundWindow2 = await contractPlatformTreasury.refundWindow();
+    /// @dev Check the current instructer locked balance according to old refund window since it is not updated yet
+    const instructorLockedBalanceArrayBN2 = [];
+    for (let i = 0; i < refundWindow; i++) {
+      instructorLockedBalanceArrayBN2[i] = ethers.utils.formatEther(
+        await contractPlatformTreasury.instLockedBalance(contentCreator.address, i)
+      );
+    }
+    /// @dev Check the current content locked pool
+    const contentLockedBalanceArrayBN2 = [];
+    for (let i = 0; i < refundWindow2; i++) {
+      contentLockedBalanceArrayBN2[i] = ethers.utils.formatEther(
+        await contractPlatformTreasury.contentCutLockedPool(i)
+      );
+    }
+    expect(instructorLockedBalanceArrayBN2[currentBlockTimestampIndex]).to.equal(
+      ethers.utils.formatEther(pricesToPay[0].sub(totalCut))
+    );
+
+    // Get current blocks timestamp to check if the content cut is recorded in the correct index
+    currentBlockTimestampIndex = Math.floor(
+      ((await hre.ethers.provider.getBlock()).timestamp % (refundWindow2 * 86400)) / 86400
+    );
+    expect(contentLockedBalanceArrayBN2[currentBlockTimestampIndex]).to.equal(ethers.utils.formatEther(totalCut)); //0.04
+    // Skip 1 day
+    const numBlocksToMine0 = Math.ceil((1 * 24 * 60 * 60) / 2);
+    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine0.toString(16)}`, "0x2"]);
+    // Make a content purchase
+    const redeemers2 = [contentBuyer1.address];
+    const tokenIds2 = [2];
+    const pricesToPay2 = [ethers.utils.parseEther("2")];
+    await makeContentPurchase(
+      contractPlatformTreasury,
+      contractVoucherVerifier,
+      contentBuyer1,
+      contractRoleManager,
+      contractUDAO,
+      tokenIds2,
+      purchasedParts,
+      pricesToPay2,
+      fullContentPurchase,
+      validUntil,
+      redeemers2,
+      giftReceiver,
+      userIds
+    );
+
+    // Get the instructer balance array before withdrawal
+    let instructorLockedBalanceArrayBN3 = [];
+    for (let i = 0; i < refundWindow2; i++) {
+      instructorLockedBalanceArrayBN3[i] = ethers.utils.formatEther(
+        await contractPlatformTreasury.instLockedBalance(contentCreator.address, i)
+      );
+    }
+    // Get the content locked pool array before withdrawal
+    let contentLockedBalanceArrayBN3 = [];
+    for (let i = 0; i < refundWindow2; i++) {
+      contentLockedBalanceArrayBN3[i] = ethers.utils.formatEther(
+        await contractPlatformTreasury.contentCutLockedPool(i)
+      );
+    }
+    // Get current blocks timestamp to check if the content cut is recorded in the correct index
+    currentBlockTimestampIndex = Math.floor(
+      ((await hre.ethers.provider.getBlock()).timestamp % (refundWindow2 * 86400)) / 86400
+    );
+
+    /// @dev Calculate amount of instructor should have receive
+    // Get total price
+    const totalPrice2 = pricesToPay2[0];
+    // Get contentFoundCut
+    const contentFoundCut2 = totalPrice2.mul(_contentFoundCut).div(100000);
+    // Get contentGoverCut
+    const contentGoverCut2 = totalPrice2.mul(_contentGoverCut).div(100000);
+    // Get contentJurorCut
+    const contentJurorCut2 = totalPrice2.mul(_contentJurorCut).div(100000);
+    // Get contentValidCut
+    const contentValidCut2 = totalPrice2.mul(_contentValidCut).div(100000);
+    // Get total cut
+    const totalCut2 = contentGoverCut2.add(contentJurorCut2).add(contentValidCut2).add(contentFoundCut2);
+    expect(instructorLockedBalanceArrayBN3[currentBlockTimestampIndex]).to.equal(
+      ethers.utils.formatEther(pricesToPay2[0].sub(totalCut2).add(pricesToPay[0].sub(totalCut)))
+    );
+    /// @dev Cuts are not added together since the 2nd sale is 1 day later
+    expect(contentLockedBalanceArrayBN3[currentBlockTimestampIndex]).to.equal(ethers.utils.formatEther(totalCut2));
+    const lastcurrentBlockTimestampIndex =
+      (currentBlockTimestampIndex - 1 + refundWindow2.toNumber()) % refundWindow2.toNumber();
+    expect(contentLockedBalanceArrayBN3[lastcurrentBlockTimestampIndex]).to.equal(ethers.utils.formatEther(totalCut));
+  });
   it("Should instructor earn correct amount of UDAO from sales", async function () {
     const consoleLogOn = false;
     await reDeploy();
