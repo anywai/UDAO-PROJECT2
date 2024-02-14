@@ -1382,6 +1382,246 @@ describe("Platform Treasury Updated General", function () {
       (currentBlockTimestampIndex - 1 + refundWindow2.toNumber()) % refundWindow2.toNumber();
     expect(contentLockedBalanceArrayBN3[lastcurrentBlockTimestampIndex]).to.equal(ethers.utils.formatEther(totalCut));
   });
+  it("Should not allow anyone to withdraw after a refund window change and before precaution withdrawal timestamp", async function () {
+    const consoleLogOn = true;
+    await reDeploy();
+    /// KYC content creator and content buyers
+    await contractRoleManager.setKYC(contentCreator.address, true);
+    await contractRoleManager.setKYC(contentBuyer1.address, true);
+    await contractRoleManager.setKYC(contentBuyer2.address, true);
+    await contractRoleManager.setKYC(contentBuyer3.address, true);
+    await contractRoleManager.setKYC(validator1.address, true);
+    await contractRoleManager.setKYC(validator2.address, true);
+    await contractRoleManager.setKYC(validator3.address, true);
+    await contractRoleManager.setKYC(validator4.address, true);
+    await contractRoleManager.setKYC(validator5.address, true);
+
+    // Define the instructer balance variables
+    let currentBlockTimestampIndex;
+
+    /// @dev Create a content
+    // Create content 
+    const contentParts = [0, 1];
+    const redeemer = contentCreator;
+    // Create content voucher
+    const createContentVoucherSample = await createContentVoucher(
+      contractUDAOContent,
+      backend,
+      contentCreator,
+      redeemer,
+      contentParts,
+      (redeemType = 1),
+      (validationScore = 1)
+    );
+    // Create content with voucher
+    await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample))
+      .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
+      .withArgs("0x0000000000000000000000000000000000000000", contentCreator.address, 1);
+    
+    // Buy the content
+    const tokenIds = [1];
+    const purchasedParts = [[1]];
+    const giftReceiver = [ethers.constants.AddressZero];
+    const fullContentPurchase = [true];
+    const pricesToPay = [ethers.utils.parseEther("1")];
+    const validUntil = Date.now() + 999999999;
+    const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
+    const redeemers = [contentBuyer1.address];
+    await makeContentPurchase(
+      contractPlatformTreasury,
+      contractVoucherVerifier,
+      contentBuyer1,
+      contractRoleManager,
+      contractUDAO,
+      tokenIds,
+      purchasedParts,
+      pricesToPay,
+      fullContentPurchase,
+      validUntil,
+      redeemers,
+      giftReceiver,
+      userIds
+    );
+
+    // Get current refund window
+    const refundWindow = await contractPlatformTreasury.refundWindow();
+
+    // Get the instructer balance array before withdrawal
+    let instructorLockedBalanceArrayBN = [];
+    for (let i = 0; i < refundWindow; i++) {
+      instructorLockedBalanceArrayBN[i] = ethers.utils.formatEther(
+        await contractPlatformTreasury.instLockedBalance(contentCreator.address, i)
+      );
+    }
+    // Get the content locked pool array before withdrawal
+    let contentLockedBalanceArrayBN = [];
+    for (let i = 0; i < refundWindow; i++) {
+      contentLockedBalanceArrayBN[i] = ethers.utils.formatEther(await contractPlatformTreasury.contentCutLockedPool(i));
+    }
+
+    // Get current blocks timestamp
+    currentBlockTimestampIndex = Math.floor(
+      ((await hre.ethers.provider.getBlock()).timestamp % (refundWindow * 86400)) / 86400
+    );
+    /// @dev Calculate amount of instructor should have receive
+    // Get total price
+    const totalPrice = pricesToPay[0];
+    // Get contentFoundCut
+    const _contentFoundCut = await contractPlatformTreasury.contentFoundCut();
+    const contentFoundCut = totalPrice.mul(_contentFoundCut).div(100000);
+    // Get contentGoverCut
+    const _contentGoverCut = await contractPlatformTreasury.contentGoverCut();
+    const contentGoverCut = totalPrice.mul(_contentGoverCut).div(100000);
+    // Get contentJurorCut
+    const _contentJurorCut = await contractPlatformTreasury.contentJurorCut();
+    const contentJurorCut = totalPrice.mul(_contentJurorCut).div(100000);
+    // Get contentValidCut
+    const _contentValidCut = await contractPlatformTreasury.contentValidCut();
+    const contentValidCut = totalPrice.mul(_contentValidCut).div(100000);
+    // Get total cut
+    const totalCut = contentGoverCut.add(contentJurorCut).add(contentValidCut).add(contentFoundCut);
+    // Use total cut to get what instructor should receive and check if it is recorded in the correct index
+    expect(instructorLockedBalanceArrayBN[currentBlockTimestampIndex]).to.equal(
+      ethers.utils.formatEther(pricesToPay[0].sub(totalCut))
+    );
+    expect(contentLockedBalanceArrayBN[currentBlockTimestampIndex]).to.equal(ethers.utils.formatEther(totalCut));
+    /// @dev Change the refund window to 5 days
+    await contractPlatformTreasury.connect(backend).changeRefundWindow(5);
+    // Get the current refund window
+    const refundWindow2 = await contractPlatformTreasury.refundWindow();
+    // Get the precaution withdrawal timestamp
+    const precautionWithdrawalTimestamp = await contractPlatformTreasury.precautionWithdrawalTimestamp();
+    // Skip days by new refund window + 1
+    const numBlocksToMine0 = Math.ceil(((refundWindow2.toNumber() + 1) * 24 * 60 * 60) / 2);
+    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine0.toString(16)}`, "0x2"]);
+    // Try to withdraw as a content creator
+    await expect(contractPlatformTreasury.connect(contentCreator).withdrawInstructor()).to.be.revertedWith(
+      "Precaution withdrawal period is not over"
+    );  
+    // Try to withdraw as the foundation
+    await expect(contractPlatformTreasury.connect(backend).withdrawFoundation()).to.be.revertedWith(
+      "Precaution withdrawal period is not over"
+    );
+  });
+  it("Should allow anyone to withdraw after a refund window change and after precaution withdrawal timestamp", async function () {
+    const consoleLogOn = true;
+    await reDeploy();
+    /// KYC content creator and content buyers
+    await contractRoleManager.setKYC(contentCreator.address, true);
+    await contractRoleManager.setKYC(contentBuyer1.address, true);
+    await contractRoleManager.setKYC(contentBuyer2.address, true);
+    await contractRoleManager.setKYC(contentBuyer3.address, true);
+    await contractRoleManager.setKYC(validator1.address, true);
+    await contractRoleManager.setKYC(validator2.address, true);
+    await contractRoleManager.setKYC(validator3.address, true);
+    await contractRoleManager.setKYC(validator4.address, true);
+    await contractRoleManager.setKYC(validator5.address, true);
+
+    // Define the instructer balance variables
+    let currentBlockTimestampIndex;
+
+    /// @dev Create a content
+    // Create content 
+    const contentParts = [0, 1];
+    const redeemer = contentCreator;
+    // Create content voucher
+    const createContentVoucherSample = await createContentVoucher(
+      contractUDAOContent,
+      backend,
+      contentCreator,
+      redeemer,
+      contentParts,
+      (redeemType = 1),
+      (validationScore = 1)
+    );
+    // Create content with voucher
+    await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample))
+      .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
+      .withArgs("0x0000000000000000000000000000000000000000", contentCreator.address, 1);
+    
+    // Buy the content
+    const tokenIds = [1];
+    const purchasedParts = [[1]];
+    const giftReceiver = [ethers.constants.AddressZero];
+    const fullContentPurchase = [true];
+    const pricesToPay = [ethers.utils.parseEther("1")];
+    const validUntil = Date.now() + 999999999;
+    const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
+    const redeemers = [contentBuyer1.address];
+    await makeContentPurchase(
+      contractPlatformTreasury,
+      contractVoucherVerifier,
+      contentBuyer1,
+      contractRoleManager,
+      contractUDAO,
+      tokenIds,
+      purchasedParts,
+      pricesToPay,
+      fullContentPurchase,
+      validUntil,
+      redeemers,
+      giftReceiver,
+      userIds
+    );
+
+    // Get current refund window
+    const refundWindow = await contractPlatformTreasury.refundWindow();
+
+    // Get the instructer balance array before withdrawal
+    let instructorLockedBalanceArrayBN = [];
+    for (let i = 0; i < refundWindow; i++) {
+      instructorLockedBalanceArrayBN[i] = ethers.utils.formatEther(
+        await contractPlatformTreasury.instLockedBalance(contentCreator.address, i)
+      );
+    }
+    // Get the content locked pool array before withdrawal
+    let contentLockedBalanceArrayBN = [];
+    for (let i = 0; i < refundWindow; i++) {
+      contentLockedBalanceArrayBN[i] = ethers.utils.formatEther(await contractPlatformTreasury.contentCutLockedPool(i));
+    }
+
+    // Get current blocks timestamp
+    currentBlockTimestampIndex = Math.floor(
+      ((await hre.ethers.provider.getBlock()).timestamp % (refundWindow * 86400)) / 86400
+    );
+    /// @dev Calculate amount of instructor should have receive
+    // Get total price
+    const totalPrice = pricesToPay[0];
+    // Get contentFoundCut
+    const _contentFoundCut = await contractPlatformTreasury.contentFoundCut();
+    const contentFoundCut = totalPrice.mul(_contentFoundCut).div(100000);
+    // Get contentGoverCut
+    const _contentGoverCut = await contractPlatformTreasury.contentGoverCut();
+    const contentGoverCut = totalPrice.mul(_contentGoverCut).div(100000);
+    // Get contentJurorCut
+    const _contentJurorCut = await contractPlatformTreasury.contentJurorCut();
+    const contentJurorCut = totalPrice.mul(_contentJurorCut).div(100000);
+    // Get contentValidCut
+    const _contentValidCut = await contractPlatformTreasury.contentValidCut();
+    const contentValidCut = totalPrice.mul(_contentValidCut).div(100000);
+    // Get total cut
+    const totalCut = contentGoverCut.add(contentJurorCut).add(contentValidCut).add(contentFoundCut);
+    // Use total cut to get what instructor should receive and check if it is recorded in the correct index
+    expect(instructorLockedBalanceArrayBN[currentBlockTimestampIndex]).to.equal(
+      ethers.utils.formatEther(pricesToPay[0].sub(totalCut))
+    );
+    expect(contentLockedBalanceArrayBN[currentBlockTimestampIndex]).to.equal(ethers.utils.formatEther(totalCut));
+    /// @dev Change the refund window to 5 days
+    await contractPlatformTreasury.connect(backend).changeRefundWindow(5);
+    // Get the current refund window
+    const refundWindow2 = await contractPlatformTreasury.refundWindow();
+    // Get the precaution withdrawal timestamp
+    const precautionWithdrawalTimestamp = await contractPlatformTreasury.precautionWithdrawalTimestamp();
+    // Update instructor balance by calling updateAndTransferPlatformBalances
+    await contractPlatformTreasury.connect(contentCreator).updateAndTransferPlatformBalances();
+    // Skip days by the precautionWithdrawalTimestamp
+    await network.provider.send("evm_setNextBlockTimestamp", [precautionWithdrawalTimestamp.toNumber() + 1]);
+    await network.provider.send("evm_mine");
+    // Try to withdraw as a content creator
+    await expect(contractPlatformTreasury.connect(contentCreator).withdrawInstructor()).to.emit(contractPlatformTreasury, "InstructorWithdrawn");
+    // Try to withdraw as the foundation
+    await expect(contractPlatformTreasury.connect(foundation).withdrawFoundation()).to.emit(contractPlatformTreasury, "FoundationWithdrawn");
+  });
   it("Should instructor earn correct amount of UDAO from sales", async function () {
     const consoleLogOn = false;
     await reDeploy();
