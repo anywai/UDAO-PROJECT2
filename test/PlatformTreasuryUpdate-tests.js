@@ -177,6 +177,10 @@ async function createContentVoucher(
     validationScore
   );
 }
+async function skipDays(days) {
+  const numBlocksToMine = Math.ceil((days * 24 * 60 * 60) / 2);
+  await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine.toString(16)}`, "0x2"]);
+}
 
 async function _createContent(
   contractRoleManager,
@@ -442,6 +446,7 @@ describe("Platform Treasury Updated General", function () {
       ethers.utils.formatEther(pricesToPay[0].sub(totalCut))
     );
   });
+
   it("Should put the instructor's 2nd sale that happened 1 day after the 1st sale in the correct index", async function () {
     const consoleLogOn = true;
     await reDeploy();
@@ -612,6 +617,7 @@ describe("Platform Treasury Updated General", function () {
       ethers.utils.formatEther(pricesToPay2[0].sub(totalCut2))
     );
   });
+
   it("Should put the instructor's 3rd sale that happened 1 day after the 2nd sale in the correct index", async function () {
     const consoleLogOn = true;
     await reDeploy();
@@ -961,6 +967,7 @@ describe("Platform Treasury Updated General", function () {
     );
     expect(contentLockedBalanceArrayBN[currentBlockTimestampIndex]).to.equal(ethers.utils.formatEther(totalCut));
   });
+
   it("Should put the instructor's 2nd sale in the correct index after a refund window change", async function () {
     const consoleLogOn = true;
     await reDeploy();
@@ -1169,6 +1176,7 @@ describe("Platform Treasury Updated General", function () {
       ethers.utils.formatEther(totalCut.add(totalCut2))
     );
   });
+
   it("Should put the instructor's 2nd sale in the correct index after a refund window change and 1 day later", async function () {
     const consoleLogOn = true;
     await reDeploy();
@@ -1382,6 +1390,7 @@ describe("Platform Treasury Updated General", function () {
       (currentBlockTimestampIndex - 1 + refundWindow2.toNumber()) % refundWindow2.toNumber();
     expect(contentLockedBalanceArrayBN3[lastcurrentBlockTimestampIndex]).to.equal(ethers.utils.formatEther(totalCut));
   });
+
   it("Should not allow anyone to withdraw after a refund window change and before precaution withdrawal timestamp", async function () {
     const consoleLogOn = true;
     await reDeploy();
@@ -1400,7 +1409,7 @@ describe("Platform Treasury Updated General", function () {
     let currentBlockTimestampIndex;
 
     /// @dev Create a content
-    // Create content 
+    // Create content
     const contentParts = [0, 1];
     const redeemer = contentCreator;
     // Create content voucher
@@ -1417,7 +1426,7 @@ describe("Platform Treasury Updated General", function () {
     await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample))
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(ethers.constants.AddressZero, contentCreator.address, 1);
-    
+
     // Buy the content
     const tokenIds = [1];
     const purchasedParts = [[1]];
@@ -1497,12 +1506,13 @@ describe("Platform Treasury Updated General", function () {
     // Try to withdraw as a content creator
     await expect(contractPlatformTreasury.connect(contentCreator).withdrawInstructor()).to.be.revertedWith(
       "Precaution withdrawal period is not over"
-    );  
+    );
     // Try to withdraw as the foundation
     await expect(contractPlatformTreasury.connect(backend).withdrawFoundation()).to.be.revertedWith(
       "Precaution withdrawal period is not over"
     );
   });
+
   it("Should allow anyone to withdraw after a refund window change and after precaution withdrawal timestamp", async function () {
     const consoleLogOn = true;
     await reDeploy();
@@ -1521,7 +1531,7 @@ describe("Platform Treasury Updated General", function () {
     let currentBlockTimestampIndex;
 
     /// @dev Create a content
-    // Create content 
+    // Create content
     const contentParts = [0, 1];
     const redeemer = contentCreator;
     // Create content voucher
@@ -1538,7 +1548,7 @@ describe("Platform Treasury Updated General", function () {
     await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample))
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(ethers.constants.AddressZero, contentCreator.address, 1);
-    
+
     // Buy the content
     const tokenIds = [1];
     const purchasedParts = [[1]];
@@ -1618,11 +1628,18 @@ describe("Platform Treasury Updated General", function () {
     await network.provider.send("evm_setNextBlockTimestamp", [precautionWithdrawalTimestamp.toNumber() + 1]);
     await network.provider.send("evm_mine");
     // Try to withdraw as a content creator
-    await expect(contractPlatformTreasury.connect(contentCreator).withdrawInstructor()).to.emit(contractPlatformTreasury, "InstructorWithdrawn");
+    await expect(contractPlatformTreasury.connect(contentCreator).withdrawInstructor()).to.emit(
+      contractPlatformTreasury,
+      "InstructorWithdrawn"
+    );
     // Try to withdraw as the foundation
-    await expect(contractPlatformTreasury.connect(foundation).withdrawFoundation()).to.emit(contractPlatformTreasury, "FoundationWithdrawn");
+    await expect(contractPlatformTreasury.connect(foundation).withdrawFoundation()).to.emit(
+      contractPlatformTreasury,
+      "FoundationWithdrawn"
+    );
   });
-  it("Should not allow anyone to withdraw after a refund window change for precation withdrawal timestamp even after a sale is made after new refund window", async function(){
+
+  it("Should not allow anyone to withdraw after a refund window change for precation withdrawal timestamp even after a sale is made after new refund window", async function () {
     const consoleLogOn = true;
     await reDeploy();
     /// KYC content creator and content buyers
@@ -1747,7 +1764,7 @@ describe("Platform Treasury Updated General", function () {
     // Skip for 1 day
     const numBlocksToMine0 = Math.ceil((1 * 24 * 60 * 60) / 2);
     await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine0.toString(16)}`, "0x2"]);
-    // Buy content 2 
+    // Buy content 2
     // Buy the content
     const tokenIds2 = [2];
     const pricesToPay2 = [ethers.utils.parseEther("2")];
@@ -1778,6 +1795,276 @@ describe("Platform Treasury Updated General", function () {
       "Precaution withdrawal period is not over"
     );
   });
+
+  it("Should learner can refund depend on the old refund window after a refund window change and instructor cannot withdraw meanwhile", async function () {
+    // re-deploy the contracts
+    await reDeploy();
+    /// KYC content creator and content buyers
+    await contractRoleManager.setKYC(contentCreator.address, true);
+    await contractRoleManager.setKYC(contentBuyer1.address, true);
+    await contractRoleManager.setKYC(contentBuyer2.address, true);
+    // create a content
+    const contentParts = [0, 1];
+    const redeemer = contentCreator;
+    // create content voucher
+    const createContentVoucherSample = await createContentVoucher(
+      contractUDAOContent,
+      backend,
+      contentCreator,
+      redeemer,
+      contentParts,
+      (redeemType = 1),
+      (validationScore = 1)
+    );
+    // create content with voucher
+    await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample))
+      .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
+      .withArgs(ethers.constants.AddressZero, contentCreator.address, 1);
+    // change the refund window to 60 days
+    await contractPlatformTreasury.connect(backend).changeRefundWindow(60);
+    // get the refund window
+    const refundWindow = (await contractPlatformTreasury.refundWindow()).toNumber();
+    // skip 60 days
+    const numBlocksToMine0 = Math.ceil(((refundWindow + 1) * 24 * 60 * 60) / 2);
+    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine0.toString(16)}`, "0x2"]);
+    // make a content purchase
+    const tokenIds = [1];
+    const purchasedParts = [[1]];
+    const giftReceiver = [ethers.constants.AddressZero];
+    const fullContentPurchase = [true];
+    const pricesToPay = [ethers.utils.parseEther("1")];
+    const validUntil = Date.now() + 999999999;
+    const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
+    const redeemers = [contentBuyer1.address];
+    await makeContentPurchase(
+      contractPlatformTreasury,
+      contractVoucherVerifier,
+      contentBuyer1,
+      contractRoleManager,
+      contractUDAO,
+      tokenIds,
+      purchasedParts,
+      pricesToPay,
+      fullContentPurchase,
+      validUntil,
+      redeemers,
+      giftReceiver,
+      userIds
+    );
+
+    // Get the instructer balance array before withdrawal
+    let instructorLockedBalanceArrayBN = [];
+    for (let i = 0; i < refundWindow; i++) {
+      instructorLockedBalanceArrayBN[i] = ethers.utils.formatEther(
+        await contractPlatformTreasury.instLockedBalance(contentCreator.address, i)
+      );
+    }
+    // Get the content locked pool array before withdrawal
+    let contentLockedBalanceArrayBN = [];
+    for (let i = 0; i < refundWindow; i++) {
+      contentLockedBalanceArrayBN[i] = ethers.utils.formatEther(await contractPlatformTreasury.contentCutLockedPool(i));
+    }
+
+    // Get current blocks timestamp
+    currentBlockTimestampIndex = Math.floor(
+      ((await hre.ethers.provider.getBlock()).timestamp % (refundWindow * 86400)) / 86400
+    );
+    /// @dev Calculate amount of instructor should have receive
+    // Get total price
+    const totalPrice = pricesToPay[0];
+    // Get contentFoundCut
+    const _contentFoundCut = await contractPlatformTreasury.contentFoundCut();
+    const contentFoundCut = totalPrice.mul(_contentFoundCut).div(100000);
+    // Get contentGoverCut
+    const _contentGoverCut = await contractPlatformTreasury.contentGoverCut();
+    const contentGoverCut = totalPrice.mul(_contentGoverCut).div(100000);
+    // Get contentJurorCut
+    const _contentJurorCut = await contractPlatformTreasury.contentJurorCut();
+    const contentJurorCut = totalPrice.mul(_contentJurorCut).div(100000);
+    // Get contentValidCut
+    const _contentValidCut = await contractPlatformTreasury.contentValidCut();
+    const contentValidCut = totalPrice.mul(_contentValidCut).div(100000);
+    // Get total cut
+    const totalCut = contentGoverCut.add(contentJurorCut).add(contentValidCut).add(contentFoundCut);
+    // Use total cut to get what instructor should receive and check if it is recorded in the correct index
+    expect(instructorLockedBalanceArrayBN[currentBlockTimestampIndex]).to.equal(
+      ethers.utils.formatEther(pricesToPay[0].sub(totalCut))
+    );
+    expect(contentLockedBalanceArrayBN[currentBlockTimestampIndex]).to.equal(ethers.utils.formatEther(totalCut));
+
+    // change the refund window to 5 days
+    await contractPlatformTreasury.connect(backend).changeRefundWindow(5);
+    // get the refund window
+    const refundWindow2 = (await contractPlatformTreasury.refundWindow()).toNumber();
+    // get current blocks timestamp
+    currentBlockTimestampIndex = Math.floor(
+      ((await hre.ethers.provider.getBlock()).timestamp % (refundWindow2 * 86400)) / 86400
+    );
+    // update instructor balance by calling updateAndTransferPlatformBalances
+    await contractPlatformTreasury.connect(contentCreator).updateAndTransferPlatformBalances();
+    // get the instructer balance array before withdrawal
+    let instructorLockedBalanceArrayBN2 = [];
+    for (let i = 0; i < refundWindow2; i++) {
+      instructorLockedBalanceArrayBN2[i] = ethers.utils.formatEther(
+        await contractPlatformTreasury.instLockedBalance(contentCreator.address, i)
+      );
+    }
+    // get the content locked pool array before withdrawal
+    let contentLockedBalanceArrayBN2 = [];
+    for (let i = 0; i < refundWindow2; i++) {
+      contentLockedBalanceArrayBN2[i] = ethers.utils.formatEther(
+        await contractPlatformTreasury.contentCutLockedPool(i)
+      );
+    }
+
+    // Use total cut to get what instructor should receive and check if it is recorded in the correct index according to the new index
+    expect(instructorLockedBalanceArrayBN2[currentBlockTimestampIndex]).to.equal(
+      ethers.utils.formatEther(pricesToPay[0].sub(totalCut))
+    );
+    expect(contentLockedBalanceArrayBN2[currentBlockTimestampIndex]).to.equal(ethers.utils.formatEther(totalCut));
+    // skip days by the new refund window
+    const numBlocksToMine1 = Math.ceil(((refundWindow2 + 1) * 24 * 60 * 60) / 2);
+    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine1.toString(16)}`, "0x2"]);
+    // update instructor balance by calling updateAndTransferPlatformBalances
+    await contractPlatformTreasury.connect(contentCreator).updateAndTransferPlatformBalances();
+
+    // balance transferred from locked balances to current balances
+    // check insTructor current balance
+    const currentBalanceInstS1 = ethers.utils.formatEther(
+      await contractPlatformTreasury.instBalance(contentCreator.address)
+    );
+    expect(currentBalanceInstS1).to.equal(ethers.utils.formatEther(pricesToPay[0].sub(totalCut)));
+    const currentCutBalanceS1 = ethers.utils.formatEther(await contractPlatformTreasury.contentCutPool());
+    expect(currentCutBalanceS1).to.equal(ethers.utils.formatEther(totalCut));
+
+    // don't allow instructor to withdraw due to the precaution withdrawal period even instturctor has positive balance
+    // get instructor positive and refunded balance
+    const [getWithdrawableBalanceS1, getRefundendBalanceS1] =
+      await contractPlatformTreasury.getWithdrawableBalanceInstructor(contentCreator.address);
+    const getWithdrawableBalanceS2 = ethers.utils.formatEther(getWithdrawableBalanceS1);
+    const getRefundendBalanceS2 = ethers.utils.formatEther(getRefundendBalanceS1);
+    expect(getWithdrawableBalanceS2).to.equal(ethers.utils.formatEther(pricesToPay[0].sub(totalCut)));
+    expect(getRefundendBalanceS2).to.equal("0.0");
+    await expect(contractPlatformTreasury.connect(contentCreator).withdrawInstructor()).to.be.revertedWith(
+      "Precaution withdrawal period is not over"
+    );
+    // skip days by refund window
+    const numBlocksToMine2 = Math.ceil(((refundWindow2 + 1) * 24 * 60 * 60) / 2);
+    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine2.toString(16)}`, "0x2"]);
+    // allow refund the content because old refund window is still valid for that purchase
+    //  Create RefundVoucher
+    const refundVoucher = new RefundVoucher({
+      contract: contractVoucherVerifier,
+      signer: backend,
+    });
+    const refundType = 1; // 0 since refund is content
+    // Voucher will be valid for 1 day
+    const voucherValidUntil = Date.now() + 9999999;
+    const contentSaleId = 0; // 0 since only one content is created and sold
+    const finalParts = []; // Empty since buyer had no parts
+    const finalContents = []; // Empty since buyer had no co
+    const refund_voucher = await refundVoucher.createVoucher(
+      contentSaleId,
+      contentCreator.address,
+      finalParts,
+      finalContents,
+      voucherValidUntil
+    );
+    // Refund the content
+    await expect(contractPlatformTreasury.connect(contentCreator).newRefundContent(refund_voucher))
+      .to.emit(contractPlatformTreasury, "SaleRefunded")
+      .withArgs(contentSaleId, refundType);
+    // get instructor positive and refunded balance
+    const [getWithdrawableBalanceS3, getRefundendBalanceS3] =
+      await contractPlatformTreasury.getWithdrawableBalanceInstructor(contentCreator.address);
+    expect(getWithdrawableBalanceS3).to.equal(pricesToPay[0].sub(totalCut));
+    expect(getRefundendBalanceS3).to.equal(pricesToPay[0].sub(totalCut));
+    const getRefundendCutBalanceS3 = ethers.utils.formatEther(
+      await contractPlatformTreasury.contentCutRefundedBalance()
+    );
+    expect(getRefundendCutBalanceS3).to.equal(ethers.utils.formatEther(totalCut));
+  });
+  it("Should not allow refund of a content based on the new refund window", async function () {
+    // re-deploy the contracts
+    await reDeploy();
+    /// KYC content creator and content buyers
+    await contractRoleManager.setKYC(contentCreator.address, true);
+    await contractRoleManager.setKYC(contentBuyer1.address, true);
+    // create a content
+    const contentParts = [0, 1];
+    const redeemer = contentCreator;
+    // create content voucher
+    const createContentVoucherSample = await createContentVoucher(
+      contractUDAOContent,
+      backend,
+      contentCreator,
+      redeemer,
+      contentParts,
+      (redeemType = 1),
+      (validationScore = 1)
+    );
+    // create content with voucher
+    await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample))
+      .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
+      .withArgs(ethers.constants.AddressZero, contentCreator.address, 1);
+
+    // make a content purchase
+    const tokenIds = [1];
+    const purchasedParts = [[1]];
+    const giftReceiver = [ethers.constants.AddressZero];
+    const fullContentPurchase = [true];
+    const pricesToPay = [ethers.utils.parseEther("1")];
+    const validUntil = Date.now() + 999999999;
+    const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
+    const redeemers = [contentBuyer1.address];
+    await makeContentPurchase(
+      contractPlatformTreasury,
+      contractVoucherVerifier,
+      contentBuyer1,
+      contractRoleManager,
+      contractUDAO,
+      tokenIds,
+      purchasedParts,
+      pricesToPay,
+      fullContentPurchase,
+      validUntil,
+      redeemers,
+      giftReceiver,
+      userIds
+    );
+
+    // change the refund window to 40 days
+    await contractPlatformTreasury.connect(backend).changeRefundWindow(40);
+    // get the refund window
+    const refundWindow2 = (await contractPlatformTreasury.refundWindow()).toNumber();
+    // skip 30 days
+    const numBlocksToMine1 = Math.ceil((30 * 24 * 60 * 60) / 2);
+    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine1.toString(16)}`, "0x2"]);
+    // try to refund the content
+    //  Create RefundVoucher
+    const refundVoucher = new RefundVoucher({
+      contract: contractVoucherVerifier,
+      signer: backend,
+    });
+    const refundType = 1; // 0 since refund is content
+    // Voucher will be valid for 1 day
+    const voucherValidUntil = Date.now() + 9999999;
+    const contentSaleId = 0; // 0 since only one content is created and sold
+    const finalParts = []; // Empty since buyer had no parts
+    const finalContents = []; // Empty since buyer had no co
+    const refund_voucher = await refundVoucher.createVoucher(
+      contentSaleId,
+      contentCreator.address,
+      finalParts,
+      finalContents,
+      voucherValidUntil
+    );
+    // Refund the content
+    await expect(contractPlatformTreasury.connect(contentCreator).newRefundContent(refund_voucher)).to.be.revertedWith(
+      "refund period over you cant refund"
+    );
+  });
+
   it("Should instructor earn correct amount of UDAO from sales", async function () {
     const consoleLogOn = false;
     await reDeploy();
@@ -2282,7 +2569,9 @@ describe("Platform Treasury Updated General", function () {
   });
 
   it("Should instructor earn correct amount of UDAO from sales when the refund window changed", async function () {
+    // this test gives balances as a console log and do not check anything at all. its purpose is to see the balances and it is totally manual.
     const consoleLogOn = false;
+    // re-deploy the contracts
     await reDeploy();
     /// KYC content creator and content buyers
     await contractRoleManager.setKYC(contentCreator.address, true);
@@ -2295,6 +2584,7 @@ describe("Platform Treasury Updated General", function () {
     await contractRoleManager.setKYC(validator4.address, true);
     await contractRoleManager.setKYC(validator5.address, true);
 
+    // Get the refund window in the first place
     const firstRefundWindow = (await contractPlatformTreasury.refundWindow()).toNumber();
 
     //change refund window
@@ -3230,12 +3520,4 @@ describe("Platform Treasury Updated General", function () {
       console.log();
     }
   });
-
-  it("Should allow refund of a content based on the old refund window", async function () {});
-
-  it("Should not allow refund of a content based on the new refund window", async function () {});
-
-  it("Should not allow refund if refund window is increased after a sale and old refund window is already reached", async function () {});
-  it("Should not allow instructor to withdraw if refund window is reduced after a sale and old refund window is not reached", async function () {});
-  it("Should allow instructor to withdraw if refund window is reduced after a sale and old refund window is reached", async function () {});
 });
