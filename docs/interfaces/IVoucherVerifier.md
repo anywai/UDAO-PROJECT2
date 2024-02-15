@@ -13,6 +13,7 @@ struct ContentDiscountVoucher {
   uint256 validUntil;
   address redeemer;
   address giftReceiver;
+  string userId;
   bytes signature;
 }
 ```
@@ -38,6 +39,7 @@ struct CoachingVoucher {
   uint256 priceToPay;
   uint256 coachingDate;
   address learner;
+  string userId;
   bytes signature;
 }
 ```

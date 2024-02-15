@@ -2,6 +2,18 @@
 
 ## VoucherVerifier
 
+### SIGNING_DOMAIN
+
+```solidity
+string SIGNING_DOMAIN
+```
+
+### SIGNATURE_VERSION
+
+```solidity
+string SIGNATURE_VERSION
+```
+
 ### constructor
 
 ```solidity
@@ -27,6 +39,7 @@ struct ContentDiscountVoucher {
   uint256 validUntil;
   address redeemer;
   address giftReceiver;
+  string userId;
   bytes signature;
 }
 ```
@@ -52,6 +65,7 @@ struct CoachingVoucher {
   uint256 priceToPay;
   uint256 coachingDate;
   address learner;
+  string userId;
   bytes signature;
 }
 ```

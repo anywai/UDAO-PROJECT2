@@ -10,6 +10,14 @@ mapping(uint256 => uint256) emptyMapping
 
 Placeholder empty mapping to disable hardhat warnings.
 
+### ValidationCreated
+
+```solidity
+event ValidationCreated(uint256 tokenId, uint256 score)
+```
+
+Event emitted when a validation is created
+
 ### getIsValidated
 
 ```solidity

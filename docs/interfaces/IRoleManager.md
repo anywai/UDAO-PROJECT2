@@ -2,18 +2,6 @@
 
 ## IRoleManager
 
-### checkRole
-
-```solidity
-function checkRole(bytes32 roles, address account) external view
-```
-
-### checkRoles
-
-```solidity
-function checkRoles(bytes32[] roles, address account) external view
-```
-
 ### hasRoles
 
 ```solidity

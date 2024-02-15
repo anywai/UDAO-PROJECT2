@@ -44,6 +44,12 @@ event VestingWithdrawal(address receiver, uint256 vestingIndex, uint256 amount)
 
 _This event is triggered when tokens are withdrawn from the contract._
 
+### VestingsWithdrawal
+
+```solidity
+event VestingsWithdrawal(address receiver, uint256[] vestingIndeces, uint256 amount)
+```
+
 ### DEPOSITOR_ROLE
 
 ```solidity
@@ -130,5 +136,19 @@ Allows beneficiary to withdraw tokens
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| vestingIndex | uint256 | The index of the lockbox to withdraw from |
+| vestingIndex | uint256 | The index of the vesting lock to withdraw from |
+
+### withdrawFromBatch
+
+```solidity
+function withdrawFromBatch(uint256[] vestingIndices) external returns (bool success)
+```
+
+Allows beneficiary to withdraw tokens from multiple vesting locks
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| vestingIndices | uint256[] | The indices of the vesting locks to withdraw from |
 

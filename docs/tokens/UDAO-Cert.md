@@ -2,6 +2,26 @@
 
 ## UDAOCertificate
 
+### SIGNING_DOMAIN
+
+```solidity
+string SIGNING_DOMAIN
+```
+
+### SIGNATURE_VERSION
+
+```solidity
+string SIGNATURE_VERSION
+```
+
+### _tokenIdCounter
+
+```solidity
+struct Counters.Counter _tokenIdCounter
+```
+
+_The counter for certificate token ids._
+
 ### AddressesUpdated
 
 ```solidity

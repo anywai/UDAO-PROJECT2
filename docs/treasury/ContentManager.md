@@ -5,7 +5,7 @@
 ### ContentBought
 
 ```solidity
-event ContentBought(string userID, uint256 cartSaleID, uint256 contentSaleID)
+event ContentBought(string userId, uint256 cartSaleID, uint256 contentSaleID)
 ```
 
 Emitted when a content is bought
@@ -30,7 +30,7 @@ Emitted when a coaching is bought
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| userId | string | The user id of the learner |
+| userId | string | The ID of the user |
 | coachingSaleID | uint256 | The ID of the coaching sale |
 
 ### SaleRefunded
@@ -141,6 +141,30 @@ event InstructorLockedBalanceUpdated(address _instructor)
 ```
 
 Emitted when the instructor locked balances is updated
+
+### contentSaleID
+
+```solidity
+struct Counters.Counter contentSaleID
+```
+
+Used to generate unique ids for content sales
+
+### coachingSaleID
+
+```solidity
+struct Counters.Counter coachingSaleID
+```
+
+Used to generate unique ids for coaching sales
+
+### cartSaleID
+
+```solidity
+struct Counters.Counter cartSaleID
+```
+
+Used to generate unique ids for cart sales
 
 ### ContentSale
 
@@ -261,7 +285,7 @@ Allows users to purchase multiple contents for the caller or gift receiver with 
 ### _buyContent
 
 ```solidity
-function _buyContent(uint256 tokenId, bool fullContentPurchase, uint256[] purchasedParts, address contentReceiver, uint256 totalCut, uint256 instrShare, uint256 _cartSaleID) internal
+function _buyContent(uint256 tokenId, bool fullContentPurchase, uint256[] purchasedParts, address contentReceiver, uint256 totalCut, uint256 instrShare) internal returns (uint256 _contentID)
 ```
 
 Used by buy content functions to receive payment from user and deliver the content to user
@@ -276,7 +300,6 @@ Used by buy content functions to receive payment from user and deliver the conte
 | contentReceiver | address | The address of the content receiver. |
 | totalCut | uint256 | The total platform cut applied to the content sale. |
 | instrShare | uint256 | The instructor's share from the the content sale. |
-| _cartSaleID | uint256 | The ID of the cart sale. |
 
 ### _checkPartReceiver
 
@@ -311,6 +334,20 @@ Returns the parts owned by buyer if buyer has bought any parts in the past
 | ---- | ---- | ----------- |
 | _buyer | address | The address of the buyer. |
 | _tokenId | uint256 | The token ID of the content. |
+
+### getOwnedContents
+
+```solidity
+function getOwnedContents(address _buyer) external view returns (uint256[])
+```
+
+Returns the contents owned by buyer
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _buyer | address | The address of the buyer. |
 
 ### _updatePlatformCutBalances
 
@@ -395,15 +432,4 @@ Allows anyone to refund of a content with a voucher created by platform
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | voucher | struct IVoucherVerifier.RefundVoucher | A RefundVoucher |
-
-### getChainID
-
-```solidity
-function getChainID() external view returns (uint256)
-```
-
-Returns the chain id of the current blockchain.
-
-_This is used to workaround an issue with ganache returning different values from the on-chain chainid() function and
-the eth_chainId RPC method. See https://github.com/protocol/nft-website/issues/121 for context._
 
