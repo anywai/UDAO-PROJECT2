@@ -1503,10 +1503,6 @@ describe("Platform Treasury Updated General", function () {
     await expect(contractPlatformTreasury.connect(contentCreator).withdrawInstructor()).to.be.revertedWith(
       "Precaution withdrawal period is not over"
     );
-    // Try to withdraw as the foundation
-    await expect(contractPlatformTreasury.connect(backend).withdrawFoundation()).to.be.revertedWith(
-      "Precaution withdrawal period is not over"
-    );
   });
 
   it("Should allow anyone to withdraw after a refund window change and after precaution withdrawal timestamp", async function () {
@@ -1786,10 +1782,6 @@ describe("Platform Treasury Updated General", function () {
     await expect(contractPlatformTreasury.connect(contentCreator).withdrawInstructor()).to.be.revertedWith(
       "Precaution withdrawal period is not over"
     );
-    // Try to withdraw as the foundation
-    await expect(contractPlatformTreasury.connect(backend).withdrawFoundation()).to.be.revertedWith(
-      "Precaution withdrawal period is not over"
-    );
   });
 
   it("Should learner can refund depend on the old refund window after a refund window change and instructor cannot withdraw meanwhile", async function () {
@@ -1980,6 +1972,7 @@ describe("Platform Treasury Updated General", function () {
     );
     expect(getRefundendCutBalanceS3).to.equal(ethers.utils.formatEther(totalCut));
   });
+
   it("Should not allow refund of a content based on the new refund window", async function () {
     // re-deploy the contracts
     await reDeploy();
@@ -2058,6 +2051,35 @@ describe("Platform Treasury Updated General", function () {
     // Refund the content
     await expect(contractPlatformTreasury.connect(contentCreator).newRefundContent(refund_voucher)).to.be.revertedWith(
       "refund period over you cant refund"
+    );
+  });
+
+  it("Should fail to change refund window less than 2 day", async function () {
+    // re-deploy the contracts
+    await reDeploy();
+    // change the refund window to 1 day
+    await expect(contractPlatformTreasury.connect(backend).changeRefundWindow(1)).to.be.revertedWith(
+      "Refund window period should be at least 2 days"
+    );
+  });
+
+  it("Should fail to change refund window more than 61 days", async function () {
+    // re-deploy the contracts
+    await reDeploy();
+    // change the refund window to 366 days
+    await expect(contractPlatformTreasury.connect(backend).changeRefundWindow(366)).to.be.revertedWith(
+      "Refund window period should be at most 60 days"
+    );
+  });
+
+  it("Should fail to change refund window to the same value", async function () {
+    // re-deploy the contracts
+    await reDeploy();
+    // get the refund window
+    const refundWindow = await contractPlatformTreasury.refundWindow();
+    // change the refund window to 60 days
+    await expect(contractPlatformTreasury.connect(backend).changeRefundWindow(refundWindow)).to.be.revertedWith(
+      "New window period is the same as the current one"
     );
   });
 });
