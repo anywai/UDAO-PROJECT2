@@ -553,8 +553,13 @@ async function consoleLog_stageChange(_stage) {
 describe("Platform Treasury Visual Tests", function () {
   it("Should platform balances must hold correct amount of token during repeated buy, refund, refundWindow change cycles", async function () {
     /// @note This test gives balances as a console log and do not check anything at all. its purpose is to see balance changes on the platform and it is totally manual.
+    console.log(
+      colorCyan,
+      "This is an visual test, to inspect it please remove the commented 'console.log' lines in the test code",
+      colorReset
+    );
     /// To show the console logs uncomment the console.log lines below
-    //consoleLogOn = true;
+    consoleLogOn = true;
     instroctorBalances_consoleLogOn = true;
     contentPool_consoleLogOn = true;
     coachingPool_consoleLogOn = true;
@@ -625,6 +630,12 @@ describe("Platform Treasury Visual Tests", function () {
     const pricesToPay = [ethers.utils.parseEther("2")];
     const validUntil = Date.now() + 999999999;
     const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
+
+    /// Backend should supply refund voucher to user to use in refund
+    // Common parts in the refund content voucher will be used in all refunds
+    const finalParts = []; // Empty since buyer had no parts
+    const finalContents = []; // Empty since buyer had no co
+    const refundType = 1; // 0 since refund is content
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////
     /// Start of the Test
@@ -702,6 +713,59 @@ describe("Platform Treasury Visual Tests", function () {
     consoleLog_coachingPoolOtherBalances(coachCurB_S1, coachRefundendB_S1, coachSumRB_S1);
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////
+    /// 1C - Make a coaching purchase
+    //Send UDAO to the buyer's wallet
+    await contractUDAO.transfer(contentBuyer1.address, ethers.utils.parseEther("100.0"));
+    //Content buyer needs to give approval to the platformtreasury
+    await contractUDAO
+      .connect(contentBuyer1)
+      .approve(contractPlatformTreasury.address, ethers.utils.parseEther("999999999999.0"));
+    //Create CoachingVoucher to be able to buy coaching
+    const lazyCoaching = new LazyCoaching({
+      contract: contractVoucherVerifier,
+      signer: backend,
+    });
+    const coachingPrice = ethers.utils.parseEther("2.0");
+    //Coaching date is 3 days from now
+    const coachingDate = (await hre.ethers.provider.getBlock()).timestamp + 3 * 24 * 60 * 60;
+    const role_voucher = await lazyCoaching.createVoucher(
+      contentCreator.address,
+      coachingPrice,
+      coachingDate,
+      contentBuyer1.address,
+      "c8d53630-233a-4f95-90cb-4df253ae9283"
+    );
+    // Buy coaching
+    expect(await contractPlatformTreasury.connect(contentBuyer1).buyCoaching(role_voucher)).to.emit(
+      contractPlatformTreasury,
+      "CoachingBought"
+    );
+    // GET "Locked Balances" arrays and "Current, Unlocked, Refunded" balances after the coaching purchase
+    const instLB_C1 = await getInstructorLockedBalanceArray(refundWindowC1, contentCreator);
+    const contLB_C1 = await getContentLockedBalanceArray(refundWindowC1);
+    const coachLB_C1 = await getCoachingLockedBalanceArray(refundWindowC1);
+    const [iCurB_C1, iUnlockB_C1, iRefundB_C1] = await getInstructorCurrentUnlockedRefundedBalances(contentCreator);
+    const [contCurB_C1, contRefundendB_C1, contSumRB_C1] = await getContentCurrentRefundedBalances();
+    const [coachCurB_C1, coachRefundendB_C1, coachSumRB_C1] = await getCoachingCurrentRefundedBalances();
+
+    // Console log the balances after the coaching purchase
+    //Empty space
+    consoleLog_emptySpace();
+    consoleLog_stageChange("1ST Coaching Purchase Completed");
+    //GetCurrentBlocksTimestamp
+    const currentLockBalanceIndex_C1 = await calculateLockBalanceIndex(refundWindowC1);
+    consoleLog_lockBalanceIndex(currentLockBalanceIndex_C1);
+    //instrucor
+    consoleLog_instructorLockedBalanceArray(instLB_C1);
+    consoleLog_instructorOtherBalances(iCurB_C1, iUnlockB_C1, iRefundB_C1);
+    //Content Pool
+    consoleLog_contentLockedBalanceArray(contLB_C1);
+    consoleLog_contentPoolOtherBalances(contCurB_C1, contRefundendB_C1, contSumRB_C1);
+    //Coaching Pool
+    consoleLog_coachingLockedBalanceArray(coachLB_C1);
+    consoleLog_coachingPoolOtherBalances(coachCurB_C1, coachRefundendB_C1, coachSumRB_C1);
+
+    ///////////////////////////////////////////////////////////////////////////////////////////////////
     /// Skip 1 day
     skipDays(1);
     //Empty space
@@ -759,12 +823,8 @@ describe("Platform Treasury Visual Tests", function () {
       contract: contractVoucherVerifier,
       signer: backend,
     });
-    const refundType = 1; // 0 since refund is content
-    //Voucher will be valid for 1 day
-    const voucherValidUntil = Date.now() + 86400;
-    const contentSaleId = 1; // 0 since only one content is created and sold
-    const finalParts = []; // Empty since buyer had no parts
-    const finalContents = []; // Empty since buyer had no co
+    const voucherValidUntil = Date.now() + 86400; //Voucher will be valid for 1 day
+    const contentSaleId = 1; //2nd sale wanted to be refund, saleId is 0 based index so that 2nd sale has id 1
     const refund_voucher = await refundVoucher.createVoucher(
       contentSaleId,
       contentCreator.address,
@@ -920,6 +980,59 @@ describe("Platform Treasury Visual Tests", function () {
     consoleLog_coachingLockedBalanceArray(coachLB_S4);
     consoleLog_coachingPoolOtherBalances(coachCurB_S4, coachRefundendB_S4, coachSumRB_S4);
 
+    /////////////////////////////////////////////////////////////////////////////////////////////////////
+    // 2C - Make a coaching purchase
+    //Send UDAO to the buyer's wallet
+    await contractUDAO.transfer(contentBuyer2.address, ethers.utils.parseEther("100.0"));
+    //Content buyer needs to give approval to the platformtreasury
+    await contractUDAO
+      .connect(contentBuyer2)
+      .approve(contractPlatformTreasury.address, ethers.utils.parseEther("999999999999.0"));
+    //Create CoachingVoucher to be able to buy coaching
+    const lazyCoaching2 = new LazyCoaching({
+      contract: contractVoucherVerifier,
+      signer: backend,
+    });
+    const coachingPrice2 = ethers.utils.parseEther("2.0");
+    //Coaching date is 3 days from now
+    const coachingDate2 = (await hre.ethers.provider.getBlock()).timestamp + 3 * 24 * 60 * 60;
+    const role_voucher2 = await lazyCoaching2.createVoucher(
+      contentCreator.address,
+      coachingPrice2,
+      coachingDate2,
+      contentBuyer2.address,
+      "c8d53630-233a-4f95-90cb-4df253ae9283"
+    );
+    // Buy coaching
+    expect(await contractPlatformTreasury.connect(contentBuyer2).buyCoaching(role_voucher2)).to.emit(
+      contractPlatformTreasury,
+      "CoachingBought"
+    );
+    // GET "Locked Balances" arrays and "Current, Unlocked, Refunded" balances after the coaching purchase
+    const instLB_C2 = await getInstructorLockedBalanceArray(refundWindowC2, contentCreator);
+    const contLB_C2 = await getContentLockedBalanceArray(refundWindowC2);
+    const coachLB_C2 = await getCoachingLockedBalanceArray(refundWindowC2);
+    const [iCurB_C2, iUnlockB_C2, iRefundB_C2] = await getInstructorCurrentUnlockedRefundedBalances(contentCreator);
+    const [contCurB_C2, contRefundendB_C2, contSumRB_C2] = await getContentCurrentRefundedBalances();
+    const [coachCurB_C2, coachRefundendB_C2, coachSumRB_C2] = await getCoachingCurrentRefundedBalances();
+
+    // Console log the balances after the coaching purchase
+    //Empty space
+    consoleLog_emptySpace();
+    consoleLog_stageChange("2ND Coaching Purchase Completed");
+    //GetCurrentBlocksTimestamp
+    const currentLockBalanceIndex_C2 = await calculateLockBalanceIndex(refundWindowC2);
+    consoleLog_lockBalanceIndex(currentLockBalanceIndex_C2);
+    //instrucor
+    consoleLog_instructorLockedBalanceArray(instLB_C2);
+    consoleLog_instructorOtherBalances(iCurB_C2, iUnlockB_C2, iRefundB_C2);
+    //Content Pool
+    consoleLog_contentLockedBalanceArray(contLB_C2);
+    consoleLog_contentPoolOtherBalances(contCurB_C2, contRefundendB_C2, contSumRB_C2);
+    //Coaching Pool
+    consoleLog_coachingLockedBalanceArray(coachLB_C2);
+    consoleLog_coachingPoolOtherBalances(coachCurB_C2, coachRefundendB_C2, coachSumRB_C2);
+
     ///////////////////////////////////////////////////////////////////////////////////////////////////
     // 4R- Refund the 4th sale
     //Create RefundVoucher
@@ -927,8 +1040,8 @@ describe("Platform Treasury Visual Tests", function () {
       contract: contractVoucherVerifier,
       signer: backend,
     });
-    const voucherValidUntil2 = Date.now() + 86400;
-    const contentSaleId2 = 3; // 0 since only one content is created and sold
+    const voucherValidUntil2 = Date.now() + 86400; //Voucher will be valid for 1 day
+    const contentSaleId2 = 3; //4th sale wanted to be refund, saleId is 0 based index so that 4th sale has id 3
     const refund_voucher2 = await refundVoucher2.createVoucher(
       contentSaleId2,
       contentCreator.address,
@@ -972,6 +1085,41 @@ describe("Platform Treasury Visual Tests", function () {
     consoleLog_emptySpace();
     //Console log the skipped days
     consoleLog_skipedDays(1);
+
+    ///////////////////////////////////////////////////////////////////////////////////////////////////
+    // 2ndCR- Refund the 2nd coaching purchase
+    //Create RefundVoucher
+    const coachingSaleID_2CR = 1; // 2nd coaching purchase wanted to be refund, saleId is 0 based index so that 2nd coaching purchase has id 1
+    const refundType_2CR = 0; // 0 since refund is coaching
+    await expect(
+      contractPlatformTreasury.connect(contentCreator).refundCoachingByInstructorOrLearner(coachingSaleID_2CR)
+    )
+      .to.emit(contractPlatformTreasury, "SaleRefunded")
+      .withArgs(coachingSaleID_2CR, refundType_2CR);
+    // GET "Locked Balances" arrays and "Current, Unlocked, Refunded" balances after the refund of the 2nd coaching purchase
+    const instLB_2CR = await getInstructorLockedBalanceArray(refundWindowC2, contentCreator);
+    const contLB_2CR = await getContentLockedBalanceArray(refundWindowC2);
+    const coachLB_2CR = await getCoachingLockedBalanceArray(refundWindowC2);
+    const [iCurB_2CR, iUnlockB_2CR, iRefundB_2CR] = await getInstructorCurrentUnlockedRefundedBalances(contentCreator);
+    const [contCurB_2CR, contRefundendB_2CR, contSumRB_2CR] = await getContentCurrentRefundedBalances();
+    const [coachCurB_2CR, coachRefundendB_2CR, coachSumRB_2CR] = await getCoachingCurrentRefundedBalances();
+
+    // Console log the balances after the refund of the 2nd coaching purchase
+    //Empty space
+    consoleLog_emptySpace();
+    consoleLog_stageChange("2ND Coaching Purchase Refunded");
+    //GetCurrentBlocksTimestamp
+    const currentLockBalanceIndex_2CR = await calculateLockBalanceIndex(refundWindowC2);
+    consoleLog_lockBalanceIndex(currentLockBalanceIndex_2CR);
+    //instrucor
+    consoleLog_instructorLockedBalanceArray(instLB_2CR);
+    consoleLog_instructorOtherBalances(iCurB_2CR, iUnlockB_2CR, iRefundB_2CR);
+    //Content Pool
+    consoleLog_contentLockedBalanceArray(contLB_2CR);
+    consoleLog_contentPoolOtherBalances(contCurB_2CR, contRefundendB_2CR, contSumRB_2CR);
+    //Coaching Pool
+    consoleLog_coachingLockedBalanceArray(coachLB_2CR);
+    consoleLog_coachingPoolOtherBalances(coachCurB_2CR, coachRefundendB_2CR, coachSumRB_2CR);
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////
     // 5- Make a new content purchase
@@ -1150,14 +1298,25 @@ describe("Platform Treasury Visual Tests", function () {
     consoleLog_coachingPoolOtherBalances(coachCurB_S6, coachRefundendB_S6, coachSumRB_S6);
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////
+    // Change refund window to 2 days to work to see the effect of the change
+    await contractPlatformTreasury.connect(backend).changeRefundWindow(2);
+    let refundWindowC3 = (await contractPlatformTreasury.refundWindow()).toNumber();
+    //Empty space
+    consoleLog_emptySpace();
+    if (consoleLogOn) {
+      console.log(colorMagenta, "----REFUND WINDOW CHANGED----", colorReset);
+      console.log("----New refund window is ", refundWindowC3, " days----");
+    }
+
+    ///////////////////////////////////////////////////////////////////////////////////////////////////
     // 6R- Refund the 6th sale
     //Create RefundVoucher
     const refundVoucher3 = new RefundVoucher({
       contract: contractVoucherVerifier,
       signer: backend,
     });
-    const voucherValidUntil3 = Date.now() + 86400;
-    const contentSaleId3 = 5; // 0 since only one content is created and sold
+    const voucherValidUntil3 = Date.now() + 86400; //Voucher will be valid for 1 day
+    const contentSaleId3 = 5; //6th sale wanted to be refund, saleId is 0 based index so that 6th sale has id 5
     const refund_voucher3 = await refundVoucher3.createVoucher(
       contentSaleId3,
       contentCreator.address,
@@ -1170,9 +1329,9 @@ describe("Platform Treasury Visual Tests", function () {
       .to.emit(contractPlatformTreasury, "SaleRefunded")
       .withArgs(contentSaleId3, refundType);
     // GET "Locked Balances" arrays and "Current, Unlocked, Refunded" balances after the refund of the 6th sale
-    const instLB_S6R = await getInstructorLockedBalanceArray(refundWindowC2, contentCreator);
-    const contLB_S6R = await getContentLockedBalanceArray(refundWindowC2);
-    const coachLB_S6R = await getCoachingLockedBalanceArray(refundWindowC2);
+    const instLB_S6R = await getInstructorLockedBalanceArray(refundWindowC3, contentCreator);
+    const contLB_S6R = await getContentLockedBalanceArray(refundWindowC3);
+    const coachLB_S6R = await getCoachingLockedBalanceArray(refundWindowC3);
     const [iCurB_S6R, iUnlockB_S6R, iRefundB_S6R] = await getInstructorCurrentUnlockedRefundedBalances(contentCreator);
     const [contCurB_S6R, contRefundendB_S6R, contSumRB_S6R] = await getContentCurrentRefundedBalances();
     const [coachCurB_S6R, coachRefundendB_S6R, coachSumRB_S6R] = await getCoachingCurrentRefundedBalances();
@@ -1182,7 +1341,7 @@ describe("Platform Treasury Visual Tests", function () {
     consoleLog_emptySpace();
     consoleLog_stageChange("6TH Sale Refunded");
     //GetCurrentBlocksTimestamp
-    const currentLockBalanceIndex_S6R = await calculateLockBalanceIndex(refundWindowC2);
+    const currentLockBalanceIndex_S6R = await calculateLockBalanceIndex(refundWindowC3);
     consoleLog_lockBalanceIndex(currentLockBalanceIndex_S6R);
     //instrucor
     consoleLog_instructorLockedBalanceArray(instLB_S6R);
@@ -1195,16 +1354,51 @@ describe("Platform Treasury Visual Tests", function () {
     consoleLog_coachingPoolOtherBalances(coachCurB_S6R, coachRefundendB_S6R, coachSumRB_S6R);
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////
+    // wait end of previous refund window to eliminate precaution withdraw block on balances
+    //Empty space
+    consoleLog_emptySpace();
+    skipDays(refundWindowC2);
+    if (consoleLogOn) {
+      console.log("----End of precaution withdrawal period ", refundWindowC2, " day----");
+    }
+
+    ///////////////////////////////////////////////////////////////////////////////////////////////////
     // Change refund window to 6 days to work to see the effect of the change
     await contractPlatformTreasury.connect(backend).changeRefundWindow(6);
-    let refundWindowC3 = (await contractPlatformTreasury.refundWindow()).toNumber();
+    let refundWindowC4 = (await contractPlatformTreasury.refundWindow()).toNumber();
     //Empty space
     consoleLog_emptySpace();
     if (consoleLogOn) {
       console.log(colorMagenta, "----REFUND WINDOW CHANGED----", colorReset);
-      console.log("----New refund window is ", refundWindowC3, " days----");
+      console.log("----New refund window is ", refundWindowC4, " days----");
     }
     // No need to wait any precaution withdrawal period since the refund window is increased
+    // GET "Locked Balances" arrays and "Current, Unlocked, Refunded" balances after the refund window change
+    const instLB_REFWC4 = await getInstructorLockedBalanceArray(refundWindowC4, contentCreator);
+    const contLB_REFWC4 = await getContentLockedBalanceArray(refundWindowC4);
+    const coachLB_REFWC4 = await getCoachingLockedBalanceArray(refundWindowC4);
+    const [iCurB_REFWC4, iUnlockB_REFWC4, iRefundB_REFWC4] = await getInstructorCurrentUnlockedRefundedBalances(
+      contentCreator
+    );
+    const [contCurB_REFWC4, contRefundendB_REFWC4, contSumRB_REFWC4] = await getContentCurrentRefundedBalances();
+    const [coachCurB_REFWC4, coachRefundendB_REFWC4, coachSumRB_REFWC4] = await getCoachingCurrentRefundedBalances();
+
+    // Console log the balances after the refund window change
+    //Empty space
+    consoleLog_emptySpace();
+    consoleLog_stageChange("Refund Window Change");
+    //GetCurrentBlocksTimestamp
+    const currentLockBalanceIndex_REFWC4 = await calculateLockBalanceIndex(refundWindowC4);
+    consoleLog_lockBalanceIndex(currentLockBalanceIndex_REFWC4);
+    //instrucor
+    consoleLog_instructorLockedBalanceArray(instLB_REFWC4);
+    consoleLog_instructorOtherBalances(iCurB_REFWC4, iUnlockB_REFWC4, iRefundB_REFWC4);
+    //Content Pool
+    consoleLog_contentLockedBalanceArray(contLB_REFWC4);
+    consoleLog_contentPoolOtherBalances(contCurB_REFWC4, contRefundendB_REFWC4, contSumRB_REFWC4);
+    //Coaching Pool
+    consoleLog_coachingLockedBalanceArray(coachLB_REFWC4);
+    consoleLog_coachingPoolOtherBalances(coachCurB_REFWC4, coachRefundendB_REFWC4, coachSumRB_REFWC4);
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////
     // 7- Make a new content purchase
@@ -1225,9 +1419,9 @@ describe("Platform Treasury Visual Tests", function () {
       userIds
     );
     // GET "Locked Balances" arrays and "Current, Unlocked, Refunded" balances after the 7th sale
-    const instLB_S7 = await getInstructorLockedBalanceArray(refundWindowC3, contentCreator);
-    const contLB_S7 = await getContentLockedBalanceArray(refundWindowC3);
-    const coachLB_S7 = await getCoachingLockedBalanceArray(refundWindowC3);
+    const instLB_S7 = await getInstructorLockedBalanceArray(refundWindowC4, contentCreator);
+    const contLB_S7 = await getContentLockedBalanceArray(refundWindowC4);
+    const coachLB_S7 = await getCoachingLockedBalanceArray(refundWindowC4);
     const [iCurB_S7, iUnlockB_S7, iRefundB_S7] = await getInstructorCurrentUnlockedRefundedBalances(contentCreator);
     const [contCurB_S7, contRefundendB_S7, contSumRB_S7] = await getContentCurrentRefundedBalances();
     const [coachCurB_S7, coachRefundendB_S7, coachSumRB_S7] = await getCoachingCurrentRefundedBalances();
@@ -1237,7 +1431,7 @@ describe("Platform Treasury Visual Tests", function () {
     consoleLog_emptySpace();
     consoleLog_stageChange("7TH Sale Completed");
     //GetCurrentBlocksTimestamp
-    const currentLockBalanceIndex_S7 = await calculateLockBalanceIndex(refundWindowC3);
+    const currentLockBalanceIndex_S7 = await calculateLockBalanceIndex(refundWindowC4);
     consoleLog_lockBalanceIndex(currentLockBalanceIndex_S7);
     //instrucor
     consoleLog_instructorLockedBalanceArray(instLB_S7);
@@ -1248,6 +1442,59 @@ describe("Platform Treasury Visual Tests", function () {
     //Coaching Pool
     consoleLog_coachingLockedBalanceArray(coachLB_S7);
     consoleLog_coachingPoolOtherBalances(coachCurB_S7, coachRefundendB_S7, coachSumRB_S7);
+
+    ///////////////////////////////////////////////////////////////////////////////////////////////////
+    // 3C - Make a coaching purchase
+    //Send UDAO to the buyer's wallet
+    await contractUDAO.transfer(contentBuyer3.address, ethers.utils.parseEther("100.0"));
+    //Content buyer needs to give approval to the platformtreasury
+    await contractUDAO
+      .connect(contentBuyer3)
+      .approve(contractPlatformTreasury.address, ethers.utils.parseEther("999999999999.0"));
+    //Create CoachingVoucher to be able to buy coaching
+    const lazyCoaching3 = new LazyCoaching({
+      contract: contractVoucherVerifier,
+      signer: backend,
+    });
+    const coachingPrice3 = ethers.utils.parseEther("2.0");
+    //Coaching date is 3 days from now
+    const coachingDate3 = (await hre.ethers.provider.getBlock()).timestamp + 3 * 24 * 60 * 60;
+    const role_voucher3 = await lazyCoaching2.createVoucher(
+      contentCreator.address,
+      coachingPrice3,
+      coachingDate3,
+      contentBuyer3.address,
+      "c8d53630-233a-4f95-90cb-4df253ae9283"
+    );
+    // Buy coaching
+    expect(await contractPlatformTreasury.connect(contentBuyer3).buyCoaching(role_voucher3)).to.emit(
+      contractPlatformTreasury,
+      "CoachingBought"
+    );
+    // GET "Locked Balances" arrays and "Current, Unlocked, Refunded" balances after the coaching purchase
+    const instLB_C3 = await getInstructorLockedBalanceArray(refundWindowC4, contentCreator);
+    const contLB_C3 = await getContentLockedBalanceArray(refundWindowC4);
+    const coachLB_C3 = await getCoachingLockedBalanceArray(refundWindowC4);
+    const [iCurB_C3, iUnlockB_C3, iRefundB_C3] = await getInstructorCurrentUnlockedRefundedBalances(contentCreator);
+    const [contCurB_C3, contRefundendB_C3, contSumRB_C3] = await getContentCurrentRefundedBalances();
+    const [coachCurB_C3, coachRefundendB_C3, coachSumRB_C3] = await getCoachingCurrentRefundedBalances();
+
+    // Console log the balances after the coaching purchase
+    //Empty space
+    consoleLog_emptySpace();
+    consoleLog_stageChange("3RD Coaching Purchase Completed");
+    //GetCurrentBlocksTimestamp
+    const currentLockBalanceIndex_C3 = await calculateLockBalanceIndex(refundWindowC4);
+    consoleLog_lockBalanceIndex(currentLockBalanceIndex_C3);
+    //instrucor
+    consoleLog_instructorLockedBalanceArray(instLB_C3);
+    consoleLog_instructorOtherBalances(iCurB_C3, iUnlockB_C3, iRefundB_C3);
+    //Content Pool
+    consoleLog_contentLockedBalanceArray(contLB_C3);
+    consoleLog_contentPoolOtherBalances(contCurB_C3, contRefundendB_C3, contSumRB_C3);
+    //Coaching Pool
+    consoleLog_coachingLockedBalanceArray(coachLB_C3);
+    consoleLog_coachingPoolOtherBalances(coachCurB_C3, coachRefundendB_C3, coachSumRB_C3);
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////
     // Skip 1 day
@@ -1276,9 +1523,9 @@ describe("Platform Treasury Visual Tests", function () {
       userIds
     );
     // GET "Locked Balances" arrays and "Current, Unlocked, Refunded" balances after the 8th sale
-    const instLB_S8 = await getInstructorLockedBalanceArray(refundWindowC3, contentCreator);
-    const contLB_S8 = await getContentLockedBalanceArray(refundWindowC3);
-    const coachLB_S8 = await getCoachingLockedBalanceArray(refundWindowC3);
+    const instLB_S8 = await getInstructorLockedBalanceArray(refundWindowC4, contentCreator);
+    const contLB_S8 = await getContentLockedBalanceArray(refundWindowC4);
+    const coachLB_S8 = await getCoachingLockedBalanceArray(refundWindowC4);
     const [iCurB_S8, iUnlockB_S8, iRefundB_S8] = await getInstructorCurrentUnlockedRefundedBalances(contentCreator);
     const [contCurB_S8, contRefundendB_S8, contSumRB_S8] = await getContentCurrentRefundedBalances();
     const [coachCurB_S8, coachRefundendB_S8, coachSumRB_S8] = await getCoachingCurrentRefundedBalances();
@@ -1288,7 +1535,7 @@ describe("Platform Treasury Visual Tests", function () {
     consoleLog_emptySpace();
     consoleLog_stageChange("8TH Sale Completed");
     //GetCurrentBlocksTimestamp
-    const currentLockBalanceIndex_S8 = await calculateLockBalanceIndex(refundWindowC3);
+    const currentLockBalanceIndex_S8 = await calculateLockBalanceIndex(refundWindowC4);
     consoleLog_lockBalanceIndex(currentLockBalanceIndex_S8);
     //instrucor
     consoleLog_instructorLockedBalanceArray(instLB_S8);
@@ -1307,8 +1554,8 @@ describe("Platform Treasury Visual Tests", function () {
       contract: contractVoucherVerifier,
       signer: backend,
     });
-    const voucherValidUntil4 = Date.now() + 86400;
-    const contentSaleId4 = 7; // 0 since only one content is created and sold
+    const voucherValidUntil4 = Date.now() + 86400; //Voucher will be valid for 1 day
+    const contentSaleId4 = 7; //8th sale wanted to be refund, saleId is 0 based index so that 8th sale has id 7
     const refund_voucher4 = await refundVoucher4.createVoucher(
       contentSaleId4,
       contentCreator.address,
@@ -1321,9 +1568,9 @@ describe("Platform Treasury Visual Tests", function () {
       .to.emit(contractPlatformTreasury, "SaleRefunded")
       .withArgs(contentSaleId4, refundType);
     // GET "Locked Balances" arrays and "Current, Unlocked, Refunded" balances after the refund of the 8th sale
-    const instLB_S8R = await getInstructorLockedBalanceArray(refundWindowC3, contentCreator);
-    const contLB_S8R = await getContentLockedBalanceArray(refundWindowC3);
-    const coachLB_S8R = await getCoachingLockedBalanceArray(refundWindowC3);
+    const instLB_S8R = await getInstructorLockedBalanceArray(refundWindowC4, contentCreator);
+    const contLB_S8R = await getContentLockedBalanceArray(refundWindowC4);
+    const coachLB_S8R = await getCoachingLockedBalanceArray(refundWindowC4);
     const [iCurB_S8R, iUnlockB_S8R, iRefundB_S8R] = await getInstructorCurrentUnlockedRefundedBalances(contentCreator);
     const [contCurB_S8R, contRefundendB_S8R, contSumRB_S8R] = await getContentCurrentRefundedBalances();
     const [coachCurB_S8R, coachRefundendB_S8R, coachSumRB_S8R] = await getCoachingCurrentRefundedBalances();
@@ -1333,7 +1580,7 @@ describe("Platform Treasury Visual Tests", function () {
     consoleLog_emptySpace();
     consoleLog_stageChange("8TH Sale Refunded");
     //GetCurrentBlocksTimestamp
-    const currentLockBalanceIndex_S8R = await calculateLockBalanceIndex(refundWindowC3);
+    const currentLockBalanceIndex_S8R = await calculateLockBalanceIndex(refundWindowC4);
     consoleLog_lockBalanceIndex(currentLockBalanceIndex_S8R);
     //instrucor
     consoleLog_instructorLockedBalanceArray(instLB_S8R);
