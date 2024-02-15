@@ -204,6 +204,18 @@ contract PlatformTreasury is ContentManager {
             hasRole(BACKEND_ROLE, msg.sender),
             "Only backend can set refund window"
         );
+        require(
+            _newWindow >= 2,
+            "Refund window period should be at least 2 days"
+        );
+        require(
+            _newWindow <= 60,
+            "Refund window period should be at most 60 days"
+        );
+        require(
+            _newWindow != refundWindow,
+            "New window period is the same as the current one"
+        );
         /// @dev this is the timestamp of the transaction in days
         uint256 transactionTime = (block.timestamp / 86400);
         /// @dev transactionLBIndex determines a "transaction time dependent position" in the Locked balanaces array.
