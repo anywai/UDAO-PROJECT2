@@ -621,7 +621,7 @@ abstract contract ContentManager is BasePlatform {
     function _transferPlatformCutstoGovernance() internal {
         if (block.timestamp >= precautionWithdrawalTimestamp) {
             /// @dev if there is any revenue in contentCutPool which is completed the refund window, distribute role shares to roles and transfer governance role shares to governance treasury
-            if (contentCutPool > contentCutRefundedBalance) {
+            if (contentCutPool >= contentCutRefundedBalance) {
                 /// @dev reduce the refunded and blocked balance from the content cut pool
                 uint positiveContentCutPool = contentCutPool -
                     contentCutRefundedBalance;
@@ -640,7 +640,7 @@ abstract contract ContentManager is BasePlatform {
             }
 
             /// @dev if there is any revenue in coachingCutPool which is completed the refund window, distribute role shares to roles and transfer governance role shares to governance treasury
-            if (coachingCutPool > coachingCutRefundedBalance) {
+            if (coachingCutPool >= coachingCutRefundedBalance) {
                 /// @dev reduce the refunded and blocked balance from the coaching cut pool
                 uint positiveCoachingCutPool = coachingCutPool -
                     coachingCutRefundedBalance;
@@ -751,6 +751,28 @@ abstract contract ContentManager is BasePlatform {
             (refundItem.instrShare + refundItem.totalCut)
         );
         emit SaleRefunded(_refCoachSaleID, 0);
+
+        /// @dev this is the timestamp of the transaction in days
+        uint256 transactionTime = (block.timestamp / 86400);
+        /// @dev transactionLBIndex determines a "transaction time dependent position" in the Locked balanaces array.
+        uint256 transactionLBIndex = transactionTime % refundWindow;
+
+        /// @dev update platform cut (coaching&content) pools and platform locked pools
+        _updatePlatformCutBalances(
+            0, //contentCut=0 due to there is no content revenue on this transaction
+            0, //coachingCut=0 due to there is no coaching revenue on this transaction
+            transactionTime,
+            transactionLBIndex
+        );
+        /// @dev if there is any revenue in platform cut pools, distribute role shares to roles and transfer governance role shares to governance treasury
+        _transferPlatformCutstoGovernance();
+        /// @dev update instructor balance and instructor locked balances,
+        _updateInstructorBalances(
+            0, //instShare=0 due to there is no new revenue on this transaction
+            refundItem.coach,
+            transactionTime,
+            transactionLBIndex
+        );
     }
 
     /// @notice Allows to anyone to refund of coaching with a voucher created by platform
@@ -780,6 +802,28 @@ abstract contract ContentManager is BasePlatform {
             (refundItem.instrShare + refundItem.totalCut)
         );
         emit SaleRefunded(voucher.saleID, 0);
+
+        /// @dev this is the timestamp of the transaction in days
+        uint256 transactionTime = (block.timestamp / 86400);
+        /// @dev transactionLBIndex determines a "transaction time dependent position" in the Locked balanaces array.
+        uint256 transactionLBIndex = transactionTime % refundWindow;
+
+        /// @dev update platform cut (coaching&content) pools and platform locked pools
+        _updatePlatformCutBalances(
+            0, //contentCut=0 due to there is no content revenue on this transaction
+            0, //coachingCut=0 due to there is no coaching revenue on this transaction
+            transactionTime,
+            transactionLBIndex
+        );
+        /// @dev if there is any revenue in platform cut pools, distribute role shares to roles and transfer governance role shares to governance treasury
+        _transferPlatformCutstoGovernance();
+        /// @dev update instructor balance and instructor locked balances,
+        _updateInstructorBalances(
+            0, //instShare=0 due to there is no new revenue on this transaction
+            refundItem.coach,
+            transactionTime,
+            transactionLBIndex
+        );
     }
 
     /// @notice Allows anyone to refund of a content with a voucher created by platform
@@ -852,5 +896,27 @@ abstract contract ContentManager is BasePlatform {
             (refundItem.instrShare + refundItem.totalCut)
         );
         emit SaleRefunded(voucher.saleID, 1);
+
+        /// @dev this is the timestamp of the transaction in days
+        uint256 transactionTime = (block.timestamp / 86400);
+        /// @dev transactionLBIndex determines a "transaction time dependent position" in the Locked balanaces array.
+        uint256 transactionLBIndex = transactionTime % refundWindow;
+
+        /// @dev update platform cut (coaching&content) pools and platform locked pools
+        _updatePlatformCutBalances(
+            0, //contentCut=0 due to there is no content revenue on this transaction
+            0, //coachingCut=0 due to there is no coaching revenue on this transaction
+            transactionTime,
+            transactionLBIndex
+        );
+        /// @dev if there is any revenue in platform cut pools, distribute role shares to roles and transfer governance role shares to governance treasury
+        _transferPlatformCutstoGovernance();
+        /// @dev update instructor balance and instructor locked balances,
+        _updateInstructorBalances(
+            0, //instShare=0 due to there is no new revenue on this transaction
+            refundItem.instructor,
+            transactionTime,
+            transactionLBIndex
+        );
     }
 }
