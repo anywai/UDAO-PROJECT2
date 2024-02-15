@@ -73,11 +73,6 @@ contract PlatformTreasury is ContentManager {
     /// @notice withdraws foundation balance to foundation wallet
     function withdrawFoundation() external whenNotPaused {
         require(
-            block.timestamp > precautionWithdrawalTimestamp,
-            "Precaution withdrawal period is not over"
-        );
-
-        require(
             hasRole(FOUNDATION_ROLE, msg.sender),
             "Only foundation can withdraw"
         );
