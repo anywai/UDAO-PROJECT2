@@ -177,10 +177,6 @@ async function createContentVoucher(
     validationScore
   );
 }
-async function skipDays(days) {
-  const numBlocksToMine = Math.ceil((days * 24 * 60 * 60) / 2);
-  await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine.toString(16)}`, "0x2"]);
-}
 
 async function _createContent(
   contractRoleManager,
@@ -343,6 +339,215 @@ async function makeCoachingPurchase(
   // Check if returned learner address is the same as the buyer address
   expect(coachingStruct.contentReceiver).to.equal(contentBuyer.address);
   return coachingSaleID;
+}
+
+///NEW FUNCTIONS
+async function skipDays(_days) {
+  const numBlocksToMine = Math.ceil((_days * 24 * 60 * 60) / 2);
+  await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine.toString(16)}`, "0x2"]);
+}
+
+async function calculateLockBalanceIndex(_refundWindow) {
+  const block = await hre.ethers.provider.getBlock();
+  const timeStampInDays = Math.floor(block.timestamp / 86400);
+  const _lockBalanceIndex = timeStampInDays % _refundWindow;
+  return _lockBalanceIndex;
+}
+
+async function getInstructorLockedBalanceArray(_refundWindow, _contentCreator) {
+  let _instructorLockedBalanceArray = [];
+  for (let i = 0; i < _refundWindow; i++) {
+    _instructorLockedBalanceArray[i] = ethers.utils.formatEther(
+      await contractPlatformTreasury.instLockedBalance(_contentCreator.address, i)
+    );
+  }
+  return _instructorLockedBalanceArray;
+}
+
+async function getContentLockedBalanceArray(_refundWindow) {
+  let _contentLockedBalanceArray = [];
+  for (let i = 0; i < _refundWindow; i++) {
+    _contentLockedBalanceArray[i] = ethers.utils.formatEther(await contractPlatformTreasury.contentCutLockedPool(i));
+  }
+  return _contentLockedBalanceArray;
+}
+
+async function getCoachingLockedBalanceArray(_refundWindow) {
+  let _coachingLockedBalanceArray = [];
+  for (let i = 0; i < _refundWindow; i++) {
+    _coachingLockedBalanceArray[i] = ethers.utils.formatEther(await contractPlatformTreasury.coachingCutLockedPool(i));
+  }
+  return _coachingLockedBalanceArray;
+}
+
+async function getInstructorCurrentUnlockedRefundedBalances(_contentCreator) {
+  const _currentBalanceInst = ethers.utils.formatEther(
+    await contractPlatformTreasury.instBalance(contentCreator.address)
+  );
+  const [_unlockedBalanceInstBN, _refundendBalanceInstBN] =
+    await contractPlatformTreasury.getWithdrawableBalanceInstructor(contentCreator.address);
+  const _unlockedBalanceInst = ethers.utils.formatEther(_unlockedBalanceInstBN);
+  const _refundendBalanceInst = ethers.utils.formatEther(_refundendBalanceInstBN);
+  const _iRefBalance = ethers.utils.formatEther(
+    await contractPlatformTreasury.instRefundedBalance(contentCreator.address)
+  );
+  if (_iRefBalance - _refundendBalanceInst != 0) {
+    console.log("ERROR: getWithdarwableBalanceInstructor() is not working properly");
+  }
+  return [_currentBalanceInst, _unlockedBalanceInst, _refundendBalanceInst];
+}
+
+async function getContentCurrentRefundedBalances() {
+  const _currentBalanceContent = ethers.utils.formatEther(await contractPlatformTreasury.contentCutPool());
+  const _refundendBalanceContent = ethers.utils.formatEther(await contractPlatformTreasury.contentCutRefundedBalance());
+
+  //Calculate the distributed content cuts
+  const _totalRoleBalances = await getTotalRoleBalances();
+
+  return [_currentBalanceContent, _refundendBalanceContent, _totalRoleBalances];
+}
+async function getCoachingCurrentRefundedBalances() {
+  const _currentBalanceCoach = ethers.utils.formatEther(await contractPlatformTreasury.coachingCutPool());
+  const _refundendBalanceCoach = ethers.utils.formatEther(await contractPlatformTreasury.coachingCutRefundedBalance());
+
+  //Calculate the distributed content cuts
+  const _totalRoleBalances = await getTotalRoleBalances();
+
+  return [_currentBalanceCoach, _refundendBalanceCoach, _totalRoleBalances];
+}
+
+async function getTotalRoleBalances() {
+  const _foundationBalance = await contractPlatformTreasury.foundationBalance();
+  const _governanceBalance = await contractPlatformTreasury.governanceBalance();
+  const _jurorBalance = await contractPlatformTreasury.jurorBalance();
+  const _validatorBalance = await contractPlatformTreasury.validatorsBalance();
+  const _sumOfBalances = ethers.utils.formatEther(
+    _foundationBalance.add(_governanceBalance).add(_jurorBalance).add(_validatorBalance)
+  );
+  return _sumOfBalances;
+}
+
+/// @dev Console Log functions and declarations
+let consoleLogOn = false;
+let instroctorBalances_consoleLogOn = false;
+let contentPool_consoleLogOn = false;
+let coachingPool_consoleLogOn = false;
+// Main colors
+const colorRed = "\u001b[31m";
+const colorGreen = "\u001b[32m";
+const colorYellow = "\u001b[33m";
+const colorBlue = "\u001b[34m";
+const colorMagenta = "\u001b[35m";
+const colorCyan = "\u001b[36m";
+
+const colorMagenta_BackCyan = "\u001b[37;44m";
+const colorReset = "\u001b[0m";
+
+async function consoleLog_skipedDays(_days) {
+  if (consoleLogOn) {
+    console.log(colorMagenta, "----- " + _days + " day passed ----", colorReset);
+  }
+}
+async function consoleLog_lockBalanceIndex(_lockBalanceIndex) {
+  if (consoleLogOn) {
+    console.log(" Today's Lock Balance Index: ", colorYellow, _lockBalanceIndex, colorReset);
+  }
+}
+async function consoleLog_emptySpace() {
+  if (consoleLogOn) {
+    console.log("");
+    console.log("");
+  }
+}
+async function consoleLog_instructorLockedBalanceArray(_instructorLockedBalanceArray) {
+  if (consoleLogOn && instroctorBalances_consoleLogOn) {
+    console.log(colorRed, "Instructor", colorReset, "Locked Balance Array: ");
+    console.log(_instructorLockedBalanceArray);
+  }
+}
+async function consoleLog_contentLockedBalanceArray(_contentLockedBalanceArray) {
+  if (consoleLogOn && contentPool_consoleLogOn) {
+    console.log(colorBlue, "Content", colorReset, "Locked Balance Array: ");
+    console.log(_contentLockedBalanceArray);
+  }
+}
+async function consoleLog_coachingLockedBalanceArray(_coachingLockedBalanceArray) {
+  if (consoleLogOn && coachingPool_consoleLogOn) {
+    console.log(colorCyan, "Coaching", colorReset, "Locked Balance Array: ");
+    console.log(_coachingLockedBalanceArray);
+  }
+}
+async function consoleLog_instructorOtherBalances(_insCurrentB, _insUnlockedB, _insRefundedB) {
+  if (consoleLogOn && instroctorBalances_consoleLogOn) {
+    console.log(
+      colorRed,
+      "Instructor",
+      colorReset,
+      "Other Balances= ",
+      "CurrentBalance:",
+      colorYellow,
+      _insCurrentB,
+      colorReset,
+      "RefundendBalance:",
+      colorYellow,
+      _insRefundedB,
+      colorReset,
+      "UnlockedBalance:",
+      colorYellow,
+      _insUnlockedB,
+      colorReset
+    );
+  }
+}
+async function consoleLog_contentPoolOtherBalances(_contentCurrentB, _contentRefundedB, _totalRoleBalances) {
+  if (consoleLogOn && contentPool_consoleLogOn) {
+    console.log(
+      colorBlue,
+      "Content Pool",
+      colorReset,
+      "Other Balances= ",
+      "CurrentBalance:",
+      colorYellow,
+      _contentCurrentB,
+      colorReset,
+      "RefundendBalance:",
+      colorYellow,
+      _contentRefundedB,
+      colorReset,
+      "++SummationOfRoleBalances:",
+      colorGreen,
+      _totalRoleBalances,
+      colorReset
+    );
+  }
+}
+async function consoleLog_coachingPoolOtherBalances(_coachingCurrentB, _coachingRefundedB, _totalRoleBalances) {
+  if (consoleLogOn && coachingPool_consoleLogOn) {
+    console.log(
+      colorCyan,
+      "Coaching Pool",
+      colorReset,
+      "Other Balances= ",
+      "CurrentBalance:",
+      colorYellow,
+      _coachingCurrentB,
+      colorReset,
+      "RefundendBalance:",
+      colorYellow,
+      _coachingRefundedB,
+      colorReset,
+      "++SummationOfRoleBalances:",
+      colorGreen,
+      _totalRoleBalances,
+      colorReset
+    );
+  }
+}
+
+async function consoleLog_stageChange(_stage) {
+  if (consoleLogOn) {
+    console.log(colorMagenta_BackCyan, _stage, colorReset);
+  }
 }
 
 describe("Platform Treasury Updated General", function () {
@@ -2065,515 +2270,18 @@ describe("Platform Treasury Updated General", function () {
     );
   });
 
-  it("Should instructor earn correct amount of UDAO from sales", async function () {
-    const consoleLogOn = false;
-    await reDeploy();
-    /// KYC content creator and content buyers
-    await contractRoleManager.setKYC(contentCreator.address, true);
-    await contractRoleManager.setKYC(contentBuyer1.address, true);
-    await contractRoleManager.setKYC(contentBuyer2.address, true);
-    await contractRoleManager.setKYC(contentBuyer3.address, true);
-    await contractRoleManager.setKYC(validator1.address, true);
-    await contractRoleManager.setKYC(validator2.address, true);
-    await contractRoleManager.setKYC(validator3.address, true);
-    await contractRoleManager.setKYC(validator4.address, true);
-    await contractRoleManager.setKYC(validator5.address, true);
+  it("Should platform balances must hold correct amount of token during repeated buy, refund, refundWindow change cycles", async function () {
+    /// @note This test gives balances as a console log and do not check anything at all. its purpose is to see balance changes on the platform and it is totally manual.
+    /// To show the console logs uncomment the console.log lines below
+    //consoleLogOn = true;
+    instroctorBalances_consoleLogOn = true;
+    contentPool_consoleLogOn = true;
+    coachingPool_consoleLogOn = true;
 
-    const firstRefundWindow = (await contractPlatformTreasury.refundWindow()).toNumber();
-    //change refund window
-    await contractPlatformTreasury.connect(backend).changeRefundWindow(5);
-
-    // wait end of previous refund window to handle precaution withdraw time
-    const numBlocksToMine20 = Math.ceil((firstRefundWindow * 24 * 60 * 60) / 2);
-    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine20.toString(16)}`, "0x2"]);
-    if (consoleLogOn) {
-      console.log("----End of precaution withdrawal period 20day----");
-    }
-
-    //Empty space
-    if (consoleLogOn) {
-      console.log();
-      console.log();
-    }
-
-    // Get the refund window before change
-    let refundWindow = (await contractPlatformTreasury.refundWindow()).toNumber();
-    if (consoleLogOn) {
-      console.log("refundWindowBefore:", refundWindow);
-    }
-    // Define the instructer balance variables
-    let currentBalanceInstS1;
-    let getWithdrawableBalanceS1;
-    let getRefundendBalanceS1;
-    let currentBlockTimestampIndex;
-    let getWithdrawableBalanceS2;
-    let getRefundendBalanceS2;
-
-    // Calculate the instructer balances
-    currentBalanceInstS1 = ethers.utils.formatEther(await contractPlatformTreasury.instBalance(contentCreator.address));
-    [getWithdrawableBalanceS1, getRefundendBalanceS1] = await contractPlatformTreasury.getWithdrawableBalanceInstructor(
-      contentCreator.address
-    );
-    getWithdrawableBalanceS2 = ethers.utils.formatEther(getWithdrawableBalanceS1);
-    getRefundendBalanceS2 = ethers.utils.formatEther(getRefundendBalanceS1);
-    if (consoleLogOn) {
-      console.log(
-        "USERS BALANCES at 0= [",
-        "Mapping:",
-        currentBalanceInstS1,
-        "Get+:",
-        getWithdrawableBalanceS2,
-        "Get-",
-        getRefundendBalanceS2,
-        "]"
-      );
-    }
-
-    //Empty space
-    if (consoleLogOn) {
-      console.log();
-      console.log();
-    }
-
-    /// Create content
-    // Create content
-    const contentParts = [0, 1];
-    const redeemer = contentCreator;
-    // Create content voucher
-    const createContentVoucherSample = await createContentVoucher(
-      contractUDAOContent,
-      backend,
-      contentCreator,
-      redeemer,
-      contentParts,
-      (redeemType = 1),
-      (validationScore = 1)
-    );
-    // Create content with voucher
-    await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample))
-      .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
-      .withArgs(ethers.constants.AddressZero, contentCreator.address, 1);
-
-    // common parts in the purchase voucher
-    const tokenIds = [1];
-    const purchasedParts = [[1]];
-    const giftReceiver = [ethers.constants.AddressZero];
-    const fullContentPurchase = [false];
-    const pricesToPay = [ethers.utils.parseEther("1")];
-    const validUntil = Date.now() + 999999999;
-    const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
-
-    // Make a content purchase
-    const redeemers = [contentBuyer1.address];
-    await makeContentPurchase(
-      contractPlatformTreasury,
-      contractVoucherVerifier,
-      contentBuyer1,
-      contractRoleManager,
-      contractUDAO,
-      tokenIds,
-      purchasedParts,
-      pricesToPay,
-      fullContentPurchase,
-      validUntil,
-      redeemers,
-      giftReceiver,
-      userIds
-    );
-
-    // Get current blocks timestamp
-    currentBlockTimestampIndex = Math.floor(
-      ((await hre.ethers.provider.getBlock()).timestamp % (refundWindow * 86400)) / 86400
-    );
-    if (consoleLogOn) {
-      console.log("ThisDaysLockBalanceIndex:", currentBlockTimestampIndex);
-    }
-
-    // Get the instructer balance before withdrawal
-    let instructorLockedBalanceArrayBN = [];
-    for (let i = 0; i < refundWindow; i++) {
-      instructorLockedBalanceArrayBN[i] = ethers.utils.formatEther(
-        await contractPlatformTreasury.instLockedBalance(contentCreator.address, i)
-      );
-    }
-    if (consoleLogOn) {
-      console.log("1st sale:", instructorLockedBalanceArrayBN);
-    }
-
-    // Calculate the instructer balances
-    currentBalanceInstS1 = ethers.utils.formatEther(await contractPlatformTreasury.instBalance(contentCreator.address));
-    [getWithdrawableBalanceS1, getRefundendBalanceS1] = await contractPlatformTreasury.getWithdrawableBalanceInstructor(
-      contentCreator.address
-    );
-    getWithdrawableBalanceS2 = ethers.utils.formatEther(getWithdrawableBalanceS1);
-    getRefundendBalanceS2 = ethers.utils.formatEther(getRefundendBalanceS1);
-    if (consoleLogOn) {
-      console.log(
-        "USERS BALANCES 1st SALE= [",
-        "Mapping:",
-        currentBalanceInstS1,
-        "Get+:",
-        getWithdrawableBalanceS2,
-        "Get-",
-        getRefundendBalanceS2,
-        "]"
-      );
-    }
-
-    //Empty space
-    if (consoleLogOn) {
-      console.log();
-      console.log();
-    }
-
-    // skip 1 day
-    const numBlocksToMine0 = Math.ceil((1 * 24 * 60 * 60) / 2);
-    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine0.toString(16)}`, "0x2"]);
-    if (consoleLogOn) {
-      console.log("----1 day passed----");
-    }
-
-    // Make a new content purchase
-    const redeemers2 = [contentBuyer2.address];
-    await makeContentPurchase(
-      contractPlatformTreasury,
-      contractVoucherVerifier,
-      contentBuyer2,
-      contractRoleManager,
-      contractUDAO,
-      tokenIds,
-      purchasedParts,
-      pricesToPay,
-      fullContentPurchase,
-      validUntil,
-      redeemers2,
-      giftReceiver,
-      userIds
-    );
-
-    // Get current blocks timestamp
-    currentBlockTimestampIndex = Math.floor(
-      ((await hre.ethers.provider.getBlock()).timestamp % (refundWindow * 86400)) / 86400
-    );
-    if (consoleLogOn) {
-      console.log("ThisDaysLockBalanceIndex:", currentBlockTimestampIndex);
-    }
-
-    //Get the instructer balance before withdrawal
-    let instructorLockedBalanceArrayBN2 = [];
-    for (let i = 0; i < refundWindow; i++) {
-      instructorLockedBalanceArrayBN2[i] = ethers.utils.formatEther(
-        await contractPlatformTreasury.instLockedBalance(contentCreator.address, i)
-      );
-    }
-    if (consoleLogOn) {
-      console.log("2nd sale:", instructorLockedBalanceArrayBN2);
-    }
-
-    // Calculate the instructer balances
-    currentBalanceInstS1 = ethers.utils.formatEther(await contractPlatformTreasury.instBalance(contentCreator.address));
-    [getWithdrawableBalanceS1, getRefundendBalanceS1] = await contractPlatformTreasury.getWithdrawableBalanceInstructor(
-      contentCreator.address
-    );
-    getWithdrawableBalanceS2 = ethers.utils.formatEther(getWithdrawableBalanceS1);
-    getRefundendBalanceS2 = ethers.utils.formatEther(getRefundendBalanceS1);
-    if (consoleLogOn) {
-      console.log(
-        "USERS BALANCES 2nd SALE= [",
-        "Mapping:",
-        currentBalanceInstS1,
-        "Get+:",
-        getWithdrawableBalanceS2,
-        "Get-",
-        getRefundendBalanceS2,
-        "]"
-      );
-    }
-
-    //Empty space
-    if (consoleLogOn) {
-      console.log();
-      console.log();
-    }
-
-    // skip 2 days
-    const numBlocksToMine1 = Math.ceil((2 * 24 * 60 * 60) / 2);
-    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine1.toString(16)}`, "0x2"]);
-    if (consoleLogOn) {
-      console.log("----2 days passed----");
-    }
-
-    // Make a new content purchase
-    const redeemers3 = [contentBuyer3.address];
-    await makeContentPurchase(
-      contractPlatformTreasury,
-      contractVoucherVerifier,
-      contentBuyer3,
-      contractRoleManager,
-      contractUDAO,
-      tokenIds,
-      purchasedParts,
-      pricesToPay,
-      fullContentPurchase,
-      validUntil,
-      redeemers3,
-      giftReceiver,
-      userIds
-    );
-
-    // Get current blocks timestamp
-    currentBlockTimestampIndex = Math.floor(
-      ((await hre.ethers.provider.getBlock()).timestamp % (refundWindow * 86400)) / 86400
-    );
-    if (consoleLogOn) {
-      console.log("ThisDaysLockBalanceIndex:", currentBlockTimestampIndex);
-    }
-
-    //Get the instructer balance before withdrawal
-    let instructorLockedBalanceArrayBN3 = [];
-    for (let i = 0; i < refundWindow; i++) {
-      instructorLockedBalanceArrayBN3[i] = ethers.utils.formatEther(
-        await contractPlatformTreasury.instLockedBalance(contentCreator.address, i)
-      );
-    }
-    if (consoleLogOn) {
-      console.log("3rd sale:", instructorLockedBalanceArrayBN3);
-    }
-
-    // Calculate the instructer balances
-    currentBalanceInstS1 = ethers.utils.formatEther(await contractPlatformTreasury.instBalance(contentCreator.address));
-    [getWithdrawableBalanceS1, getRefundendBalanceS1] = await contractPlatformTreasury.getWithdrawableBalanceInstructor(
-      contentCreator.address
-    );
-    getWithdrawableBalanceS2 = ethers.utils.formatEther(getWithdrawableBalanceS1);
-    getRefundendBalanceS2 = ethers.utils.formatEther(getRefundendBalanceS1);
-    if (consoleLogOn) {
-      console.log(
-        "USERS BALANCES 3rd SALE= [",
-        "Mapping:",
-        currentBalanceInstS1,
-        "Get+:",
-        getWithdrawableBalanceS2,
-        "Get-",
-        getRefundendBalanceS2,
-        "]"
-      );
-    }
-
-    //Empty space
-    if (consoleLogOn) {
-      console.log();
-      console.log();
-    }
-
-    // skip 5 day
-    const numBlocksToMine2 = Math.ceil((4 * 24 * 60 * 60) / 2);
-    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine2.toString(16)}`, "0x2"]);
-    if (consoleLogOn) {
-      console.log("----4 days passed----");
-    }
-
-    const purchasedPartsNew = [[0]];
-    // Make a new content purchase
-    const redeemers4 = [contentBuyer1.address];
-    await makeContentPurchase(
-      contractPlatformTreasury,
-      contractVoucherVerifier,
-      contentBuyer1,
-      contractRoleManager,
-      contractUDAO,
-      tokenIds,
-      purchasedPartsNew,
-      pricesToPay,
-      fullContentPurchase,
-      validUntil,
-      redeemers4,
-      giftReceiver,
-      userIds
-    );
-
-    // Get current blocks timestamp
-    currentBlockTimestampIndex = Math.floor(
-      ((await hre.ethers.provider.getBlock()).timestamp % (refundWindow * 86400)) / 86400
-    );
-    if (consoleLogOn) {
-      console.log("ThisDaysLockBalanceIndex:", currentBlockTimestampIndex);
-    }
-
-    // Get the instructer balance before withdrawal
-    let instructorLockedBalanceArrayBN4 = [];
-    for (let i = 0; i < refundWindow; i++) {
-      instructorLockedBalanceArrayBN4[i] = ethers.utils.formatEther(
-        await contractPlatformTreasury.instLockedBalance(contentCreator.address, i)
-      );
-    }
-    if (consoleLogOn) {
-      console.log("4th sale:", instructorLockedBalanceArrayBN4);
-    }
-
-    // Calculate the instructer balances
-    currentBalanceInstS1 = ethers.utils.formatEther(await contractPlatformTreasury.instBalance(contentCreator.address));
-    [getWithdrawableBalanceS1, getRefundendBalanceS1] = await contractPlatformTreasury.getWithdrawableBalanceInstructor(
-      contentCreator.address
-    );
-    getWithdrawableBalanceS2 = ethers.utils.formatEther(getWithdrawableBalanceS1);
-    getRefundendBalanceS2 = ethers.utils.formatEther(getRefundendBalanceS1);
-    if (consoleLogOn) {
-      console.log(
-        "USERS BALANCES 4st SALE= [",
-        "Mapping:",
-        currentBalanceInstS1,
-        "Get+:",
-        getWithdrawableBalanceS2,
-        "Get-",
-        getRefundendBalanceS2,
-        "]"
-      );
-    }
-
-    //Empty space
-    if (consoleLogOn) {
-      console.log();
-      console.log();
-    }
-
-    // skip 1 day
-    const numBlocksToMine3 = Math.ceil((1 * 24 * 60 * 60) / 2);
-    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine3.toString(16)}`, "0x2"]);
-    if (consoleLogOn) {
-      console.log("----1 days passed----");
-    }
-    // Make a new content purchase
-    const redeemers5 = [contentBuyer2.address];
-    await makeContentPurchase(
-      contractPlatformTreasury,
-      contractVoucherVerifier,
-      contentBuyer2,
-      contractRoleManager,
-      contractUDAO,
-      tokenIds,
-      purchasedPartsNew,
-      pricesToPay,
-      fullContentPurchase,
-      validUntil,
-      redeemers5,
-      giftReceiver,
-      userIds
-    );
-
-    // Get current blocks timestamp
-    currentBlockTimestampIndex = Math.floor(
-      ((await hre.ethers.provider.getBlock()).timestamp % (refundWindow * 86400)) / 86400
-    );
-    if (consoleLogOn) {
-      console.log("ThisDaysLockBalanceIndex:", currentBlockTimestampIndex);
-    }
-
-    //Get the instructer balance before withdrawal
-    let instructorLockedBalanceArrayBN5 = [];
-    for (let i = 0; i < refundWindow; i++) {
-      instructorLockedBalanceArrayBN5[i] = ethers.utils.formatEther(
-        await contractPlatformTreasury.instLockedBalance(contentCreator.address, i)
-      );
-    }
-    if (consoleLogOn) {
-      console.log("5th sale:", instructorLockedBalanceArrayBN5);
-    }
-
-    // Calculate the instructer balances
-    currentBalanceInstS1 = ethers.utils.formatEther(await contractPlatformTreasury.instBalance(contentCreator.address));
-    [getWithdrawableBalanceS1, getRefundendBalanceS1] = await contractPlatformTreasury.getWithdrawableBalanceInstructor(
-      contentCreator.address
-    );
-    getWithdrawableBalanceS2 = ethers.utils.formatEther(getWithdrawableBalanceS1);
-    getRefundendBalanceS2 = ethers.utils.formatEther(getRefundendBalanceS1);
-    if (consoleLogOn) {
-      console.log(
-        "USERS BALANCES 5st SALE= [",
-        "Mapping:",
-        currentBalanceInstS1,
-        "Get+:",
-        getWithdrawableBalanceS2,
-        "Get-",
-        getRefundendBalanceS2,
-        "]"
-      );
-    }
-
-    //Empty space
-    if (consoleLogOn) {
-      console.log();
-      console.log();
-    }
-
-    // skip 4 day
-    const numBlocksToMine4 = Math.ceil((4 * 24 * 60 * 60) / 2);
-    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine4.toString(16)}`, "0x2"]);
-    if (consoleLogOn) {
-      console.log("----4 days passed----");
-    }
-
-    // Calculate the instructer balances
-    currentBalanceInstS1 = ethers.utils.formatEther(await contractPlatformTreasury.instBalance(contentCreator.address));
-    [getWithdrawableBalanceS1, getRefundendBalanceS1] = await contractPlatformTreasury.getWithdrawableBalanceInstructor(
-      contentCreator.address
-    );
-    getWithdrawableBalanceS2 = ethers.utils.formatEther(getWithdrawableBalanceS1);
-    getRefundendBalanceS2 = ethers.utils.formatEther(getRefundendBalanceS1);
-    if (consoleLogOn) {
-      console.log(
-        "USERS BALANCES before withdraw= [",
-        "Mapping:",
-        currentBalanceInstS1,
-        "Get+:",
-        getWithdrawableBalanceS2,
-        "Get-",
-        getRefundendBalanceS2,
-        "]"
-      );
-    }
-
-    if (consoleLogOn) {
-      console.log("Instructor Withdraw");
-    }
-    //Instructor withdraws his earnings
-    const instructerBalanceBefore = await contractUDAO.balanceOf(contentCreator.address);
-    await contractPlatformTreasury.connect(contentCreator).withdrawInstructor();
-    const instructerBalanceAfter = await contractUDAO.balanceOf(contentCreator.address);
-    let instructerBalanceChange = instructerBalanceAfter - instructerBalanceBefore;
-
-    //Instructor UDAO Balance change
-    if (consoleLogOn) {
-      console.log("Instructor UDAO Balance change:", ethers.utils.formatEther(instructerBalanceChange.toString()));
-    }
-
-    // Calculate the instructer balances
-    currentBalanceInstS1 = ethers.utils.formatEther(await contractPlatformTreasury.instBalance(contentCreator.address));
-    [getWithdrawableBalanceS1, getRefundendBalanceS1] = await contractPlatformTreasury.getWithdrawableBalanceInstructor(
-      contentCreator.address
-    );
-    getWithdrawableBalanceS2 = ethers.utils.formatEther(getWithdrawableBalanceS1);
-    getRefundendBalanceS2 = ethers.utils.formatEther(getRefundendBalanceS1);
-    if (consoleLogOn) {
-      console.log(
-        "USERS BALANCES after withdraw= [",
-        "Mapping:",
-        currentBalanceInstS1,
-        "Get+:",
-        getWithdrawableBalanceS2,
-        "Get-",
-        getRefundendBalanceS2,
-        "]"
-      );
-    }
-  });
-
-  it("Should instructor earn correct amount of UDAO from sales when the refund window changed", async function () {
-    // this test gives balances as a console log and do not check anything at all. its purpose is to see the balances and it is totally manual.
-    const consoleLogOn = false;
+    /// Initial Setup of Platform for Test
     // re-deploy the contracts
     await reDeploy();
-    /// KYC content creator and content buyers
+    // KYC content creator and content buyers
     await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer1.address, true);
     await contractRoleManager.setKYC(contentBuyer2.address, true);
@@ -2584,71 +2292,35 @@ describe("Platform Treasury Updated General", function () {
     await contractRoleManager.setKYC(validator4.address, true);
     await contractRoleManager.setKYC(validator5.address, true);
 
+    // Set content&coaching cut percentages to work without fractional numbers (foundation, governance, juror, validator), 10000 = 10%
+    await contractPlatformTreasury.connect(backend).setContentCuts(20000, 10000, 10000, 10000);
+    await contractPlatformTreasury.connect(backend).setCoachCuts(20000, 10000, 10000, 10000);
+    // Expect total cut now %50
+    expect(await contractPlatformTreasury.contentTotalCut()).to.equal(50000);
+    expect(await contractPlatformTreasury.coachTotalCut()).to.equal(50000);
+
     // Get the refund window in the first place
-    const firstRefundWindow = (await contractPlatformTreasury.refundWindow()).toNumber();
-
-    //change refund window
+    const initialRefundWindow = (await contractPlatformTreasury.refundWindow()).toNumber();
+    // Change refund window to 5 days to work with smaller locked balance arrays
     await contractPlatformTreasury.connect(backend).changeRefundWindow(5);
-
-    // wait end of previous refund window to handle precaution withdraw time
-    const numBlocksToMine20 = Math.ceil((firstRefundWindow * 24 * 60 * 60) / 2);
-    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine20.toString(16)}`, "0x2"]);
-    if (consoleLogOn) {
-      console.log("----End of precaution withdrawal period 20day----");
-    }
-
+    let refundWindowC1 = (await contractPlatformTreasury.refundWindow()).toNumber();
     //Empty space
+    consoleLog_emptySpace();
     if (consoleLogOn) {
-      console.log();
+      console.log(colorMagenta, "----REFUND WINDOW CHANGED----", colorReset);
+      console.log("----New refund window is ", refundWindowC1, " days----");
     }
+    // Wait end of previous refund window to eliminate precaution withdraw block on balances
+    skipDays(initialRefundWindow);
     if (consoleLogOn) {
-      console.log();
-    }
-
-    // Get the refund window before change
-    let refundWindow = (await contractPlatformTreasury.refundWindow()).toNumber();
-    if (consoleLogOn) {
-      console.log("refundWindowBefore:", refundWindow);
-    }
-    // Define the instructer balance variables
-    let currentBalanceInstS1;
-    let getWithdrawableBalanceS1;
-    let getRefundendBalanceS1;
-    let currentBlockTimestampIndex;
-
-    // Calculate the instructer balances
-    currentBalanceInstS1 = ethers.utils.formatEther(await contractPlatformTreasury.instBalance(contentCreator.address));
-    [getWithdrawableBalanceS1, getRefundendBalanceS1] = await contractPlatformTreasury.getWithdrawableBalanceInstructor(
-      contentCreator.address
-    );
-    getWithdrawableBalanceS2 = ethers.utils.formatEther(getWithdrawableBalanceS1);
-    getRefundendBalanceS2 = ethers.utils.formatEther(getRefundendBalanceS1);
-    if (consoleLogOn) {
-      console.log(
-        "USERS BALANCES at 0= [",
-        "Mapping:",
-        currentBalanceInstS1,
-        "Get+:",
-        getWithdrawableBalanceS2,
-        "Get-",
-        getRefundendBalanceS2,
-        "]"
-      );
+      console.log("----End of precaution withdrawal period ", initialRefundWindow, " day----");
     }
 
-    //Empty space
-    if (consoleLogOn) {
-      console.log();
-    }
-    if (consoleLogOn) {
-      console.log();
-    }
-
-    /// Create content
-    // Create content
+    /// Create Content
+    // Content have 2 parts: 0,1 and creator is: contentCreator
     const contentParts = [0, 1];
     const redeemer = contentCreator;
-    // Create content voucher
+    // Backend should suply to creater a create content voucher
     const createContentVoucherSample = await createContentVoucher(
       contractUDAOContent,
       backend,
@@ -2658,21 +2330,55 @@ describe("Platform Treasury Updated General", function () {
       (redeemType = 1),
       (validationScore = 1)
     );
-    // Create content with voucher
+    // Instructor uses this voucher to Create Content on platform
     await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample))
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
       .withArgs(ethers.constants.AddressZero, contentCreator.address, 1);
 
-    // common parts in the purchase voucher
+    /// Backend should supply to buyers a purchase voucher
+    // Common parts in the purchase voucher will be used in all purchases
     const tokenIds = [1];
     const purchasedParts = [[1]];
     const giftReceiver = [ethers.constants.AddressZero];
     const fullContentPurchase = [false];
-    const pricesToPay = [ethers.utils.parseEther("1.05")];
+    const pricesToPay = [ethers.utils.parseEther("2")];
     const validUntil = Date.now() + 999999999;
     const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
 
-    // Make a content purchase
+    ///////////////////////////////////////////////////////////////////////////////////////////////////
+    /// Start of the Test
+
+    ///////////////////////////////////////////////////////////////////////////////////////////////////
+    /// 0- Balances at the beginning
+    // Get "Locked Balances" arrays and "Current, Refunded, Unlocked" balances at the beginning
+    const instLB_S0 = await getInstructorLockedBalanceArray(refundWindowC1, contentCreator);
+    const contLB_S0 = await getContentLockedBalanceArray(refundWindowC1);
+    const coachLB_S0 = await getCoachingLockedBalanceArray(refundWindowC1);
+    const [iCurB_S0, iUnlockB_S0, iRefundB_S0] = await getInstructorCurrentUnlockedRefundedBalances(contentCreator);
+    const [contCurB_S0, contRefundendB_S0, contSumRB_S0] = await getContentCurrentRefundedBalances();
+    const [coachCurB_S0, coachRefundendB_S0, coachSumRB_S0] = await getCoachingCurrentRefundedBalances();
+
+    // Console log the balances at the beginning
+    //Empty space
+    consoleLog_emptySpace();
+    if (consoleLogOn) {
+      console.log("Beginnig of the test, Refund Window is ", refundWindowC1);
+    }
+    //GetCurrentBlocksTimestamp
+    const currentLockBalanceIndex_S0 = await calculateLockBalanceIndex(refundWindowC1);
+    consoleLog_lockBalanceIndex(currentLockBalanceIndex_S0);
+    //instrucor
+    consoleLog_instructorLockedBalanceArray(instLB_S0);
+    consoleLog_instructorOtherBalances(iCurB_S0, iUnlockB_S0, iRefundB_S0);
+    //Content Pool
+    consoleLog_contentLockedBalanceArray(contLB_S0);
+    consoleLog_contentPoolOtherBalances(contCurB_S0, contRefundendB_S0, contSumRB_S0);
+    //Coaching Pool
+    consoleLog_coachingLockedBalanceArray(coachLB_S0);
+    consoleLog_coachingPoolOtherBalances(coachCurB_S0, coachRefundendB_S0, coachSumRB_S0);
+
+    ///////////////////////////////////////////////////////////////////////////////////////////////////
+    /// 1- Make a content purchase
     const redeemers = [contentBuyer1.address];
     await makeContentPurchase(
       contractPlatformTreasury,
@@ -2689,60 +2395,41 @@ describe("Platform Treasury Updated General", function () {
       giftReceiver,
       userIds
     );
+    // GET "Locked Balances" arrays and "Current, Unlocked, Refunded" balances after the 1st sale
+    const instLB_S1 = await getInstructorLockedBalanceArray(refundWindowC1, contentCreator);
+    const contLB_S1 = await getContentLockedBalanceArray(refundWindowC1);
+    const coachLB_S1 = await getCoachingLockedBalanceArray(refundWindowC1);
+    const [iCurB_S1, iUnlockB_S1, iRefundB_S1] = await getInstructorCurrentUnlockedRefundedBalances(contentCreator);
+    const [contCurB_S1, contRefundendB_S1, contSumRB_S1] = await getContentCurrentRefundedBalances();
+    const [coachCurB_S1, coachRefundendB_S1, coachSumRB_S1] = await getCoachingCurrentRefundedBalances();
 
-    // Get current blocks timestamp
-    currentBlockTimestampIndex = Math.floor(
-      ((await hre.ethers.provider.getBlock()).timestamp % (refundWindow * 86400)) / 86400
-    );
-    if (consoleLogOn) {
-      console.log("ThisDaysLockBalanceIndex:", currentBlockTimestampIndex);
-    }
-
-    // Get the instructer balance before withdrawal
-    let instructorLockedBalanceArrayBN = [];
-    for (let i = 0; i < refundWindow; i++) {
-      instructorLockedBalanceArrayBN[i] = ethers.utils.formatEther(
-        await contractPlatformTreasury.instLockedBalance(contentCreator.address, i)
-      );
-    }
-    if (consoleLogOn) {
-      console.log("1st sale:", instructorLockedBalanceArrayBN);
-    }
-
-    // Calculate the instructer balances
-    currentBalanceInstS1 = ethers.utils.formatEther(await contractPlatformTreasury.instBalance(contentCreator.address));
-    [getWithdrawableBalanceS1, getRefundendBalanceS1] = await contractPlatformTreasury.getWithdrawableBalanceInstructor(
-      contentCreator.address
-    );
-    getWithdrawableBalanceS2 = ethers.utils.formatEther(getWithdrawableBalanceS1);
-    getRefundendBalanceS2 = ethers.utils.formatEther(getRefundendBalanceS1);
-    if (consoleLogOn) {
-      console.log(
-        "USERS BALANCES 1st SALE= [",
-        "Mapping:",
-        currentBalanceInstS1,
-        "Get+:",
-        getWithdrawableBalanceS2,
-        "Get-",
-        getRefundendBalanceS2,
-        "]"
-      );
-    }
-
+    // Console log the balances after the 1st sale
     //Empty space
-    if (consoleLogOn) {
-      console.log();
-      console.log();
-    }
+    consoleLog_emptySpace();
+    consoleLog_stageChange("1ST Sale Completed");
+    //GetCurrentBlocksTimestamp
+    const currentLockBalanceIndex_S1 = await calculateLockBalanceIndex(refundWindowC1);
+    consoleLog_lockBalanceIndex(currentLockBalanceIndex_S1);
+    //instrucor
+    consoleLog_instructorLockedBalanceArray(instLB_S1);
+    consoleLog_instructorOtherBalances(iCurB_S1, iUnlockB_S1, iRefundB_S1);
+    //Content Pool
+    consoleLog_contentLockedBalanceArray(contLB_S1);
+    consoleLog_contentPoolOtherBalances(contCurB_S1, contRefundendB_S1, contSumRB_S1);
+    //Coaching Pool
+    consoleLog_coachingLockedBalanceArray(coachLB_S1);
+    consoleLog_coachingPoolOtherBalances(coachCurB_S1, coachRefundendB_S1, coachSumRB_S1);
 
-    // skip 1 day
-    const numBlocksToMine0 = Math.ceil((1 * 24 * 60 * 60) / 2);
-    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine0.toString(16)}`, "0x2"]);
-    if (consoleLogOn) {
-      console.log("----1 day passed----");
-    }
+    ///////////////////////////////////////////////////////////////////////////////////////////////////
+    /// Skip 1 day
+    skipDays(1);
+    //Empty space
+    consoleLog_emptySpace();
+    //Console log the skipped days
+    consoleLog_skipedDays(1);
 
-    // Make a new content purchase
+    ///////////////////////////////////////////////////////////////////////////////////////////////////
+    // 2- Make a new content purchase
     const redeemers2 = [contentBuyer2.address];
     await makeContentPurchase(
       contractPlatformTreasury,
@@ -2759,60 +2446,40 @@ describe("Platform Treasury Updated General", function () {
       giftReceiver,
       userIds
     );
+    // GET "Locked Balances" arrays and "Current, Unlocked, Refunded" balances after the 2nd sale
+    const instLB_S2 = await getInstructorLockedBalanceArray(refundWindowC1, contentCreator);
+    const contLB_S2 = await getContentLockedBalanceArray(refundWindowC1);
+    const coachLB_S2 = await getCoachingLockedBalanceArray(refundWindowC1);
+    const [iCurB_S2, iUnlockB_S2, iRefundB_S2] = await getInstructorCurrentUnlockedRefundedBalances(contentCreator);
+    const [contCurB_S2, contRefundendB_S2, contSumRB_S2] = await getContentCurrentRefundedBalances();
+    const [coachCurB_S2, coachRefundendB_S2, coachSumRB_S2] = await getCoachingCurrentRefundedBalances();
 
-    // Get current blocks timestamp
-    currentBlockTimestampIndex = Math.floor(
-      ((await hre.ethers.provider.getBlock()).timestamp % (refundWindow * 86400)) / 86400
-    );
-    if (consoleLogOn) {
-      console.log("ThisDaysLockBalanceIndex:", currentBlockTimestampIndex);
-    }
-
-    //Get the instructer balance
-    let instructorLockedBalanceArrayBN2 = [];
-    for (let i = 0; i < refundWindow; i++) {
-      instructorLockedBalanceArrayBN2[i] = ethers.utils.formatEther(
-        await contractPlatformTreasury.instLockedBalance(contentCreator.address, i)
-      );
-    }
-    if (consoleLogOn) {
-      console.log("2nd sale:", instructorLockedBalanceArrayBN2);
-    }
-
-    // Calculate the instructer balances
-    currentBalanceInstS1 = ethers.utils.formatEther(await contractPlatformTreasury.instBalance(contentCreator.address));
-    [getWithdrawableBalanceS1, getRefundendBalanceS1] = await contractPlatformTreasury.getWithdrawableBalanceInstructor(
-      contentCreator.address
-    );
-    getWithdrawableBalanceS2 = ethers.utils.formatEther(getWithdrawableBalanceS1);
-    getRefundendBalanceS2 = ethers.utils.formatEther(getRefundendBalanceS1);
-    if (consoleLogOn) {
-      console.log(
-        "USERS BALANCES 2nd SALE= [",
-        "Mapping:",
-        currentBalanceInstS1,
-        "Get+:",
-        getWithdrawableBalanceS2,
-        "Get-",
-        getRefundendBalanceS2,
-        "]"
-      );
-    }
-
+    // Console log the balances after the 2nd sale
     //Empty space
-    if (consoleLogOn) {
-      console.log();
-      console.log();
-    }
+    consoleLog_emptySpace();
+    consoleLog_stageChange("2ND Sale Completed");
+    //GetCurrentBlocksTimestamp
+    const currentLockBalanceIndex_S2 = await calculateLockBalanceIndex(refundWindowC1);
+    consoleLog_lockBalanceIndex(currentLockBalanceIndex_S2);
+    //instrucor
+    consoleLog_instructorLockedBalanceArray(instLB_S2);
+    consoleLog_instructorOtherBalances(iCurB_S2, iUnlockB_S2, iRefundB_S2);
+    //Content Pool
+    consoleLog_contentLockedBalanceArray(contLB_S2);
+    consoleLog_contentPoolOtherBalances(contCurB_S2, contRefundendB_S2, contSumRB_S2);
+    //Coaching Pool
+    consoleLog_coachingLockedBalanceArray(coachLB_S2);
+    consoleLog_coachingPoolOtherBalances(coachCurB_S2, coachRefundendB_S2, coachSumRB_S2);
 
-    // refund the 2nd sale
-    //  Create RefundVoucher
+    ///////////////////////////////////////////////////////////////////////////////////////////////////
+    // 2R- Refund the 2nd sale
+    //Create RefundVoucher
     const refundVoucher = new RefundVoucher({
       contract: contractVoucherVerifier,
       signer: backend,
     });
     const refundType = 1; // 0 since refund is content
-    // Voucher will be valid for 1 day
+    //Voucher will be valid for 1 day
     const voucherValidUntil = Date.now() + 86400;
     const contentSaleId = 1; // 0 since only one content is created and sold
     const finalParts = []; // Empty since buyer had no parts
@@ -2824,55 +2491,45 @@ describe("Platform Treasury Updated General", function () {
       finalContents,
       voucherValidUntil
     );
-    // Refund the content
+    //Refund the content
     await expect(contractPlatformTreasury.connect(contentCreator).newRefundContent(refund_voucher))
       .to.emit(contractPlatformTreasury, "SaleRefunded")
       .withArgs(contentSaleId, refundType);
+    // GET "Locked Balances" arrays and "Current, Unlocked, Refunded" balances after the refund of the 2nd sale
+    const instLB_S2R = await getInstructorLockedBalanceArray(refundWindowC1, contentCreator);
+    const contLB_S2R = await getContentLockedBalanceArray(refundWindowC1);
+    const coachLB_S2R = await getCoachingLockedBalanceArray(refundWindowC1);
+    const [iCurB_S2R, iUnlockB_S2R, iRefundB_S2R] = await getInstructorCurrentUnlockedRefundedBalances(contentCreator);
+    const [contCurB_S2R, contRefundendB_S2R, contSumRB_S2R] = await getContentCurrentRefundedBalances();
+    const [coachCurB_S2R, coachRefundendB_S2R, coachSumRB_S2R] = await getCoachingCurrentRefundedBalances();
 
-    //Get the instructer balance before withdrawal
-    let instructorLockedBalanceArrayBN2R = [];
-    for (let i = 0; i < refundWindow; i++) {
-      instructorLockedBalanceArrayBN2R[i] = ethers.utils.formatEther(
-        await contractPlatformTreasury.instLockedBalance(contentCreator.address, i)
-      );
-    }
-    if (consoleLogOn) {
-      console.log("***2nd sale REFUNDED:", instructorLockedBalanceArrayBN2R);
-    }
-    // Calculate the instructer balances
-    currentBalanceInstS1 = ethers.utils.formatEther(await contractPlatformTreasury.instBalance(contentCreator.address));
-    [getWithdrawableBalanceS1, getRefundendBalanceS1] = await contractPlatformTreasury.getWithdrawableBalanceInstructor(
-      contentCreator.address
-    );
-    getWithdrawableBalanceS2 = ethers.utils.formatEther(getWithdrawableBalanceS1);
-    getRefundendBalanceS2 = ethers.utils.formatEther(getRefundendBalanceS1);
-    if (consoleLogOn) {
-      console.log(
-        "***USERS BALANCES 2nd Sale Refunded= [",
-        "Mapping:",
-        currentBalanceInstS1,
-        "Get+:",
-        getWithdrawableBalanceS2,
-        "Get-",
-        getRefundendBalanceS2,
-        "]"
-      );
-    }
-
+    // Console log the balances after the refund of the 2nd sale
     //Empty space
-    if (consoleLogOn) {
-      console.log();
-      console.log();
-    }
+    consoleLog_emptySpace();
+    consoleLog_stageChange("2ND Sale Refunded");
+    //GetCurrentBlocksTimestamp
+    const currentLockBalanceIndex_S2R = await calculateLockBalanceIndex(refundWindowC1);
+    consoleLog_lockBalanceIndex(currentLockBalanceIndex_S2R);
+    //instrucor
+    consoleLog_instructorLockedBalanceArray(instLB_S2R);
+    consoleLog_instructorOtherBalances(iCurB_S2R, iUnlockB_S2R, iRefundB_S2R);
+    //Content Pool
+    consoleLog_contentLockedBalanceArray(contLB_S2R);
+    consoleLog_contentPoolOtherBalances(contCurB_S2R, contRefundendB_S2R, contSumRB_S2R);
+    //Coaching Pool
+    consoleLog_coachingLockedBalanceArray(coachLB_S2R);
+    consoleLog_coachingPoolOtherBalances(coachCurB_S2R, coachRefundendB_S2R, coachSumRB_S2R);
 
-    // skip 2 days
-    const numBlocksToMine1 = Math.ceil((2 * 24 * 60 * 60) / 2);
-    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine1.toString(16)}`, "0x2"]);
-    if (consoleLogOn) {
-      console.log("----2 days passed----");
-    }
+    ///////////////////////////////////////////////////////////////////////////////////////////////////
+    // Skip 2 day
+    skipDays(2);
+    //Empty space
+    consoleLog_emptySpace();
+    //Console log the skipped days
+    consoleLog_skipedDays(2);
 
-    // Make a new content purchase
+    ///////////////////////////////////////////////////////////////////////////////////////////////////
+    // 3- Make a new content purchase
     const redeemers3 = [contentBuyer3.address];
     await makeContentPurchase(
       contractPlatformTreasury,
@@ -2889,86 +2546,58 @@ describe("Platform Treasury Updated General", function () {
       giftReceiver,
       userIds
     );
+    // GET "Locked Balances" arrays and "Current, Unlocked, Refunded" balances after the 3rd sale
+    const instLB_S3 = await getInstructorLockedBalanceArray(refundWindowC1, contentCreator);
+    const contLB_S3 = await getContentLockedBalanceArray(refundWindowC1);
+    const coachLB_S3 = await getCoachingLockedBalanceArray(refundWindowC1);
+    const [iCurB_S3, iUnlockB_S3, iRefundB_S3] = await getInstructorCurrentUnlockedRefundedBalances(contentCreator);
+    const [contCurB_S3, contRefundendB_S3, contSumRB_S3] = await getContentCurrentRefundedBalances();
+    const [coachCurB_S3, coachRefundendB_S3, coachSumRB_S3] = await getCoachingCurrentRefundedBalances();
 
-    // Get current blocks timestamp
-    currentBlockTimestampIndex = Math.floor(
-      ((await hre.ethers.provider.getBlock()).timestamp % (refundWindow * 86400)) / 86400
-    );
-    if (consoleLogOn) {
-      console.log("ThisDaysLockBalanceIndex:", currentBlockTimestampIndex);
-    }
-
-    //Get the instructer balance before withdrawal
-    let instructorLockedBalanceArrayBN3 = [];
-    let instructorLockedBalanceArray3 = [];
-    for (let i = 0; i < refundWindow; i++) {
-      instructorLockedBalanceArrayBN3[i] = ethers.utils.formatEther(
-        await contractPlatformTreasury.instLockedBalance(contentCreator.address, i)
-      );
-    }
-    if (consoleLogOn) {
-      console.log("3rd sale:", instructorLockedBalanceArrayBN3);
-    }
-
-    // Calculate the instructer balances
-    currentBalanceInstS1 = ethers.utils.formatEther(await contractPlatformTreasury.instBalance(contentCreator.address));
-    [getWithdrawableBalanceS1, getRefundendBalanceS1] = await contractPlatformTreasury.getWithdrawableBalanceInstructor(
-      contentCreator.address
-    );
-    getWithdrawableBalanceS2 = ethers.utils.formatEther(getWithdrawableBalanceS1);
-    getRefundendBalanceS2 = ethers.utils.formatEther(getRefundendBalanceS1);
-    if (consoleLogOn) {
-      console.log(
-        "USERS BALANCES 3rd SALE= [",
-        "Mapping:",
-        currentBalanceInstS1,
-        "Get+:",
-        getWithdrawableBalanceS2,
-        "Get-",
-        getRefundendBalanceS2,
-        "]"
-      );
-    }
-
+    // Console log the balances after the 3rd sale
     //Empty space
-    if (consoleLogOn) {
-      console.log();
-      console.log();
-    }
+    consoleLog_emptySpace();
+    consoleLog_stageChange("3RD Sale Completed");
+    //GetCurrentBlocksTimestamp
+    const currentLockBalanceIndex_S3 = await calculateLockBalanceIndex(refundWindowC1);
+    consoleLog_lockBalanceIndex(currentLockBalanceIndex_S3);
+    //instrucor
+    consoleLog_instructorLockedBalanceArray(instLB_S3);
+    consoleLog_instructorOtherBalances(iCurB_S3, iUnlockB_S3, iRefundB_S3);
+    //Content Pool
+    consoleLog_contentLockedBalanceArray(contLB_S3);
+    consoleLog_contentPoolOtherBalances(contCurB_S3, contRefundendB_S3, contSumRB_S3);
+    //Coaching Pool
+    consoleLog_coachingLockedBalanceArray(coachLB_S3);
+    consoleLog_coachingPoolOtherBalances(coachCurB_S3, coachRefundendB_S3, coachSumRB_S3);
 
-    // REFUND WINDOW CHANGED
-    if (consoleLogOn) {
-      console.log("REFUND WINDOW CHANGED");
-    }
-    //change refund window
+    ///////////////////////////////////////////////////////////////////////////////////////////////////
+    // Change refund window to 3 days to work to see the effect of the change
     await contractPlatformTreasury.connect(backend).changeRefundWindow(3);
-    // wait end of previous refund window to handle precaution withdraw time
-    const numBlocksToMine30 = Math.ceil((5 * 24 * 60 * 60) / 2);
-    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine30.toString(16)}`, "0x2"]);
-    if (consoleLogOn) {
-      console.log("----End of precaution withdrawal period 5day----");
-    }
-
-    refundWindow = (await contractPlatformTreasury.refundWindow()).toNumber();
-    if (consoleLogOn) {
-      console.log("refundWindowAfter:", refundWindow);
-    }
-
+    let refundWindowC2 = (await contractPlatformTreasury.refundWindow()).toNumber();
     //Empty space
+    consoleLog_emptySpace();
     if (consoleLogOn) {
-      console.log();
-      console.log();
+      console.log(colorMagenta, "----REFUND WINDOW CHANGED----", colorReset);
+      console.log("----New refund window is ", refundWindowC2, " days----");
+    }
+    // wait end of previous refund window to eliminate precaution withdraw block on balances
+    skipDays(refundWindowC1);
+    if (consoleLogOn) {
+      console.log("----End of precaution withdrawal period ", refundWindowC1, " day----");
     }
 
-    // skip 4 day
-    const numBlocksToMine2 = Math.ceil((4 * 24 * 60 * 60) / 2);
-    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine2.toString(16)}`, "0x2"]);
-    if (consoleLogOn) {
-      console.log("----4 days passed----");
-    }
+    ///////////////////////////////////////////////////////////////////////////////////////////////////
+    // Skip 4 day
+    skipDays(4);
+    //Empty space
+    consoleLog_emptySpace();
+    //Console log the skipped days
+    consoleLog_skipedDays(4);
 
+    ///////////////////////////////////////////////////////////////////////////////////////////////////
+    // 4- Make a new content purchase
     const purchasedPartsNew = [[0]];
-    // Make a new content purchase
     const redeemers4 = [contentBuyer1.address];
     await makeContentPurchase(
       contractPlatformTreasury,
@@ -2985,54 +2614,34 @@ describe("Platform Treasury Updated General", function () {
       giftReceiver,
       userIds
     );
+    // GET "Locked Balances" arrays and "Current, Unlocked, Refunded" balances after the 4th sale
+    const instLB_S4 = await getInstructorLockedBalanceArray(refundWindowC2, contentCreator);
+    const contLB_S4 = await getContentLockedBalanceArray(refundWindowC2);
+    const coachLB_S4 = await getCoachingLockedBalanceArray(refundWindowC2);
+    const [iCurB_S4, iUnlockB_S4, iRefundB_S4] = await getInstructorCurrentUnlockedRefundedBalances(contentCreator);
+    const [contCurB_S4, contRefundendB_S4, contSumRB_S4] = await getContentCurrentRefundedBalances();
+    const [coachCurB_S4, coachRefundendB_S4, coachSumRB_S4] = await getCoachingCurrentRefundedBalances();
 
-    // Get current blocks timestamp
-    currentBlockTimestampIndex = Math.floor(
-      ((await hre.ethers.provider.getBlock()).timestamp % (refundWindow * 86400)) / 86400
-    );
-    if (consoleLogOn) {
-      console.log("ThisDaysLockBalanceIndex:", currentBlockTimestampIndex);
-    }
-
-    // Get the instructer balance before withdrawal
-    let instructorLockedBalanceArrayBN4 = [];
-    for (let i = 0; i < refundWindow; i++) {
-      instructorLockedBalanceArrayBN4[i] = ethers.utils.formatEther(
-        await contractPlatformTreasury.instLockedBalance(contentCreator.address, i)
-      );
-    }
-    if (consoleLogOn) {
-      console.log("4th sale:", instructorLockedBalanceArrayBN4);
-    }
-
-    // Calculate the instructer balances
-    currentBalanceInstS1 = ethers.utils.formatEther(await contractPlatformTreasury.instBalance(contentCreator.address));
-    [getWithdrawableBalanceS1, getRefundendBalanceS1] = await contractPlatformTreasury.getWithdrawableBalanceInstructor(
-      contentCreator.address
-    );
-    getWithdrawableBalanceS2 = ethers.utils.formatEther(getWithdrawableBalanceS1);
-    getRefundendBalanceS2 = ethers.utils.formatEther(getRefundendBalanceS1);
-    if (consoleLogOn) {
-      console.log(
-        "USERS BALANCES 4st SALE= [",
-        "Mapping:",
-        currentBalanceInstS1,
-        "Get+:",
-        getWithdrawableBalanceS2,
-        "Get-",
-        getRefundendBalanceS2,
-        "]"
-      );
-    }
-
+    // Console log the balances after the 4th sale
     //Empty space
-    if (consoleLogOn) {
-      console.log();
-      console.log();
-    }
+    consoleLog_emptySpace();
+    consoleLog_stageChange("4TH Sale Completed");
+    //GetCurrentBlocksTimestamp
+    const currentLockBalanceIndex_S4 = await calculateLockBalanceIndex(refundWindowC2);
+    consoleLog_lockBalanceIndex(currentLockBalanceIndex_S4);
+    //instrucor
+    consoleLog_instructorLockedBalanceArray(instLB_S4);
+    consoleLog_instructorOtherBalances(iCurB_S4, iUnlockB_S4, iRefundB_S4);
+    //Content Pool
+    consoleLog_contentLockedBalanceArray(contLB_S4);
+    consoleLog_contentPoolOtherBalances(contCurB_S4, contRefundendB_S4, contSumRB_S4);
+    //Coaching Pool
+    consoleLog_coachingLockedBalanceArray(coachLB_S4);
+    consoleLog_coachingPoolOtherBalances(coachCurB_S4, coachRefundendB_S4, coachSumRB_S4);
 
-    // refund the 4th sale
-    //  Create RefundVoucher
+    ///////////////////////////////////////////////////////////////////////////////////////////////////
+    // 4R- Refund the 4th sale
+    //Create RefundVoucher
     const refundVoucher2 = new RefundVoucher({
       contract: contractVoucherVerifier,
       signer: backend,
@@ -3050,50 +2659,41 @@ describe("Platform Treasury Updated General", function () {
     await expect(contractPlatformTreasury.connect(contentCreator).newRefundContent(refund_voucher2))
       .to.emit(contractPlatformTreasury, "SaleRefunded")
       .withArgs(contentSaleId2, refundType);
+    // GET "Locked Balances" arrays and "Current, Unlocked, Refunded" balances after the refund of the 4th sale
+    const instLB_S4R = await getInstructorLockedBalanceArray(refundWindowC2, contentCreator);
+    const contLB_S4R = await getContentLockedBalanceArray(refundWindowC2);
+    const coachLB_S4R = await getCoachingLockedBalanceArray(refundWindowC2);
+    const [iCurB_S4R, iUnlockB_S4R, iRefundB_S4R] = await getInstructorCurrentUnlockedRefundedBalances(contentCreator);
+    const [contCurB_S4R, contRefundendB_S4R, contSumRB_S4R] = await getContentCurrentRefundedBalances();
+    const [coachCurB_S4R, coachRefundendB_S4R, coachSumRB_S4R] = await getCoachingCurrentRefundedBalances();
 
-    //Get the instructer balance before withdrawal
-    let instructorLockedBalanceArrayBN4R = [];
-    for (let i = 0; i < refundWindow; i++) {
-      instructorLockedBalanceArrayBN4R[i] = ethers.utils.formatEther(
-        await contractPlatformTreasury.instLockedBalance(contentCreator.address, i)
-      );
-    }
-    if (consoleLogOn) {
-      console.log("***4th sale REFUNDED:", instructorLockedBalanceArrayBN4R);
-    }
-    // Calculate the instructer balances
-    currentBalanceInstS1 = ethers.utils.formatEther(await contractPlatformTreasury.instBalance(contentCreator.address));
-    [getWithdrawableBalanceS1, getRefundendBalanceS1] = await contractPlatformTreasury.getWithdrawableBalanceInstructor(
-      contentCreator.address
-    );
-    getWithdrawableBalanceS2 = ethers.utils.formatEther(getWithdrawableBalanceS1);
-    getRefundendBalanceS2 = ethers.utils.formatEther(getRefundendBalanceS1);
-    if (consoleLogOn) {
-      console.log(
-        "***USERS BALANCES 4th Sale Refunded= [",
-        "Mapping:",
-        currentBalanceInstS1,
-        "Get+:",
-        getWithdrawableBalanceS2,
-        "Get-",
-        getRefundendBalanceS2,
-        "]"
-      );
-    }
-
+    // Console log the balances after the refund of the 4th sale
     //Empty space
-    if (consoleLogOn) {
-      console.log();
-      console.log();
-    }
+    consoleLog_emptySpace();
+    consoleLog_stageChange("4TH Sale Refunded");
+    //GetCurrentBlocksTimestamp
+    const currentLockBalanceIndex_S4R = await calculateLockBalanceIndex(refundWindowC2);
+    consoleLog_lockBalanceIndex(currentLockBalanceIndex_S4R);
+    //instrucor
+    consoleLog_instructorLockedBalanceArray(instLB_S4R);
+    consoleLog_instructorOtherBalances(iCurB_S4R, iUnlockB_S4R, iRefundB_S4R);
+    //Content Pool
+    consoleLog_contentLockedBalanceArray(contLB_S4R);
+    consoleLog_contentPoolOtherBalances(contCurB_S4R, contRefundendB_S4R, contSumRB_S4R);
+    //Coaching Pool
+    consoleLog_coachingLockedBalanceArray(coachLB_S4R);
+    consoleLog_coachingPoolOtherBalances(coachCurB_S4R, coachRefundendB_S4R, coachSumRB_S4R);
 
-    // skip 1 day
-    const numBlocksToMine3 = Math.ceil((1 * 24 * 60 * 60) / 2);
-    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine3.toString(16)}`, "0x2"]);
-    if (consoleLogOn) {
-      console.log("----1 days passed----");
-    }
-    // Make a new content purchase
+    ///////////////////////////////////////////////////////////////////////////////////////////////////
+    // Skip 1 day
+    skipDays(1);
+    //Empty space
+    consoleLog_emptySpace();
+    //Console log the skipped days
+    consoleLog_skipedDays(1);
+
+    ///////////////////////////////////////////////////////////////////////////////////////////////////
+    // 5- Make a new content purchase
     const redeemers5 = [contentBuyer2.address];
     await makeContentPurchase(
       contractPlatformTreasury,
@@ -3110,121 +2710,123 @@ describe("Platform Treasury Updated General", function () {
       giftReceiver,
       userIds
     );
+    // GET "Locked Balances" arrays and "Current, Unlocked, Refunded" balances after the 5th sale
+    const instLB_S5 = await getInstructorLockedBalanceArray(refundWindowC2, contentCreator);
+    const contLB_S5 = await getContentLockedBalanceArray(refundWindowC2);
+    const coachLB_S5 = await getCoachingLockedBalanceArray(refundWindowC2);
+    const [iCurB_S5, iUnlockB_S5, iRefundB_S5] = await getInstructorCurrentUnlockedRefundedBalances(contentCreator);
+    const [contCurB_S5, contRefundendB_S5, contSumRB_S5] = await getContentCurrentRefundedBalances();
+    const [coachCurB_S5, coachRefundendB_S5, coachSumRB_S5] = await getCoachingCurrentRefundedBalances();
 
-    // Get current blocks timestamp
-    currentBlockTimestampIndex = Math.floor(
-      ((await hre.ethers.provider.getBlock()).timestamp % (refundWindow * 86400)) / 86400
-    );
-    if (consoleLogOn) {
-      console.log("ThisDaysLockBalanceIndex:", currentBlockTimestampIndex);
-    }
-
-    //Get the instructer balance before withdrawal
-    let instructorLockedBalanceArrayBN5 = [];
-    for (let i = 0; i < refundWindow; i++) {
-      instructorLockedBalanceArrayBN5[i] = ethers.utils.formatEther(
-        await contractPlatformTreasury.instLockedBalance(contentCreator.address, i)
-      );
-    }
-    if (consoleLogOn) {
-      console.log("5th sale:", instructorLockedBalanceArrayBN5);
-    }
-
-    // Calculate the instructer balances
-    currentBalanceInstS1 = ethers.utils.formatEther(await contractPlatformTreasury.instBalance(contentCreator.address));
-    [getWithdrawableBalanceS1, getRefundendBalanceS1] = await contractPlatformTreasury.getWithdrawableBalanceInstructor(
-      contentCreator.address
-    );
-    getWithdrawableBalanceS2 = ethers.utils.formatEther(getWithdrawableBalanceS1);
-    getRefundendBalanceS2 = ethers.utils.formatEther(getRefundendBalanceS1);
-    if (consoleLogOn) {
-      console.log(
-        "USERS BALANCES 5st SALE= [",
-        "Mapping:",
-        currentBalanceInstS1,
-        "Get+:",
-        getWithdrawableBalanceS2,
-        "Get-",
-        getRefundendBalanceS2,
-        "]"
-      );
-    }
-
+    // Console log the balances after the 5th sale
     //Empty space
-    if (consoleLogOn) {
-      console.log();
-      console.log();
-    }
+    consoleLog_emptySpace();
+    consoleLog_stageChange("5TH Sale Completed");
+    //GetCurrentBlocksTimestamp
+    const currentLockBalanceIndex_S5 = await calculateLockBalanceIndex(refundWindowC2);
+    consoleLog_lockBalanceIndex(currentLockBalanceIndex_S5);
+    //instrucor
+    consoleLog_instructorLockedBalanceArray(instLB_S5);
+    consoleLog_instructorOtherBalances(iCurB_S5, iUnlockB_S5, iRefundB_S5);
+    //Content Pool
+    consoleLog_contentLockedBalanceArray(contLB_S5);
+    consoleLog_contentPoolOtherBalances(contCurB_S5, contRefundendB_S5, contSumRB_S5);
+    //Coaching Pool
+    consoleLog_coachingLockedBalanceArray(coachLB_S5);
+    consoleLog_coachingPoolOtherBalances(coachCurB_S5, coachRefundendB_S5, coachSumRB_S5);
 
-    // skip 4 day
-    const numBlocksToMine4 = Math.ceil((2 * 24 * 60 * 60) / 2);
-    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine4.toString(16)}`, "0x2"]);
-    if (consoleLogOn) {
-      console.log("----2 days passed----");
-    }
+    ///////////////////////////////////////////////////////////////////////////////////////////////////
+    // Skip 2 day
+    skipDays(2);
+    //Empty space
+    consoleLog_emptySpace();
+    //Console log the skipped days
+    consoleLog_skipedDays(2);
 
-    // Calculate the instructer balances
-    currentBalanceInstS1 = ethers.utils.formatEther(await contractPlatformTreasury.instBalance(contentCreator.address));
-    [getWithdrawableBalanceS1, getRefundendBalanceS1] = await contractPlatformTreasury.getWithdrawableBalanceInstructor(
-      contentCreator.address
-    );
-    getWithdrawableBalanceS2 = ethers.utils.formatEther(getWithdrawableBalanceS1);
-    getRefundendBalanceS2 = ethers.utils.formatEther(getRefundendBalanceS1);
-    if (consoleLogOn) {
-      console.log(
-        "USERS BALANCES before withdraw= [",
-        "Mapping:",
-        currentBalanceInstS1,
-        "Get+:",
-        getWithdrawableBalanceS2,
-        "Get-",
-        getRefundendBalanceS2,
-        "]"
-      );
-    }
+    ///////////////////////////////////////////////////////////////////////////////////////////////////
+    // GET "Locked Balances" arrays and "Current, Unlocked, Refunded" balances before the withdrawal
+    const instLB_W1 = await getInstructorLockedBalanceArray(refundWindowC2, contentCreator);
+    const contLB_W1 = await getContentLockedBalanceArray(refundWindowC2);
+    const coachLB_W1 = await getCoachingLockedBalanceArray(refundWindowC2);
+    const [iCurB_W1, iUnlockB_W1, iRefundB_W1] = await getInstructorCurrentUnlockedRefundedBalances(contentCreator);
+    const [contCurB_W1, contRefundendB_W1, contSumRB_W1] = await getContentCurrentRefundedBalances();
+    const [coachCurB_W1, coachRefundendB_W1, coachSumRB_W1] = await getCoachingCurrentRefundedBalances();
 
+    // Console log the balances before the withdrawal
+    //Empty space
+    consoleLog_emptySpace();
     if (consoleLogOn) {
-      console.log("Instructor Withdraw");
+      console.log(colorMagenta, "*****************************************************", colorReset);
     }
-    //Instructor withdraws his earnings
+    if (consoleLogOn) {
+      console.log(colorMagenta, "Before Withdraw", colorReset);
+    }
+    //GetCurrentBlocksTimestamp
+    const currentLockBalanceIndex_W1 = await calculateLockBalanceIndex(refundWindowC2);
+    consoleLog_lockBalanceIndex(currentLockBalanceIndex_W1);
+    //instrucor
+    consoleLog_instructorLockedBalanceArray(instLB_W1);
+    consoleLog_instructorOtherBalances(iCurB_W1, iUnlockB_W1, iRefundB_W1);
+    //Content Pool
+    consoleLog_contentLockedBalanceArray(contLB_W1);
+    consoleLog_contentPoolOtherBalances(contCurB_W1, contRefundendB_W1, contSumRB_W1);
+    //Coaching Pool
+    consoleLog_coachingLockedBalanceArray(coachLB_W1);
+    consoleLog_coachingPoolOtherBalances(coachCurB_W1, coachRefundendB_W1, coachSumRB_W1);
+
+    ///////////////////////////////////////////////////////////////////////////////////////////////////
+    // Instructor withdraws his earnings
     const instructerBalanceBefore = await contractUDAO.balanceOf(contentCreator.address);
     await contractPlatformTreasury.connect(contentCreator).withdrawInstructor();
     const instructerBalanceAfter = await contractUDAO.balanceOf(contentCreator.address);
     let instructerBalanceChange = instructerBalanceAfter - instructerBalanceBefore;
 
-    //Instructor UDAO Balance change
+    // console log the instructor balance change
     if (consoleLogOn) {
-      console.log("Instructor UDAO Balance change:", ethers.utils.formatEther(instructerBalanceChange.toString()));
-    }
-
-    // Calculate the instructer balances
-    currentBalanceInstS1 = ethers.utils.formatEther(await contractPlatformTreasury.instBalance(contentCreator.address));
-    [getWithdrawableBalanceS1, getRefundendBalanceS1] = await contractPlatformTreasury.getWithdrawableBalanceInstructor(
-      contentCreator.address
-    );
-    getWithdrawableBalanceS2 = ethers.utils.formatEther(getWithdrawableBalanceS1);
-    getRefundendBalanceS2 = ethers.utils.formatEther(getRefundendBalanceS1);
-    if (consoleLogOn) {
+      console.log(colorMagenta, "*****************INSTRUCTOR WITHDRAW*****************", colorReset);
       console.log(
-        "USERS BALANCES after withdraw= [",
-        "Mapping:",
-        currentBalanceInstS1,
-        "Get+:",
-        getWithdrawableBalanceS2,
-        "Get-",
-        getRefundendBalanceS2,
-        "]"
+        colorRed,
+        "Instructor",
+        colorReset,
+        "UDAO Balance change:",
+        colorGreen,
+        ethers.utils.formatEther(instructerBalanceChange.toString()),
+        colorReset
       );
     }
 
+    //GET "Locked Balances" arrays and "Current, Unlocked, Refunded" balances after the withdrawal
+    const instLB_W2 = await getInstructorLockedBalanceArray(refundWindowC2, contentCreator);
+    const contLB_W2 = await getContentLockedBalanceArray(refundWindowC2);
+    const coachLB_W2 = await getCoachingLockedBalanceArray(refundWindowC2);
+    const [iCurB_W2, iUnlockB_W2, iRefundB_W2] = await getInstructorCurrentUnlockedRefundedBalances(contentCreator);
+    const [contCurB_W2, contRefundendB_W2, contSumRB_W2] = await getContentCurrentRefundedBalances();
+    const [coachCurB_W2, coachRefundendB_W2, coachSumRB_W2] = await getCoachingCurrentRefundedBalances();
+
+    // Console log the balances after the withdrawal
     //Empty space
+    consoleLog_emptySpace();
     if (consoleLogOn) {
-      console.log();
-      console.log();
+      console.log(colorMagenta, "After Withdraw", colorReset);
+    }
+    //GetCurrentBlocksTimestamp
+    const currentLockBalanceIndex_W2 = await calculateLockBalanceIndex(refundWindowC2);
+    consoleLog_lockBalanceIndex(currentLockBalanceIndex_W2);
+    //instrucor
+    consoleLog_instructorLockedBalanceArray(instLB_W2);
+    consoleLog_instructorOtherBalances(iCurB_W2, iUnlockB_W2, iRefundB_W2);
+    //Content Pool
+    consoleLog_contentLockedBalanceArray(contLB_W2);
+    consoleLog_contentPoolOtherBalances(contCurB_W2, contRefundendB_W2, contSumRB_W2);
+    //Coaching Pool
+    consoleLog_coachingLockedBalanceArray(coachLB_W2);
+    consoleLog_coachingPoolOtherBalances(coachCurB_W2, coachRefundendB_W2, coachSumRB_W2);
+    if (consoleLogOn) {
+      console.log(colorMagenta, "*****************************************************", colorReset);
     }
 
-    // a new sale
-    // Make a new content purchase
+    ///////////////////////////////////////////////////////////////////////////////////////////////////
+    // 6- Make a new content purchase
     const redeemers6 = [contentBuyer3.address];
     await makeContentPurchase(
       contractPlatformTreasury,
@@ -3241,34 +2843,34 @@ describe("Platform Treasury Updated General", function () {
       giftReceiver,
       userIds
     );
+    // GET "Locked Balances" arrays and "Current, Unlocked, Refunded" balances after the 6th sale
+    const instLB_S6 = await getInstructorLockedBalanceArray(refundWindowC2, contentCreator);
+    const contLB_S6 = await getContentLockedBalanceArray(refundWindowC2);
+    const coachLB_S6 = await getCoachingLockedBalanceArray(refundWindowC2);
+    const [iCurB_S6, iUnlockB_S6, iRefundB_S6] = await getInstructorCurrentUnlockedRefundedBalances(contentCreator);
+    const [contCurB_S6, contRefundendB_S6, contSumRB_S6] = await getContentCurrentRefundedBalances();
+    const [coachCurB_S6, coachRefundendB_S6, coachSumRB_S6] = await getCoachingCurrentRefundedBalances();
 
-    // Get current blocks timestamp
-    currentBlockTimestampIndex = Math.floor(
-      ((await hre.ethers.provider.getBlock()).timestamp % (refundWindow * 86400)) / 86400
-    );
-    if (consoleLogOn) {
-      console.log("ThisDaysLockBalanceIndex:", currentBlockTimestampIndex);
-    }
-
-    //Get the instructer balance before withdrawal
-    let instructorLockedBalanceArrayBN6 = [];
-    for (let i = 0; i < refundWindow; i++) {
-      instructorLockedBalanceArrayBN6[i] = ethers.utils.formatEther(
-        await contractPlatformTreasury.instLockedBalance(contentCreator.address, i)
-      );
-    }
-    if (consoleLogOn) {
-      console.log("6th sale:", instructorLockedBalanceArrayBN6);
-    }
-
+    // Console log the balances after the 6th sale
     //Empty space
-    if (consoleLogOn) {
-      console.log();
-      console.log();
-    }
+    consoleLog_emptySpace();
+    consoleLog_stageChange("6TH Sale Completed");
+    //GetCurrentBlocksTimestamp
+    const currentLockBalanceIndex_S6 = await calculateLockBalanceIndex(refundWindowC2);
+    consoleLog_lockBalanceIndex(currentLockBalanceIndex_S6);
+    //instrucor
+    consoleLog_instructorLockedBalanceArray(instLB_S6);
+    consoleLog_instructorOtherBalances(iCurB_S6, iUnlockB_S6, iRefundB_S6);
+    //Content Pool
+    consoleLog_contentLockedBalanceArray(contLB_S6);
+    consoleLog_contentPoolOtherBalances(contCurB_S6, contRefundendB_S6, contSumRB_S6);
+    //Coaching Pool
+    consoleLog_coachingLockedBalanceArray(coachLB_S6);
+    consoleLog_coachingPoolOtherBalances(coachCurB_S6, coachRefundendB_S6, coachSumRB_S6);
 
-    // refund the 6th sale
-    //  Create RefundVoucher
+    ///////////////////////////////////////////////////////////////////////////////////////////////////
+    // 6R- Refund the 6th sale
+    //Create RefundVoucher
     const refundVoucher3 = new RefundVoucher({
       contract: contractVoucherVerifier,
       signer: backend,
@@ -3282,60 +2884,49 @@ describe("Platform Treasury Updated General", function () {
       finalContents,
       voucherValidUntil3
     );
-    // Refund the content
+    //Refund the content
     await expect(contractPlatformTreasury.connect(contentCreator).newRefundContent(refund_voucher3))
       .to.emit(contractPlatformTreasury, "SaleRefunded")
       .withArgs(contentSaleId3, refundType);
+    // GET "Locked Balances" arrays and "Current, Unlocked, Refunded" balances after the refund of the 6th sale
+    const instLB_S6R = await getInstructorLockedBalanceArray(refundWindowC2, contentCreator);
+    const contLB_S6R = await getContentLockedBalanceArray(refundWindowC2);
+    const coachLB_S6R = await getCoachingLockedBalanceArray(refundWindowC2);
+    const [iCurB_S6R, iUnlockB_S6R, iRefundB_S6R] = await getInstructorCurrentUnlockedRefundedBalances(contentCreator);
+    const [contCurB_S6R, contRefundendB_S6R, contSumRB_S6R] = await getContentCurrentRefundedBalances();
+    const [coachCurB_S6R, coachRefundendB_S6R, coachSumRB_S6R] = await getCoachingCurrentRefundedBalances();
 
-    //Get the instructer balance before withdrawal
-    let instructorLockedBalanceArrayBN6R = [];
-    for (let i = 0; i < refundWindow; i++) {
-      instructorLockedBalanceArrayBN6R[i] = ethers.utils.formatEther(
-        await contractPlatformTreasury.instLockedBalance(contentCreator.address, i)
-      );
-    }
-    if (consoleLogOn) {
-      console.log("***6th sale REFUNDED:", instructorLockedBalanceArrayBN6R);
-    }
-    // Calculate the instructer balances
-    currentBalanceInstS1 = ethers.utils.formatEther(await contractPlatformTreasury.instBalance(contentCreator.address));
-    [getWithdrawableBalanceS1, getRefundendBalanceS1] = await contractPlatformTreasury.getWithdrawableBalanceInstructor(
-      contentCreator.address
-    );
-    getWithdrawableBalanceS2 = ethers.utils.formatEther(getWithdrawableBalanceS1);
-    getRefundendBalanceS2 = ethers.utils.formatEther(getRefundendBalanceS1);
-    if (consoleLogOn) {
-      console.log(
-        "***USERS BALANCES 6th Sale Refunded= [",
-        "Mapping:",
-        currentBalanceInstS1,
-        "Get+:",
-        getWithdrawableBalanceS2,
-        "Get-",
-        getRefundendBalanceS2,
-        "]"
-      );
-    }
+    // Console log the balances after the refund of the 6th sale
+    //Empty space
+    consoleLog_emptySpace();
+    consoleLog_stageChange("6TH Sale Refunded");
+    //GetCurrentBlocksTimestamp
+    const currentLockBalanceIndex_S6R = await calculateLockBalanceIndex(refundWindowC2);
+    consoleLog_lockBalanceIndex(currentLockBalanceIndex_S6R);
+    //instrucor
+    consoleLog_instructorLockedBalanceArray(instLB_S6R);
+    consoleLog_instructorOtherBalances(iCurB_S6R, iUnlockB_S6R, iRefundB_S6R);
+    //Content Pool
+    consoleLog_contentLockedBalanceArray(contLB_S6R);
+    consoleLog_contentPoolOtherBalances(contCurB_S6R, contRefundendB_S6R, contSumRB_S6R);
+    //Coaching Pool
+    consoleLog_coachingLockedBalanceArray(coachLB_S6R);
+    consoleLog_coachingPoolOtherBalances(coachCurB_S6R, coachRefundendB_S6R, coachSumRB_S6R);
 
-    // empty space
+    ///////////////////////////////////////////////////////////////////////////////////////////////////
+    // Change refund window to 6 days to work to see the effect of the change
+    await contractPlatformTreasury.connect(backend).changeRefundWindow(6);
+    let refundWindowC3 = (await contractPlatformTreasury.refundWindow()).toNumber();
+    //Empty space
+    consoleLog_emptySpace();
     if (consoleLogOn) {
-      console.log();
-      console.log();
+      console.log(colorMagenta, "----REFUND WINDOW CHANGED----", colorReset);
+      console.log("----New refund window is ", refundWindowC3, " days----");
     }
+    // No need to wait any precaution withdrawal period since the refund window is increased
 
-    // REFUND WINDOW CHANGED
-    if (consoleLogOn) {
-      console.log("REFUND WINDOW CHANGED");
-    }
-    //change refund window
-    await contractPlatformTreasury.connect(backend).changeRefundWindow(7);
-    refundWindow = (await contractPlatformTreasury.refundWindow()).toNumber();
-    if (consoleLogOn) {
-      console.log("refundWindowAfter:", refundWindow);
-    }
-
-    // a new sale
-    // Make a new content purchase
+    ///////////////////////////////////////////////////////////////////////////////////////////////////
+    // 7- Make a new content purchase
     const redeemers7 = [validator1.address];
     await makeContentPurchase(
       contractPlatformTreasury,
@@ -3352,59 +2943,41 @@ describe("Platform Treasury Updated General", function () {
       giftReceiver,
       userIds
     );
-    // Get current blocks timestamp
-    currentBlockTimestampIndex = Math.floor(
-      ((await hre.ethers.provider.getBlock()).timestamp % (refundWindow * 86400)) / 86400
-    );
-    if (consoleLogOn) {
-      console.log("ThisDaysLockBalanceIndex:", currentBlockTimestampIndex);
-    }
+    // GET "Locked Balances" arrays and "Current, Unlocked, Refunded" balances after the 7th sale
+    const instLB_S7 = await getInstructorLockedBalanceArray(refundWindowC3, contentCreator);
+    const contLB_S7 = await getContentLockedBalanceArray(refundWindowC3);
+    const coachLB_S7 = await getCoachingLockedBalanceArray(refundWindowC3);
+    const [iCurB_S7, iUnlockB_S7, iRefundB_S7] = await getInstructorCurrentUnlockedRefundedBalances(contentCreator);
+    const [contCurB_S7, contRefundendB_S7, contSumRB_S7] = await getContentCurrentRefundedBalances();
+    const [coachCurB_S7, coachRefundendB_S7, coachSumRB_S7] = await getCoachingCurrentRefundedBalances();
 
-    //Get the instructer balance before withdrawal
-    let instructorLockedBalanceArrayBN7 = [];
-    for (let i = 0; i < refundWindow; i++) {
-      instructorLockedBalanceArrayBN7[i] = ethers.utils.formatEther(
-        await contractPlatformTreasury.instLockedBalance(contentCreator.address, i)
-      );
-    }
-    if (consoleLogOn) {
-      console.log("7th sale:", instructorLockedBalanceArrayBN7);
-    }
-
-    // Calculate the instructer balances
-    currentBalanceInstS1 = ethers.utils.formatEther(await contractPlatformTreasury.instBalance(contentCreator.address));
-    [getWithdrawableBalanceS1, getRefundendBalanceS1] = await contractPlatformTreasury.getWithdrawableBalanceInstructor(
-      contentCreator.address
-    );
-    getWithdrawableBalanceS2 = ethers.utils.formatEther(getWithdrawableBalanceS1);
-    getRefundendBalanceS2 = ethers.utils.formatEther(getRefundendBalanceS1);
-    if (consoleLogOn) {
-      console.log(
-        "USERS BALANCES 7st SALE= [",
-        "Mapping:",
-        currentBalanceInstS1,
-        "Get+:",
-        getWithdrawableBalanceS2,
-        "Get-",
-        getRefundendBalanceS2,
-        "]"
-      );
-    }
-
+    // Console log the balances after the 7th sale
     //Empty space
-    if (consoleLogOn) {
-      console.log();
-      console.log();
-    }
+    consoleLog_emptySpace();
+    consoleLog_stageChange("7TH Sale Completed");
+    //GetCurrentBlocksTimestamp
+    const currentLockBalanceIndex_S7 = await calculateLockBalanceIndex(refundWindowC3);
+    consoleLog_lockBalanceIndex(currentLockBalanceIndex_S7);
+    //instrucor
+    consoleLog_instructorLockedBalanceArray(instLB_S7);
+    consoleLog_instructorOtherBalances(iCurB_S7, iUnlockB_S7, iRefundB_S7);
+    //Content Pool
+    consoleLog_contentLockedBalanceArray(contLB_S7);
+    consoleLog_contentPoolOtherBalances(contCurB_S7, contRefundendB_S7, contSumRB_S7);
+    //Coaching Pool
+    consoleLog_coachingLockedBalanceArray(coachLB_S7);
+    consoleLog_coachingPoolOtherBalances(coachCurB_S7, coachRefundendB_S7, coachSumRB_S7);
 
-    // skip 1 day
-    const numBlocksToMine5 = Math.ceil((1 * 24 * 60 * 60) / 2);
-    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine5.toString(16)}`, "0x2"]);
-    if (consoleLogOn) {
-      console.log("----1 days passed----");
-    }
+    ///////////////////////////////////////////////////////////////////////////////////////////////////
+    // Skip 1 day
+    skipDays(1);
+    //Empty space
+    consoleLog_emptySpace();
+    //Console log the skipped days
+    consoleLog_skipedDays(1);
 
-    // Make a new content purchase
+    ///////////////////////////////////////////////////////////////////////////////////////////////////
+    // 8- Make a new content purchase
     const redeemers8 = [validator2.address];
     await makeContentPurchase(
       contractPlatformTreasury,
@@ -3421,52 +2994,34 @@ describe("Platform Treasury Updated General", function () {
       giftReceiver,
       userIds
     );
-    // Get current blocks timestamp
-    currentBlockTimestampIndex = Math.floor(
-      ((await hre.ethers.provider.getBlock()).timestamp % (refundWindow * 86400)) / 86400
-    );
-    if (consoleLogOn) {
-      console.log("ThisDaysLockBalanceIndex:", currentBlockTimestampIndex);
-    }
-    //Get the instructer balance before withdrawal
-    let instructorLockedBalanceArrayBN8 = [];
-    for (let i = 0; i < refundWindow; i++) {
-      instructorLockedBalanceArrayBN8[i] = ethers.utils.formatEther(
-        await contractPlatformTreasury.instLockedBalance(contentCreator.address, i)
-      );
-    }
-    if (consoleLogOn) {
-      console.log("8th sale:", instructorLockedBalanceArrayBN8);
-    }
+    // GET "Locked Balances" arrays and "Current, Unlocked, Refunded" balances after the 8th sale
+    const instLB_S8 = await getInstructorLockedBalanceArray(refundWindowC3, contentCreator);
+    const contLB_S8 = await getContentLockedBalanceArray(refundWindowC3);
+    const coachLB_S8 = await getCoachingLockedBalanceArray(refundWindowC3);
+    const [iCurB_S8, iUnlockB_S8, iRefundB_S8] = await getInstructorCurrentUnlockedRefundedBalances(contentCreator);
+    const [contCurB_S8, contRefundendB_S8, contSumRB_S8] = await getContentCurrentRefundedBalances();
+    const [coachCurB_S8, coachRefundendB_S8, coachSumRB_S8] = await getCoachingCurrentRefundedBalances();
 
-    // Calculate the instructer balances
-    currentBalanceInstS1 = ethers.utils.formatEther(await contractPlatformTreasury.instBalance(contentCreator.address));
-    [getWithdrawableBalanceS1, getRefundendBalanceS1] = await contractPlatformTreasury.getWithdrawableBalanceInstructor(
-      contentCreator.address
-    );
-    getWithdrawableBalanceS2 = ethers.utils.formatEther(getWithdrawableBalanceS1);
-    getRefundendBalanceS2 = ethers.utils.formatEther(getRefundendBalanceS1);
-    if (consoleLogOn) {
-      console.log(
-        "USERS BALANCES 8th SALE= [",
-        "Mapping:",
-        currentBalanceInstS1,
-        "Get+:",
-        getWithdrawableBalanceS2,
-        "Get-",
-        getRefundendBalanceS2,
-        "]"
-      );
-    }
-
+    // Console log the balances after the 8th sale
     //Empty space
-    if (consoleLogOn) {
-      console.log();
-      console.log();
-    }
+    consoleLog_emptySpace();
+    consoleLog_stageChange("8TH Sale Completed");
+    //GetCurrentBlocksTimestamp
+    const currentLockBalanceIndex_S8 = await calculateLockBalanceIndex(refundWindowC3);
+    consoleLog_lockBalanceIndex(currentLockBalanceIndex_S8);
+    //instrucor
+    consoleLog_instructorLockedBalanceArray(instLB_S8);
+    consoleLog_instructorOtherBalances(iCurB_S8, iUnlockB_S8, iRefundB_S8);
+    //Content Pool
+    consoleLog_contentLockedBalanceArray(contLB_S8);
+    consoleLog_contentPoolOtherBalances(contCurB_S8, contRefundendB_S8, contSumRB_S8);
+    //Coaching Pool
+    consoleLog_coachingLockedBalanceArray(coachLB_S8);
+    consoleLog_coachingPoolOtherBalances(coachCurB_S8, coachRefundendB_S8, coachSumRB_S8);
 
-    //refund the 8th sale
-    //  Create RefundVoucher
+    ///////////////////////////////////////////////////////////////////////////////////////////////////
+    // 8R- Refund the 8th sale
+    //Create RefundVoucher
     const refundVoucher4 = new RefundVoucher({
       contract: contractVoucherVerifier,
       signer: backend,
@@ -3480,44 +3035,35 @@ describe("Platform Treasury Updated General", function () {
       finalContents,
       voucherValidUntil4
     );
-    // Refund the content
+    //Refund the content
     await expect(contractPlatformTreasury.connect(contentCreator).newRefundContent(refund_voucher4))
       .to.emit(contractPlatformTreasury, "SaleRefunded")
       .withArgs(contentSaleId4, refundType);
-    //Get the instructer balance before withdrawal
-    let instructorLockedBalanceArrayBN8R = [];
-    for (let i = 0; i < refundWindow; i++) {
-      instructorLockedBalanceArrayBN8R[i] = ethers.utils.formatEther(
-        await contractPlatformTreasury.instLockedBalance(contentCreator.address, i)
-      );
-    }
-    if (consoleLogOn) {
-      console.log("***8th sale REFUNDED:", instructorLockedBalanceArrayBN8R);
-    }
+    // GET "Locked Balances" arrays and "Current, Unlocked, Refunded" balances after the refund of the 8th sale
+    const instLB_S8R = await getInstructorLockedBalanceArray(refundWindowC3, contentCreator);
+    const contLB_S8R = await getContentLockedBalanceArray(refundWindowC3);
+    const coachLB_S8R = await getCoachingLockedBalanceArray(refundWindowC3);
+    const [iCurB_S8R, iUnlockB_S8R, iRefundB_S8R] = await getInstructorCurrentUnlockedRefundedBalances(contentCreator);
+    const [contCurB_S8R, contRefundendB_S8R, contSumRB_S8R] = await getContentCurrentRefundedBalances();
+    const [coachCurB_S8R, coachRefundendB_S8R, coachSumRB_S8R] = await getCoachingCurrentRefundedBalances();
 
-    // Calculate the instructer balances
-    currentBalanceInstS1 = ethers.utils.formatEther(await contractPlatformTreasury.instBalance(contentCreator.address));
-    [getWithdrawableBalanceS1, getRefundendBalanceS1] = await contractPlatformTreasury.getWithdrawableBalanceInstructor(
-      contentCreator.address
-    );
-    getWithdrawableBalanceS2 = ethers.utils.formatEther(getWithdrawableBalanceS1);
-    getRefundendBalanceS2 = ethers.utils.formatEther(getRefundendBalanceS1);
-    if (consoleLogOn) {
-      console.log(
-        "***USERS BALANCES 8th sale REFUNDED= [",
-        "Mapping:",
-        currentBalanceInstS1,
-        "Get+:",
-        getWithdrawableBalanceS2,
-        "Get-",
-        getRefundendBalanceS2,
-        "]"
-      );
-    }
+    // Console log the balances after the refund of the 8th sale
     //Empty space
-    if (consoleLogOn) {
-      console.log();
-      console.log();
-    }
+    consoleLog_emptySpace();
+    consoleLog_stageChange("8TH Sale Refunded");
+    //GetCurrentBlocksTimestamp
+    const currentLockBalanceIndex_S8R = await calculateLockBalanceIndex(refundWindowC3);
+    consoleLog_lockBalanceIndex(currentLockBalanceIndex_S8R);
+    //instrucor
+    consoleLog_instructorLockedBalanceArray(instLB_S8R);
+    consoleLog_instructorOtherBalances(iCurB_S8R, iUnlockB_S8R, iRefundB_S8R);
+    //Content Pool
+    consoleLog_contentLockedBalanceArray(contLB_S8R);
+    consoleLog_contentPoolOtherBalances(contCurB_S8R, contRefundendB_S8R, contSumRB_S8R);
+    //Coaching Pool
+    consoleLog_coachingLockedBalanceArray(coachLB_S8R);
+    consoleLog_coachingPoolOtherBalances(coachCurB_S8R, coachRefundendB_S8R, coachSumRB_S8R);
+
+    ///////////////////////////////////////////////////////////////////////////////////////////////////
   });
 });
