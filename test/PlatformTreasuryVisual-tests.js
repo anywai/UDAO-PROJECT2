@@ -81,6 +81,7 @@ async function reDeploy(reApplyRolesViaVoucher = true, isDexRequired = false) {
   const reApplyJurorRoles = [jurorMember, jurorMember1, jurorMember2, jurorMember3, jurorMember4];
   const VALIDATOR_ROLE = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("VALIDATOR_ROLE"));
   const JUROR_ROLE = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("JUROR_ROLE"));
+  contractGovernanceTreasury = replace.contractGovernanceTreasury;
 }
 
 async function checkAccountUDAOVpBalanceAndDelegate(contractUDAOVp, account) {
@@ -1591,6 +1592,357 @@ describe("Platform Treasury Visual Tests", function () {
     //Coaching Pool
     consoleLog_coachingLockedBalanceArray(coachLB_S8R);
     consoleLog_coachingPoolOtherBalances(coachCurB_S8R, coachRefundendB_S8R, coachSumRB_S8R);
+
+    ///////////////////////////////////////////////////////////////////////////////////////////////////
+    governanceTreasuryAddress = contractGovernanceTreasury.address;
+    const governanceTreasuryBalance_G00 = await contractUDAO.balanceOf(governanceTreasuryAddress);
+    // Enable governance treasury to see token flow into the governance treasury
+    await contractPlatformTreasury.connect(backend).activateGovernanceTreasury(true);
+    expect(await contractPlatformTreasury.isGovernanceTreasuryOnline()).to.equal(true);
+    // GET "Locked Balances" arrays and "Current, Unlocked, Refunded" balances after the governance treasury activation
+    const instLB_G0 = await getInstructorLockedBalanceArray(refundWindowC4, contentCreator);
+    const contLB_G0 = await getContentLockedBalanceArray(refundWindowC4);
+    const coachLB_G0 = await getCoachingLockedBalanceArray(refundWindowC4);
+    const [iCurB_G0, iUnlockB_G0, iRefundB_G0] = await getInstructorCurrentUnlockedRefundedBalances(contentCreator);
+    const [contCurB_G0, contRefundendB_G0, contSumRB_G0] = await getContentCurrentRefundedBalances();
+    const [coachCurB_G0, coachRefundendB_G0, coachSumRB_G0] = await getCoachingCurrentRefundedBalances();
+    //Governance treasury balance change
+    const governanceTreasuryBalance_G0 = await contractUDAO.balanceOf(governanceTreasuryAddress);
+    const governanceTreasuryBalanceChangeG00toG0 = governanceTreasuryBalance_G0 - governanceTreasuryBalance_G00;
+    // Console log the governance treasury balance change
+    if (consoleLogOn) {
+      console.log(
+        colorYellow,
+        "Governance Treasury",
+        colorReset,
+        "UDAO Balance change:",
+        colorGreen,
+        ethers.utils.formatEther(governanceTreasuryBalanceChangeG00toG0.toString()),
+        colorReset
+      );
+      _foundationBalance00 = ethers.utils.formatEther(await contractPlatformTreasury.foundationBalance());
+      console.log(colorYellow, "Foundation", colorReset, "balance:", colorGreen, _foundationBalance00, colorReset);
+    }
+
+    // Console log the balances after the governance treasury activation
+    //Empty space
+    consoleLog_emptySpace();
+    consoleLog_stageChange("Governance Treasury Activation");
+    //GetCurrentBlocksTimestamp
+    const currentLockBalanceIndex_G0 = await calculateLockBalanceIndex(refundWindowC4);
+    consoleLog_lockBalanceIndex(currentLockBalanceIndex_G0);
+    //instrucor
+    consoleLog_instructorLockedBalanceArray(instLB_G0);
+    consoleLog_instructorOtherBalances(iCurB_G0, iUnlockB_G0, iRefundB_G0);
+    //Content Pool
+    consoleLog_contentLockedBalanceArray(contLB_G0);
+    consoleLog_contentPoolOtherBalances(contCurB_G0, contRefundendB_G0, contSumRB_G0);
+    //Coaching Pool
+    consoleLog_coachingLockedBalanceArray(coachLB_G0);
+    consoleLog_coachingPoolOtherBalances(coachCurB_G0, coachRefundendB_G0, coachSumRB_G0);
+
+    ///////////////////////////////////////////////////////////////////////////////////////////////////
+    //// Change refund window to 2 days to work to see the effect of the change
+    await contractPlatformTreasury.connect(backend).changeRefundWindow(2);
+    let refundWindowC5 = (await contractPlatformTreasury.refundWindow()).toNumber();
+    //Empty space
+    consoleLog_emptySpace();
+    if (consoleLogOn) {
+      console.log(colorMagenta, "----REFUND WINDOW CHANGED----", colorReset);
+      console.log("----New refund window is ", refundWindowC5, " days----");
+    }
+    //GET "Locked Balances" arrays and "Current, Unlocked, Refunded" balances after the refund window change
+    const instLB_REFWC5 = await getInstructorLockedBalanceArray(refundWindowC5, contentCreator);
+    const contLB_REFWC5 = await getContentLockedBalanceArray(refundWindowC5);
+    const coachLB_REFWC5 = await getCoachingLockedBalanceArray(refundWindowC5);
+    const [iCurB_REFWC5, iUnlockB_REFWC5, iRefundB_REFWC5] = await getInstructorCurrentUnlockedRefundedBalances(
+      contentCreator
+    );
+    const [contCurB_REFWC5, contRefundendB_REFWC5, contSumRB_REFWC5] = await getContentCurrentRefundedBalances();
+    const [coachCurB_REFWC5, coachRefundendB_REFWC5, coachSumRB_REFWC5] = await getCoachingCurrentRefundedBalances();
+
+    // Console log the balances after the refund window change
+    //Empty space
+    consoleLog_emptySpace();
+    consoleLog_stageChange("Refund Window Change");
+    //GetCurrentBlocksTimestamp
+    const currentLockBalanceIndex_REFWC5 = await calculateLockBalanceIndex(refundWindowC5);
+    consoleLog_lockBalanceIndex(currentLockBalanceIndex_REFWC5);
+    //instrucor
+    consoleLog_instructorLockedBalanceArray(instLB_REFWC5);
+    consoleLog_instructorOtherBalances(iCurB_REFWC5, iUnlockB_REFWC5, iRefundB_REFWC5);
+    //Content Pool
+    consoleLog_contentLockedBalanceArray(contLB_REFWC5);
+    consoleLog_contentPoolOtherBalances(contCurB_REFWC5, contRefundendB_REFWC5, contSumRB_REFWC5);
+    //Coaching Pool
+    consoleLog_coachingLockedBalanceArray(coachLB_REFWC5);
+    consoleLog_coachingPoolOtherBalances(coachCurB_REFWC5, coachRefundendB_REFWC5, coachSumRB_REFWC5);
+
+    //Governance treasury balance change
+    const governanceTreasuryBalance_G1 = await contractUDAO.balanceOf(governanceTreasuryAddress);
+    const governanceTreasuryBalanceChangeG0toG1 = governanceTreasuryBalance_G1 - governanceTreasuryBalance_G0;
+    // Console log the governance treasury balance change
+    if (consoleLogOn) {
+      console.log(
+        colorYellow,
+        "Governance Treasury",
+        colorReset,
+        "UDAO Balance change:",
+        colorGreen,
+        ethers.utils.formatEther(governanceTreasuryBalanceChangeG0toG1.toString()),
+        colorReset
+      );
+      _foundationBalance01 = ethers.utils.formatEther(await contractPlatformTreasury.foundationBalance());
+      console.log(colorYellow, "Foundation", colorReset, "balance:", colorGreen, _foundationBalance01, colorReset);
+    }
+
+    ///////////////////////////////////////////////////////////////////////////////////////////////////
+    // Skip 2 day
+    skipDays(2);
+    //Empty space
+    consoleLog_emptySpace();
+    //Console log the skipped days
+    consoleLog_skipedDays(2);
+
+    ///////////////////////////////////////////////////////////////////////////////////////////////////
+    // 9- Make a new content purchase
+    const redeemers9 = [validator3.address];
+    await makeContentPurchase(
+      contractPlatformTreasury,
+      contractVoucherVerifier,
+      validator3,
+      contractRoleManager,
+      contractUDAO,
+      tokenIds,
+      purchasedPartsNew,
+      pricesToPay,
+      fullContentPurchase,
+      validUntil,
+      redeemers9,
+      giftReceiver,
+      userIds
+    );
+    // GET "Locked Balances" arrays and "Current, Unlocked, Refunded" balances after the 9th sale
+    const instLB_S9 = await getInstructorLockedBalanceArray(refundWindowC5, contentCreator);
+    const contLB_S9 = await getContentLockedBalanceArray(refundWindowC5);
+    const coachLB_S9 = await getCoachingLockedBalanceArray(refundWindowC5);
+    const [iCurB_S9, iUnlockB_S9, iRefundB_S9] = await getInstructorCurrentUnlockedRefundedBalances(contentCreator);
+    const [contCurB_S9, contRefundendB_S9, contSumRB_S9] = await getContentCurrentRefundedBalances();
+    const [coachCurB_S9, coachRefundendB_S9, coachSumRB_S9] = await getCoachingCurrentRefundedBalances();
+
+    // Console log the balances after the 9th sale
+    //Empty space
+    consoleLog_emptySpace();
+    consoleLog_stageChange("9TH Sale Completed");
+    //GetCurrentBlocksTimestamp
+    const currentLockBalanceIndex_S9 = await calculateLockBalanceIndex(refundWindowC5);
+    consoleLog_lockBalanceIndex(currentLockBalanceIndex_S9);
+    //instrucor
+    consoleLog_instructorLockedBalanceArray(instLB_S9);
+    consoleLog_instructorOtherBalances(iCurB_S9, iUnlockB_S9, iRefundB_S9);
+    //Content Pool
+    consoleLog_contentLockedBalanceArray(contLB_S9);
+    consoleLog_contentPoolOtherBalances(contCurB_S9, contRefundendB_S9, contSumRB_S9);
+    //Coaching Pool
+    consoleLog_coachingLockedBalanceArray(coachLB_S9);
+    consoleLog_coachingPoolOtherBalances(coachCurB_S9, coachRefundendB_S9, coachSumRB_S9);
+
+    //Governance treasury balance change
+    const governanceTreasuryBalance_G2 = await contractUDAO.balanceOf(governanceTreasuryAddress);
+    const governanceTreasuryBalanceChangeG1toG2 = governanceTreasuryBalance_G2 - governanceTreasuryBalance_G1;
+    // Console log the governance treasury balance change
+    if (consoleLogOn) {
+      console.log(
+        colorYellow,
+        "Governance Treasury",
+        colorReset,
+        "UDAO Balance change:",
+        colorGreen,
+        ethers.utils.formatEther(governanceTreasuryBalanceChangeG1toG2.toString()),
+        colorReset
+      );
+      _foundationBalance02 = ethers.utils.formatEther(await contractPlatformTreasury.foundationBalance());
+      console.log(colorYellow, "Foundation", colorReset, "balance:", colorGreen, _foundationBalance02, colorReset);
+    }
+
+    ///////////////////////////////////////////////////////////////////////////////////////////////////
+    // Try to withdraw foundation balance
+    const foundationBalanceBefore = await contractUDAO.balanceOf(contractPlatformTreasury.address);
+    await contractPlatformTreasury.connect(foundation).withdrawFoundation();
+    const foundationBalanceAfter = await contractUDAO.balanceOf(contractPlatformTreasury.address);
+    let foundationBalanceChange = foundationBalanceAfter - foundationBalanceBefore;
+    // console log the foundation balance change
+    //empty space
+    consoleLog_emptySpace();
+    if (consoleLogOn) {
+      console.log(colorMagenta, "*****************FOUNDATION WITHDRAW*****************", colorReset);
+      console.log(
+        colorRed,
+        "Foundation",
+        colorReset,
+        "UDAO Balance change:",
+        colorGreen,
+        ethers.utils.formatEther(foundationBalanceChange.toString()),
+        colorReset
+      );
+    }
+
+    ///////////////////////////////////////////////////////////////////////////////////////////////////
+    // GET "Locked Balances" arrays and "Current, Unlocked, Refunded" balances after the foundation withdrawal
+    const instLB_FW = await getInstructorLockedBalanceArray(refundWindowC5, contentCreator);
+    const contLB_FW = await getContentLockedBalanceArray(refundWindowC5);
+    const coachLB_FW = await getCoachingLockedBalanceArray(refundWindowC5);
+    const [iCurB_FW, iUnlockB_FW, iRefundB_FW] = await getInstructorCurrentUnlockedRefundedBalances(contentCreator);
+    const [contCurB_FW, contRefundendB_FW, contSumRB_FW] = await getContentCurrentRefundedBalances();
+    const [coachCurB_FW, coachRefundendB_FW, coachSumRB_FW] = await getCoachingCurrentRefundedBalances();
+
+    // Console log the balances after the foundation withdrawal
+    //Empty space
+    consoleLog_emptySpace();
+    consoleLog_stageChange("After Foundation Withdrawal");
+    //GetCurrentBlocksTimestamp
+    const currentLockBalanceIndex_FW = await calculateLockBalanceIndex(refundWindowC5);
+    consoleLog_lockBalanceIndex(currentLockBalanceIndex_FW);
+    //instrucor
+    consoleLog_instructorLockedBalanceArray(instLB_FW);
+    consoleLog_instructorOtherBalances(iCurB_FW, iUnlockB_FW, iRefundB_FW);
+    //Content Pool
+    consoleLog_contentLockedBalanceArray(contLB_FW);
+    consoleLog_contentPoolOtherBalances(contCurB_FW, contRefundendB_FW, contSumRB_FW);
+    //Coaching Pool
+    consoleLog_coachingLockedBalanceArray(coachLB_FW);
+    consoleLog_coachingPoolOtherBalances(coachCurB_FW, coachRefundendB_FW, coachSumRB_FW);
+
+    // Governance treasury balance change
+    const governanceTreasuryBalance_G3 = await contractUDAO.balanceOf(governanceTreasuryAddress);
+    const governanceTreasuryBalanceChangeG2toG3 = governanceTreasuryBalance_G3 - governanceTreasuryBalance_G2;
+    // Console log the governance treasury balance change
+    if (consoleLogOn) {
+      console.log(
+        colorYellow,
+        "Governance Treasury",
+        colorReset,
+        "UDAO Balance change:",
+        colorGreen,
+        ethers.utils.formatEther(governanceTreasuryBalanceChangeG2toG3.toString()),
+        colorReset
+      );
+      _foundationBalance03 = ethers.utils.formatEther(await contractPlatformTreasury.foundationBalance());
+      console.log(colorYellow, "Foundation", colorReset, "balance:", colorGreen, _foundationBalance03, colorReset);
+    }
+
+    ///////////////////////////////////////////////////////////////////////////////////////////////////
+    //Skip 4 days to eliminate precaution withdraw block on balances
+    //Empty space
+    consoleLog_emptySpace();
+    skipDays(4);
+    if (consoleLogOn) {
+      console.log("----End of REMAINING precaution withdrawal period, (Since 2 day passed) +", 4, " day----");
+    }
+    // Get "Locked Balances" arrays and "Current, Unlocked, Refunded" balances after the precaution withdrawal period
+    const instLB_FW2 = await getInstructorLockedBalanceArray(refundWindowC5, contentCreator);
+    const contLB_FW2 = await getContentLockedBalanceArray(refundWindowC5);
+    const coachLB_FW2 = await getCoachingLockedBalanceArray(refundWindowC5);
+    const [iCurB_FW2, iUnlockB_FW2, iRefundB_FW2] = await getInstructorCurrentUnlockedRefundedBalances(contentCreator);
+    const [contCurB_FW2, contRefundendB_FW2, contSumRB_FW2] = await getContentCurrentRefundedBalances();
+    const [coachCurB_FW2, coachRefundendB_FW2, coachSumRB_FW2] = await getCoachingCurrentRefundedBalances();
+
+    // Console log the balances after the precaution withdrawal period
+    //Empty space
+    consoleLog_emptySpace();
+    consoleLog_stageChange("After Remaining Precaution Withdrawal Period");
+    //GetCurrentBlocksTimestamp
+    const currentLockBalanceIndex_FW2 = await calculateLockBalanceIndex(refundWindowC5);
+    consoleLog_lockBalanceIndex(currentLockBalanceIndex_FW2);
+    //instrucor
+    consoleLog_instructorLockedBalanceArray(instLB_FW2);
+    consoleLog_instructorOtherBalances(iCurB_FW2, iUnlockB_FW2, iRefundB_FW2);
+    //Content Pool
+    consoleLog_contentLockedBalanceArray(contLB_FW2);
+    consoleLog_contentPoolOtherBalances(contCurB_FW2, contRefundendB_FW2, contSumRB_FW2);
+    //Coaching Pool
+    consoleLog_coachingLockedBalanceArray(coachLB_FW2);
+    consoleLog_coachingPoolOtherBalances(coachCurB_FW2, coachRefundendB_FW2, coachSumRB_FW2);
+
+    ///////////////////////////////////////////////////////////////////////////////////////////////////
+    // Witdraw instructor balance
+    const instructorBalanceBefore1 = await contractUDAO.balanceOf(contentCreator.address);
+    await contractPlatformTreasury.connect(contentCreator).withdrawInstructor();
+    const instructorBalanceAfter1 = await contractUDAO.balanceOf(contentCreator.address);
+    let instructorBalanceChange1 = instructorBalanceAfter1 - instructorBalanceBefore1;
+    // console log the instructor balance change
+    if (consoleLogOn) {
+      console.log(colorMagenta, "*****************INSTRUCTOR WITHDRAW*****************", colorReset);
+      console.log(
+        colorRed,
+        "Instructor",
+        colorReset,
+        "UDAO Balance change:",
+        colorGreen,
+        ethers.utils.formatEther(instructorBalanceChange1.toString()),
+        colorReset
+      );
+    }
+    //governance treasury balance change
+    const governanceTreasuryBalance_G4 = await contractUDAO.balanceOf(governanceTreasuryAddress);
+    const governanceTreasuryBalanceChangeG3toG4 = governanceTreasuryBalance_G4 - governanceTreasuryBalance_G3;
+    // Console log the governance treasury balance change
+    if (consoleLogOn) {
+      console.log(
+        colorYellow,
+        "Governance Treasury",
+        colorReset,
+        "UDAO Balance change:",
+        colorGreen,
+        ethers.utils.formatEther(governanceTreasuryBalanceChangeG3toG4.toString()),
+        colorReset
+      );
+      _foundationBalance04 = ethers.utils.formatEther(await contractPlatformTreasury.foundationBalance());
+      console.log(colorYellow, "Foundation", colorReset, "balance:", colorGreen, _foundationBalance04, colorReset);
+    }
+
+    // GET "Locked Balances" arrays and "Current, Unlocked, Refunded" balances after the instructor withdrawal
+    const instLB_IW = await getInstructorLockedBalanceArray(refundWindowC5, contentCreator);
+    const contLB_IW = await getContentLockedBalanceArray(refundWindowC5);
+    const coachLB_IW = await getCoachingLockedBalanceArray(refundWindowC5);
+    const [iCurB_IW, iUnlockB_IW, iRefundB_IW] = await getInstructorCurrentUnlockedRefundedBalances(contentCreator);
+    const [contCurB_IW, contRefundendB_IW, contSumRB_IW] = await getContentCurrentRefundedBalances();
+    const [coachCurB_IW, coachRefundendB_IW, coachSumRB_IW] = await getCoachingCurrentRefundedBalances();
+
+    // Console log the balances after the instructor withdrawal
+    //Empty space
+    consoleLog_emptySpace();
+    consoleLog_stageChange("After Instructor Withdrawal");
+    //GetCurrentBlocksTimestamp
+    const currentLockBalanceIndex_IW = await calculateLockBalanceIndex(refundWindowC5);
+    consoleLog_lockBalanceIndex(currentLockBalanceIndex_IW);
+    //instrucor
+    consoleLog_instructorLockedBalanceArray(instLB_IW);
+    consoleLog_instructorOtherBalances(iCurB_IW, iUnlockB_IW, iRefundB_IW);
+    //Content Pool
+    consoleLog_contentLockedBalanceArray(contLB_IW);
+    consoleLog_contentPoolOtherBalances(contCurB_IW, contRefundendB_IW, contSumRB_IW);
+    //Coaching Pool
+    consoleLog_coachingLockedBalanceArray(coachLB_IW);
+    consoleLog_coachingPoolOtherBalances(coachCurB_IW, coachRefundendB_IW, coachSumRB_IW);
+
+    // governance treasury balance change
+    const governanceTreasuryBalance_G5 = await contractUDAO.balanceOf(governanceTreasuryAddress);
+    const governanceTreasuryBalanceChangeG4toG5 = governanceTreasuryBalance_G5 - governanceTreasuryBalance_G4;
+    // Console log the governance treasury balance change
+    if (consoleLogOn) {
+      console.log(
+        colorYellow,
+        "Governance Treasury",
+        colorReset,
+        "UDAO Balance change:",
+        colorGreen,
+        ethers.utils.formatEther(governanceTreasuryBalanceChangeG4toG5.toString()),
+        colorReset
+      );
+      _foundationBalance05 = ethers.utils.formatEther(await contractPlatformTreasury.foundationBalance());
+      console.log(colorYellow, "Foundation", colorReset, "balance:", colorGreen, _foundationBalance05, colorReset);
+    }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////
   });
