@@ -341,6 +341,12 @@ async function makeCoachingPurchase(
   return coachingSaleID;
 }
 
+async function skipDays(_days) {
+  // There is 86400 second in a day (24h*60m*60s=86400s), and also in polygon 1 block is mined every 2 seconds
+  const numBlocksToMine = Math.ceil((_days * 24 * 60 * 60) / 2);
+  await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine.toString(16)}`, "0x2"]);
+}
+
 describe("Platform Treasury General", function () {
   it("Should allow backend to set update addresses", async function () {
     await reDeploy();
@@ -503,8 +509,7 @@ describe("Platform Treasury General", function () {
     /// convert big number to number
     const refundWindowDaysNumber = refundWindowDays.toNumber();
 
-    const numBlocksToMine = Math.ceil((refundWindowDaysNumber * 24 * 60 * 60) / 2);
-    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine.toString(16)}`, "0x2"]);
+    skipDays(refundWindowDaysNumber);
 
     /// @dev Withdraw foundation funds from the treasury
     await contractPlatformTreasury.connect(foundation).withdrawFoundation();
@@ -610,8 +615,7 @@ describe("Platform Treasury General", function () {
     const refundWindowDaysNumber = refundWindowDays.toNumber();
 
     /// @dev Skip 20 days to allow foundation to withdraw funds
-    const numBlocksToMine = Math.ceil((refundWindowDaysNumber * 24 * 60 * 60) / 2);
-    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine.toString(16)}`, "0x2"]);
+    skipDays(refundWindowDaysNumber);
 
     /// @dev Withdraw foundation funds from the treasury
     await contractPlatformTreasury.connect(foundation).withdrawFoundation();
@@ -692,8 +696,7 @@ describe("Platform Treasury General", function () {
     const refundWindowDaysNumber = refundWindowDays.toNumber();
 
     /// @dev Skip 20 days to allow foundation to withdraw funds
-    const numBlocksToMine = Math.ceil((refundWindowDaysNumber * 24 * 60 * 60) / 2);
-    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine.toString(16)}`, "0x2"]);
+    skipDays(refundWindowDaysNumber);
     // Instructer should call withdrawInstructor from platformtreasury contract
     await contractPlatformTreasury.connect(contentCreator).withdrawInstructor();
     // Get the instructer balance after withdrawal
@@ -787,8 +790,7 @@ describe("Platform Treasury General", function () {
     const refundWindowDaysNumber = refundWindowDays.toNumber();
 
     /// @dev Skip 20 days to allow foundation to withdraw funds
-    const numBlocksToMine = Math.ceil((refundWindowDaysNumber * 24 * 60 * 60) / 2);
-    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine.toString(16)}`, "0x2"]);
+    skipDays(refundWindowDaysNumber);
     // Instructer should call withdrawInstructor from platformtreasury contract
     await contractPlatformTreasury.connect(contentCreator).withdrawInstructor();
     // Get the instructer balance after withdrawal
@@ -821,7 +823,7 @@ describe("Platform Treasury General", function () {
         .sub(jurorBalance)
     );
     /// @dev Skip 20 days to allow foundation to withdraw funds
-    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine.toString(16)}`, "0x2"]);
+    skipDays(refundWindowDaysNumber);
 
     const purchasedParts2 = [[0]];
 
@@ -1263,8 +1265,7 @@ describe("Platform Treasury General", function () {
     const refundWindowDaysNumber = refundWindowDays.toNumber();
 
     /// @dev Skip 20 days to allow foundation to withdraw funds
-    const numBlocksToMine = Math.ceil((refundWindowDaysNumber * 24 * 60 * 60) / 2);
-    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine.toString(16)}`, "0x2"]);
+    skipDays(refundWindowDaysNumber);
 
     /// Pause contract
     await contractPlatformTreasury.connect(backend).pause();
@@ -1399,8 +1400,7 @@ describe("Platform Treasury General", function () {
     await expect(instructerBalanceBefore).to.equal(0);
 
     /// @dev Skip 1 days
-    const numBlocksToMine0 = Math.ceil((1 * 24 * 60 * 60) / 2);
-    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine0.toString(16)}`, "0x2"]);
+    skipDays(1);
 
     /// Check if the buyer has the content part
     const result = await contractPlatformTreasury
@@ -1436,8 +1436,7 @@ describe("Platform Treasury General", function () {
     const refundWindowDaysNumber = refundWindowDays.toNumber();
 
     /// @dev Skip 20 days to allow foundation to withdraw funds
-    const numBlocksToMine1 = Math.ceil((refundWindowDaysNumber * 2 * 24 * 60 * 60) / 2);
-    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine1.toString(16)}`, "0x2"]);
+    skipDays(refundWindowDaysNumber);
 
     /// a new purchase will be update the instructer balance
     const redeemers2 = [contentBuyer2.address];

@@ -172,6 +172,12 @@ async function reDeploy(reApplyRolesViaVoucher = true, isDexRequired = false) {
   contractGovernanceTreasury = replace.contractGovernanceTreasury;
 }
 
+async function skipDays(_days) {
+  // There is 86400 second in a day (24h*60m*60s=86400s), and also in polygon 1 block is mined every 2 seconds
+  const numBlocksToMine = Math.ceil((_days * 24 * 60 * 60) / 2);
+  await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine.toString(16)}`, "0x2"]);
+}
+
 describe("Platform Treasury Contract - Content", function () {
   it("Should fail to set validation manager if not FOUNDATION", async function () {
     await reDeploy();
@@ -1898,8 +1904,7 @@ describe("Platform Treasury Contract - Content", function () {
     const refundWindowDaysNumber = refundWindowDays.toNumber();
 
     /// @dev Skip 20'refund window period' days to allow foundation to withdraw funds
-    const numBlocksToMine = Math.ceil((refundWindowDaysNumber * 24 * 60 * 60) / 2);
-    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine.toString(16)}`, "0x2"]);
+    skipDays(refundWindowDaysNumber);
 
     // Check if the buyer paid the correct amount
     expect(balanceBefore1.sub(balanceAfter1)).to.equal(pricesToPay[0]);
@@ -2243,8 +2248,7 @@ describe("Platform Treasury Contract - Content", function () {
     /// convert big number to number
     const refundWindowDaysNumber = refundWindowDaysNumberInBigNumber.toNumber();
     /// @dev Skip 20'refund window period' days to complete the refund window
-    const numBlocksToMine = Math.ceil(((refundWindowDaysNumber + 1) * 24 * 60 * 60) / 2);
-    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine.toString(16)}`, "0x2"]);
+    skipDays(refundWindowDaysNumber + 1);
 
     // Refund the content
     await expect(contractPlatformTreasury.connect(contentCreator).newRefundContent(refund_voucher)).to.be.revertedWith(
@@ -2337,8 +2341,7 @@ describe("Platform Treasury Contract - Content", function () {
     const refundWindowDaysNumber = refundWindowDays.toNumber();
 
     /// @dev Skip 20'refund window period' days to allow foundation to withdraw funds
-    const numBlocksToMine = Math.ceil(((refundWindowDaysNumber - 1) * 24 * 60 * 60) / 2);
-    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine.toString(16)}`, "0x2"]);
+    skipDays(refundWindowDaysNumber - 1);
 
     // Make a content purchase for token 2
     const tokenIds2 = [2];
@@ -2377,8 +2380,7 @@ describe("Platform Treasury Contract - Content", function () {
     expect(balanceBefore2.sub(balanceAfter2)).to.equal(pricesToPay2[0]);
 
     /// @dev Skip 1 day to complete refund window for first purchase
-    const numBlocksToMine2 = Math.ceil((1 * 24 * 60 * 60) / 2);
-    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine2.toString(16)}`, "0x2"]);
+    skipDays(1);
 
     // change refund window to 7 days
     const oldRefundWindow = refundWindowDaysNumber;
@@ -2393,15 +2395,13 @@ describe("Platform Treasury Contract - Content", function () {
     expect(await contractPlatformTreasury.foundationBalance()).to.equal(contentFoundCut1);
 
     /// @dev Skip new refund window to complete refund window for seccond purchase
-    const numBlocksToMine3 = Math.ceil((oldRefundWindow * 24 * 60 * 60) / 2);
-    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine3.toString(16)}`, "0x2"]);
+    skipDays(oldRefundWindow);
     const totalPrice2 = pricesToPay2[0];
     const contentFoundCut2 = totalPrice2.mul(_contentFoundCut).div(100000);
 
     // Update balances
     await contractPlatformTreasury.updateAndTransferPlatformBalances();
-    const numBlocksToMine4 = Math.ceil((1 * 24 * 60 * 60) / 2);
-    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine4.toString(16)}`, "0x2"]);
+    skipDays(1);
     expect(await contractPlatformTreasury.foundationBalance()).to.equal(contentFoundCut1.add(contentFoundCut2));
     // foundation withdraw funds
     await contractPlatformTreasury.connect(foundation).withdrawFoundation();
@@ -2497,8 +2497,7 @@ describe("Platform Treasury Contract - Content", function () {
     const refundWindowDaysNumber = refundWindowDays.toNumber();
 
     /// @dev Skip 20'refund window period' days to allow foundation to withdraw funds
-    const numBlocksToMine = Math.ceil(((refundWindowDaysNumber - 0) * 24 * 60 * 60) / 2);
-    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine.toString(16)}`, "0x2"]);
+    skipDays(refundWindowDaysNumber);
 
     //calculate total inst locked balance
     let totalInstLB = ethers.BigNumber.from(0);

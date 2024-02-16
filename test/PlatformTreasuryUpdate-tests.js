@@ -341,6 +341,12 @@ async function makeCoachingPurchase(
   return coachingSaleID;
 }
 
+async function skipDays(_days) {
+  // There is 86400 second in a day (24h*60m*60s=86400s), and also in polygon 1 block is mined every 2 seconds
+  const numBlocksToMine = Math.ceil((_days * 24 * 60 * 60) / 2);
+  await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine.toString(16)}`, "0x2"]);
+}
+
 describe("Platform Treasury Updated General", function () {
   it("Should put the instructor earnings in the correct index with correct amount", async function () {
     const consoleLogOn = true;
@@ -560,8 +566,7 @@ describe("Platform Treasury Updated General", function () {
       ethers.utils.formatEther(pricesToPay[0].sub(totalCut))
     );
     // skip 1 day
-    const numBlocksToMine0 = Math.ceil((1 * 24 * 60 * 60) / 2);
-    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine0.toString(16)}`, "0x2"]);
+    skipDays(1);
 
     // common parts in the purchase voucher
     const tokenIds2 = [2];
@@ -748,8 +753,7 @@ describe("Platform Treasury Updated General", function () {
       ethers.utils.formatEther(pricesToPay[0].sub(totalCut))
     );
     // skip 1 day
-    const numBlocksToMine0 = Math.ceil((1 * 24 * 60 * 60) / 2);
-    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine0.toString(16)}`, "0x2"]);
+    skipDays(1);
 
     // common parts in the purchase voucher
     const tokenIds2 = [2];
@@ -801,8 +805,7 @@ describe("Platform Treasury Updated General", function () {
       ethers.utils.formatEther(pricesToPay2[0].sub(totalCut2))
     );
     // skip 1 day
-    const numBlocksToMine1 = Math.ceil((1 * 24 * 60 * 60) / 2);
-    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine1.toString(16)}`, "0x2"]);
+    skipDays(1);
 
     // common parts in the purchase voucher
     const tokenIds3 = [3];
@@ -1323,8 +1326,7 @@ describe("Platform Treasury Updated General", function () {
     );
     expect(contentLockedBalanceArrayBN2[currentBlockTimestampIndex]).to.equal(ethers.utils.formatEther(totalCut)); //0.04
     // Skip 1 day
-    const numBlocksToMine0 = Math.ceil((1 * 24 * 60 * 60) / 2);
-    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine0.toString(16)}`, "0x2"]);
+    skipDays(1);
     // Make a content purchase
     const redeemers2 = [contentBuyer1.address];
     const tokenIds2 = [2];
@@ -1497,8 +1499,7 @@ describe("Platform Treasury Updated General", function () {
     // Get the precaution withdrawal timestamp
     const precautionWithdrawalTimestamp = await contractPlatformTreasury.precautionWithdrawalTimestamp();
     // Skip days by new refund window + 1
-    const numBlocksToMine0 = Math.ceil(((refundWindow2.toNumber() + 1) * 24 * 60 * 60) / 2);
-    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine0.toString(16)}`, "0x2"]);
+    skipDays(refundWindow2.toNumber() + 1);
     // Try to withdraw as a content creator
     await expect(contractPlatformTreasury.connect(contentCreator).withdrawInstructor()).to.be.revertedWith(
       "Precaution withdrawal period is not over"
@@ -1754,8 +1755,7 @@ describe("Platform Treasury Updated General", function () {
     // Get the current refund window
     const refundWindow2 = await contractPlatformTreasury.refundWindow();
     // Skip for 1 day
-    const numBlocksToMine0 = Math.ceil((1 * 24 * 60 * 60) / 2);
-    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine0.toString(16)}`, "0x2"]);
+    skipDays(1);
     // Buy content 2
     // Buy the content
     const tokenIds2 = [2];
@@ -1776,8 +1776,7 @@ describe("Platform Treasury Updated General", function () {
       userIds
     );
     // Skip for new refund window
-    const numBlocksToMine1 = Math.ceil((refundWindow2.toNumber() * 24 * 60 * 60) / 2);
-    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine1.toString(16)}`, "0x2"]);
+    skipDays(refundWindow2.toNumber());
     // Try to withdraw as a content creator
     await expect(contractPlatformTreasury.connect(contentCreator).withdrawInstructor()).to.be.revertedWith(
       "Precaution withdrawal period is not over"
@@ -1813,8 +1812,7 @@ describe("Platform Treasury Updated General", function () {
     // get the refund window
     const refundWindow = (await contractPlatformTreasury.refundWindow()).toNumber();
     // skip 60 days
-    const numBlocksToMine0 = Math.ceil(((refundWindow + 1) * 24 * 60 * 60) / 2);
-    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine0.toString(16)}`, "0x2"]);
+    skipDays(refundWindow + 1);
     // make a content purchase
     const tokenIds = [1];
     const purchasedParts = [[1]];
@@ -1911,8 +1909,7 @@ describe("Platform Treasury Updated General", function () {
     );
     expect(contentLockedBalanceArrayBN2[currentBlockTimestampIndex]).to.equal(ethers.utils.formatEther(totalCut));
     // skip days by the new refund window
-    const numBlocksToMine1 = Math.ceil(((refundWindow2 + 1) * 24 * 60 * 60) / 2);
-    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine1.toString(16)}`, "0x2"]);
+    skipDays(refundWindow2 + 1);
     // update instructor balance by calling updateAndTransferPlatformBalances
     await contractPlatformTreasury.connect(contentCreator).updateAndTransferPlatformBalances();
 
@@ -1937,8 +1934,7 @@ describe("Platform Treasury Updated General", function () {
       "Precaution withdrawal period is not over"
     );
     // skip days by refund window
-    const numBlocksToMine2 = Math.ceil(((refundWindow2 + 1) * 24 * 60 * 60) / 2);
-    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine2.toString(16)}`, "0x2"]);
+    skipDays(refundWindow2 + 1);
     // allow refund the content because old refund window is still valid for that purchase
     //  Create RefundVoucher
     const refundVoucher = new RefundVoucher({
@@ -2027,8 +2023,7 @@ describe("Platform Treasury Updated General", function () {
     // get the refund window
     const refundWindow2 = (await contractPlatformTreasury.refundWindow()).toNumber();
     // skip 30 days
-    const numBlocksToMine1 = Math.ceil((30 * 24 * 60 * 60) / 2);
-    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine1.toString(16)}`, "0x2"]);
+    skipDays(30);
     // try to refund the content
     //  Create RefundVoucher
     const refundVoucher = new RefundVoucher({
