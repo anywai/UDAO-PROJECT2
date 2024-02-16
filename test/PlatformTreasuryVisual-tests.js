@@ -344,13 +344,22 @@ async function makeCoachingPurchase(
 
 ///NEW FUNCTIONS
 async function skipDays(_days) {
-  const numBlocksToMine = Math.ceil((_days * 24 * 60 * 60) / 2);
-  await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine.toString(16)}`, "0x2"]);
+  // There is 86400 second in a day (24h*60m*60s=86400s), and also in polygon 1 block is mined every 2 seconds
+  //const numBlocksToMine = Math.ceil((_days * 24 * 60 * 60) / 2);
+  //await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine.toString(16)}`, "0x2"]);
+
+  // test new test forward time function
+  await contractPlatformTreasury.connect(backend).testerForwardTimeInDays(_days);
 }
 
 async function calculateLockBalanceIndex(_refundWindow) {
-  const block = await hre.ethers.provider.getBlock();
-  const timeStampInDays = Math.floor(block.timestamp / 86400);
+  const block = await hre.ethers.provider.getBlock("latest");
+  //const timeStampInDays = Math.floor(block.timestamp / 86400);
+
+  // in the tests we was mining new blocks to forward time, so on this branch we are using a overshoot in the BasePlatform.sol to manipulate the time
+  const overShoot = (await contractPlatformTreasury.testerTimeOvershoot()).toNumber();
+  const timeStampInDays = Math.floor((block.timestamp + overShoot) / 86400);
+
   const _lockBalanceIndex = timeStampInDays % _refundWindow;
   return _lockBalanceIndex;
 }
@@ -560,7 +569,7 @@ describe("Platform Treasury Visual Tests", function () {
       colorReset
     );
     /// To show the console logs uncomment the console.log lines below
-    consoleLogOn = true;
+    //consoleLogOn = true;
     instroctorBalances_consoleLogOn = true;
     contentPool_consoleLogOn = true;
     coachingPool_consoleLogOn = true;
@@ -598,7 +607,7 @@ describe("Platform Treasury Visual Tests", function () {
       console.log("----New refund window is ", refundWindowC1, " days----");
     }
     // Wait end of previous refund window to eliminate precaution withdraw block on balances
-    skipDays(initialRefundWindow);
+    await skipDays(initialRefundWindow);
     if (consoleLogOn) {
       console.log("----End of precaution withdrawal period ", initialRefundWindow, " day----");
     }
@@ -728,7 +737,10 @@ describe("Platform Treasury Visual Tests", function () {
     });
     const coachingPrice = ethers.utils.parseEther("2.0");
     //Coaching date is 3 days from now
-    const coachingDate = (await hre.ethers.provider.getBlock()).timestamp + 3 * 24 * 60 * 60;
+    const blockCur1 = await hre.ethers.provider.getBlock("latest");
+    const overShootCur1 = (await contractPlatformTreasury.testerTimeOvershoot()).toNumber();
+
+    const coachingDate = blockCur1.timestamp + overShootCur1 + 3 * 86400;
     const role_voucher = await lazyCoaching.createVoucher(
       contentCreator.address,
       coachingPrice,
@@ -768,7 +780,7 @@ describe("Platform Treasury Visual Tests", function () {
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////
     /// Skip 1 day
-    skipDays(1);
+    await skipDays(1);
     //Empty space
     consoleLog_emptySpace();
     //Console log the skipped days
@@ -864,7 +876,7 @@ describe("Platform Treasury Visual Tests", function () {
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////
     // Skip 2 day
-    skipDays(2);
+    await skipDays(2);
     //Empty space
     consoleLog_emptySpace();
     //Console log the skipped days
@@ -924,14 +936,14 @@ describe("Platform Treasury Visual Tests", function () {
       console.log("----New refund window is ", refundWindowC2, " days----");
     }
     // wait end of previous refund window to eliminate precaution withdraw block on balances
-    skipDays(refundWindowC1);
+    await skipDays(refundWindowC1);
     if (consoleLogOn) {
       console.log("----End of precaution withdrawal period ", refundWindowC1, " day----");
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////
     // Skip 4 day
-    skipDays(4);
+    await skipDays(4);
     //Empty space
     consoleLog_emptySpace();
     //Console log the skipped days
@@ -996,7 +1008,10 @@ describe("Platform Treasury Visual Tests", function () {
     });
     const coachingPrice2 = ethers.utils.parseEther("2.0");
     //Coaching date is 3 days from now
-    const coachingDate2 = (await hre.ethers.provider.getBlock()).timestamp + 3 * 24 * 60 * 60;
+    const blockCur2 = await hre.ethers.provider.getBlock("latest");
+    const overShootCur2 = (await contractPlatformTreasury.testerTimeOvershoot()).toNumber();
+
+    const coachingDate2 = blockCur2.timestamp + overShootCur2 + 3 * 86400;
     const role_voucher2 = await lazyCoaching2.createVoucher(
       contentCreator.address,
       coachingPrice2,
@@ -1081,7 +1096,7 @@ describe("Platform Treasury Visual Tests", function () {
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////
     // Skip 1 day
-    skipDays(1);
+    await skipDays(1);
     //Empty space
     consoleLog_emptySpace();
     //Console log the skipped days
@@ -1167,7 +1182,7 @@ describe("Platform Treasury Visual Tests", function () {
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////
     // Skip 2 day
-    skipDays(2);
+    await skipDays(2);
     //Empty space
     consoleLog_emptySpace();
     //Console log the skipped days
@@ -1358,7 +1373,7 @@ describe("Platform Treasury Visual Tests", function () {
     // wait end of previous refund window to eliminate precaution withdraw block on balances
     //Empty space
     consoleLog_emptySpace();
-    skipDays(refundWindowC2);
+    await skipDays(refundWindowC2);
     if (consoleLogOn) {
       console.log("----End of precaution withdrawal period ", refundWindowC2, " day----");
     }
@@ -1459,7 +1474,10 @@ describe("Platform Treasury Visual Tests", function () {
     });
     const coachingPrice3 = ethers.utils.parseEther("2.0");
     //Coaching date is 3 days from now
-    const coachingDate3 = (await hre.ethers.provider.getBlock()).timestamp + 3 * 24 * 60 * 60;
+    const blockCur3 = await hre.ethers.provider.getBlock("latest");
+    const overShootCur3 = (await contractPlatformTreasury.testerTimeOvershoot()).toNumber();
+
+    const coachingDate3 = blockCur3.timestamp + overShootCur3 + 3 * 86400;
     const role_voucher3 = await lazyCoaching2.createVoucher(
       contentCreator.address,
       coachingPrice3,
@@ -1499,7 +1517,7 @@ describe("Platform Treasury Visual Tests", function () {
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////
     // Skip 1 day
-    skipDays(1);
+    await skipDays(1);
     //Empty space
     consoleLog_emptySpace();
     //Console log the skipped days
@@ -1698,7 +1716,7 @@ describe("Platform Treasury Visual Tests", function () {
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////
     // Skip 2 day
-    skipDays(2);
+    await skipDays(2);
     //Empty space
     consoleLog_emptySpace();
     //Console log the skipped days
@@ -1835,7 +1853,7 @@ describe("Platform Treasury Visual Tests", function () {
     //Skip 4 days to eliminate precaution withdraw block on balances
     //Empty space
     consoleLog_emptySpace();
-    skipDays(4);
+    await skipDays(4);
     if (consoleLogOn) {
       console.log("----End of REMAINING precaution withdrawal period, (Since 2 day passed) +", 4, " day----");
     }
