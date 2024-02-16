@@ -343,8 +343,11 @@ async function makeCoachingPurchase(
 
 async function skipDays(_days) {
   // There is 86400 second in a day (24h*60m*60s=86400s), and also in polygon 1 block is mined every 2 seconds
-  const numBlocksToMine = Math.ceil((_days * 24 * 60 * 60) / 2);
-  await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine.toString(16)}`, "0x2"]);
+  //const numBlocksToMine = Math.ceil((_days * 24 * 60 * 60) / 2);
+  //await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine.toString(16)}`, "0x2"]);
+
+  // test new test forward time function
+  await contractPlatformTreasury.connect(backend).testerForwardTimeInDays(_days);
 }
 
 describe("Platform Treasury General", function () {
@@ -509,7 +512,7 @@ describe("Platform Treasury General", function () {
     /// convert big number to number
     const refundWindowDaysNumber = refundWindowDays.toNumber();
 
-    skipDays(refundWindowDaysNumber);
+    await skipDays(refundWindowDaysNumber);
 
     /// @dev Withdraw foundation funds from the treasury
     await contractPlatformTreasury.connect(foundation).withdrawFoundation();
@@ -615,7 +618,7 @@ describe("Platform Treasury General", function () {
     const refundWindowDaysNumber = refundWindowDays.toNumber();
 
     /// @dev Skip 20 days to allow foundation to withdraw funds
-    skipDays(refundWindowDaysNumber);
+    await skipDays(refundWindowDaysNumber);
 
     /// @dev Withdraw foundation funds from the treasury
     await contractPlatformTreasury.connect(foundation).withdrawFoundation();
@@ -696,7 +699,7 @@ describe("Platform Treasury General", function () {
     const refundWindowDaysNumber = refundWindowDays.toNumber();
 
     /// @dev Skip 20 days to allow foundation to withdraw funds
-    skipDays(refundWindowDaysNumber);
+    await skipDays(refundWindowDaysNumber);
     // Instructer should call withdrawInstructor from platformtreasury contract
     await contractPlatformTreasury.connect(contentCreator).withdrawInstructor();
     // Get the instructer balance after withdrawal
@@ -790,7 +793,7 @@ describe("Platform Treasury General", function () {
     const refundWindowDaysNumber = refundWindowDays.toNumber();
 
     /// @dev Skip 20 days to allow foundation to withdraw funds
-    skipDays(refundWindowDaysNumber);
+    await skipDays(refundWindowDaysNumber);
     // Instructer should call withdrawInstructor from platformtreasury contract
     await contractPlatformTreasury.connect(contentCreator).withdrawInstructor();
     // Get the instructer balance after withdrawal
@@ -823,7 +826,7 @@ describe("Platform Treasury General", function () {
         .sub(jurorBalance)
     );
     /// @dev Skip 20 days to allow foundation to withdraw funds
-    skipDays(refundWindowDaysNumber);
+    await skipDays(refundWindowDaysNumber);
 
     const purchasedParts2 = [[0]];
 
@@ -1265,7 +1268,7 @@ describe("Platform Treasury General", function () {
     const refundWindowDaysNumber = refundWindowDays.toNumber();
 
     /// @dev Skip 20 days to allow foundation to withdraw funds
-    skipDays(refundWindowDaysNumber);
+    await skipDays(refundWindowDaysNumber);
 
     /// Pause contract
     await contractPlatformTreasury.connect(backend).pause();
@@ -1400,7 +1403,7 @@ describe("Platform Treasury General", function () {
     await expect(instructerBalanceBefore).to.equal(0);
 
     /// @dev Skip 1 days
-    skipDays(1);
+    await skipDays(1);
 
     /// Check if the buyer has the content part
     const result = await contractPlatformTreasury
@@ -1436,7 +1439,7 @@ describe("Platform Treasury General", function () {
     const refundWindowDaysNumber = refundWindowDays.toNumber();
 
     /// @dev Skip 20 days to allow foundation to withdraw funds
-    skipDays(refundWindowDaysNumber);
+    await skipDays(refundWindowDaysNumber);
 
     /// a new purchase will be update the instructer balance
     const redeemers2 = [contentBuyer2.address];

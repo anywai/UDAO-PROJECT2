@@ -69,8 +69,11 @@ async function reDeploy(reApplyRolesViaVoucher = true, isDexRequired = false) {
 
 async function skipDays(_days) {
   // There is 86400 second in a day (24h*60m*60s=86400s), and also in polygon 1 block is mined every 2 seconds
-  const numBlocksToMine = Math.ceil((_days * 24 * 60 * 60) / 2);
-  await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine.toString(16)}`, "0x2"]);
+  //const numBlocksToMine = Math.ceil((_days * 24 * 60 * 60) / 2);
+  //await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine.toString(16)}`, "0x2"]);
+
+  // test new test forward time function
+  await contractPlatformTreasury.connect(backend).testerForwardTimeInDays(_days);
 }
 
 describe("Platform Treasury Contract - Coaching", function () {
@@ -499,7 +502,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     // Check if returned learner address is the same as the buyer address
     expect(coachingStruct.contentReceiver).to.equal(contentBuyer.address);
     // Mine 5 days of blocks
-    skipDays(5);
+    await skipDays(5);
     // Refund coaching
     const refundType = 0; // 0 since refund is coaching
     await expect(
@@ -554,7 +557,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     expect(coachingStruct.contentReceiver).to.equal(contentBuyer.address);
     // Mine 5 days of blocks
 
-    skipDays(5);
+    await skipDays(5);
     // Refund coaching
     const refundType = 0; // 0 since refund is coaching
     await expect(contractPlatformTreasury.connect(contentCreator).refundCoachingByInstructorOrLearner(coachingSaleID))
@@ -613,7 +616,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     expect(coachingStruct.contentReceiver).to.equal(contentBuyer.address);
     // Mine 5 days of blocks
 
-    skipDays(5);
+    await skipDays(5);
     // Refund coaching
     const refundType = 0; // 0 since refund is coaching
     await expect(contractPlatformTreasury.connect(contentCreator).refundCoachingByInstructorOrLearner(coachingSaleID))
@@ -676,7 +679,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     expect(coachingStruct.contentReceiver).to.equal(contentBuyer.address);
     const refundWindow = await contractPlatformTreasury.refundWindow();
     // Mine days of blocks that bigger than refundWindow days:
-    skipDays(refundWindow + 1);
+    await skipDays(refundWindow + 1);
     // Refund coaching
     await expect(
       contractPlatformTreasury.connect(contentCreator).refundCoachingByInstructorOrLearner(coachingSaleID)
@@ -724,7 +727,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     // Check if returned learner address is the same as the buyer address
     expect(coachingStruct.contentReceiver).to.equal(contentBuyer.address);
     // Mine 2 days of blocks
-    skipDays(2);
+    await skipDays(2);
     // Refund coaching
     await expect(
       contractPlatformTreasury.connect(contentBuyer).refundCoachingByInstructorOrLearner(coachingSaleID)
@@ -778,7 +781,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     // Check if returned learner address is the same as the buyer address
     expect(coachingStruct.contentReceiver).to.equal(contentBuyer.address);
     // Mine 2 days of blocks
-    skipDays(2);
+    await skipDays(2);
     //  Create RefundVoucher
     const refundVoucher = new RefundVoucher({
       contract: contractVoucherVerifier,
@@ -851,7 +854,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     // Check if returned learner address is the same as the buyer address
     expect(coachingStruct.contentReceiver).to.equal(contentBuyer.address);
     // Mine 2 days of blocks
-    skipDays(2);
+    await skipDays(2);
     //  Create RefundVoucher
     const refundVoucher = new RefundVoucher({
       contract: contractVoucherVerifier,
@@ -931,7 +934,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     // Mine more than refund period
     const refundWindow = await contractPlatformTreasury.refundWindow();
     // Mine days of blocks that bigger than refundWindow days:
-    skipDays(refundWindow + 1);
+    await skipDays(refundWindow + 1);
     //  Create RefundVoucher
     const refundVoucher = new RefundVoucher({
       contract: contractVoucherVerifier,
@@ -1043,7 +1046,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     const refundWindowDaysNumber = refundWindowDays.toNumber();
 
     /// @dev Skip 20'refund window period' days to allow foundation to withdraw funds
-    skipDays(refundWindowDaysNumber);
+    await skipDays(refundWindowDaysNumber);
     // Update transfer platform balances
     await contractPlatformTreasury.connect(backend).updateAndTransferPlatformBalances();
     /// @dev Check if the governance treasury has the correct amount with respect to the platform cut percentages
@@ -1065,7 +1068,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     expect(governanceTreasuryBalance).to.equal(totalCut);
 
     /// @dev Skip 20 days to allow foundation to withdraw funds
-    skipDays(refundWindowDaysNumber);
+    await skipDays(refundWindowDaysNumber);
     await contractPlatformTreasury.updateAndTransferPlatformBalances();
   });
 
