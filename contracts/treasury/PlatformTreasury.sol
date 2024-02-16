@@ -49,7 +49,8 @@ contract PlatformTreasury is ContentManager {
     /// @notice Allows anyone to update the platform cut balances and transfer the platform cut to governance
     function updateAndTransferPlatformBalances() external {
         /// @dev this is the timestamp of the transaction in days
-        uint256 transactionTime = (block.timestamp / 86400);
+        uint256 transactionTime = ((block.timestamp + testerTimeOvershoot) /
+            86400);
         /// @dev transactionLBIndex determines a "transaction time dependent position" in the Locked balanaces array.
         uint256 transactionLBIndex = transactionTime % refundWindow;
         /// @dev update platform cut (coaching&content) pools and platform locked pools
@@ -77,7 +78,8 @@ contract PlatformTreasury is ContentManager {
             "Only foundation can withdraw"
         );
         /// @dev this is the timestamp of the transaction in days
-        uint256 transactionTime = (block.timestamp / 86400);
+        uint256 transactionTime = ((block.timestamp + testerTimeOvershoot) /
+            86400);
         /// @dev transactionLBIndex determines a "transaction time dependent position" in the Locked balanaces array.
         uint256 transactionLBIndex = transactionTime % refundWindow;
         /// @dev update platform cut (coaching&content) pools and platform locked pools
@@ -102,7 +104,8 @@ contract PlatformTreasury is ContentManager {
     /// @notice Allows instructers to withdraw individually.
     function withdrawInstructor() external whenNotPaused {
         require(
-            block.timestamp > precautionWithdrawalTimestamp,
+            (block.timestamp + testerTimeOvershoot) >
+                precautionWithdrawalTimestamp,
             "Precaution withdrawal period is not over"
         );
 
@@ -117,7 +120,8 @@ contract PlatformTreasury is ContentManager {
             "Debt is larger than or equal to balance"
         );
         /// @dev this is the timestamp of the transaction in days
-        uint256 transactionTime = (block.timestamp / 86400);
+        uint256 transactionTime = ((block.timestamp + testerTimeOvershoot) /
+            86400);
         /// @dev transactionLBIndex determines a "transaction time dependent position" in the Locked balanaces array.
         uint256 transactionLBIndex = transactionTime % refundWindow;
         /// @dev update platform cut (coaching&content) pools and platform locked pools
@@ -161,7 +165,8 @@ contract PlatformTreasury is ContentManager {
 
         if (prevInstRefundWindow[_inst] == refundWindow) {
             /// @dev this is the timestamp of the transaction in days
-            uint256 transactionTime = (block.timestamp / 86400);
+            uint256 transactionTime = ((block.timestamp + testerTimeOvershoot) /
+                86400);
             /// @dev transactionLBIndex determines a "transaction time dependent position" in the Locked balanaces array.
             uint256 transactionLBIndex = transactionTime % refundWindow;
 
@@ -212,7 +217,8 @@ contract PlatformTreasury is ContentManager {
             "New window period is the same as the current one"
         );
         /// @dev this is the timestamp of the transaction in days
-        uint256 transactionTime = (block.timestamp / 86400);
+        uint256 transactionTime = ((block.timestamp + testerTimeOvershoot) /
+            86400);
         /// @dev transactionLBIndex determines a "transaction time dependent position" in the Locked balanaces array.
         uint256 transactionLBIndex = transactionTime % refundWindow;
         /// @dev update platform cut (coaching&content) pools and platform locked pools
@@ -236,7 +242,8 @@ contract PlatformTreasury is ContentManager {
         }
 
         if (refundWindow > _newWindow) {
-            uint temp = block.timestamp + (refundWindow * 86400);
+            uint temp = (block.timestamp + testerTimeOvershoot) +
+                (refundWindow * 86400);
             if (temp > precautionWithdrawalTimestamp) {
                 precautionWithdrawalTimestamp = temp;
             }

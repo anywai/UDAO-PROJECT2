@@ -14,6 +14,17 @@ import "../interfaces/IRoleManager.sol";
 import "../interfaces/IVoucherVerifier.sol";
 
 abstract contract BasePlatform is Pausable {
+    /// @dev this is a time overshoot for the testers to forward time, IT WILL BE REMOVED IN PRODUCTION
+    uint public testerTimeOvershoot = 0;
+
+    function testerForwardTimeInDays(uint _days) external {
+        require(
+            hasRole(BACKEND_ROLE, msg.sender),
+            "Only backend can forward time"
+        );
+        testerTimeOvershoot += _days * 86400;
+    }
+
     /// @dev Role definitions are here to reduce the size of the contract.
     bytes32 public constant BACKEND_ROLE = keccak256("BACKEND_ROLE");
     bytes32 public constant FOUNDATION_ROLE = keccak256("FOUNDATION_ROLE");

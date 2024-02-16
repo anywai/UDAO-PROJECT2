@@ -144,11 +144,13 @@ abstract contract ContentManager is BasePlatform {
         /// @dev check and verify the voucher is created by platform
         voucherVerifier.verifyCoachingVoucher(voucher);
         require(
-            voucher.coachingDate >= block.timestamp + 86400 * 1,
+            voucher.coachingDate >=
+                (block.timestamp + testerTimeOvershoot) + 86400 * 1,
             "Coaching date must be at least 1 day before"
         );
         require(
-            voucher.coachingDate <= block.timestamp + 86400 * 7,
+            voucher.coachingDate <=
+                (block.timestamp + testerTimeOvershoot) + 86400 * 7,
             "Coaching date must be at most 7 days before"
         );
         if (hasRole(BACKEND_ROLE, msg.sender)) {
@@ -190,7 +192,8 @@ abstract contract ContentManager is BasePlatform {
         udao.transferFrom(msg.sender, address(this), totalCut + instrShare);
 
         /// @dev this is the timestamp of the transaction in days
-        uint256 transactionTime = (block.timestamp / 86400);
+        uint256 transactionTime = ((block.timestamp + testerTimeOvershoot) /
+            86400);
 
         /// @dev transactionLBIndex determines a "transaction time dependent position" in the Locked balanaces array.
         uint256 transactionLBIndex = transactionTime % refundWindow;
@@ -341,7 +344,8 @@ abstract contract ContentManager is BasePlatform {
         udao.transferFrom(msg.sender, address(this), instrShare + totalCut);
 
         /// @dev this is the timestamp of the transaction in days
-        uint256 transactionTime = (block.timestamp / 86400);
+        uint256 transactionTime = ((block.timestamp + testerTimeOvershoot) /
+            86400);
         /// @dev transactionLBIndex determines a "transaction time dependent position" in the Locked balanaces array.
         uint256 transactionLBIndex = transactionTime % refundWindow;
 
@@ -619,7 +623,10 @@ abstract contract ContentManager is BasePlatform {
 
     /// @notice Distributes platform revenue to platform roles and transfers governance role shares to the governance treasury.
     function _transferPlatformCutstoGovernance() internal {
-        if (block.timestamp >= precautionWithdrawalTimestamp) {
+        if (
+            (block.timestamp + testerTimeOvershoot) >=
+            precautionWithdrawalTimestamp
+        ) {
             /// @dev if there is any revenue in contentCutPool which is completed the refund window, distribute role shares to roles and transfer governance role shares to governance treasury
             if (contentCutPool >= contentCutRefundedBalance) {
                 /// @dev reduce the refunded and blocked balance from the content cut pool
@@ -726,12 +733,14 @@ abstract contract ContentManager is BasePlatform {
         CoachingSale storage refundItem = coachSales[_refCoachSaleID];
         /// @dev a sale only be refunded in the refund window period after the purchase date
         require(
-            refundItem.refundablePeriod > (block.timestamp / 86400),
+            refundItem.refundablePeriod >
+                ((block.timestamp + testerTimeOvershoot) / 86400),
             "Refund period over you cant refund"
         );
         if (msg.sender == refundItem.payee) {
             require(
-                refundItem.coachingDate >= block.timestamp + 86400,
+                refundItem.coachingDate >=
+                    (block.timestamp + testerTimeOvershoot) + 86400,
                 "You can't refund less than 1 day prior to coaching date"
             );
         } else if (msg.sender != refundItem.coach) {
@@ -753,7 +762,8 @@ abstract contract ContentManager is BasePlatform {
         emit SaleRefunded(_refCoachSaleID, 0);
 
         /// @dev this is the timestamp of the transaction in days
-        uint256 transactionTime = (block.timestamp / 86400);
+        uint256 transactionTime = ((block.timestamp + testerTimeOvershoot) /
+            86400);
         /// @dev transactionLBIndex determines a "transaction time dependent position" in the Locked balanaces array.
         uint256 transactionLBIndex = transactionTime % refundWindow;
 
@@ -785,7 +795,8 @@ abstract contract ContentManager is BasePlatform {
         CoachingSale storage refundItem = coachSales[voucher.saleID];
         /// @dev a sale only be refunded in the refund window period after the purchase date
         require(
-            refundItem.refundablePeriod > (block.timestamp / 86400),
+            refundItem.refundablePeriod >
+                ((block.timestamp + testerTimeOvershoot) / 86400),
             "Refund period over you cant refund"
         );
         /// @dev a sale can only be refunded once
@@ -804,7 +815,8 @@ abstract contract ContentManager is BasePlatform {
         emit SaleRefunded(voucher.saleID, 0);
 
         /// @dev this is the timestamp of the transaction in days
-        uint256 transactionTime = (block.timestamp / 86400);
+        uint256 transactionTime = ((block.timestamp + testerTimeOvershoot) /
+            86400);
         /// @dev transactionLBIndex determines a "transaction time dependent position" in the Locked balanaces array.
         uint256 transactionLBIndex = transactionTime % refundWindow;
 
@@ -836,7 +848,8 @@ abstract contract ContentManager is BasePlatform {
         ContentSale storage refundItem = contentSales[voucher.saleID];
         /// @dev a sale only be refunded in the refund window period after the purchase date
         require(
-            refundItem.refundablePeriod > (block.timestamp / 86400),
+            refundItem.refundablePeriod >
+                ((block.timestamp + testerTimeOvershoot) / 86400),
             "refund period over you cant refund"
         );
         /// @dev a sale can only be refunded once
@@ -898,7 +911,8 @@ abstract contract ContentManager is BasePlatform {
         emit SaleRefunded(voucher.saleID, 1);
 
         /// @dev this is the timestamp of the transaction in days
-        uint256 transactionTime = (block.timestamp / 86400);
+        uint256 transactionTime = ((block.timestamp + testerTimeOvershoot) /
+            86400);
         /// @dev transactionLBIndex determines a "transaction time dependent position" in the Locked balanaces array.
         uint256 transactionLBIndex = transactionTime % refundWindow;
 
