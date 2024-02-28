@@ -238,16 +238,6 @@ Updates and syncs addresses of UDAO version 1.0 contracts.
 
 _This function performs contract wise address updates on UDAO version 1.0 contracts and synchronizes them with the records in this contract._
 
-### syncVersion2ContractAddresses
-
-```solidity
-function syncVersion2ContractAddresses() external
-```
-
-Updates and syncs addresses of UDAO version 2.0 contracts.
-
-_This function performs contract wise address updates on UDAO version 2.0 contracts and synchronizes them with the records in this contract._
-
 ### setAddressUDAOContract
 
 ```solidity

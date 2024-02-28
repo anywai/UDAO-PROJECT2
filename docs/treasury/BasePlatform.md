@@ -320,6 +320,16 @@ bool isGovernanceTreasuryOnline
 
 is governance part of platform released
 
+### precautionWithdrawalTimestamp
+
+```solidity
+uint256 precautionWithdrawalTimestamp
+```
+
+the timestamp of the last precaution withdrawal
+
+_changing refund window with a shorter one is creates a negative balance risk for the platform and withdrawals need to be limited for previous refund window_
+
 ### constructor
 
 ```solidity
@@ -559,4 +569,22 @@ sets the cut for foundation/governance/juror/validator for a content sale
 | _contentGoverCut | uint256 | new cut for governance |
 | _contentJurorCut | uint256 | new cut for juror pool |
 | _contentValidCut | uint256 | new cut for validator pool |
+
+### pause
+
+```solidity
+function pause() external
+```
+
+allows the backend to pause the contract
+
+_pausing the contract will prevent all purchases refunds and withdrawals from the contract_
+
+### unpause
+
+```solidity
+function unpause() external
+```
+
+allows the backend to unpause the contract
 

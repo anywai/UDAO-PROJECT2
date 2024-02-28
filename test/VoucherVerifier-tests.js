@@ -157,6 +157,8 @@ describe("Voucher Verifier", function () {
     const fullContentPurchase = [true];
     const pricesToPay = [ethers.utils.parseEther("1")];
     const validUntil = Date.now() + 999999999;
+    const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
+
 
     ///////////////////////MAKE CONTENT PURCHASE//////////////////////////
     contentBuyer = contentBuyer1;
@@ -181,6 +183,7 @@ describe("Voucher Verifier", function () {
           { name: "validUntil", type: "uint256" },
           { name: "redeemer", type: "address" },
           { name: "giftReceiver", type: "address" },
+          { name: "userId", type: "string" },
         ],
     */
 
@@ -196,7 +199,8 @@ describe("Voucher Verifier", function () {
         pricesToPay[i],
         validUntil,
         redeemers[i],
-        giftReceiver[i]
+        giftReceiver[i],
+        userIds[i]
       );
       // Save the voucher to the array
       contentPurchaseVouchers.push(contentPurchaseVoucher);
@@ -204,7 +208,7 @@ describe("Voucher Verifier", function () {
     /// Try to buy content and revert with "Signature invalid or unauthorized"
     const transaction = contractPlatformTreasury
       .connect(contentCreator)
-      .buyContentWithDiscount(contentPurchaseVouchers);
+      .buyContent(contentPurchaseVouchers);
     await expect(transaction).to.be.revertedWith("Signature invalid or unauthorized");
 
     const transaction2 = contractVoucherVerifier
@@ -249,6 +253,8 @@ describe("Voucher Verifier", function () {
     const fullContentPurchase = [true];
     const pricesToPay = [ethers.utils.parseEther("1")];
     const validUntil = 1000000;
+    const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
+
 
     ///////////////////////MAKE CONTENT PURCHASE//////////////////////////
     contentBuyer = contentBuyer1;
@@ -264,17 +270,6 @@ describe("Voucher Verifier", function () {
       .approve(contractPlatformTreasury.address, ethers.utils.parseEther("999999999999.0"));
 
     /// Create content purchase vouchers
-    /*
-    ContentDiscountVoucher: [
-          { name: "tokenId", type: "uint256" },
-          { name: "fullContentPurchase", type: "bool" },
-          { name: "purchasedParts", type: "uint256[]" },
-          { name: "priceToPay", type: "uint256" },
-          { name: "validUntil", type: "uint256" },
-          { name: "redeemer", type: "address" },
-          { name: "giftReceiver", type: "address" },
-        ],
-    */
 
     const contentPurchaseVouchers = [];
     for (let i = 0; i < tokenIds.length; i++) {
@@ -288,7 +283,8 @@ describe("Voucher Verifier", function () {
         pricesToPay[i],
         validUntil,
         redeemers[i],
-        giftReceiver[i]
+        giftReceiver[i],
+        userIds[i]
       );
       // Save the voucher to the array
       contentPurchaseVouchers.push(contentPurchaseVoucher);
@@ -297,7 +293,7 @@ describe("Voucher Verifier", function () {
     /// Try to buy content and revert with "Signature invalid or unauthorized"
     const transaction = contractPlatformTreasury
       .connect(contentCreator)
-      .buyContentWithDiscount(contentPurchaseVouchers);
+      .buyContent(contentPurchaseVouchers);
     await expect(transaction).to.be.revertedWith("Voucher has expired.");
 
     const transaction2 = contractVoucherVerifier
@@ -342,6 +338,7 @@ describe("Voucher Verifier", function () {
     const fullContentPurchase = [true];
     const pricesToPay = [ethers.utils.parseEther("1")];
     const validUntil = Date.now() + 999999999;
+    const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
 
     ///////////////////////MAKE CONTENT PURCHASE//////////////////////////
     contentBuyer = contentBuyer1;
@@ -357,17 +354,7 @@ describe("Voucher Verifier", function () {
       .approve(contractPlatformTreasury.address, ethers.utils.parseEther("999999999999.0"));
 
     /// Create content purchase vouchers
-    /*
-    ContentDiscountVoucher: [
-          { name: "tokenId", type: "uint256" },
-          { name: "fullContentPurchase", type: "bool" },
-          { name: "purchasedParts", type: "uint256[]" },
-          { name: "priceToPay", type: "uint256" },
-          { name: "validUntil", type: "uint256" },
-          { name: "redeemer", type: "address" },
-          { name: "giftReceiver", type: "address" },
-        ],
-    */
+    
 
     const contentPurchaseVouchers = [];
     for (let i = 0; i < tokenIds.length; i++) {
@@ -381,7 +368,8 @@ describe("Voucher Verifier", function () {
         pricesToPay[i],
         validUntil,
         redeemers[i],
-        giftReceiver[i]
+        giftReceiver[i],
+        userIds[i]
       );
       // Save the voucher to the array
       contentPurchaseVouchers.push(contentPurchaseVoucher);
@@ -390,10 +378,10 @@ describe("Voucher Verifier", function () {
     /// Buy content
     const purchaseTx = await contractPlatformTreasury
       .connect(contentBuyer)
-      .buyContentWithDiscount(contentPurchaseVouchers);
+      .buyContent(contentPurchaseVouchers);
     const queueTxReceipt = await purchaseTx.wait();
     const queueTxEvent = queueTxReceipt.events.find((e) => e.event == "ContentBought");
-    const contentSaleID = queueTxEvent.args[0];
+    const contentSaleID = queueTxEvent.args[2];
     // Get content struct
     const contentStruct = await contractPlatformTreasury.contentSales(contentSaleID);
     // Check if returned learner address is the same as the buyer address
@@ -469,6 +457,7 @@ describe("Voucher Verifier", function () {
       signer: contentBuyer3,
     });
     const coachingPrice = ethers.utils.parseEther("1.0");
+    const userId = "c8d53630-233a-4f95-90cb-4df253ae9283";
     /// Get the current block timestamp
     const currentBlockTimestamp = (await hre.ethers.provider.getBlock()).timestamp;
     /// Coaching date is 3 days from now
@@ -477,7 +466,8 @@ describe("Voucher Verifier", function () {
       contentCreator.address,
       coachingPrice,
       coachingDate,
-      contentBuyer.address
+      contentBuyer.address,
+      userId
     );
     // change the voucher and try to manipulate coach
     role_voucher.coach = contentBuyer2.address;

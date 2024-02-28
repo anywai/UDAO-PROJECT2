@@ -57,7 +57,8 @@ async function makeContentPurchase(
   fullContentPurchase,
   validUntil,
   redeemers,
-  giftReceiver
+  giftReceiver,
+  userIds
 ) {
   /// Set KYC
   await contractRoleManager.setKYC(contentBuyer.address, true);
@@ -79,6 +80,7 @@ async function makeContentPurchase(
         { name: "validUntil", type: "uint256" },
         { name: "redeemer", type: "address" },
         { name: "giftReceiver", type: "address" },
+        { name: "userId", type: "string" },
       ],
   */
   const contentPurchaseVouchers = [];
@@ -93,18 +95,20 @@ async function makeContentPurchase(
       pricesToPay[i],
       validUntil,
       redeemers[i],
-      giftReceiver[i]
+      giftReceiver[i],
+      userIds[i]
     );
     // Save the voucher to the array
     contentPurchaseVouchers.push(contentPurchaseVoucher);
   }
   /// Buy content
-  const purchaseTx = await contractPlatformTreasury
-    .connect(contentBuyer)
-    .buyContentWithDiscount(contentPurchaseVouchers);
+  const purchaseTx = await contractPlatformTreasury.connect(contentBuyer).buyContent(contentPurchaseVouchers);
   const queueTxReceipt = await purchaseTx.wait();
   const queueTxEvent = queueTxReceipt.events.find((e) => e.event == "ContentBought");
-  const contentSaleID = queueTxEvent.args[0];
+  const contentSaleID = queueTxEvent.args[2];
+  const userId = queueTxEvent.args[0];
+  // expect to get the same userId
+  expect(userIds[0]).to.equal(userId);
   // Get content struct
   const contentStruct = await contractPlatformTreasury.contentSales(contentSaleID);
   // Check if returned learner address is the same as the buyer address
@@ -168,6 +172,12 @@ async function reDeploy(reApplyRolesViaVoucher = true, isDexRequired = false) {
   contractGovernanceTreasury = replace.contractGovernanceTreasury;
 }
 
+async function skipDays(_days) {
+  // There is 86400 second in a day (24h*60m*60s=86400s), and also in polygon 1 block is mined every 2 seconds
+  const numBlocksToMine = Math.ceil((_days * 24 * 60 * 60) / 2);
+  await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine.toString(16)}`, "0x2"]);
+}
+
 describe("Platform Treasury Contract - Content", function () {
   it("Should fail to set validation manager if not FOUNDATION", async function () {
     await reDeploy();
@@ -207,6 +217,8 @@ describe("Platform Treasury Contract - Content", function () {
     const purchasedParts = [parts];
     const redeemers = [contentBuyer1.address];
     const giftReceiver = [ethers.constants.AddressZero];
+    const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
+
     const fullContentPurchase = [true];
     const pricesToPay = [ethers.utils.parseEther("1")];
     const validUntil = Date.now() + 999999999;
@@ -222,7 +234,8 @@ describe("Platform Treasury Contract - Content", function () {
       fullContentPurchase,
       validUntil,
       redeemers,
-      giftReceiver
+      giftReceiver,
+      userIds
     );
     const balanceBefore = balances[0];
     const balanceAfter = balances[1];
@@ -275,6 +288,7 @@ describe("Platform Treasury Contract - Content", function () {
     const fullContentPurchase = [true];
     const pricesToPay = [ethers.utils.parseEther("1")];
     const validUntil = Date.now() + 999999999;
+    const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
 
     /// Set KYC
     await contractRoleManager.setKYC(contentBuyer.address, true);
@@ -299,16 +313,17 @@ describe("Platform Treasury Contract - Content", function () {
         pricesToPay[i],
         validUntil,
         redeemers[i],
-        giftReceiver[i]
+        giftReceiver[i],
+        userIds[i]
       );
       // Save the voucher to the array
       contentPurchaseVouchers.push(contentPurchaseVoucher);
     }
     /// Buy content
-    const purchaseTx = await contractPlatformTreasury.connect(backend).buyContentWithDiscount(contentPurchaseVouchers);
+    const purchaseTx = await contractPlatformTreasury.connect(backend).buyContent(contentPurchaseVouchers);
     const queueTxReceipt = await purchaseTx.wait();
     const queueTxEvent = queueTxReceipt.events.find((e) => e.event == "ContentBought");
-    const contentSaleID = queueTxEvent.args[0];
+    const contentSaleID = queueTxEvent.args[2];
     // Get content struct
     const contentStruct = await contractPlatformTreasury.contentSales(contentSaleID);
     const balanceAfter = await contractUDAO.balanceOf(backend.address);
@@ -365,6 +380,7 @@ describe("Platform Treasury Contract - Content", function () {
     const fullContentPurchase = [true];
     const pricesToPay = [ethers.utils.parseEther("1")];
     const validUntil = Date.now() + 999999999;
+    const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
 
     /// Set KYC
     await contractRoleManager.setKYC(contentBuyer.address, true);
@@ -388,13 +404,14 @@ describe("Platform Treasury Contract - Content", function () {
         pricesToPay[i],
         validUntil,
         redeemers[i],
-        giftReceiver[i]
+        giftReceiver[i],
+        userIds[i]
       );
       // Save the voucher to the array
       contentPurchaseVouchers.push(contentPurchaseVoucher);
     }
     /// Buy content
-    const purchaseTx = contractPlatformTreasury.connect(contentBuyer1).buyContentWithDiscount(contentPurchaseVouchers);
+    const purchaseTx = contractPlatformTreasury.connect(contentBuyer1).buyContent(contentPurchaseVouchers);
     //not enough udao balance
     await expect(purchaseTx).to.be.revertedWith("Not enough UDAO sent!");
   });
@@ -432,6 +449,7 @@ describe("Platform Treasury Contract - Content", function () {
     const fullContentPurchase = [true];
     const pricesToPay = [ethers.utils.parseEther("1")];
     const validUntil = Date.now() + 999999999;
+    const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
 
     /// Set KYC
     await contractRoleManager.setKYC(contentBuyer.address, true);
@@ -455,13 +473,14 @@ describe("Platform Treasury Contract - Content", function () {
         pricesToPay[i],
         validUntil,
         redeemers[i],
-        giftReceiver[i]
+        giftReceiver[i],
+        userIds[i]
       );
       // Save the voucher to the array
       contentPurchaseVouchers.push(contentPurchaseVoucher);
     }
     /// Buy content
-    const purchaseTx = contractPlatformTreasury.connect(contentBuyer1).buyContentWithDiscount(contentPurchaseVouchers);
+    const purchaseTx = contractPlatformTreasury.connect(contentBuyer1).buyContent(contentPurchaseVouchers);
     //not enough udao balance
     await expect(purchaseTx).to.be.revertedWith("Not enough allowance!");
   });
@@ -499,7 +518,7 @@ describe("Platform Treasury Contract - Content", function () {
     const fullContentPurchase = [true];
     const pricesToPay = [ethers.utils.parseEther("1")];
     const validUntil = Date.now() + 999999999;
-
+    const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
     /// Set KYC
     await contractRoleManager.setKYC(contentBuyer.address, true);
     /// Send UDAO to the buyer's wallet
@@ -523,13 +542,14 @@ describe("Platform Treasury Contract - Content", function () {
         pricesToPay[i],
         validUntil,
         redeemers[i],
-        giftReceiver[i]
+        giftReceiver[i],
+        userIds[i]
       );
       // Save the voucher to the array
       contentPurchaseVouchers.push(contentPurchaseVoucher);
     }
     /// Buy content
-    const purchaseTx = contractPlatformTreasury.connect(backend).buyContentWithDiscount(contentPurchaseVouchers);
+    const purchaseTx = contractPlatformTreasury.connect(backend).buyContent(contentPurchaseVouchers);
     expect(purchaseTx).to.be.revertedWith("Fiat purchase requires a gift receiver!");
   });
 
@@ -562,6 +582,7 @@ describe("Platform Treasury Contract - Content", function () {
     const fullContentPurchase = [false];
     const pricesToPay = [ethers.utils.parseEther("1")];
     const validUntil = Date.now() + 999999999;
+    const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
 
     const balances = await makeContentPurchase(
       contractPlatformTreasury,
@@ -575,7 +596,8 @@ describe("Platform Treasury Contract - Content", function () {
       fullContentPurchase,
       validUntil,
       redeemers,
-      giftReceiver
+      giftReceiver,
+      userIds
     );
     const balanceBefore = balances[0];
     const balanceAfter = balances[1];
@@ -618,6 +640,8 @@ describe("Platform Treasury Contract - Content", function () {
     const fullContentPurchase = [false];
     const pricesToPay = [ethers.utils.parseEther("1")];
     const validUntil = Date.now() + 999999999;
+    const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
+
     const balances = await makeContentPurchase(
       contractPlatformTreasury,
       contractVoucherVerifier,
@@ -630,7 +654,8 @@ describe("Platform Treasury Contract - Content", function () {
       fullContentPurchase,
       validUntil,
       redeemers,
-      giftReceiver
+      giftReceiver,
+      userIds
     );
     const balanceBefore = balances[0];
     const balanceAfter = balances[1];
@@ -654,15 +679,16 @@ describe("Platform Treasury Contract - Content", function () {
         pricesToPay[i],
         validUntil,
         redeemers[i],
-        giftReceiver[i]
+        giftReceiver[i],
+        userIds[i]
       );
       // Save the voucher to the array
       contentPurchaseVouchers.push(contentPurchaseVoucher);
     }
     /// Buy content
-    await expect(
-      contractPlatformTreasury.connect(contentBuyer1).buyContentWithDiscount(contentPurchaseVouchers)
-    ).to.revertedWith("Part is already owned!");
+    await expect(contractPlatformTreasury.connect(contentBuyer1).buyContent(contentPurchaseVouchers)).to.revertedWith(
+      "Part is already owned!"
+    );
   });
 
   it("Should fail to buy a content if caller is not redeemer", async function () {
@@ -692,6 +718,8 @@ describe("Platform Treasury Contract - Content", function () {
     const purchasedParts = [[2, 3, 5]];
     const redeemers = [contentBuyer1.address];
     const giftReceiver = [ethers.constants.AddressZero];
+    const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
+
     const fullContentPurchase = [false];
     const pricesToPay = [ethers.utils.parseEther("1")];
     const validUntil = Date.now() + 999999999;
@@ -707,7 +735,8 @@ describe("Platform Treasury Contract - Content", function () {
       fullContentPurchase,
       validUntil,
       redeemers,
-      giftReceiver
+      giftReceiver,
+      userIds
     );
     const balanceBefore = balances[0];
     const balanceAfter = balances[1];
@@ -731,15 +760,16 @@ describe("Platform Treasury Contract - Content", function () {
         pricesToPay[i],
         validUntil,
         redeemers[i],
-        giftReceiver[i]
+        giftReceiver[i],
+        userIds[i]
       );
       // Save the voucher to the array
       contentPurchaseVouchers.push(contentPurchaseVoucher);
     }
     /// Buy content
-    await expect(
-      contractPlatformTreasury.connect(contentBuyer2).buyContentWithDiscount(contentPurchaseVouchers)
-    ).to.revertedWith("You are not redeemer");
+    await expect(contractPlatformTreasury.connect(contentBuyer2).buyContent(contentPurchaseVouchers)).to.revertedWith(
+      "You are not redeemer"
+    );
   });
 
   it("Should fail to buy a content if content does not exists", async function () {
@@ -762,6 +792,7 @@ describe("Platform Treasury Contract - Content", function () {
     const fullContentPurchase = [false];
     const pricesToPay = [ethers.utils.parseEther("1")];
     const validUntil = Date.now() + 999999999;
+    const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
     const contentPurchaseVouchers = [];
     for (let i = 0; i < tokenIds.length; i++) {
       const contentPurchaseVoucher = await new DiscountedPurchase({
@@ -774,15 +805,16 @@ describe("Platform Treasury Contract - Content", function () {
         pricesToPay[i],
         validUntil,
         redeemers[i],
-        giftReceiver[i]
+        giftReceiver[i],
+        userIds[i]
       );
       // Save the voucher to the array
       contentPurchaseVouchers.push(contentPurchaseVoucher);
     }
     /// Try to purchase the content
-    await expect(
-      contractPlatformTreasury.connect(contentBuyer1).buyContentWithDiscount(contentPurchaseVouchers)
-    ).to.revertedWith("Content not exist!");
+    await expect(contractPlatformTreasury.connect(contentBuyer1).buyContent(contentPurchaseVouchers)).to.revertedWith(
+      "Content not exist!"
+    );
   });
 
   it("Should fail to buy content if buyer is banned", async function () {
@@ -816,6 +848,7 @@ describe("Platform Treasury Contract - Content", function () {
     const fullContentPurchase = [false];
     const pricesToPay = [ethers.utils.parseEther("1")];
     const validUntil = Date.now() + 999999999;
+    const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
     const contentPurchaseVouchers = [];
     for (let i = 0; i < tokenIds.length; i++) {
       const contentPurchaseVoucher = await new DiscountedPurchase({
@@ -828,15 +861,16 @@ describe("Platform Treasury Contract - Content", function () {
         pricesToPay[i],
         validUntil,
         redeemers[i],
-        giftReceiver[i]
+        giftReceiver[i],
+        userIds[i]
       );
       // Save the voucher to the array
       contentPurchaseVouchers.push(contentPurchaseVoucher);
     }
     /// Try to purchase the content with banned buyer
-    await expect(
-      contractPlatformTreasury.connect(contentBuyer1).buyContentWithDiscount(contentPurchaseVouchers)
-    ).to.revertedWith("You are banned");
+    await expect(contractPlatformTreasury.connect(contentBuyer1).buyContent(contentPurchaseVouchers)).to.revertedWith(
+      "You are banned"
+    );
   });
 
   it("Should fail to buy content if buyer is not kyced", async function () {
@@ -870,6 +904,7 @@ describe("Platform Treasury Contract - Content", function () {
     const fullContentPurchase = [false];
     const pricesToPay = [ethers.utils.parseEther("1")];
     const validUntil = Date.now() + 999999999;
+    const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
     const contentPurchaseVouchers = [];
     for (let i = 0; i < tokenIds.length; i++) {
       const contentPurchaseVoucher = await new DiscountedPurchase({
@@ -882,15 +917,16 @@ describe("Platform Treasury Contract - Content", function () {
         pricesToPay[i],
         validUntil,
         redeemers[i],
-        giftReceiver[i]
+        giftReceiver[i],
+        userIds[i]
       );
       // Save the voucher to the array
       contentPurchaseVouchers.push(contentPurchaseVoucher);
     }
     /// Try to purchase the content with banned buyer
-    await expect(
-      contractPlatformTreasury.connect(contentBuyer1).buyContentWithDiscount(contentPurchaseVouchers)
-    ).to.revertedWith("You are not KYCed");
+    await expect(contractPlatformTreasury.connect(contentBuyer1).buyContent(contentPurchaseVouchers)).to.revertedWith(
+      "You are not KYCed"
+    );
   });
 
   it("Should fail to buy content if instructer is banned and isSelleble set to false", async function () {
@@ -927,6 +963,7 @@ describe("Platform Treasury Contract - Content", function () {
     const fullContentPurchase = [false];
     const pricesToPay = [ethers.utils.parseEther("1")];
     const validUntil = Date.now() + 999999999;
+    const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
     const contentPurchaseVouchers = [];
     for (let i = 0; i < tokenIds.length; i++) {
       const contentPurchaseVoucher = await new DiscountedPurchase({
@@ -939,15 +976,16 @@ describe("Platform Treasury Contract - Content", function () {
         pricesToPay[i],
         validUntil,
         redeemers[i],
-        giftReceiver[i]
+        giftReceiver[i],
+        userIds[i]
       );
       // Save the voucher to the array
       contentPurchaseVouchers.push(contentPurchaseVoucher);
     }
     /// Try to purchase the content with banned instructor
-    await expect(
-      contractPlatformTreasury.connect(contentBuyer1).buyContentWithDiscount(contentPurchaseVouchers)
-    ).to.revertedWith("Not sellable");
+    await expect(contractPlatformTreasury.connect(contentBuyer1).buyContent(contentPurchaseVouchers)).to.revertedWith(
+      "Not sellable"
+    );
   });
 
   it("Should allow to buy content if instructer is banned and isSelleble set to true", async function () {
@@ -978,6 +1016,8 @@ describe("Platform Treasury Contract - Content", function () {
     const purchasedParts = [[2, 3, 5]];
     const redeemers = [contentBuyer1.address];
     const giftReceiver = [ethers.constants.AddressZero];
+    const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
+
     const fullContentPurchase = [false];
     const pricesToPay = [ethers.utils.parseEther("1")];
     const validUntil = Date.now() + 999999999;
@@ -994,7 +1034,8 @@ describe("Platform Treasury Contract - Content", function () {
       fullContentPurchase,
       validUntil,
       redeemers,
-      giftReceiver
+      giftReceiver,
+      userIds
     );
     const balanceBefore = balances[0];
     const balanceAfter = balances[1];
@@ -1038,6 +1079,8 @@ describe("Platform Treasury Contract - Content", function () {
     const purchasedParts = [parts];
     const redeemers = [contentBuyer1.address];
     const giftReceiver = [ethers.constants.AddressZero];
+    const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
+
     const fullContentPurchase = [true];
     const pricesToPay = [ethers.utils.parseEther("1")];
     const validUntil = Date.now() + 999999999;
@@ -1053,7 +1096,8 @@ describe("Platform Treasury Contract - Content", function () {
       fullContentPurchase,
       validUntil,
       redeemers,
-      giftReceiver
+      giftReceiver,
+      userIds
     );
     const balanceBefore = balances[0];
     const balanceAfter = balances[1];
@@ -1066,6 +1110,7 @@ describe("Platform Treasury Contract - Content", function () {
     /// Check if the buyer paid the correct amount
     expect(balanceBefore.sub(balanceAfter)).to.equal(priceToPay);
     /// Try to buy the same content part again
+
     await expect(
       makeContentPurchase(
         contractPlatformTreasury,
@@ -1079,7 +1124,8 @@ describe("Platform Treasury Contract - Content", function () {
         fullContentPurchase,
         validUntil,
         redeemers,
-        giftReceiver
+        giftReceiver,
+        userIds
       )
     ).to.revertedWith("Content is already fully purchased!");
   });
@@ -1121,6 +1167,8 @@ describe("Platform Treasury Contract - Content", function () {
     const pricesToPay = [ethers.utils.parseEther("1")];
     const validUntil = Date.now() + 999999999;
     // Try to buy a content part that does not exists
+    const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
+
     await expect(
       makeContentPurchase(
         contractPlatformTreasury,
@@ -1134,7 +1182,8 @@ describe("Platform Treasury Contract - Content", function () {
         fullContentPurchase,
         validUntil,
         redeemers,
-        giftReceiver
+        giftReceiver,
+        userIds
       )
     ).to.revertedWith("Part does not exist!");
   });
@@ -1174,6 +1223,8 @@ describe("Platform Treasury Contract - Content", function () {
     const purchasedParts = [parts];
     const redeemers = [contentBuyer1.address];
     const giftReceiver = [contentBuyer3.address];
+    const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
+
     const fullContentPurchase = [true];
     const pricesToPay = [ethers.utils.parseEther("1")];
     const validUntil = Date.now() + 999999999;
@@ -1189,7 +1240,8 @@ describe("Platform Treasury Contract - Content", function () {
       fullContentPurchase,
       validUntil,
       redeemers,
-      giftReceiver
+      giftReceiver,
+      userIds
     );
     const balanceBefore = balances[0];
     const balanceAfter = balances[1];
@@ -1233,6 +1285,8 @@ describe("Platform Treasury Contract - Content", function () {
     const purchasedParts = [[2, 3, 4]];
     const redeemers = [contentBuyer1.address];
     const giftReceiver = [contentBuyer3.address];
+    const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
+
     const fullContentPurchase = [false];
     const pricesToPay = [ethers.utils.parseEther("1")];
     const validUntil = Date.now() + 999999999;
@@ -1248,7 +1302,8 @@ describe("Platform Treasury Contract - Content", function () {
       fullContentPurchase,
       validUntil,
       redeemers,
-      giftReceiver
+      giftReceiver,
+      userIds
     );
     const balanceBefore = balances[0];
     const balanceAfter = balances[1];
@@ -1299,6 +1354,9 @@ describe("Platform Treasury Contract - Content", function () {
     const purchasedParts = [parts];
     const redeemers = [contentBuyer1.address];
     const giftReceiver = [contentBuyer3.address];
+
+    const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
+
     const fullContentPurchase = [true];
     const pricesToPay = [ethers.utils.parseEther("1")];
     const validUntil = Date.now() + 999999999;
@@ -1316,7 +1374,8 @@ describe("Platform Treasury Contract - Content", function () {
         fullContentPurchase,
         validUntil,
         redeemers,
-        giftReceiver
+        giftReceiver,
+        userIds
       )
     ).to.revertedWith("Gift receiver is banned");
   });
@@ -1357,6 +1416,8 @@ describe("Platform Treasury Contract - Content", function () {
     const purchasedParts = [parts];
     const redeemers = [contentBuyer1.address];
     const giftReceiver = [contentBuyer3.address];
+    const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
+
     const fullContentPurchase = [true];
     const pricesToPay = [ethers.utils.parseEther("1")];
     const validUntil = Date.now() + 999999999;
@@ -1374,7 +1435,8 @@ describe("Platform Treasury Contract - Content", function () {
         fullContentPurchase,
         validUntil,
         redeemers,
-        giftReceiver
+        giftReceiver,
+        userIds
       )
     ).to.revertedWith("Gift receiver is not KYCed");
   });
@@ -1414,6 +1476,8 @@ describe("Platform Treasury Contract - Content", function () {
     const purchasedParts = [[1, 0]];
     const redeemers = [contentBuyer1.address];
     const giftReceiver = [contentBuyer3.address];
+    const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
+
     const fullContentPurchase = [false];
     const pricesToPay = [ethers.utils.parseEther("1")];
     const validUntil = Date.now() + 999999999;
@@ -1431,7 +1495,8 @@ describe("Platform Treasury Contract - Content", function () {
         fullContentPurchase,
         validUntil,
         redeemers,
-        giftReceiver
+        giftReceiver,
+        userIds
       )
     ).to.revertedWith("Parts are not in order or duplicated!");
   });
@@ -1484,9 +1549,11 @@ describe("Platform Treasury Contract - Content", function () {
     const purchasedParts1 = [parts1];
     const redeemers1 = [contentBuyer1.address];
     const giftReceiver = [ethers.constants.AddressZero];
+
     const fullContentPurchase = [true];
     const pricesToPay = [ethers.utils.parseEther("1")];
     const validUntil = Date.now() + 999999999;
+    const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
     const balances = await makeContentPurchase(
       contractPlatformTreasury,
       contractVoucherVerifier,
@@ -1499,7 +1566,8 @@ describe("Platform Treasury Contract - Content", function () {
       fullContentPurchase,
       validUntil,
       redeemers1,
-      giftReceiver
+      giftReceiver,
+      userIds
     );
     const balanceBefore1 = balances[0];
     const balanceAfter1 = balances[1];
@@ -1516,6 +1584,7 @@ describe("Platform Treasury Contract - Content", function () {
     const purchasedParts2 = [parts2];
     const redeemers2 = [contentBuyer1.address];
     const giftReceiver2 = [ethers.constants.AddressZero];
+
     const fullContentPurchase2 = [true];
     const pricesToPay2 = [ethers.utils.parseEther("1")];
     const validUntil2 = Date.now() + 999999999;
@@ -1531,7 +1600,8 @@ describe("Platform Treasury Contract - Content", function () {
       fullContentPurchase2,
       validUntil2,
       redeemers2,
-      giftReceiver2
+      giftReceiver2,
+      userIds
     );
     const balanceBefore2 = balances2[0];
     const balanceAfter2 = balances2[1];
@@ -1592,6 +1662,7 @@ describe("Platform Treasury Contract - Content", function () {
     const fullContentPurchase = [true, true];
     const pricesToPay = [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")];
     const validUntil = Date.now() + 999999999;
+    const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283", "c8d53630-233a-4f95-90cb-4df253ae9283"];
     const balances = await makeContentPurchase(
       contractPlatformTreasury,
       contractVoucherVerifier,
@@ -1604,7 +1675,8 @@ describe("Platform Treasury Contract - Content", function () {
       fullContentPurchase,
       validUntil,
       redeemers,
-      giftReceiver
+      giftReceiver,
+      userIds
     );
     const balanceBefore = balances[0];
     const balanceAfter = balances[1];
@@ -1669,6 +1741,8 @@ describe("Platform Treasury Contract - Content", function () {
     const purchasedParts = [parts1, parts2];
     const redeemers = [contentBuyer1.address, contentBuyer1.address];
     const giftReceiver = [contentBuyer3.address, contentBuyer3.address];
+    const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283", "c8d53630-233a-4f95-90cb-4df253ae9283"];
+
     const fullContentPurchase = [true, true];
     const pricesToPay = [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")];
     const validUntil = Date.now() + 999999999;
@@ -1684,7 +1758,8 @@ describe("Platform Treasury Contract - Content", function () {
       fullContentPurchase,
       validUntil,
       redeemers,
-      giftReceiver
+      giftReceiver,
+      userIds
     );
     const balanceBefore = balances[0];
     const balanceAfter = balances[1];
@@ -1791,6 +1866,8 @@ describe("Platform Treasury Contract - Content", function () {
     const purchasedParts1 = [parts1];
     const redeemers1 = [contentBuyer1.address];
     const giftReceiver = [ethers.constants.AddressZero];
+    const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
+
     const fullContentPurchase = [true];
     const pricesToPay = [ethers.utils.parseEther("10")];
     const validUntil = Date.now() + 999999999;
@@ -1806,7 +1883,8 @@ describe("Platform Treasury Contract - Content", function () {
       fullContentPurchase,
       validUntil,
       redeemers1,
-      giftReceiver
+      giftReceiver,
+      userIds
     );
 
     const balanceBefore1 = balances[0];
@@ -1826,8 +1904,7 @@ describe("Platform Treasury Contract - Content", function () {
     const refundWindowDaysNumber = refundWindowDays.toNumber();
 
     /// @dev Skip 20'refund window period' days to allow foundation to withdraw funds
-    const numBlocksToMine = Math.ceil((refundWindowDaysNumber * 24 * 60 * 60) / 2);
-    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine.toString(16)}`, "0x2"]);
+    skipDays(refundWindowDaysNumber);
 
     // Check if the buyer paid the correct amount
     expect(balanceBefore1.sub(balanceAfter1)).to.equal(pricesToPay[0]);
@@ -1836,6 +1913,7 @@ describe("Platform Treasury Contract - Content", function () {
     const purchasedParts2 = [parts2];
     const redeemers2 = [contentBuyer1.address];
     const giftReceiver2 = [ethers.constants.AddressZero];
+
     const fullContentPurchase2 = [true];
     const pricesToPay2 = [ethers.utils.parseEther("1")];
     const validUntil2 = Date.now() + 999999999;
@@ -1851,7 +1929,8 @@ describe("Platform Treasury Contract - Content", function () {
       fullContentPurchase2,
       validUntil2,
       redeemers2,
-      giftReceiver2
+      giftReceiver2,
+      userIds
     );
     const balanceBefore2 = balances2[0];
     const balanceAfter2 = balances2[1];
@@ -1913,6 +1992,8 @@ describe("Platform Treasury Contract - Content", function () {
     const purchasedParts = [parts];
     const redeemers = [contentBuyer1.address];
     const giftReceiver = [ethers.constants.AddressZero];
+    const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
+
     const fullContentPurchase = [true];
     const pricesToPay = [ethers.utils.parseEther("1")];
     const validUntil = Date.now() + 999999999;
@@ -1928,7 +2009,8 @@ describe("Platform Treasury Contract - Content", function () {
       fullContentPurchase,
       validUntil,
       redeemers,
-      giftReceiver
+      giftReceiver,
+      userIds
     );
     const balanceBefore = balances[0];
     const balanceAfter = balances[1];
@@ -2006,6 +2088,8 @@ describe("Platform Treasury Contract - Content", function () {
     const purchasedParts = [parts];
     const redeemers = [contentBuyer1.address];
     const giftReceiver = [ethers.constants.AddressZero];
+    const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
+
     const fullContentPurchase = [true];
     const pricesToPay = [ethers.utils.parseEther("1")];
     const validUntil = Date.now() + 999999999;
@@ -2021,7 +2105,8 @@ describe("Platform Treasury Contract - Content", function () {
       fullContentPurchase,
       validUntil,
       redeemers,
-      giftReceiver
+      giftReceiver,
+      userIds
     );
     const balanceBefore = balances[0];
     const balanceAfter = balances[1];
@@ -2104,6 +2189,8 @@ describe("Platform Treasury Contract - Content", function () {
     const purchasedParts = [parts];
     const redeemers = [contentBuyer1.address];
     const giftReceiver = [ethers.constants.AddressZero];
+    const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
+
     const fullContentPurchase = [true];
     const pricesToPay = [ethers.utils.parseEther("1")];
     const validUntil = Date.now() + 999999999;
@@ -2119,7 +2206,8 @@ describe("Platform Treasury Contract - Content", function () {
       fullContentPurchase,
       validUntil,
       redeemers,
-      giftReceiver
+      giftReceiver,
+      userIds
     );
     const balanceBefore = balances[0];
     const balanceAfter = balances[1];
@@ -2160,8 +2248,7 @@ describe("Platform Treasury Contract - Content", function () {
     /// convert big number to number
     const refundWindowDaysNumber = refundWindowDaysNumberInBigNumber.toNumber();
     /// @dev Skip 20'refund window period' days to complete the refund window
-    const numBlocksToMine = Math.ceil(((refundWindowDaysNumber + 1) * 24 * 60 * 60) / 2);
-    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine.toString(16)}`, "0x2"]);
+    skipDays(refundWindowDaysNumber + 1);
 
     // Refund the content
     await expect(contractPlatformTreasury.connect(contentCreator).newRefundContent(refund_voucher)).to.be.revertedWith(
@@ -2217,6 +2304,8 @@ describe("Platform Treasury Contract - Content", function () {
     const purchasedParts1 = [parts1];
     const redeemers1 = [contentBuyer1.address];
     const giftReceiver = [ethers.constants.AddressZero];
+    const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
+
     const fullContentPurchase = [true];
     const pricesToPay = [ethers.utils.parseEther("3")];
     const validUntil = Date.now() + 999999999;
@@ -2232,7 +2321,8 @@ describe("Platform Treasury Contract - Content", function () {
       fullContentPurchase,
       validUntil,
       redeemers1,
-      giftReceiver
+      giftReceiver,
+      userIds
     );
     const balanceBefore1 = balances[0];
     const balanceAfter1 = balances[1];
@@ -2251,8 +2341,7 @@ describe("Platform Treasury Contract - Content", function () {
     const refundWindowDaysNumber = refundWindowDays.toNumber();
 
     /// @dev Skip 20'refund window period' days to allow foundation to withdraw funds
-    const numBlocksToMine = Math.ceil(((refundWindowDaysNumber - 1) * 24 * 60 * 60) / 2);
-    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine.toString(16)}`, "0x2"]);
+    skipDays(refundWindowDaysNumber - 1);
 
     // Make a content purchase for token 2
     const tokenIds2 = [2];
@@ -2274,7 +2363,8 @@ describe("Platform Treasury Contract - Content", function () {
       fullContentPurchase2,
       validUntil2,
       redeemers2,
-      giftReceiver2
+      giftReceiver2,
+      userIds
     );
     const balanceBefore2 = balances2[0];
     const balanceAfter2 = balances2[1];
@@ -2290,10 +2380,10 @@ describe("Platform Treasury Contract - Content", function () {
     expect(balanceBefore2.sub(balanceAfter2)).to.equal(pricesToPay2[0]);
 
     /// @dev Skip 1 day to complete refund window for first purchase
-    const numBlocksToMine2 = Math.ceil((1 * 24 * 60 * 60) / 2);
-    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine2.toString(16)}`, "0x2"]);
+    skipDays(1);
 
     // change refund window to 7 days
+    const oldRefundWindow = refundWindowDaysNumber;
     const newRefundWindow = 7;
     await contractPlatformTreasury.connect(backend).changeRefundWindow(newRefundWindow);
 
@@ -2305,15 +2395,13 @@ describe("Platform Treasury Contract - Content", function () {
     expect(await contractPlatformTreasury.foundationBalance()).to.equal(contentFoundCut1);
 
     /// @dev Skip new refund window to complete refund window for seccond purchase
-    const numBlocksToMine3 = Math.ceil((newRefundWindow * 24 * 60 * 60) / 2);
-    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine3.toString(16)}`, "0x2"]);
+    skipDays(oldRefundWindow);
     const totalPrice2 = pricesToPay2[0];
     const contentFoundCut2 = totalPrice2.mul(_contentFoundCut).div(100000);
 
     // Update balances
     await contractPlatformTreasury.updateAndTransferPlatformBalances();
-    const numBlocksToMine4 = Math.ceil((1 * 24 * 60 * 60) / 2);
-    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine4.toString(16)}`, "0x2"]);
+    skipDays(1);
     expect(await contractPlatformTreasury.foundationBalance()).to.equal(contentFoundCut1.add(contentFoundCut2));
     // foundation withdraw funds
     await contractPlatformTreasury.connect(foundation).withdrawFoundation();
@@ -2372,6 +2460,8 @@ describe("Platform Treasury Contract - Content", function () {
     const purchasedParts1 = [parts1];
     const redeemers1 = [contentBuyer1.address];
     const giftReceiver = [ethers.constants.AddressZero];
+    const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
+
     const fullContentPurchase = [true];
     const pricesToPay = [ethers.utils.parseEther("3")];
     const validUntil = Date.now() + 999999999;
@@ -2387,7 +2477,8 @@ describe("Platform Treasury Contract - Content", function () {
       fullContentPurchase,
       validUntil,
       redeemers1,
-      giftReceiver
+      giftReceiver,
+      userIds
     );
     const balanceBefore1 = balances[0];
     const balanceAfter1 = balances[1];
@@ -2406,8 +2497,7 @@ describe("Platform Treasury Contract - Content", function () {
     const refundWindowDaysNumber = refundWindowDays.toNumber();
 
     /// @dev Skip 20'refund window period' days to allow foundation to withdraw funds
-    const numBlocksToMine = Math.ceil(((refundWindowDaysNumber - 0) * 24 * 60 * 60) / 2);
-    await hre.network.provider.send("hardhat_mine", [`0x${numBlocksToMine.toString(16)}`, "0x2"]);
+    skipDays(refundWindowDaysNumber);
 
     //calculate total inst locked balance
     let totalInstLB = ethers.BigNumber.from(0);
@@ -2442,7 +2532,8 @@ describe("Platform Treasury Contract - Content", function () {
       fullContentPurchase,
       validUntil,
       redeemers2,
-      giftReceiver
+      giftReceiver,
+      userIds
     );
     //calculate total inst locked balance
     let totalInstLB2 = ethers.BigNumber.from(0);

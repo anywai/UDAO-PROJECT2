@@ -9,7 +9,7 @@
     "ethers": "^5.7.2",
     "hardhat": "^2.19.4",
     "hardhat-etherscan": "^1.0.1",
-    "solidity-coverage": "^0.8.2"
+    "solidity-coverage": "^0.8.5"
   },
   "dependencies": {
     "@chainlink/contracts": "^0.6.1",

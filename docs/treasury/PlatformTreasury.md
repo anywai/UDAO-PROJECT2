@@ -91,7 +91,7 @@ Allows instructers to withdraw individually.
 ### getWithdrawableBalanceInstructor
 
 ```solidity
-function getWithdrawableBalanceInstructor(address _inst) public view returns (uint256)
+function getWithdrawableBalanceInstructor(address _inst) public view returns (uint256, uint256)
 ```
 
 returns the withdrawable balance of the instructor
@@ -107,6 +107,7 @@ returns the withdrawable balance of the instructor
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | [0] | uint256 | withdrawableBalance The withdrawable balance of the given instructor |
+| [1] | uint256 |  |
 
 ### changeRefundWindow
 

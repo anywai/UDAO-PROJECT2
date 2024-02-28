@@ -112,6 +112,10 @@ abstract contract BasePlatform is Pausable {
     /// @notice is governance part of platform released
     bool public isGovernanceTreasuryOnline = false;
 
+    /// @notice the timestamp of the last precaution withdrawal
+    /// @dev changing refund window with a shorter one is creates a negative balance risk for the platform and withdrawals need to be limited for previous refund window
+    uint public precautionWithdrawalTimestamp;
+
     /// @notice constructor of BasePlatform
     /// @param roleManagerAddress is address of RoleManager contract
     /// @param udaoAddress is address of UDAO token contract

@@ -8,15 +8,18 @@ import "./BasePlatform.sol";
 
 abstract contract ContentManager is BasePlatform {
     /// @notice Emitted when a content is bought
+    /// @param userId The ID of the user
     /// @param cartSaleID The ID of the cart sale
     /// @param contentSaleID The ID of the content sale
     event ContentBought(
+        string userId,
         uint256 indexed cartSaleID,
         uint256 indexed contentSaleID
     );
     /// @notice Emitted when a coaching is bought
+    /// @param userId The ID of the user
     /// @param coachingSaleID The ID of the coaching sale
-    event CoachingBought(uint256 indexed coachingSaleID);
+    event CoachingBought(string userId, uint256 indexed coachingSaleID);
     /// @notice Emitted when refund is requested. saleType: 0=coaching, 1=content
     /// @param saleID The ID of the coaching or content sale to be refunded
     /// @param saleType The type of the sale 0=coaching, 1=content
@@ -223,13 +226,12 @@ abstract contract ContentManager is BasePlatform {
         /// @dev if there is any revenue in platform cut pools, distribute role shares to roles and transfer governance role shares to governance treasury
         _transferPlatformCutstoGovernance();
 
-        emit CoachingBought(coachingSaleID.current() - 1);
+        emit CoachingBought(voucher.userId, coachingSaleID.current() - 1);
     }
 
     /// @notice Allows users to purchase multiple contents for the caller or gift receiver with discount vouchers
     /// @param vouchers buy discount content voucher array
-    /// TODO Rename this function to buyContent
-    function buyContentWithDiscount(
+    function buyContent(
         IVoucherVerifier.ContentDiscountVoucher[] calldata vouchers
     ) external whenNotPaused {
         /// @dev Determine the number of items in the cart
@@ -299,14 +301,18 @@ abstract contract ContentManager is BasePlatform {
         /// @dev Save the sale on a list for future use (e.g refund)
         cartSaleID.increment();
         for (uint256 i; i < voucherIdsLength; i++) {
-            _buyContentwithUDAO(
+            uint256 contentID = _buyContent(
                 vouchers[i].tokenId,
                 vouchers[i].fullContentPurchase,
                 vouchers[i].purchasedParts,
                 contentReceiver[i],
                 totalCut[i],
-                instrShare[i],
-                cartSaleID.current() - 1
+                instrShare[i]
+            );
+            emit ContentBought(
+                vouchers[i].userId,
+                cartSaleID.current() - 1,
+                contentID
             );
         }
 
@@ -321,16 +327,14 @@ abstract contract ContentManager is BasePlatform {
     /// @param contentReceiver The address of the content receiver.
     /// @param totalCut The total platform cut applied to the content sale.
     /// @param instrShare The instructor's share from the the content sale.
-    /// @param _cartSaleID The ID of the cart sale.
-    function _buyContentwithUDAO(
+    function _buyContent(
         uint256 tokenId,
         bool fullContentPurchase,
         uint256[] calldata purchasedParts,
         address contentReceiver,
         uint256 totalCut,
-        uint256 instrShare,
-        uint256 _cartSaleID
-    ) internal {
+        uint256 instrShare
+    ) internal returns (uint256 _contentID) {
         address instructor = udaoc.ownerOf(tokenId);
 
         /// @dev Transfer UDAO payment from buyer to contract
@@ -400,7 +404,7 @@ abstract contract ContentManager is BasePlatform {
             fullPurchase: fullContentPurchase
         });
 
-        emit ContentBought(_cartSaleID, contentSaleID.current() - 1);
+        return (contentSaleID.current() - 1);
     }
 
     /// @notice Checks if there is nothing wrong with the content purchase related to content receiver
@@ -615,46 +619,47 @@ abstract contract ContentManager is BasePlatform {
 
     /// @notice Distributes platform revenue to platform roles and transfers governance role shares to the governance treasury.
     function _transferPlatformCutstoGovernance() internal {
-        /// @dev if there is any revenue in contentCutPool which is completed the refund window, distribute role shares to roles and transfer governance role shares to governance treasury
-        if (contentCutPool > contentCutRefundedBalance) {
-            /// @dev reduce the refunded and blocked balance from the content cut pool
-            uint positiveContentCutPool = contentCutPool -
-                contentCutRefundedBalance;
-            contentCutPool = 0;
-            contentCutRefundedBalance = 0;
-            emit ContentCutPoolUpdated(contentCutPool);
+        if (block.timestamp >= precautionWithdrawalTimestamp) {
+            /// @dev if there is any revenue in contentCutPool which is completed the refund window, distribute role shares to roles and transfer governance role shares to governance treasury
+            if (contentCutPool >= contentCutRefundedBalance) {
+                /// @dev reduce the refunded and blocked balance from the content cut pool
+                uint positiveContentCutPool = contentCutPool -
+                    contentCutRefundedBalance;
+                contentCutPool = 0;
+                contentCutRefundedBalance = 0;
+                emit ContentCutPoolUpdated(contentCutPool);
 
-            /// @dev Distribute the content cut shares to platform roles
-            _distributeContentCutShares(positiveContentCutPool);
-            emit RoleBalancesUpdated(
-                foundationBalance,
-                jurorBalance,
-                validatorsBalance,
-                governanceBalance
-            );
-        }
+                /// @dev Distribute the content cut shares to platform roles
+                _distributeContentCutShares(positiveContentCutPool);
+                emit RoleBalancesUpdated(
+                    foundationBalance,
+                    jurorBalance,
+                    validatorsBalance,
+                    governanceBalance
+                );
+            }
 
-        /// @dev if there is any revenue in coachingCutPool which is completed the refund window, distribute role shares to roles and transfer governance role shares to governance treasury
-        if (coachingCutPool > coachingCutRefundedBalance) {
-            /// @dev reduce the refunded and blocked balance from the coaching cut pool
-            uint positiveCoachingCutPool = coachingCutPool -
-                coachingCutRefundedBalance;
-            coachingCutPool = 0;
-            coachingCutRefundedBalance = 0;
-            emit CoachingCutPoolUpdated(coachingCutPool);
+            /// @dev if there is any revenue in coachingCutPool which is completed the refund window, distribute role shares to roles and transfer governance role shares to governance treasury
+            if (coachingCutPool >= coachingCutRefundedBalance) {
+                /// @dev reduce the refunded and blocked balance from the coaching cut pool
+                uint positiveCoachingCutPool = coachingCutPool -
+                    coachingCutRefundedBalance;
+                coachingCutPool = 0;
+                coachingCutRefundedBalance = 0;
+                emit CoachingCutPoolUpdated(coachingCutPool);
 
-            /// @dev Distribute the coaching cut shares to platform roles
-            _distributeCoachingCutShares(positiveCoachingCutPool);
-            emit RoleBalancesUpdated(
-                foundationBalance,
-                jurorBalance,
-                validatorsBalance,
-                governanceBalance
-            );
+                /// @dev Distribute the coaching cut shares to platform roles
+                _distributeCoachingCutShares(positiveCoachingCutPool);
+                emit RoleBalancesUpdated(
+                    foundationBalance,
+                    jurorBalance,
+                    validatorsBalance,
+                    governanceBalance
+                );
+            }
         }
 
         /// @dev Transfer the governance role shares to the governance treasury if governance treasury is online
-        /// TODO Remove isGovernanceTreasuryOnline 
         if (isGovernanceTreasuryOnline == true) {
             bool aBalanceUpdated;
             /// @dev if jurorBalance is positive, transfer the juror balance to the governance treasury
@@ -721,7 +726,7 @@ abstract contract ContentManager is BasePlatform {
         CoachingSale storage refundItem = coachSales[_refCoachSaleID];
         /// @dev a sale only be refunded in the refund window period after the purchase date
         require(
-            refundItem.refundablePeriod >= (block.timestamp / 86400),
+            refundItem.refundablePeriod > (block.timestamp / 86400),
             "Refund period over you cant refund"
         );
         if (msg.sender == refundItem.payee) {
@@ -746,6 +751,28 @@ abstract contract ContentManager is BasePlatform {
             (refundItem.instrShare + refundItem.totalCut)
         );
         emit SaleRefunded(_refCoachSaleID, 0);
+
+        /// @dev this is the timestamp of the transaction in days
+        uint256 transactionTime = (block.timestamp / 86400);
+        /// @dev transactionLBIndex determines a "transaction time dependent position" in the Locked balanaces array.
+        uint256 transactionLBIndex = transactionTime % refundWindow;
+
+        /// @dev update platform cut (coaching&content) pools and platform locked pools
+        _updatePlatformCutBalances(
+            0, //contentCut=0 due to there is no content revenue on this transaction
+            0, //coachingCut=0 due to there is no coaching revenue on this transaction
+            transactionTime,
+            transactionLBIndex
+        );
+        /// @dev if there is any revenue in platform cut pools, distribute role shares to roles and transfer governance role shares to governance treasury
+        _transferPlatformCutstoGovernance();
+        /// @dev update instructor balance and instructor locked balances,
+        _updateInstructorBalances(
+            0, //instShare=0 due to there is no new revenue on this transaction
+            refundItem.coach,
+            transactionTime,
+            transactionLBIndex
+        );
     }
 
     /// @notice Allows to anyone to refund of coaching with a voucher created by platform
@@ -758,7 +785,7 @@ abstract contract ContentManager is BasePlatform {
         CoachingSale storage refundItem = coachSales[voucher.saleID];
         /// @dev a sale only be refunded in the refund window period after the purchase date
         require(
-            refundItem.refundablePeriod >= (block.timestamp / 86400),
+            refundItem.refundablePeriod > (block.timestamp / 86400),
             "Refund period over you cant refund"
         );
         /// @dev a sale can only be refunded once
@@ -775,6 +802,28 @@ abstract contract ContentManager is BasePlatform {
             (refundItem.instrShare + refundItem.totalCut)
         );
         emit SaleRefunded(voucher.saleID, 0);
+
+        /// @dev this is the timestamp of the transaction in days
+        uint256 transactionTime = (block.timestamp / 86400);
+        /// @dev transactionLBIndex determines a "transaction time dependent position" in the Locked balanaces array.
+        uint256 transactionLBIndex = transactionTime % refundWindow;
+
+        /// @dev update platform cut (coaching&content) pools and platform locked pools
+        _updatePlatformCutBalances(
+            0, //contentCut=0 due to there is no content revenue on this transaction
+            0, //coachingCut=0 due to there is no coaching revenue on this transaction
+            transactionTime,
+            transactionLBIndex
+        );
+        /// @dev if there is any revenue in platform cut pools, distribute role shares to roles and transfer governance role shares to governance treasury
+        _transferPlatformCutstoGovernance();
+        /// @dev update instructor balance and instructor locked balances,
+        _updateInstructorBalances(
+            0, //instShare=0 due to there is no new revenue on this transaction
+            refundItem.coach,
+            transactionTime,
+            transactionLBIndex
+        );
     }
 
     /// @notice Allows anyone to refund of a content with a voucher created by platform
@@ -787,7 +836,7 @@ abstract contract ContentManager is BasePlatform {
         ContentSale storage refundItem = contentSales[voucher.saleID];
         /// @dev a sale only be refunded in the refund window period after the purchase date
         require(
-            refundItem.refundablePeriod >= (block.timestamp / 86400),
+            refundItem.refundablePeriod > (block.timestamp / 86400),
             "refund period over you cant refund"
         );
         /// @dev a sale can only be refunded once
@@ -847,5 +896,27 @@ abstract contract ContentManager is BasePlatform {
             (refundItem.instrShare + refundItem.totalCut)
         );
         emit SaleRefunded(voucher.saleID, 1);
+
+        /// @dev this is the timestamp of the transaction in days
+        uint256 transactionTime = (block.timestamp / 86400);
+        /// @dev transactionLBIndex determines a "transaction time dependent position" in the Locked balanaces array.
+        uint256 transactionLBIndex = transactionTime % refundWindow;
+
+        /// @dev update platform cut (coaching&content) pools and platform locked pools
+        _updatePlatformCutBalances(
+            0, //contentCut=0 due to there is no content revenue on this transaction
+            0, //coachingCut=0 due to there is no coaching revenue on this transaction
+            transactionTime,
+            transactionLBIndex
+        );
+        /// @dev if there is any revenue in platform cut pools, distribute role shares to roles and transfer governance role shares to governance treasury
+        _transferPlatformCutstoGovernance();
+        /// @dev update instructor balance and instructor locked balances,
+        _updateInstructorBalances(
+            0, //instShare=0 due to there is no new revenue on this transaction
+            refundItem.instructor,
+            transactionTime,
+            transactionLBIndex
+        );
     }
 }
