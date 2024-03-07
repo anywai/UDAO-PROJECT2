@@ -66,7 +66,23 @@ contract UDAOGovernor is
         emit AddressesUpdated(roleManagerAddress, stakingContractAddress);
     }
 
-    uint _quorum = 1e18; // 720000000e18 (100.000.000 * 0.04 * 6 * 30)
+    uint _quorum = 1e18; // 720000000e18 (200.000.000 * 0.04 * 6 * 30)
+
+    // TODO Check if we can customize propose function to add quorum as a parameter
+    // TODO check if we can change public to internal and override the propose function
+    // TODO Check when setQuroum gets effective (before proposal creation? After? What about before/after update voting power?)
+    // TODO Check if we can block users who didn't update their voting power before certain time of a proposal creation
+    function propose(
+        address[] memory targets,
+        uint256[] memory values,
+        bytes[] memory calldatas,
+        string memory description,
+        uint newQuorum
+    ) public override(IGovernor, Governor) returns (uint256) {
+        setQuorum(newQuorum);
+        require(hasRole(ROLE_MEMBER, msg.sender), "Only members can propose");
+        return super.propose(targets, values, calldatas, description);
+    }
 
     function setQuorum(uint newQuorum) external onlyGovernance {
         _quorum = newQuorum;
@@ -89,9 +105,23 @@ contract UDAOGovernor is
         uint8 support,
         string memory reason
     ) internal override(Governor) returns (uint256) {
+        require(
+            VotingPower.hasUpdatedVotingPower(account),
+            "No updated voting power"
+        );
         udaoStaker.addVoteRewards(msg.sender);
         return
             _castVote(proposalId, account, support, reason, _defaultParams());
+    }
+
+    function hasUpdatedVotingPower(address account) public view returns (bool) {
+        // address => timeStamp
+        // mapping(address => uint256) public votingPower;
+        if (votingPower[account] < 3 days) {
+            return true;
+        } else {
+            return false;
+        }
     }
 
     // The following functions are overrides required by Solidity.
