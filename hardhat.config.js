@@ -41,7 +41,7 @@ module.exports = {
     localhost: {
       allowUnlimitedContractSize: true,
     },
-    mumbai: {
+    amoy: {
       url: POLYGON_MUMBAI_RPC_PROVIDER,
       accounts: [`0x${PRIVATE_KEY}`],
     },
@@ -69,5 +69,10 @@ module.exports = {
       },
     },
   },
-  etherscan: { apiKey: POLYGONSCAN_API_KEY },
+    etherscan: {
+      apiKey: {
+        amoy:POLYGONSCAN_API_KEY,
+      }
+  }
+  
 };
