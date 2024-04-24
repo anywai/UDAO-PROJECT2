@@ -45,9 +45,6 @@ contract UDAOContent is
         _tokenIds.increment();
     }
 
-    /// @dev isAllowedToBurn is a bool variable that controls whether the backend is allowed to burn a content or not.
-    bool public isAllowedToBurn = false;
-
     /// @dev tokenId => true/false (is sellable)
     mapping(uint256 => bool) public isSellable;
     /// @dev tokenId => partIds
@@ -97,14 +94,6 @@ contract UDAOContent is
             "Only sale controller can set sellable"
         );
         isSellable[_tokenId] = _isSellable;
-    }
-
-    function setIsAllowedToBurn(bool status) external {
-        require(
-            hasRole(GOVERNANCE_ROLE, msg.sender),
-            "Only governance can allow to burning"
-        );
-        isAllowedToBurn = status;
     }
 
     /// @notice Get the updated addresses from contract manager
