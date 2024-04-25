@@ -69,10 +69,26 @@ module.exports = {
       },
     },
   },
-    etherscan: {
-      apiKey: {
-        amoy:POLYGONSCAN_API_KEY,
+  etherscan: {
+    apiKey: {
+      amoy: POLYGONSCAN_API_KEY
+    },
+    sourcify: {
+      // Disabled by default
+      // Doesn't need an API key
+      // Should be true to verify contracts
+      enabled: true
+    },
+    customChains: [
+      {
+        network: "amoy",
+        chainId: 80002,
+        urls: {
+          apiURL: "https://www.oklink.com/api/explorer/v1/contract/verify/async/api/polygonAmoy",
+          browserURL: "https://www.oklink.com/polygonAmoy"
+        }
       }
+    ]
   }
   
 };
