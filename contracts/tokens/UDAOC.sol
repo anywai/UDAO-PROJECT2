@@ -1,21 +1,17 @@
 // SPDX-License-Identifier: MIT
-/// @title UDAOC (UDAO-Content) token is an ERC721 token.
+/// @title UDAOC (UDAO-Content) token is an ERC721 token modified to make it non-transferable.
 pragma solidity ^0.8.4;
 
-//import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
-import "./ERC721Locked.sol";
-
-import "./ERC721LockedURIStorage.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
-//Voucher için alttaki ikisi
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
-
+import "@openzeppelin/contracts/security/Pausable.sol";
+import "./ERC721Locked.sol";
+import "./ERC721LockedURIStorage.sol";
 import "../interfaces/IUDAOC.sol";
 import "../interfaces/ISupervision.sol";
 import "../interfaces/IRoleManager.sol";
 import "../RoleLegacy.sol";
-import "@openzeppelin/contracts/security/Pausable.sol";
 
 contract UDAOContent is
     Pausable,
