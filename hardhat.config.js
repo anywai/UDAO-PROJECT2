@@ -8,7 +8,8 @@ require("@nomiclabs/hardhat-ethers");
 require("@nomiclabs/hardhat-etherscan");
 require("hardhat-contract-sizer");
 
-const { POLYGON_MUMBAI_RPC_PROVIDER, PRIVATE_KEY, POLYGON_RPC_PROVIDER, POLYGONSCAN_API_KEY } = process.env;
+const { POLYGON_MUMBAI_RPC_PROVIDER, PRIVATE_KEY, MAINNET_KEY, POLYGON_RPC_PROVIDER, POLYGONSCAN_API_KEY } =
+  process.env;
 
 // This is a sample Hardhat task. To learn how to create your own go to
 // https://hardhat.org/guides/create-task.html
@@ -41,9 +42,13 @@ module.exports = {
     localhost: {
       allowUnlimitedContractSize: true,
     },
-    mumbai: {
+    amoy: {
       url: POLYGON_MUMBAI_RPC_PROVIDER,
       accounts: [`0x${PRIVATE_KEY}`],
+    },
+    polygon: {
+      url: POLYGON_RPC_PROVIDER,
+      accounts: [`0x${MAINNET_KEY}`],
     },
   },
   gasReporter: {
@@ -65,5 +70,25 @@ module.exports = {
       },
     },
   },
-  etherscan: { apiKey: POLYGONSCAN_API_KEY },
+  etherscan: {
+    apiKey: {
+      amoy: POLYGONSCAN_API_KEY,
+    },
+    sourcify: {
+      // Disabled by default
+      // Doesn't need an API key
+      // Should be true to verify contracts
+      enabled: true,
+    },
+    customChains: [
+      {
+        network: "amoy",
+        chainId: 80002,
+        urls: {
+          apiURL: "https://www.oklink.com/api/explorer/v1/contract/verify/async/api/polygonAmoy",
+          browserURL: "https://www.oklink.com/polygonAmoy",
+        },
+      },
+    ],
+  },
 };

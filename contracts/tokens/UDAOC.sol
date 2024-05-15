@@ -1,25 +1,25 @@
 // SPDX-License-Identifier: MIT
-/// @title UDAOC (UDAO-Content) token is an ERC721 token.
+/// @title UDAOC (UDAO-Content) token is an ERC721 token modified to make it non-transferable.
 pragma solidity ^0.8.4;
 
-import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
-import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
+import "@openzeppelin/contracts/security/Pausable.sol";
+import "./ERC721Locked.sol";
+import "./ERC721LockedURIStorage.sol";
 import "../interfaces/IUDAOC.sol";
 import "../interfaces/ISupervision.sol";
 import "../interfaces/IRoleManager.sol";
 import "../RoleLegacy.sol";
-import "@openzeppelin/contracts/security/Pausable.sol";
 
 contract UDAOContent is
     Pausable,
     RoleLegacy,
     IUDAOC,
-    ERC721,
+    ERC721Locked,
     EIP712,
-    ERC721URIStorage
+    ERC721LockedURIStorage
 {
     using Counters for Counters.Counter;
     /// @dev The counter for content token ids.
@@ -34,15 +34,12 @@ contract UDAOContent is
     constructor(
         address roleManagerAddress
     )
-        ERC721("UDAO Content", "UDAOC")
+        ERC721Locked("UDAO Content", "UDAOC")
         EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION)
     {
         roleManager = IRoleManager(roleManagerAddress);
         _tokenIds.increment();
     }
-
-    /// @dev isAllowedToBurn is a bool variable that controls whether the backend is allowed to burn a content or not.
-    bool public isAllowedToBurn = false;
 
     /// @dev tokenId => true/false (is sellable)
     mapping(uint256 => bool) public isSellable;
@@ -93,14 +90,6 @@ contract UDAOContent is
             "Only sale controller can set sellable"
         );
         isSellable[_tokenId] = _isSellable;
-    }
-
-    function setIsAllowedToBurn(bool status) external {
-        require(
-            hasRole(GOVERNANCE_ROLE, msg.sender),
-            "Only governance can allow to burning"
-        );
-        isAllowedToBurn = status;
     }
 
     /// @notice Get the updated addresses from contract manager
@@ -339,45 +328,6 @@ contract UDAOContent is
         return contentParts[tokenId].length;
     }
 
-    /// @notice Burns a content which is not allowed
-    /// @param tokenId The id of the token to burn
-    function burn(uint256 tokenId) external {
-        require(isAllowedToBurn, "Burning is not allowed by governance");
-        _burn(tokenId);
-    }
-
-    /// @notice Burns a content which is not allowed
-    /// @param tokenId The id of the token to burn
-    function _burn(
-        uint256 tokenId
-    ) internal override(ERC721, ERC721URIStorage) {
-        require(
-            hasRole(BACKEND_ROLE, msg.sender),
-            "Only backend can burn a content"
-        );
-        super._burn(tokenId);
-    }
-
-    /// @notice Allows transfer of a content with KYC and ban checks
-    /// @param from The current token owner
-    /// @param to Token to send to
-    /// @param tokenId The id of the token to transfer
-    function _beforeTokenTransfer(
-        address from,
-        address to,
-        uint256 tokenId
-    ) internal virtual override {
-        super._beforeTokenTransfer(from, to, tokenId);
-        if (to != address(0)) {
-            require(isKYCed(to, 18), "Receiver is not KYCed!");
-            require(isNotBanned(to, 18), "Receiver is banned!");
-        }
-        if (from != address(0)) {
-            require(isKYCed(from, 19), "Sender is not KYCed!");
-            require(isNotBanned(from, 19), "Sender is banned!");
-        }
-    }
-
     /// @notice Allows off-chain check if batch of tokens(content) exists
     /// @param tokenIds Array of token IDs
     function existsBatch(
@@ -458,13 +408,18 @@ contract UDAOContent is
 
     function tokenURI(
         uint256 tokenId
-    ) public view override(ERC721, ERC721URIStorage) returns (string memory) {
+    )
+        public
+        view
+        override(ERC721Locked, ERC721LockedURIStorage)
+        returns (string memory)
+    {
         return super.tokenURI(tokenId);
     }
 
     function supportsInterface(
         bytes4 interfaceId
-    ) public view override(ERC721, IERC165) returns (bool) {
+    ) public view override(ERC721Locked, IERC165) returns (bool) {
         return super.supportsInterface(interfaceId);
     }
 }
