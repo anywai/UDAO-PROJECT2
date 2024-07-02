@@ -223,8 +223,7 @@ contract ContractManager is RoleLegacy {
             udaoStakerAddress
         );
     }
-    */
-
+*/
     /// @notice This function updates the address record held in this contract for the UDAO token contract
     /// @param _udaoAddress The new address recond of the UDAO token contract to be held in this contract.
     function setAddressUDAOContract(address _udaoAddress) external {
