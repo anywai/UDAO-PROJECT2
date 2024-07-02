@@ -1,14 +1,16 @@
 require("solidity-docgen");
-require("@nomiclabs/hardhat-waffle");
+//require("@nomiclabs/hardhat-waffle");
 require("hardhat-contract-sizer");
 require("solidity-coverage");
 require("hardhat-gas-reporter");
 require("dotenv").config();
-require("@nomiclabs/hardhat-ethers");
-require("@nomiclabs/hardhat-etherscan");
+//require("@nomiclabs/hardhat-ethers");
+//require("@nomiclabs/hardhat-etherscan");
 require("hardhat-contract-sizer");
+require("@nomicfoundation/hardhat-ignition-ethers");
 
-const { POLYGON_MUMBAI_RPC_PROVIDER, PRIVATE_KEY, MAINNET_KEY, POLYGON_RPC_PROVIDER, POLYGONSCAN_API_KEY } = process.env;
+const { POLYGON_TEST_RPC_PROVIDER, TEST_PRIVATE_KEY, MAINNET_PRIVATE_KEY, POLYGON_RPC_PROVIDER, POLYGONSCAN_API_KEY } =
+  process.env;
 
 // This is a sample Hardhat task. To learn how to create your own go to
 // https://hardhat.org/guides/create-task.html
@@ -42,12 +44,24 @@ module.exports = {
       allowUnlimitedContractSize: true,
     },
     amoy: {
-      url: POLYGON_MUMBAI_RPC_PROVIDER,
-      accounts: [`0x${PRIVATE_KEY}`],
+      url: POLYGON_TEST_RPC_PROVIDER,
+      accounts: [`0x${TEST_PRIVATE_KEY}`],
+      gasPrice: 50000000000,
     },
     polygon: {
       url: POLYGON_RPC_PROVIDER,
-      accounts: [`0x${MAINNET_KEY}`],
+      accounts: [`0x${MAINNET_PRIVATE_KEY}`],
+    },
+  },
+  ignition: {
+    blockPollingInterval: 1_000,
+    timeBeforeBumpingFees: 3 * 60 * 1_000,
+    maxFeePerGasLimit: 50_000_000_000n, // 50 gwei
+    maxPriorityFeePerGas: 2_000_000_000n, // 2 gwei
+    maxFeeBumps: 4,
+    requiredConfirmations: 5,
+    modules: {
+      // Modüllerinizi buraya ekleyebilirsiniz
     },
   },
   gasReporter: {
@@ -71,13 +85,13 @@ module.exports = {
   },
   etherscan: {
     apiKey: {
-      amoy: POLYGONSCAN_API_KEY
+      amoy: POLYGONSCAN_API_KEY,
     },
     sourcify: {
       // Disabled by default
       // Doesn't need an API key
       // Should be true to verify contracts
-      enabled: true
+      enabled: true,
     },
     customChains: [
       {
@@ -85,10 +99,9 @@ module.exports = {
         chainId: 80002,
         urls: {
           apiURL: "https://www.oklink.com/api/explorer/v1/contract/verify/async/api/polygonAmoy",
-          browserURL: "https://www.oklink.com/polygonAmoy"
-        }
-      }
-    ]
-  }
-  
+          browserURL: "https://www.oklink.com/polygonAmoy",
+        },
+      },
+    ],
+  },
 };
