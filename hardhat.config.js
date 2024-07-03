@@ -9,7 +9,7 @@ require("dotenv").config();
 require("hardhat-contract-sizer");
 require("@nomicfoundation/hardhat-ignition-ethers");
 
-const { POLYGON_TEST_RPC_PROVIDER, TEST_PRIVATE_KEY, MAINNET_PRIVATE_KEY, POLYGON_RPC_PROVIDER, POLYGONSCAN_API_KEY } =
+const { POLYGON_TEST_RPC_PROVIDER, TEST_PRIVATE_KEY, TEST_FOUND_PRIVATE_KEY, MAINNET_PRIVATE_KEY, POLYGON_RPC_PROVIDER, POLYGONSCAN_API_KEY } =
   process.env;
 
 // This is a sample Hardhat task. To learn how to create your own go to
@@ -45,7 +45,7 @@ module.exports = {
     },
     amoy: {
       url: POLYGON_TEST_RPC_PROVIDER,
-      accounts: [`0x${TEST_PRIVATE_KEY}`],
+      accounts: [`0x${TEST_PRIVATE_KEY}`, `0x${TEST_FOUND_PRIVATE_KEY}`],
       gasPrice: 50000000000,
     },
     polygon: {
@@ -56,8 +56,8 @@ module.exports = {
   ignition: {
     blockPollingInterval: 1_000,
     timeBeforeBumpingFees: 3 * 60 * 1_000,
-    maxFeePerGasLimit: 50_000_000_000n, // 50 gwei
-    maxPriorityFeePerGas: 2_000_000_000n, // 2 gwei
+    maxFeePerGasLimit: 50_000_000_0n, // 50 gwei
+    maxPriorityFeePerGas: 2_000_000_0n, // 2 gwei
     maxFeeBumps: 4,
     requiredConfirmations: 5,
     modules: {
