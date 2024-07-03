@@ -1,0 +1,12 @@
+{
+  "DeployAmoyContracts#DummySupervision": "0x53Fb25Dae7fFFD5d4F1b89fCF41240B95Fdf8774",
+  "DeployAmoyContracts#UDAO": "0x5E2575e9930Bb86606BFCAA2e0B288515e6D4063",
+  "DeployAmoyContracts#RoleManager": "0xFB634b3b26a8F1D4c62c28b71bb7245416B6a760",
+  "DeployAmoyContracts#ContractManager": "0x32064eFcC39a0c395eCc69DB8b41A97819857439",
+  "DeployAmoyContracts#GovernanceTreasury": "0xac0f769fD8363B091B8CD7fb4eCb6b8bFf99cB29",
+  "DeployAmoyContracts#UDAOCertificate": "0x9245FCA85d7833f9801E7732210D3ED4c55c814D",
+  "DeployAmoyContracts#UDAOContent": "0x2b481EDfcbeFF608908C807806d986Dc90fBf763",
+  "DeployAmoyContracts#Vesting": "0xE723C9118B1cC528d0de9f1ea2B1ee4A4A06252c",
+  "DeployAmoyContracts#VoucherVerifier": "0x29D860881646d31dB5fF018Ba0B08d8291387ccC",
+  "DeployAmoyContracts#PlatformTreasury": "0xb9eA1917c4c13aF63f82DCB3FD90af7FB0f3b521"
+}
