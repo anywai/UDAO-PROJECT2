@@ -10,8 +10,9 @@ module.exports = buildModule("DeployAmoyContracts", (m) => {
   //  "0ecbb4aa5a7ab07b88076b9a92b809b54fb82f664599965616a0ebb399584b24",
   //  ethers.provider
   //);
-  const foundationPK = "c65a58d97cfc1a35f67fba197655b9df253ffddbdf31d9cc18ec1447cb454818";
+  const foundationPK = "106c89731b42c90935018001a2a550767d406c3847966e36b440bbc12cf00f54";
   const foundation = new ethers.Wallet(foundationPK, ethers.provider);
+
   //const foundation = new ethers.Wallet(
   //  "c65a58d97cfc1a35f67fba197655b9df253ffddbdf31d9cc18ec1447cb454818",
   //  ethers.provider
@@ -83,7 +84,7 @@ module.exports = buildModule("DeployAmoyContracts", (m) => {
   m.call(
     contractRoleManager,
     "grantRole",
-    [ethers.keccak256(ethers.toUtf8Bytes("CONTRACT_MANAGER")), contractContractManager.address],
+    [ethers.keccak256(ethers.toUtf8Bytes("CONTRACT_MANAGER")), contractContractManager],
     { id: "grantContractManagerRole" }
   );
   console.log("sa 14.0");
@@ -112,7 +113,7 @@ module.exports = buildModule("DeployAmoyContracts", (m) => {
   m.call(
     contractRoleManager,
     "grantRole",
-    [ethers.keccak256(ethers.toUtf8Bytes("TREASURY_CONTRACT")), contractPlatformTreasury.address],
+    [ethers.keccak256(ethers.toUtf8Bytes("TREASURY_CONTRACT")), contractPlatformTreasury],
     { id: "grantTreasuryContractRole" }
   );
   console.log("sa 18.0");
@@ -128,7 +129,7 @@ module.exports = buildModule("DeployAmoyContracts", (m) => {
   m.call(
     contractRoleManager,
     "grantRole",
-    [ethers.keccak256(ethers.toUtf8Bytes("SUPERVISION_CONTRACT")), contractSupervision.address],
+    [ethers.keccak256(ethers.toUtf8Bytes("SUPERVISION_CONTRACT")), contractSupervision],
     { id: "grantSupervisionContractRole" }
   );
   console.log("sa 20.0");
@@ -136,7 +137,7 @@ module.exports = buildModule("DeployAmoyContracts", (m) => {
   m.call(
     contractRoleManager,
     "grantRole",
-    [ethers.keccak256(ethers.toUtf8Bytes("UDAOC_CONTRACT")), contractUDAOContent.address],
+    [ethers.keccak256(ethers.toUtf8Bytes("UDAOC_CONTRACT")), contractUDAOContent],
     { id: "grantUDAOCContractRole" }
   );
   console.log("sa 21.0");
