@@ -144,7 +144,7 @@ module.exports = buildModule("DeployAmoyContracts", (m) => {
   const zero = "0x0000000000000000000000000000000000000000000000000000000000000000";
 
   // Return ownership of contractRoleManager to foundation from backend after deployment
-  m.call(contractRoleManager, "grantRole", [zero, foundation.address], {
+  const deneme1 = m.call(contractRoleManager, "grantRole", [zero, foundation.address], {
     id: "grantAdminRoleToFoundation",
     from: backend.address,
   });
@@ -153,6 +153,8 @@ module.exports = buildModule("DeployAmoyContracts", (m) => {
   m.call(contractRoleManager, "revokeRole", [zero, backend.address], {
     id: "revokeAdminRoleFromBackend",
     from: foundation.address,
+    after: [deneme1]
   });
   console.log("sa 23.0");
+  
 });
