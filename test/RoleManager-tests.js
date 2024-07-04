@@ -83,9 +83,9 @@ describe("Role Manager", function () {
   it("Should allow foundation to hand over the ownership of rolemanager contract", async function () {
     await reDeploy();
     // foundation wallet can grant DEFAULT_ADMIN_ROLE to contentbuyer1
-    await contractRoleManager.connect(foundation).grantRole(ethers.constants.HashZero, contentBuyer1.address);
+    await contractRoleManager.connect(foundation).grantRole(ethers.ZeroHash, contentBuyer1.address);
     // and now new DEFAULT_ADMIN_ROLE is contentbuyer1 and it can revoke DEFAULT_ADMIN_ROLE from foundation
-    await contractRoleManager.connect(contentBuyer1).revokeRole(ethers.constants.HashZero, foundation.address);
+    await contractRoleManager.connect(contentBuyer1).revokeRole(ethers.ZeroHash, foundation.address);
     // foundation can not grant role to anyone after it has been revoked from DEFAULT_ADMIN_ROLE
     await expect(
       contractRoleManager.connect(foundation).grantRole(BACKEND_ROLE, contentBuyer1.address)
@@ -93,7 +93,7 @@ describe("Role Manager", function () {
       "AccessControl: account " + foundation.address.toLowerCase() + " is missing role " + ADDRESS_ZERO
     );
     // contentBuyer1 has the role DEFAULT_ADMIN_ROLE
-    expect(await contractRoleManager.hasRole(ethers.constants.HashZero, contentBuyer1.address)).to.equal(true);
+    expect(await contractRoleManager.hasRole(ethers.ZeroHash, contentBuyer1.address)).to.equal(true);
   });
 
   it("Should allow foundation to grant backend role by using dedicated function", async function () {
@@ -201,9 +201,9 @@ describe("Role Manager", function () {
     await reDeploy();
 
     // convert string to bytes 32
-    const kec256_backend = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("BACKEND_ROLE"));
-    const kec256_staking = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("STAKING_CONTRACT"));
-    const kec256_governance = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("GOVERNANCE_ROLE"));
+    const kec256_backend = ethers.keccak256(ethers.toUtf8Bytes("BACKEND_ROLE"));
+    const kec256_staking = ethers.keccak256(ethers.toUtf8Bytes("STAKING_CONTRACT"));
+    const kec256_governance = ethers.keccak256(ethers.toUtf8Bytes("GOVERNANCE_ROLE"));
     const kec_array = [kec256_backend, kec256_staking, kec256_governance];
 
     // check if contentbuyer1 has skating role

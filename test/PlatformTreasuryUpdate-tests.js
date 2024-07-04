@@ -79,16 +79,16 @@ async function reDeploy(reApplyRolesViaVoucher = true, isDexRequired = false) {
   contractPriceGetter = replace.contractPriceGetter;
   const reApplyValidatorRoles = [validator, validator1, validator2, validator3, validator4, validator5];
   const reApplyJurorRoles = [jurorMember, jurorMember1, jurorMember2, jurorMember3, jurorMember4];
-  const VALIDATOR_ROLE = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("VALIDATOR_ROLE"));
-  const JUROR_ROLE = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("JUROR_ROLE"));
+  const VALIDATOR_ROLE = ethers.keccak256(ethers.toUtf8Bytes("VALIDATOR_ROLE"));
+  const JUROR_ROLE = ethers.keccak256(ethers.toUtf8Bytes("JUROR_ROLE"));
 }
 
 async function checkAccountUDAOVpBalanceAndDelegate(contractUDAOVp, account) {
   const accountBalance = await contractUDAOVp.balanceOf(account.address);
-  await expect(accountBalance).to.equal(ethers.utils.parseEther("300"));
+  await expect(accountBalance).to.equal(ethers.parseEther("300"));
   await contractUDAOVp.connect(account).delegate(account.address);
   const accountVotes = await contractUDAOVp.getVotes(account.address);
-  await expect(accountVotes).to.equal(ethers.utils.parseEther("300"));
+  await expect(accountVotes).to.equal(ethers.parseEther("300"));
 }
 async function runValidation(
   contractSupervision,
@@ -102,49 +102,49 @@ async function runValidation(
 ) {
   await expect(contractSupervision.connect(validator1).assignValidation(1))
     .to.emit(contractSupervision, "ValidationAssigned")
-    .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), validator1.address);
+    .withArgs(BigInt(0), BigInt(1), validator1.address);
   await expect(contractSupervision.connect(validator2).assignValidation(1))
     .to.emit(contractSupervision, "ValidationAssigned")
-    .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), validator2.address);
+    .withArgs(BigInt(0), BigInt(1), validator2.address);
   await expect(contractSupervision.connect(validator3).assignValidation(1))
     .to.emit(contractSupervision, "ValidationAssigned")
-    .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), validator3.address);
+    .withArgs(BigInt(0), BigInt(1), validator3.address);
   await expect(contractSupervision.connect(validator4).assignValidation(1))
     .to.emit(contractSupervision, "ValidationAssigned")
-    .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), validator4.address);
+    .withArgs(BigInt(0), BigInt(1), validator4.address);
   await expect(contractSupervision.connect(validator5).assignValidation(1))
     .to.emit(contractSupervision, "ValidationAssigned")
-    .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), validator5.address);
+    .withArgs(BigInt(0), BigInt(1), validator5.address);
 
   await expect(contractSupervision.connect(validator1).sendValidation(1, true))
     .to.emit(contractSupervision, "ValidationResultSent")
-    .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), validator1.address, true);
+    .withArgs(BigInt(0), BigInt(1), validator1.address, true);
   await expect(contractSupervision.connect(validator2).sendValidation(1, true))
     .to.emit(contractSupervision, "ValidationResultSent")
-    .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), validator2.address, true);
+    .withArgs(BigInt(0), BigInt(1), validator2.address, true);
   await expect(contractSupervision.connect(validator3).sendValidation(1, true))
     .to.emit(contractSupervision, "ValidationResultSent")
-    .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), validator3.address, true);
+    .withArgs(BigInt(0), BigInt(1), validator3.address, true);
   await expect(contractSupervision.connect(validator4).sendValidation(1, true))
     .to.emit(contractSupervision, "ValidationResultSent")
-    .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), validator4.address, true);
+    .withArgs(BigInt(0), BigInt(1), validator4.address, true);
   await expect(contractSupervision.connect(validator5).sendValidation(1, false))
     .to.emit(contractSupervision, "ValidationResultSent")
-    .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), validator5.address, false);
+    .withArgs(BigInt(0), BigInt(1), validator5.address, false);
   await expect(contractSupervision.connect(contentCreator).finalizeValidation(1))
     .to.emit(contractSupervision, "ValidationEnded")
-    .withArgs(ethers.BigNumber.from(0), ethers.BigNumber.from(1), true);
+    .withArgs(BigInt(0), BigInt(1), true);
 }
 
 async function setupGovernanceMember(contractRoleManager, contractUDAO, contractUDAOStaker, governanceCandidate) {
   await contractRoleManager.setKYC(governanceCandidate.address, true);
-  await contractUDAO.transfer(governanceCandidate.address, ethers.utils.parseEther("100.0"));
+  await contractUDAO.transfer(governanceCandidate.address, ethers.parseEther("100.0"));
   await contractUDAO
     .connect(governanceCandidate)
-    .approve(contractUDAOStaker.address, ethers.utils.parseEther("999999999999.0"));
-  await expect(contractUDAOStaker.connect(governanceCandidate).stakeForGovernance(ethers.utils.parseEther("10"), 30))
+    .approve(contractUDAOStaker.address, ethers.parseEther("999999999999.0"));
+  await expect(contractUDAOStaker.connect(governanceCandidate).stakeForGovernance(ethers.parseEther("10"), 30))
     .to.emit(contractUDAOStaker, "GovernanceStake") // transfer from null address to minter
-    .withArgs(governanceCandidate.address, ethers.utils.parseEther("10"), ethers.utils.parseEther("300"));
+    .withArgs(governanceCandidate.address, ethers.parseEther("10"), ethers.parseEther("300"));
 }
 async function createContentVoucher(
   contractUDAOContent,
@@ -161,7 +161,7 @@ async function createContentVoucher(
   // add some minutes to it and convert it to a BigNumber
   const futureBlock = block.timestamp + 1000;
   // convert it to a BigNumber
-  const futureBlockBigNumber = ethers.BigNumber.from(futureBlock);
+  const futureBlockBigNumber = BigInt(futureBlock);
 
   return await new Redeem({
     contract: contractUDAOContent,
@@ -245,11 +245,11 @@ async function makeContentPurchase(
   /// Set KYC
   await contractRoleManager.setKYC(contentBuyer.address, true);
   /// Send UDAO to the buyer's wallet
-  await contractUDAO.transfer(contentBuyer.address, ethers.utils.parseEther("100.0"));
+  await contractUDAO.transfer(contentBuyer.address, ethers.parseEther("100.0"));
   /// Content buyer needs to give approval to the platformtreasury
   await contractUDAO
     .connect(contentBuyer)
-    .approve(contractPlatformTreasury.address, ethers.utils.parseEther("999999999999.0"));
+    .approve(contractPlatformTreasury.address, ethers.parseEther("999999999999.0"));
   /// Create content purchase vouchers
   /*
   ContentDiscountVoucher: [
@@ -307,11 +307,11 @@ async function makeCoachingPurchase(
   // Set KYC
   await contractRoleManager.setKYC(contentBuyer.address, true);
   // Send some UDAO to contentBuyer
-  await contractUDAO.transfer(contentBuyer.address, ethers.utils.parseEther("100.0"));
+  await contractUDAO.transfer(contentBuyer.address, ethers.parseEther("100.0"));
   // Content buyer needs to give approval to the platformtreasury
   await contractUDAO
     .connect(contentBuyer)
-    .approve(contractPlatformTreasury.address, ethers.utils.parseEther("999999999999.0"));
+    .approve(contractPlatformTreasury.address, ethers.parseEther("999999999999.0"));
 
   // Create CoachingVoucher to be able to buy coaching
   const lazyCoaching = new LazyCoaching({
@@ -389,7 +389,7 @@ describe("Platform Treasury Updated General", function () {
     const purchasedParts = [[1]];
     const giftReceiver = [ethers.constants.AddressZero];
     const fullContentPurchase = [false];
-    const pricesToPay = [ethers.utils.parseEther("1")];
+    const pricesToPay = [ethers.parseEther("1")];
     const validUntil = Date.now() + 999999999;
     const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
 
@@ -507,7 +507,7 @@ describe("Platform Treasury Updated General", function () {
     const purchasedParts = [[1]];
     const giftReceiver = [ethers.constants.AddressZero];
     const fullContentPurchase = [true];
-    const pricesToPay = [ethers.utils.parseEther("1")];
+    const pricesToPay = [ethers.parseEther("1")];
     const validUntil = Date.now() + 999999999;
     const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
 
@@ -570,7 +570,7 @@ describe("Platform Treasury Updated General", function () {
 
     // common parts in the purchase voucher
     const tokenIds2 = [2];
-    const pricesToPay2 = [ethers.utils.parseEther("2")];
+    const pricesToPay2 = [ethers.parseEther("2")];
 
     // Make a content purchase
     await makeContentPurchase(
@@ -694,7 +694,7 @@ describe("Platform Treasury Updated General", function () {
     const purchasedParts = [[1]];
     const giftReceiver = [ethers.constants.AddressZero];
     const fullContentPurchase = [true];
-    const pricesToPay = [ethers.utils.parseEther("1")];
+    const pricesToPay = [ethers.parseEther("1")];
     const validUntil = Date.now() + 999999999;
     const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
 
@@ -757,7 +757,7 @@ describe("Platform Treasury Updated General", function () {
 
     // common parts in the purchase voucher
     const tokenIds2 = [2];
-    const pricesToPay2 = [ethers.utils.parseEther("2")];
+    const pricesToPay2 = [ethers.parseEther("2")];
 
     // Make a content purchase
     await makeContentPurchase(
@@ -809,7 +809,7 @@ describe("Platform Treasury Updated General", function () {
 
     // common parts in the purchase voucher
     const tokenIds3 = [3];
-    const pricesToPay3 = [ethers.utils.parseEther("3")];
+    const pricesToPay3 = [ethers.parseEther("3")];
 
     // Make a content purchase
     await makeContentPurchase(
@@ -901,7 +901,7 @@ describe("Platform Treasury Updated General", function () {
     const purchasedParts = [[1]];
     const giftReceiver = [ethers.constants.AddressZero];
     const fullContentPurchase = [true];
-    const pricesToPay = [ethers.utils.parseEther("1")];
+    const pricesToPay = [ethers.parseEther("1")];
     const validUntil = Date.now() + 999999999;
     const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
 
@@ -1025,7 +1025,7 @@ describe("Platform Treasury Updated General", function () {
     const purchasedParts = [[1]];
     const giftReceiver = [ethers.constants.AddressZero];
     const fullContentPurchase = [true];
-    const pricesToPay = [ethers.utils.parseEther("1")];
+    const pricesToPay = [ethers.parseEther("1")];
     const validUntil = Date.now() + 999999999;
     const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
 
@@ -1118,7 +1118,7 @@ describe("Platform Treasury Updated General", function () {
     // Make a content purchase
     const redeemers2 = [contentBuyer1.address];
     const tokenIds2 = [2];
-    const pricesToPay2 = [ethers.utils.parseEther("2")];
+    const pricesToPay2 = [ethers.parseEther("2")];
     await makeContentPurchase(
       contractPlatformTreasury,
       contractVoucherVerifier,
@@ -1234,7 +1234,7 @@ describe("Platform Treasury Updated General", function () {
     const purchasedParts = [[1]];
     const giftReceiver = [ethers.constants.AddressZero];
     const fullContentPurchase = [true];
-    const pricesToPay = [ethers.utils.parseEther("1")];
+    const pricesToPay = [ethers.parseEther("1")];
     const validUntil = Date.now() + 999999999;
     const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
 
@@ -1330,7 +1330,7 @@ describe("Platform Treasury Updated General", function () {
     // Make a content purchase
     const redeemers2 = [contentBuyer1.address];
     const tokenIds2 = [2];
-    const pricesToPay2 = [ethers.utils.parseEther("2")];
+    const pricesToPay2 = [ethers.parseEther("2")];
     await makeContentPurchase(
       contractPlatformTreasury,
       contractVoucherVerifier,
@@ -1430,7 +1430,7 @@ describe("Platform Treasury Updated General", function () {
     const purchasedParts = [[1]];
     const giftReceiver = [ethers.constants.AddressZero];
     const fullContentPurchase = [true];
-    const pricesToPay = [ethers.utils.parseEther("1")];
+    const pricesToPay = [ethers.parseEther("1")];
     const validUntil = Date.now() + 999999999;
     const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
     const redeemers = [contentBuyer1.address];
@@ -1547,7 +1547,7 @@ describe("Platform Treasury Updated General", function () {
     const purchasedParts = [[1]];
     const giftReceiver = [ethers.constants.AddressZero];
     const fullContentPurchase = [true];
-    const pricesToPay = [ethers.utils.parseEther("1")];
+    const pricesToPay = [ethers.parseEther("1")];
     const validUntil = Date.now() + 999999999;
     const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
     const redeemers = [contentBuyer1.address];
@@ -1688,7 +1688,7 @@ describe("Platform Treasury Updated General", function () {
     const purchasedParts = [[1]];
     const giftReceiver = [ethers.constants.AddressZero];
     const fullContentPurchase = [true];
-    const pricesToPay = [ethers.utils.parseEther("1")];
+    const pricesToPay = [ethers.parseEther("1")];
     const validUntil = Date.now() + 999999999;
     const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
     const redeemers = [contentBuyer1.address];
@@ -1759,7 +1759,7 @@ describe("Platform Treasury Updated General", function () {
     // Buy content 2
     // Buy the content
     const tokenIds2 = [2];
-    const pricesToPay2 = [ethers.utils.parseEther("2")];
+    const pricesToPay2 = [ethers.parseEther("2")];
     await makeContentPurchase(
       contractPlatformTreasury,
       contractVoucherVerifier,
@@ -1818,7 +1818,7 @@ describe("Platform Treasury Updated General", function () {
     const purchasedParts = [[1]];
     const giftReceiver = [ethers.constants.AddressZero];
     const fullContentPurchase = [true];
-    const pricesToPay = [ethers.utils.parseEther("1")];
+    const pricesToPay = [ethers.parseEther("1")];
     const validUntil = Date.now() + 999999999;
     const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
     const redeemers = [contentBuyer1.address];
@@ -1998,7 +1998,7 @@ describe("Platform Treasury Updated General", function () {
     const purchasedParts = [[1]];
     const giftReceiver = [ethers.constants.AddressZero];
     const fullContentPurchase = [true];
-    const pricesToPay = [ethers.utils.parseEther("1")];
+    const pricesToPay = [ethers.parseEther("1")];
     const validUntil = Date.now() + 999999999;
     const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
     const redeemers = [contentBuyer1.address];

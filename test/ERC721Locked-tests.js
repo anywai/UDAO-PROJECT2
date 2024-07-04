@@ -76,7 +76,7 @@ async function createContentVoucher(
   // add some minutes to it and convert it to a BigNumber
   const futureBlock = block.timestamp + 1000;
   // convert it to a BigNumber
-  const futureBlockBigNumber = ethers.BigNumber.from(futureBlock);
+  const futureBlockBigNumber = BigInt(futureBlock);
   return await new Redeem({
     contract: contractUDAOContent,
     signer: backend,
@@ -104,8 +104,8 @@ describe("UDAOC Contract", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
 
     /// part prices must be determined before creating content
-    const partPricesArray = [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")];
-    const contentPrice = ethers.utils.parseEther("2");
+    const partPricesArray = [ethers.parseEther("1"), ethers.parseEther("1")];
+    const contentPrice = ethers.parseEther("2");
     const redeemer = contentCreator;
 
     /// Create Voucher from redeem.js and use it for creating content
@@ -125,15 +125,15 @@ describe("UDAOC Contract", function () {
       .withArgs("0x0000000000000000000000000000000000000000", contentCreator.address, 1);
     // Check balance of content creator
     const balance = await contractUDAOContent.balanceOf(contentCreator.address);
-    expect(balance).to.eql(ethers.BigNumber.from(1));
+    expect(balance).to.eql(BigInt(1));
   });
   it("Should increase the balance of content creator to 2 if content is created twice", async function () {
     await reDeploy();
     await contractRoleManager.setKYC(contentCreator.address, true);
 
     /// part prices must be determined before creating content
-    const partPricesArray = [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")];
-    const contentPrice = ethers.utils.parseEther("2");
+    const partPricesArray = [ethers.parseEther("1"), ethers.parseEther("1")];
+    const contentPrice = ethers.parseEther("2");
     const redeemer = contentCreator;
 
     /// Create Voucher from redeem.js and use it for creating content
@@ -153,7 +153,7 @@ describe("UDAOC Contract", function () {
       .withArgs("0x0000000000000000000000000000000000000000", contentCreator.address, 1);
     // Check balance of content creator
     let balance = await contractUDAOContent.balanceOf(contentCreator.address);
-    expect(balance).to.eql(ethers.BigNumber.from(1));
+    expect(balance).to.eql(BigInt(1));
 
     // Create content
     const contentParts1 = [0, 1];
@@ -171,119 +171,120 @@ describe("UDAOC Contract", function () {
       .withArgs("0x0000000000000000000000000000000000000000", contentCreator.address, 2);
     // Check balance of content creator
     balance = await contractUDAOContent.balanceOf(contentCreator.address);
-    expect(balance).to.eql(ethers.BigNumber.from(2));
-    });
+    expect(balance).to.eql(BigInt(2));
+  });
 
-    it("Should return the NAME of the ERC721 token as UDAO Content", async function () {
-        await reDeploy();
-        const name = await contractUDAOContent.name();
-        expect(name).to.eql("UDAO Content");
-        });
+  it("Should return the NAME of the ERC721 token as UDAO Content", async function () {
+    await reDeploy();
+    const name = await contractUDAOContent.name();
+    expect(name).to.eql("UDAO Content");
+  });
 
-    it("Should return the SYMBOL of the ERC721 token as UDAOC", async function () {
-        await reDeploy();
-        const symbol = await contractUDAOContent.symbol();
-        expect(symbol).to.eql("UDAOC");
-        }
+  it("Should return the SYMBOL of the ERC721 token as UDAOC", async function () {
+    await reDeploy();
+    const symbol = await contractUDAOContent.symbol();
+    expect(symbol).to.eql("UDAOC");
+  });
+  it("Should return tokenURI of the ERC721 token as ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi", async function () {
+    await reDeploy();
+    // KYC content creator
+    await contractRoleManager.setKYC(contentCreator.address, true);
+    //Create content
+    const contentParts = [0, 1];
+    const createContentVoucherSample = await createContentVoucher(
+      contractUDAOContent,
+      backend,
+      contentCreator,
+      contentCreator,
+      contentParts,
+      (redeemType = 1),
+      (validationScore = 0)
     );
-    it("Should return tokenURI of the ERC721 token as ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi", async function () {
-        await reDeploy();
-        // KYC content creator
-        await contractRoleManager.setKYC(contentCreator.address, true);
-        //Create content
-        const contentParts = [0, 1];
-        const createContentVoucherSample = await createContentVoucher(
-            contractUDAOContent,
-            backend,
-            contentCreator,
-            contentCreator,
-            contentParts,
-            (redeemType = 1),
-            (validationScore = 0)
-        );
-        await contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample);
-        // Check tokenURI
-        const tokenURI = await contractUDAOContent.tokenURI(1);
-        expect(tokenURI).to.eql("ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi");
-        }
+    await contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample);
+    // Check tokenURI
+    const tokenURI = await contractUDAOContent.tokenURI(1);
+    expect(tokenURI).to.eql("ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi");
+  });
+  it("Should revert to return tokenURI if tokenId does not exist", async function () {
+    await reDeploy();
+    await expect(contractUDAOContent.tokenURI(1)).to.be.revertedWith("ERC721Locked: invalid token ID");
+  });
+  it("Should revert to approve", async function () {
+    await reDeploy();
+    await expect(contractUDAOContent.approve(backend.address, 1)).to.be.revertedWith("ERC721Locked: not approvable");
+  });
+  it("Should revert to setApprovalForAll", async function () {
+    await reDeploy();
+    await expect(contractUDAOContent.setApprovalForAll(backend.address, true)).to.be.revertedWith(
+      "ERC721Locked: not approvable"
     );
-    it("Should revert to return tokenURI if tokenId does not exist", async function () {
-        await reDeploy();
-        await expect(contractUDAOContent.tokenURI(1)).to.be.revertedWith("ERC721Locked: invalid token ID");
-        }
+  });
+  it("Should return zero address to getApproved", async function () {
+    await reDeploy();
+    // KYC content creator
+    await contractRoleManager.setKYC(contentCreator.address, true);
+    //Create content
+    const contentParts = [0, 1];
+    const createContentVoucherSample = await createContentVoucher(
+      contractUDAOContent,
+      backend,
+      contentCreator,
+      contentCreator,
+      contentParts,
+      (redeemType = 1),
+      (validationScore = 0)
     );
-    it("Should revert to approve", async function () {
-        await reDeploy();
-        await expect(contractUDAOContent.approve(backend.address, 1)).to.be.revertedWith("ERC721Locked: not approvable");
-        }
+    await contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample);
+    // Check getApproved
+    const getApproved = await contractUDAOContent.getApproved(1);
+    expect(getApproved).to.eql(ethers.constants.AddressZero);
+  });
+  it("Should return false to isApprovedForAll", async function () {
+    await reDeploy();
+    const isApprovedForAll = await contractUDAOContent.isApprovedForAll(contentCreator.address, backend.address);
+    expect(isApprovedForAll).to.eql(false);
+  });
+  it("Should revert to safeTransferFrom", async function () {
+    await reDeploy();
+    //await contract['safeTransferFrom(address,address,uint256)'](accountUser, newOwner, idNFT)
+    await expect(
+      contractUDAOContent["safeTransferFrom(address,address,uint256)"](contentCreator.address, backend.address, 1)
+    ).to.be.revertedWith("ERC721Locked: not transferable");
+  });
+  it("Should revert to safeTransferFrom with data", async function () {
+    await reDeploy();
+    //await contract['safeTransferFrom(address,address,uint256, bytes memory)'](accountUser, newOwner, idNFT, data)
+    await expect(
+      contractUDAOContent["safeTransferFrom(address,address,uint256,bytes)"](
+        contentCreator.address,
+        backend.address,
+        1,
+        "0x"
+      )
+    ).to.be.revertedWith("ERC721Locked: not transferable");
+  });
+  it("Should return true to locked for a content", async function () {
+    await reDeploy();
+    // KYC content creator
+    await contractRoleManager.setKYC(contentCreator.address, true);
+    //Create content
+    const contentParts = [0, 1];
+    const createContentVoucherSample = await createContentVoucher(
+      contractUDAOContent,
+      backend,
+      contentCreator,
+      contentCreator,
+      contentParts,
+      (redeemType = 1),
+      (validationScore = 0)
     );
-    it("Should revert to setApprovalForAll", async function () {
-        await reDeploy();
-        await expect(contractUDAOContent.setApprovalForAll(backend.address, true)).to.be.revertedWith("ERC721Locked: not approvable");
-        }
-    );
-    it("Should return zero address to getApproved", async function () {
-        await reDeploy();
-        // KYC content creator
-        await contractRoleManager.setKYC(contentCreator.address, true);
-        //Create content
-        const contentParts = [0, 1];
-        const createContentVoucherSample = await createContentVoucher(
-            contractUDAOContent,
-            backend,
-            contentCreator,
-            contentCreator,
-            contentParts,
-            (redeemType = 1),
-            (validationScore = 0)
-        );
-        await contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample);
-        // Check getApproved
-        const getApproved = await contractUDAOContent.getApproved(1);
-        expect(getApproved).to.eql(ethers.constants.AddressZero);
-        }
-    );
-    it("Should return false to isApprovedForAll", async function () {
-        await reDeploy();
-        const isApprovedForAll = await contractUDAOContent.isApprovedForAll(contentCreator.address, backend.address);
-        expect(isApprovedForAll).to.eql(false);
-        }
-    );
-    it("Should revert to safeTransferFrom", async function () {
-        await reDeploy();
-        //await contract['safeTransferFrom(address,address,uint256)'](accountUser, newOwner, idNFT)
-        await expect(contractUDAOContent['safeTransferFrom(address,address,uint256)'](contentCreator.address, backend.address, 1)).to.be.revertedWith("ERC721Locked: not transferable");
-        }
-    );
-    it("Should revert to safeTransferFrom with data", async function () {
-        await reDeploy();
-        //await contract['safeTransferFrom(address,address,uint256, bytes memory)'](accountUser, newOwner, idNFT, data)
-        await expect(contractUDAOContent['safeTransferFrom(address,address,uint256,bytes)'](contentCreator.address, backend.address, 1, "0x")).to.be.revertedWith("ERC721Locked: not transferable");
-        });
-    it("Should return true to locked for a content", async function () {
-        await reDeploy();
-        // KYC content creator
-        await contractRoleManager.setKYC(contentCreator.address, true);
-        //Create content
-        const contentParts = [0, 1];
-        const createContentVoucherSample = await createContentVoucher(
-            contractUDAOContent,
-            backend,
-            contentCreator,
-            contentCreator,
-            contentParts,
-            (redeemType = 1),
-            (validationScore = 0)
-        );
-        await contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample);
-        const locked = await contractUDAOContent.locked(1);
-        expect(locked).to.eql(true);
-        }
-    );
-    it("Should return true to defaultLocked", async function () {
-        await reDeploy();
-        const defaultLocked = await contractUDAOContent.defaultLocked();
-        expect(defaultLocked).to.eql(true);
-        }
-    );
+    await contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample);
+    const locked = await contractUDAOContent.locked(1);
+    expect(locked).to.eql(true);
+  });
+  it("Should return true to defaultLocked", async function () {
+    await reDeploy();
+    const defaultLocked = await contractUDAOContent.defaultLocked();
+    expect(defaultLocked).to.eql(true);
+  });
 });

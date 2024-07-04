@@ -76,7 +76,7 @@ async function createContentVoucher(
   // add some minutes to it and convert it to a BigNumber
   const futureBlock = block.timestamp + 1000;
   // convert it to a BigNumber
-  const futureBlockBigNumber = ethers.BigNumber.from(futureBlock);
+  const futureBlockBigNumber = BigInt(futureBlock);
   return await new Redeem({
     contract: contractUDAOContent,
     signer: backend,
@@ -155,8 +155,8 @@ describe("UDAOC Contract", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
 
     /// part prices must be determined before creating content
-    const partPricesArray = [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")];
-    const contentPrice = ethers.utils.parseEther("2");
+    const partPricesArray = [ethers.parseEther("1"), ethers.parseEther("1")];
+    const contentPrice = ethers.parseEther("2");
     const redeemer = contentCreator;
 
     /// Create Voucher from redeem.js and use it for creating content
@@ -181,8 +181,8 @@ describe("UDAOC Contract", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
 
     /// part prices must be determined before creating content
-    const partPricesArray = [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")];
-    const contentPrice = ethers.utils.parseEther("2");
+    const partPricesArray = [ethers.parseEther("1"), ethers.parseEther("1")];
+    const contentPrice = ethers.parseEther("2");
     const redeemer = contentCreator;
     /// Create Voucher from redeem.js and use it for creating content
     // Create content
@@ -224,11 +224,11 @@ describe("UDAOC Contract", function () {
       createContentVoucherSample3,
     ];
     // define token id = 1 as a big number
-    const bigNumber1 = ethers.BigNumber.from(1);
+    const bigNumber1 = BigInt(1);
     // define token id = 2 as a big number
-    const bigNumber2 = ethers.BigNumber.from(2);
+    const bigNumber2 = BigInt(2);
     // define token id = 3 as a big number
-    const bigNumber3 = ethers.BigNumber.from(3);
+    const bigNumber3 = BigInt(3);
 
     // create contents and expect Transfer events to emit
     await contractUDAOContent.connect(contentCreator).batchCreateContents(createContentVoucherSampleArray);
@@ -263,8 +263,8 @@ describe("UDAOC Contract", function () {
     expect(batchExistArray).to.eql([false, false, false]);
 
     /// part prices must be determined before creating content
-    const partPricesArray = [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")];
-    const contentPrice = ethers.utils.parseEther("2");
+    const partPricesArray = [ethers.parseEther("1"), ethers.parseEther("1")];
+    const contentPrice = ethers.parseEther("2");
     const redeemer = contentCreator;
     /// Create Voucher from redeem.js and use it for creating content
     // Create content
@@ -306,11 +306,11 @@ describe("UDAOC Contract", function () {
       createContentVoucherSample3,
     ];
     // define token id = 1 as a big number
-    const bigNumber1 = ethers.BigNumber.from(1);
+    const bigNumber1 = BigInt(1);
     // define token id = 2 as a big number
-    const bigNumber2 = ethers.BigNumber.from(2);
+    const bigNumber2 = BigInt(2);
     // define token id = 3 as a big number
-    const bigNumber3 = ethers.BigNumber.from(3);
+    const bigNumber3 = BigInt(3);
 
     // create contents and expect Transfer events to emit
     await contractUDAOContent.connect(backend).batchCreateContents(createContentVoucherSampleArray);
@@ -345,8 +345,8 @@ describe("UDAOC Contract", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
 
     /// part prices must be determined before creating content
-    const partPricesArray = [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")];
-    const contentPrice = ethers.utils.parseEther("2");
+    const partPricesArray = [ethers.parseEther("1"), ethers.parseEther("1")];
+    const contentPrice = ethers.parseEther("2");
     const redeemer = contentCreator;
     // Create content
     const contentParts = [0, 1];
@@ -375,8 +375,8 @@ describe("UDAOC Contract", function () {
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
     /// part prices must be determined before creating content
-    const partPricesArray = [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")];
-    const contentPrice = ethers.utils.parseEther("2");
+    const partPricesArray = [ethers.parseEther("1"), ethers.parseEther("1")];
+    const contentPrice = ethers.parseEther("2");
     const redeemer = contentCreator;
     // Create content
     const contentParts = [0, 1];
@@ -396,8 +396,7 @@ describe("UDAOC Contract", function () {
       .withArgs("0x0000000000000000000000000000000000000000", contentCreator.address, 1);
     await expect(
       contractUDAOContent.connect(contentCreator).transferFrom(contentCreator.address, contentBuyer.address, 1)
-    )
-      .to.revertedWith("ERC721Locked: not transferable")
+    ).to.revertedWith("ERC721Locked: not transferable");
   });
 
   it("Should fail to burn token with TypeError since there is no burn function", async function () {
@@ -406,8 +405,8 @@ describe("UDAOC Contract", function () {
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
     /// part prices must be determined before creating content
-    const partPricesArray = [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")];
-    const contentPrice = ethers.utils.parseEther("2");
+    const partPricesArray = [ethers.parseEther("1"), ethers.parseEther("1")];
+    const contentPrice = ethers.parseEther("2");
     const redeemer = contentCreator;
     // Create content
     const contentParts = [0, 1];
@@ -449,8 +448,8 @@ describe("UDAOC Contract", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
 
     /// part prices must be determined before creating content
-    const partPricesArray = [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")];
-    const contentPrice = ethers.utils.parseEther("2");
+    const partPricesArray = [ethers.parseEther("1"), ethers.parseEther("1")];
+    const contentPrice = ethers.parseEther("2");
     const redeemer = contentCreator;
 
     /// Create Voucher from redeem.js and use it for creating content
@@ -485,8 +484,8 @@ describe("UDAOC Contract", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
 
     /// part prices must be determined before creating content
-    const partPricesArray = [ethers.utils.parseEther("1"), ethers.utils.parseEther("2"), ethers.utils.parseEther("3")];
-    const contentPrice = ethers.utils.parseEther("10");
+    const partPricesArray = [ethers.parseEther("1"), ethers.parseEther("2"), ethers.parseEther("3")];
+    const contentPrice = ethers.parseEther("10");
     const redeemer = contentCreator;
     // Create content
     const contentParts = [0, 1, 2];
@@ -526,7 +525,7 @@ describe("UDAOC Contract", function () {
       "ContentModified"
     );
     // Convert contentParts2 values to bignumbers
-    const contentParts2BigNumbers = contentParts2.map((x) => ethers.BigNumber.from(x));
+    const contentParts2BigNumbers = contentParts2.map((x) => BigInt(x));
     // wait 1 seconds
     await new Promise((r) => setTimeout(r, 1000));
     // Check if getContentParts returns the correct part array
@@ -539,8 +538,8 @@ describe("UDAOC Contract", function () {
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
     /// part prices must be determined before creating content
-    const partPricesArray = [ethers.utils.parseEther("1"), ethers.utils.parseEther("2"), ethers.utils.parseEther("3")];
-    const contentPrice = ethers.utils.parseEther("10");
+    const partPricesArray = [ethers.parseEther("1"), ethers.parseEther("2"), ethers.parseEther("3")];
+    const contentPrice = ethers.parseEther("10");
     const redeemer = contentCreator;
 
     // Create content
@@ -563,8 +562,8 @@ describe("UDAOC Contract", function () {
 
     // new part information
     const tokenId = 0;
-    const _NewContentPrice = ethers.utils.parseEther("20");
-    const _NewPartPriceArray = [ethers.utils.parseEther("20")];
+    const _NewContentPrice = ethers.parseEther("20");
+    const _NewPartPriceArray = [ethers.parseEther("20")];
     // Create content
     const contentParts2 = [0];
     /// Create Voucher from redeem.js and use it for modifying content
@@ -607,12 +606,12 @@ describe("UDAOC Contract", function () {
     // new part information
     const tokenId = 0;
     const _NewPartPriceArray = [
-      ethers.utils.parseEther("7"),
-      ethers.utils.parseEther("6"),
-      ethers.utils.parseEther("3"),
-      ethers.utils.parseEther("4"),
+      ethers.parseEther("7"),
+      ethers.parseEther("6"),
+      ethers.parseEther("3"),
+      ethers.parseEther("4"),
     ];
-    const _NewContentPrice = ethers.utils.parseEther("20");
+    const _NewContentPrice = ethers.parseEther("20");
     await contractRoleManager.setKYC(contentCreator.address, false);
     // Create content
     const contentParts = [0, 1, 2, 3];
@@ -638,8 +637,8 @@ describe("UDAOC Contract", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
 
     /// part prices must be determined before creating content
-    const partPricesArray = [ethers.utils.parseEther("1"), ethers.utils.parseEther("2"), ethers.utils.parseEther("3")];
-    const contentPrice = ethers.utils.parseEther("10");
+    const partPricesArray = [ethers.parseEther("1"), ethers.parseEther("2"), ethers.parseEther("3")];
+    const contentPrice = ethers.parseEther("10");
     const redeemer = contentCreator;
     // Create content
     const contentParts = [0, 1, 2];
@@ -661,12 +660,12 @@ describe("UDAOC Contract", function () {
     // new part information
     const tokenId = 0;
     const _NewPartPriceArray = [
-      ethers.utils.parseEther("7"),
-      ethers.utils.parseEther("6"),
-      ethers.utils.parseEther("3"),
-      ethers.utils.parseEther("4"),
+      ethers.parseEther("7"),
+      ethers.parseEther("6"),
+      ethers.parseEther("3"),
+      ethers.parseEther("4"),
     ];
-    const _NewContentPrice = ethers.utils.parseEther("20");
+    const _NewContentPrice = ethers.parseEther("20");
     await contractRoleManager.setBan(contentCreator.address, true);
     // Create content
     const contentParts2 = [0, 1, 2, 3];
@@ -808,8 +807,8 @@ describe("UDAOC Contract", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
 
     /// part prices must be determined before creating content
-    const partPricesArray = [ethers.utils.parseEther("1"), ethers.utils.parseEther("2"), ethers.utils.parseEther("3")];
-    const contentPrice = ethers.utils.parseEther("10");
+    const partPricesArray = [ethers.parseEther("1"), ethers.parseEther("2"), ethers.parseEther("3")];
+    const contentPrice = ethers.parseEther("10");
     const redeemer = contentCreator;
     // Create content
     const contentParts = [0, 1, 2];
@@ -834,7 +833,7 @@ describe("UDAOC Contract", function () {
     // add some minutes to it and convert it to a BigNumber
     const futureBlock = block.timestamp + 1000;
     // convert it to a BigNumber
-    const futureBlockBigNumber = ethers.BigNumber.from(futureBlock);
+    const futureBlockBigNumber = BigInt(futureBlock);
     const modifyContentVoucherSample = await new Redeem({
       contract: contractUDAOContent,
       signer: backend,
@@ -861,8 +860,8 @@ describe("UDAOC Contract", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
 
     /// part prices must be determined before creating content
-    const partPricesArray = [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")];
-    const contentPrice = ethers.utils.parseEther("2");
+    const partPricesArray = [ethers.parseEther("1"), ethers.parseEther("1")];
+    const contentPrice = ethers.parseEther("2");
     const redeemer = contentCreator;
 
     /// Create Voucher from redeem.js and use it for creating content
@@ -873,7 +872,7 @@ describe("UDAOC Contract", function () {
     // add some minutes to it and convert it to a BigNumber
     const futureBlock = block.timestamp + 1000;
     // convert it to a BigNumber
-    const futureBlockBigNumber = ethers.BigNumber.from(futureBlock);
+    const futureBlockBigNumber = BigInt(futureBlock);
     const createContentVoucherSample = await new Redeem({
       contract: contractUDAOContent,
       signer: contentBuyer1,
@@ -904,8 +903,8 @@ describe("UDAOC Contract", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
 
     /// part prices must be determined before creating content
-    const partPricesArray = [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")];
-    const contentPrice = ethers.utils.parseEther("2");
+    const partPricesArray = [ethers.parseEther("1"), ethers.parseEther("1")];
+    const contentPrice = ethers.parseEther("2");
     const redeemer = contentCreator;
 
     /// Create Voucher from redeem.js and use it for creating content
@@ -916,7 +915,7 @@ describe("UDAOC Contract", function () {
     // add some minutes to it and convert it to a BigNumber
     const futureBlock = block.timestamp + 1000;
     // convert it to a BigNumber
-    const futureBlockBigNumber = ethers.BigNumber.from(futureBlock);
+    const futureBlockBigNumber = BigInt(futureBlock);
     const createContentVoucherSample = await new Redeem({
       contract: contractUDAOContent,
       signer: backend,
@@ -960,8 +959,8 @@ describe("UDAOC Contract", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
 
     /// part prices must be determined before creating content
-    const partPricesArray = [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")];
-    const contentPrice = ethers.utils.parseEther("2");
+    const partPricesArray = [ethers.parseEther("1"), ethers.parseEther("1")];
+    const contentPrice = ethers.parseEther("2");
     const redeemer = contentBuyer1;
 
     /// Create Voucher from redeem.js and use it for creating content
@@ -991,8 +990,8 @@ describe("UDAOC Contract", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
 
     /// part prices must be determined before creating content
-    const partPricesArray = [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")];
-    const contentPrice = ethers.utils.parseEther("2");
+    const partPricesArray = [ethers.parseEther("1"), ethers.parseEther("1")];
+    const contentPrice = ethers.parseEther("2");
     const redeemer = contentBuyer1;
 
     /// Create Voucher from redeem.js and use it for creating content
@@ -1032,8 +1031,8 @@ describe("UDAOC Contract", function () {
     await contractRoleManager.setKYC(contentCreator.address, false);
 
     /// part prices must be determined before creating content
-    const partPricesArray = [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")];
-    const contentPrice = ethers.utils.parseEther("2");
+    const partPricesArray = [ethers.parseEther("1"), ethers.parseEther("1")];
+    const contentPrice = ethers.parseEther("2");
     const redeemer = contentCreator;
 
     /// Create Voucher from redeem.js and use it for creating content
@@ -1064,8 +1063,8 @@ describe("UDAOC Contract", function () {
     await contractRoleManager.setBan(contentCreator.address, true);
 
     /// part prices must be determined before creating content
-    const partPricesArray = [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")];
-    const contentPrice = ethers.utils.parseEther("2");
+    const partPricesArray = [ethers.parseEther("1"), ethers.parseEther("1")];
+    const contentPrice = ethers.parseEther("2");
     const redeemer = contentCreator;
 
     /// Create Voucher from redeem.js and use it for creating content
@@ -1096,8 +1095,8 @@ describe("UDAOC Contract", function () {
     await contractRoleManager.setKYC(backend.address, true);
 
     /// part prices must be determined before creating content
-    const partPricesArray = [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")];
-    const contentPrice = ethers.utils.parseEther("2");
+    const partPricesArray = [ethers.parseEther("1"), ethers.parseEther("1")];
+    const contentPrice = ethers.parseEther("2");
     const redeemer = backend;
 
     /// Create Voucher from redeem.js and use it for creating content
@@ -1127,8 +1126,8 @@ describe("UDAOC Contract", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
 
     /// part prices must be determined before creating content
-    const partPricesArray = [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")];
-    const contentPrice = ethers.utils.parseEther("2");
+    const partPricesArray = [ethers.parseEther("1"), ethers.parseEther("1")];
+    const contentPrice = ethers.parseEther("2");
     const redeemer = contentCreator;
 
     /// Create Voucher from redeem.js and use it for creating content
@@ -1172,8 +1171,8 @@ describe("UDAOC Contract", function () {
     await contractRoleManager.setKYC(backend.address, true);
 
     /// part prices must be determined before creating content
-    const partPricesArray = [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")];
-    const contentPrice = ethers.utils.parseEther("2");
+    const partPricesArray = [ethers.parseEther("1"), ethers.parseEther("1")];
+    const contentPrice = ethers.parseEther("2");
     const redeemer = backend;
 
     /// Create Voucher from redeem.js and use it for creating content
@@ -1203,8 +1202,8 @@ describe("UDAOC Contract", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
 
     /// part prices must be determined before creating content
-    const partPricesArray = [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")];
-    const contentPrice = ethers.utils.parseEther("2");
+    const partPricesArray = [ethers.parseEther("1"), ethers.parseEther("1")];
+    const contentPrice = ethers.parseEther("2");
     const redeemer = contentCreator;
 
     /// Create Voucher from redeem.js and use it for creating content
@@ -1247,8 +1246,8 @@ describe("UDAOC Contract", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
 
     /// part prices must be determined before creating content
-    const partPricesArray = [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")];
-    const contentPrice = ethers.utils.parseEther("2");
+    const partPricesArray = [ethers.parseEther("1"), ethers.parseEther("1")];
+    const contentPrice = ethers.parseEther("2");
     const redeemer = contentCreator;
 
     /// Create Voucher from redeem.js and use it for creating content
@@ -1259,7 +1258,7 @@ describe("UDAOC Contract", function () {
     // add some minutes to it and convert it to a BigNumber
     const futureBlock = block.timestamp - 1;
     // convert it to a BigNumber
-    const futureBlockBigNumber = ethers.BigNumber.from(futureBlock);
+    const futureBlockBigNumber = BigInt(futureBlock);
     const createContentVoucherSample = await new Redeem({
       contract: contractUDAOContent,
       signer: backend,
@@ -1290,8 +1289,8 @@ describe("UDAOC Contract", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
 
     /// part prices must be determined before creating content
-    const partPricesArray = [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")];
-    const contentPrice = ethers.utils.parseEther("2");
+    const partPricesArray = [ethers.parseEther("1"), ethers.parseEther("1")];
+    const contentPrice = ethers.parseEther("2");
     const redeemer = contentCreator;
 
     /// Create Voucher from redeem.js and use it for creating content
@@ -1302,7 +1301,7 @@ describe("UDAOC Contract", function () {
     // add some minutes to it and convert it to a BigNumber
     const futureBlock = block.timestamp + 1000;
     // convert it to a BigNumber
-    const futureBlockBigNumber = ethers.BigNumber.from(futureBlock);
+    const futureBlockBigNumber = BigInt(futureBlock);
     const createContentVoucherSample = await new Redeem({
       contract: contractUDAOContent,
       signer: backend,
@@ -1347,8 +1346,8 @@ describe("UDAOC Contract", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
 
     /// part prices must be determined before creating content
-    const partPricesArray = [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")];
-    const contentPrice = ethers.utils.parseEther("2");
+    const partPricesArray = [ethers.parseEther("1"), ethers.parseEther("1")];
+    const contentPrice = ethers.parseEther("2");
     const redeemer = contentCreator;
 
     /// Create Voucher from redeem.js and use it for creating content
@@ -1359,7 +1358,7 @@ describe("UDAOC Contract", function () {
     // add some minutes to it and convert it to a BigNumber
     const futureBlock = block.timestamp + 1000;
     // convert it to a BigNumber
-    const futureBlockBigNumber = ethers.BigNumber.from(futureBlock);
+    const futureBlockBigNumber = BigInt(futureBlock);
     const createContentVoucherSample = await new Redeem({
       contract: contractUDAOContent,
       signer: backend,
@@ -1390,8 +1389,8 @@ describe("UDAOC Contract", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
 
     /// part prices must be determined before creating content
-    const partPricesArray = [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")];
-    const contentPrice = ethers.utils.parseEther("2");
+    const partPricesArray = [ethers.parseEther("1"), ethers.parseEther("1")];
+    const contentPrice = ethers.parseEther("2");
     const redeemer = contentCreator;
 
     /// Create Voucher from redeem.js and use it for creating content
@@ -1402,7 +1401,7 @@ describe("UDAOC Contract", function () {
     // add some minutes to it and convert it to a BigNumber
     const futureBlock = block.timestamp + 1000;
     // convert it to a BigNumber
-    const futureBlockBigNumber = ethers.BigNumber.from(futureBlock);
+    const futureBlockBigNumber = BigInt(futureBlock);
     const createContentVoucherSample = await new Redeem({
       contract: contractUDAOContent,
       signer: backend,
@@ -1447,8 +1446,8 @@ describe("UDAOC Contract", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
 
     /// part prices must be determined before creating content
-    const partPricesArray = [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")];
-    const contentPrice = ethers.utils.parseEther("2");
+    const partPricesArray = [ethers.parseEther("1"), ethers.parseEther("1")];
+    const contentPrice = ethers.parseEther("2");
     const redeemer = contentCreator;
 
     /// Create Voucher from redeem.js and use it for creating content
@@ -1459,7 +1458,7 @@ describe("UDAOC Contract", function () {
     // add some minutes to it and convert it to a BigNumber
     const futureBlock = block.timestamp + 1000;
     // convert it to a BigNumber
-    const futureBlockBigNumber = ethers.BigNumber.from(futureBlock);
+    const futureBlockBigNumber = BigInt(futureBlock);
     const createContentVoucherSample = await new Redeem({
       contract: contractUDAOContent,
       signer: backend,
@@ -1490,8 +1489,8 @@ describe("UDAOC Contract", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
 
     /// part prices must be determined before creating content
-    const partPricesArray = [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")];
-    const contentPrice = ethers.utils.parseEther("2");
+    const partPricesArray = [ethers.parseEther("1"), ethers.parseEther("1")];
+    const contentPrice = ethers.parseEther("2");
     const redeemer = contentCreator;
 
     /// Create Voucher from redeem.js and use it for creating content
@@ -1502,7 +1501,7 @@ describe("UDAOC Contract", function () {
     // add some minutes to it and convert it to a BigNumber
     const futureBlock = block.timestamp + 1000;
     // convert it to a BigNumber
-    const futureBlockBigNumber = ethers.BigNumber.from(futureBlock);
+    const futureBlockBigNumber = BigInt(futureBlock);
     const createContentVoucherSample = await new Redeem({
       contract: contractUDAOContent,
       signer: backend,
@@ -1547,8 +1546,8 @@ describe("UDAOC Contract", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
 
     /// part prices must be determined before creating content
-    const partPricesArray = [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")];
-    const contentPrice = ethers.utils.parseEther("2");
+    const partPricesArray = [ethers.parseEther("1"), ethers.parseEther("1")];
+    const contentPrice = ethers.parseEther("2");
     const redeemer = contentCreator;
 
     /// Create Voucher from redeem.js and use it for creating content
@@ -1573,8 +1572,8 @@ describe("UDAOC Contract", function () {
     // check ValidationCreated event emitted with correct parameters
     const events = await contractSupervision.queryFilter(eventFilter);
     //convert number to bignumber
-    const tokenIdBigNumber = ethers.BigNumber.from(1);
-    const validationScoreBigNumber = ethers.BigNumber.from(1);
+    const tokenIdBigNumber = BigInt(1);
+    const validationScoreBigNumber = BigInt(1);
 
     //check if event emitted with correct parameters
     expect(events[0].args.tokenId).to.equal(tokenIdBigNumber);
@@ -1586,7 +1585,7 @@ describe("UDAOC Contract", function () {
     // add some minutes to it and convert it to a BigNumber
     const futureBlock = block.timestamp + 1000;
     // convert it to a BigNumber
-    const futureBlockBigNumber = ethers.BigNumber.from(futureBlock);
+    const futureBlockBigNumber = BigInt(futureBlock);
     const createContentVoucherSample2 = await new Redeem({
       contract: contractUDAOContent,
       signer: backend,
@@ -1612,8 +1611,8 @@ describe("UDAOC Contract", function () {
     const events2 = await contractSupervision.queryFilter(eventFilter2);
 
     //convert number to bignumber
-    const tokenIdBigNumber2 = ethers.BigNumber.from(1);
-    const validationScoreBigNumber2 = ethers.BigNumber.from(1);
+    const tokenIdBigNumber2 = BigInt(1);
+    const validationScoreBigNumber2 = BigInt(1);
     //check if event emitted with correct parameters
     expect(events2[0].args.tokenId).to.equal(tokenIdBigNumber2);
     expect(events2[0].args.score).to.equal(validationScoreBigNumber2);
@@ -1624,8 +1623,8 @@ describe("UDAOC Contract", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
 
     /// part prices must be determined before creating content
-    const partPricesArray = [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")];
-    const contentPrice = ethers.utils.parseEther("2");
+    const partPricesArray = [ethers.parseEther("1"), ethers.parseEther("1")];
+    const contentPrice = ethers.parseEther("2");
     const redeemer = contentCreator;
 
     /// Create Voucher from redeem.js and use it for creating content
@@ -1650,7 +1649,7 @@ describe("UDAOC Contract", function () {
     // add some minutes to it and convert it to a BigNumber
     const futureBlock = block.timestamp + 1000;
     // convert it to a BigNumber
-    const futureBlockBigNumber = ethers.BigNumber.from(futureBlock);
+    const futureBlockBigNumber = BigInt(futureBlock);
     const modifyContentVoucherSample = await new Redeem({
       contract: contractUDAOContent,
       signer: backend,
@@ -1673,8 +1672,8 @@ describe("UDAOC Contract", function () {
     const events = await contractSupervision.queryFilter(eventFilter);
 
     //convert number to bignumber
-    const tokenIdBigNumber = ethers.BigNumber.from(1);
-    const validationScoreBigNumber = ethers.BigNumber.from(2);
+    const tokenIdBigNumber = BigInt(1);
+    const validationScoreBigNumber = BigInt(2);
     //check if event emitted with correct parameters
     expect(events[0].args.tokenId).to.equal(tokenIdBigNumber);
     expect(events[0].args.score).to.equal(validationScoreBigNumber);

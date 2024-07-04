@@ -1,6 +1,5 @@
 {
   "devDependencies": {
-    "ethers": "^6.7.0",
     "@nomicfoundation/hardhat-ignition-ethers": "^0.15.5",
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
     "chai": "^4.3.6",

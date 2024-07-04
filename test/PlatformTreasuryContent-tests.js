@@ -27,7 +27,7 @@ async function createContentVoucher(
   // add some minutes to it and convert it to a BigNumber
   const futureBlock = block.timestamp + 1000;
   // convert it to a BigNumber
-  const futureBlockBigNumber = ethers.BigNumber.from(futureBlock);
+  const futureBlockBigNumber = BigInt(futureBlock);
 
   const redeemer = contentCreator;
 
@@ -63,12 +63,12 @@ async function makeContentPurchase(
   /// Set KYC
   await contractRoleManager.setKYC(contentBuyer.address, true);
   /// Send UDAO to the buyer's wallet
-  await contractUDAO.transfer(contentBuyer.address, ethers.utils.parseEther("100.0"));
+  await contractUDAO.transfer(contentBuyer.address, ethers.parseEther("100.0"));
   const balanceBeforePurchase = await contractUDAO.balanceOf(contentBuyer.address);
   /// Content buyer needs to give approval to the platformtreasury
   await contractUDAO
     .connect(contentBuyer)
-    .approve(contractPlatformTreasury.address, ethers.utils.parseEther("999999999999.0"));
+    .approve(contractPlatformTreasury.address, ethers.parseEther("999999999999.0"));
 
   /// Create content purchase vouchers
   /*
@@ -220,7 +220,7 @@ describe("Platform Treasury Contract - Content", function () {
     const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
 
     const fullContentPurchase = [true];
-    const pricesToPay = [ethers.utils.parseEther("1")];
+    const pricesToPay = [ethers.parseEther("1")];
     const validUntil = Date.now() + 999999999;
     const balances = await makeContentPurchase(
       contractPlatformTreasury,
@@ -286,19 +286,17 @@ describe("Platform Treasury Contract - Content", function () {
     const redeemers = [backend.address];
     const giftReceiver = [contentBuyer1.address];
     const fullContentPurchase = [true];
-    const pricesToPay = [ethers.utils.parseEther("1")];
+    const pricesToPay = [ethers.parseEther("1")];
     const validUntil = Date.now() + 999999999;
     const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
 
     /// Set KYC
     await contractRoleManager.setKYC(contentBuyer.address, true);
     /// Send UDAO to the buyer's wallet
-    await contractUDAO.transfer(contentBuyer.address, ethers.utils.parseEther("100.0"));
+    await contractUDAO.transfer(contentBuyer.address, ethers.parseEther("100.0"));
     const balanceBefore = await contractUDAO.balanceOf(backend.address);
     /// Content buyer needs to give approval to the platformtreasury
-    await contractUDAO
-      .connect(backend)
-      .approve(contractPlatformTreasury.address, ethers.utils.parseEther("999999999999.0"));
+    await contractUDAO.connect(backend).approve(contractPlatformTreasury.address, ethers.parseEther("999999999999.0"));
 
     /// Create content purchase vouchers
     const contentPurchaseVouchers = [];
@@ -378,18 +376,18 @@ describe("Platform Treasury Contract - Content", function () {
     const redeemers = [contentBuyer1.address];
     const giftReceiver = [contentBuyer1.address];
     const fullContentPurchase = [true];
-    const pricesToPay = [ethers.utils.parseEther("1")];
+    const pricesToPay = [ethers.parseEther("1")];
     const validUntil = Date.now() + 999999999;
     const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
 
     /// Set KYC
     await contractRoleManager.setKYC(contentBuyer.address, true);
     /// Send UDAO to the buyer's wallet
-    //await contractUDAO.transfer(contentBuyer1.address, ethers.utils.parseEther("100.0"));
+    //await contractUDAO.transfer(contentBuyer1.address, ethers.parseEther("100.0"));
     /// Content buyer needs to give approval to the platformtreasury
     await contractUDAO
       .connect(contentBuyer1)
-      .approve(contractPlatformTreasury.address, ethers.utils.parseEther("999999999999.0"));
+      .approve(contractPlatformTreasury.address, ethers.parseEther("999999999999.0"));
 
     /// Create content purchase vouchers
     const contentPurchaseVouchers = [];
@@ -447,18 +445,18 @@ describe("Platform Treasury Contract - Content", function () {
     const redeemers = [contentBuyer1.address];
     const giftReceiver = [contentBuyer1.address];
     const fullContentPurchase = [true];
-    const pricesToPay = [ethers.utils.parseEther("1")];
+    const pricesToPay = [ethers.parseEther("1")];
     const validUntil = Date.now() + 999999999;
     const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
 
     /// Set KYC
     await contractRoleManager.setKYC(contentBuyer.address, true);
     /// Send UDAO to the buyer's wallet
-    await contractUDAO.transfer(contentBuyer1.address, ethers.utils.parseEther("100.0"));
+    await contractUDAO.transfer(contentBuyer1.address, ethers.parseEther("100.0"));
     /// Content buyer needs to give approval to the platformtreasury
     //await contractUDAO
     //  .connect(contentBuyer1)
-    //  .approve(contractPlatformTreasury.address, ethers.utils.parseEther("999999999999.0"));
+    //  .approve(contractPlatformTreasury.address, ethers.parseEther("999999999999.0"));
 
     /// Create content purchase vouchers
     const contentPurchaseVouchers = [];
@@ -516,18 +514,16 @@ describe("Platform Treasury Contract - Content", function () {
     const redeemers = [backend.address];
     const giftReceiver = [backend.address];
     const fullContentPurchase = [true];
-    const pricesToPay = [ethers.utils.parseEther("1")];
+    const pricesToPay = [ethers.parseEther("1")];
     const validUntil = Date.now() + 999999999;
     const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
     /// Set KYC
     await contractRoleManager.setKYC(contentBuyer.address, true);
     /// Send UDAO to the buyer's wallet
-    await contractUDAO.transfer(contentBuyer.address, ethers.utils.parseEther("100.0"));
+    await contractUDAO.transfer(contentBuyer.address, ethers.parseEther("100.0"));
     const balanceBefore = await contractUDAO.balanceOf(backend.address);
     /// Content buyer needs to give approval to the platformtreasury
-    await contractUDAO
-      .connect(backend)
-      .approve(contractPlatformTreasury.address, ethers.utils.parseEther("999999999999.0"));
+    await contractUDAO.connect(backend).approve(contractPlatformTreasury.address, ethers.parseEther("999999999999.0"));
 
     /// Create content purchase vouchers
     const contentPurchaseVouchers = [];
@@ -580,7 +576,7 @@ describe("Platform Treasury Contract - Content", function () {
     const redeemers = [contentBuyer1.address];
     const giftReceiver = [ethers.constants.AddressZero];
     const fullContentPurchase = [false];
-    const pricesToPay = [ethers.utils.parseEther("1")];
+    const pricesToPay = [ethers.parseEther("1")];
     const validUntil = Date.now() + 999999999;
     const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
 
@@ -638,7 +634,7 @@ describe("Platform Treasury Contract - Content", function () {
     const redeemers = [contentBuyer1.address];
     const giftReceiver = [ethers.constants.AddressZero];
     const fullContentPurchase = [false];
-    const pricesToPay = [ethers.utils.parseEther("1")];
+    const pricesToPay = [ethers.parseEther("1")];
     const validUntil = Date.now() + 999999999;
     const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
 
@@ -721,7 +717,7 @@ describe("Platform Treasury Contract - Content", function () {
     const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
 
     const fullContentPurchase = [false];
-    const pricesToPay = [ethers.utils.parseEther("1")];
+    const pricesToPay = [ethers.parseEther("1")];
     const validUntil = Date.now() + 999999999;
     const balances = await makeContentPurchase(
       contractPlatformTreasury,
@@ -780,9 +776,9 @@ describe("Platform Treasury Contract - Content", function () {
     // Give approval to the platformtreasury
     await contractUDAO
       .connect(contentBuyer)
-      .approve(contractPlatformTreasury.address, ethers.utils.parseEther("999999999999.0"));
+      .approve(contractPlatformTreasury.address, ethers.parseEther("999999999999.0"));
     // Send UDAO to the buyer's wallet
-    await contractUDAO.transfer(contentBuyer.address, ethers.utils.parseEther("100.0"));
+    await contractUDAO.transfer(contentBuyer.address, ethers.parseEther("100.0"));
     // Try to buy a content that does not exists
     // Make a content purchase
     const tokenIds = [1];
@@ -790,7 +786,7 @@ describe("Platform Treasury Contract - Content", function () {
     const redeemers = [contentBuyer1.address];
     const giftReceiver = [ethers.constants.AddressZero];
     const fullContentPurchase = [false];
-    const pricesToPay = [ethers.utils.parseEther("1")];
+    const pricesToPay = [ethers.parseEther("1")];
     const validUntil = Date.now() + 999999999;
     const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
     const contentPurchaseVouchers = [];
@@ -846,7 +842,7 @@ describe("Platform Treasury Contract - Content", function () {
     const redeemers = [contentBuyer1.address];
     const giftReceiver = [ethers.constants.AddressZero];
     const fullContentPurchase = [false];
-    const pricesToPay = [ethers.utils.parseEther("1")];
+    const pricesToPay = [ethers.parseEther("1")];
     const validUntil = Date.now() + 999999999;
     const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
     const contentPurchaseVouchers = [];
@@ -902,7 +898,7 @@ describe("Platform Treasury Contract - Content", function () {
     const redeemers = [contentBuyer1.address];
     const giftReceiver = [ethers.constants.AddressZero];
     const fullContentPurchase = [false];
-    const pricesToPay = [ethers.utils.parseEther("1")];
+    const pricesToPay = [ethers.parseEther("1")];
     const validUntil = Date.now() + 999999999;
     const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
     const contentPurchaseVouchers = [];
@@ -961,7 +957,7 @@ describe("Platform Treasury Contract - Content", function () {
     const redeemers = [contentBuyer1.address];
     const giftReceiver = [ethers.constants.AddressZero];
     const fullContentPurchase = [false];
-    const pricesToPay = [ethers.utils.parseEther("1")];
+    const pricesToPay = [ethers.parseEther("1")];
     const validUntil = Date.now() + 999999999;
     const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
     const contentPurchaseVouchers = [];
@@ -1019,7 +1015,7 @@ describe("Platform Treasury Contract - Content", function () {
     const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
 
     const fullContentPurchase = [false];
-    const pricesToPay = [ethers.utils.parseEther("1")];
+    const pricesToPay = [ethers.parseEther("1")];
     const validUntil = Date.now() + 999999999;
 
     const balances = await makeContentPurchase(
@@ -1082,7 +1078,7 @@ describe("Platform Treasury Contract - Content", function () {
     const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
 
     const fullContentPurchase = [true];
-    const pricesToPay = [ethers.utils.parseEther("1")];
+    const pricesToPay = [ethers.parseEther("1")];
     const validUntil = Date.now() + 999999999;
     const balances = await makeContentPurchase(
       contractPlatformTreasury,
@@ -1138,9 +1134,9 @@ describe("Platform Treasury Contract - Content", function () {
     // Give approval to the platformtreasury
     await contractUDAO
       .connect(contentBuyer)
-      .approve(contractPlatformTreasury.address, ethers.utils.parseEther("999999999999.0"));
+      .approve(contractPlatformTreasury.address, ethers.parseEther("999999999999.0"));
     // Send UDAO to the buyer's wallet
-    await contractUDAO.transfer(contentBuyer.address, ethers.utils.parseEther("100.0"));
+    await contractUDAO.transfer(contentBuyer.address, ethers.parseEther("100.0"));
     // Create content
     const contentParts = [0, 1];
     // Create content voucher
@@ -1164,7 +1160,7 @@ describe("Platform Treasury Contract - Content", function () {
     const redeemers = [contentBuyer1.address];
     const giftReceiver = [ethers.constants.AddressZero];
     const fullContentPurchase = [false];
-    const pricesToPay = [ethers.utils.parseEther("1")];
+    const pricesToPay = [ethers.parseEther("1")];
     const validUntil = Date.now() + 999999999;
     // Try to buy a content part that does not exists
     const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
@@ -1197,9 +1193,9 @@ describe("Platform Treasury Contract - Content", function () {
     // Give approval to the platformtreasury
     await contractUDAO
       .connect(contentBuyer)
-      .approve(contractPlatformTreasury.address, ethers.utils.parseEther("999999999999.0"));
+      .approve(contractPlatformTreasury.address, ethers.parseEther("999999999999.0"));
     // Send UDAO to the buyer's wallet
-    await contractUDAO.transfer(contentBuyer.address, ethers.utils.parseEther("100.0"));
+    await contractUDAO.transfer(contentBuyer.address, ethers.parseEther("100.0"));
     // Create content
     const contentParts = [0, 1];
     // Create content voucher
@@ -1226,7 +1222,7 @@ describe("Platform Treasury Contract - Content", function () {
     const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
 
     const fullContentPurchase = [true];
-    const pricesToPay = [ethers.utils.parseEther("1")];
+    const pricesToPay = [ethers.parseEther("1")];
     const validUntil = Date.now() + 999999999;
     const balances = await makeContentPurchase(
       contractPlatformTreasury,
@@ -1288,7 +1284,7 @@ describe("Platform Treasury Contract - Content", function () {
     const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
 
     const fullContentPurchase = [false];
-    const pricesToPay = [ethers.utils.parseEther("1")];
+    const pricesToPay = [ethers.parseEther("1")];
     const validUntil = Date.now() + 999999999;
     const balances = await makeContentPurchase(
       contractPlatformTreasury,
@@ -1328,9 +1324,9 @@ describe("Platform Treasury Contract - Content", function () {
     // Give approval to the platformtreasury
     await contractUDAO
       .connect(contentBuyer)
-      .approve(contractPlatformTreasury.address, ethers.utils.parseEther("999999999999.0"));
+      .approve(contractPlatformTreasury.address, ethers.parseEther("999999999999.0"));
     // Send UDAO to the buyer's wallet
-    await contractUDAO.transfer(contentBuyer.address, ethers.utils.parseEther("100.0"));
+    await contractUDAO.transfer(contentBuyer.address, ethers.parseEther("100.0"));
     // Create content
     const contentParts = [0, 1];
     // Create content voucher
@@ -1358,7 +1354,7 @@ describe("Platform Treasury Contract - Content", function () {
     const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
 
     const fullContentPurchase = [true];
-    const pricesToPay = [ethers.utils.parseEther("1")];
+    const pricesToPay = [ethers.parseEther("1")];
     const validUntil = Date.now() + 999999999;
     // Try to buy the content
     await expect(
@@ -1390,9 +1386,9 @@ describe("Platform Treasury Contract - Content", function () {
     // Give approval to the platformtreasury
     await contractUDAO
       .connect(contentBuyer)
-      .approve(contractPlatformTreasury.address, ethers.utils.parseEther("999999999999.0"));
+      .approve(contractPlatformTreasury.address, ethers.parseEther("999999999999.0"));
     // Send UDAO to the buyer's wallet
-    await contractUDAO.transfer(contentBuyer.address, ethers.utils.parseEther("100.0"));
+    await contractUDAO.transfer(contentBuyer.address, ethers.parseEther("100.0"));
     // Create content
     const contentParts = [0, 1];
     // Create content voucher
@@ -1419,7 +1415,7 @@ describe("Platform Treasury Contract - Content", function () {
     const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
 
     const fullContentPurchase = [true];
-    const pricesToPay = [ethers.utils.parseEther("1")];
+    const pricesToPay = [ethers.parseEther("1")];
     const validUntil = Date.now() + 999999999;
     // Try to buy the content
     await expect(
@@ -1450,9 +1446,9 @@ describe("Platform Treasury Contract - Content", function () {
     // Give approval to the platformtreasury
     await contractUDAO
       .connect(contentBuyer1)
-      .approve(contractPlatformTreasury.address, ethers.utils.parseEther("999999999999.0"));
+      .approve(contractPlatformTreasury.address, ethers.parseEther("999999999999.0"));
     // Send UDAO to the buyer's wallet
-    await contractUDAO.transfer(contentBuyer1.address, ethers.utils.parseEther("100.0"));
+    await contractUDAO.transfer(contentBuyer1.address, ethers.parseEther("100.0"));
     // Create content
     const contentParts = [0, 1];
     // Create content voucher
@@ -1479,7 +1475,7 @@ describe("Platform Treasury Contract - Content", function () {
     const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
 
     const fullContentPurchase = [false];
-    const pricesToPay = [ethers.utils.parseEther("1")];
+    const pricesToPay = [ethers.parseEther("1")];
     const validUntil = Date.now() + 999999999;
     // Try to buy the content
     await expect(
@@ -1551,7 +1547,7 @@ describe("Platform Treasury Contract - Content", function () {
     const giftReceiver = [ethers.constants.AddressZero];
 
     const fullContentPurchase = [true];
-    const pricesToPay = [ethers.utils.parseEther("1")];
+    const pricesToPay = [ethers.parseEther("1")];
     const validUntil = Date.now() + 999999999;
     const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
     const balances = await makeContentPurchase(
@@ -1586,7 +1582,7 @@ describe("Platform Treasury Contract - Content", function () {
     const giftReceiver2 = [ethers.constants.AddressZero];
 
     const fullContentPurchase2 = [true];
-    const pricesToPay2 = [ethers.utils.parseEther("1")];
+    const pricesToPay2 = [ethers.parseEther("1")];
     const validUntil2 = Date.now() + 999999999;
     const balances2 = await makeContentPurchase(
       contractPlatformTreasury,
@@ -1660,7 +1656,7 @@ describe("Platform Treasury Contract - Content", function () {
     const redeemers = [contentBuyer1.address, contentBuyer1.address];
     const giftReceiver = [ethers.constants.AddressZero, ethers.constants.AddressZero];
     const fullContentPurchase = [true, true];
-    const pricesToPay = [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")];
+    const pricesToPay = [ethers.parseEther("1"), ethers.parseEther("1")];
     const validUntil = Date.now() + 999999999;
     const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283", "c8d53630-233a-4f95-90cb-4df253ae9283"];
     const balances = await makeContentPurchase(
@@ -1744,7 +1740,7 @@ describe("Platform Treasury Contract - Content", function () {
     const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283", "c8d53630-233a-4f95-90cb-4df253ae9283"];
 
     const fullContentPurchase = [true, true];
-    const pricesToPay = [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")];
+    const pricesToPay = [ethers.parseEther("1"), ethers.parseEther("1")];
     const validUntil = Date.now() + 999999999;
     const balances = await makeContentPurchase(
       contractPlatformTreasury,
@@ -1869,7 +1865,7 @@ describe("Platform Treasury Contract - Content", function () {
     const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
 
     const fullContentPurchase = [true];
-    const pricesToPay = [ethers.utils.parseEther("10")];
+    const pricesToPay = [ethers.parseEther("10")];
     const validUntil = Date.now() + 999999999;
     const balances = await makeContentPurchase(
       contractPlatformTreasury,
@@ -1915,7 +1911,7 @@ describe("Platform Treasury Contract - Content", function () {
     const giftReceiver2 = [ethers.constants.AddressZero];
 
     const fullContentPurchase2 = [true];
-    const pricesToPay2 = [ethers.utils.parseEther("1")];
+    const pricesToPay2 = [ethers.parseEther("1")];
     const validUntil2 = Date.now() + 999999999;
     const balances2 = await makeContentPurchase(
       contractPlatformTreasury,
@@ -1995,7 +1991,7 @@ describe("Platform Treasury Contract - Content", function () {
     const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
 
     const fullContentPurchase = [true];
-    const pricesToPay = [ethers.utils.parseEther("1")];
+    const pricesToPay = [ethers.parseEther("1")];
     const validUntil = Date.now() + 999999999;
     const balances = await makeContentPurchase(
       contractPlatformTreasury,
@@ -2091,7 +2087,7 @@ describe("Platform Treasury Contract - Content", function () {
     const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
 
     const fullContentPurchase = [true];
-    const pricesToPay = [ethers.utils.parseEther("1")];
+    const pricesToPay = [ethers.parseEther("1")];
     const validUntil = Date.now() + 999999999;
     const balances = await makeContentPurchase(
       contractPlatformTreasury,
@@ -2192,7 +2188,7 @@ describe("Platform Treasury Contract - Content", function () {
     const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
 
     const fullContentPurchase = [true];
-    const pricesToPay = [ethers.utils.parseEther("1")];
+    const pricesToPay = [ethers.parseEther("1")];
     const validUntil = Date.now() + 999999999;
     const balances = await makeContentPurchase(
       contractPlatformTreasury,
@@ -2307,7 +2303,7 @@ describe("Platform Treasury Contract - Content", function () {
     const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
 
     const fullContentPurchase = [true];
-    const pricesToPay = [ethers.utils.parseEther("3")];
+    const pricesToPay = [ethers.parseEther("3")];
     const validUntil = Date.now() + 999999999;
     const balances = await makeContentPurchase(
       contractPlatformTreasury,
@@ -2349,7 +2345,7 @@ describe("Platform Treasury Contract - Content", function () {
     const redeemers2 = [contentBuyer1.address];
     const giftReceiver2 = [ethers.constants.AddressZero];
     const fullContentPurchase2 = [true];
-    const pricesToPay2 = [ethers.utils.parseEther("5")];
+    const pricesToPay2 = [ethers.parseEther("5")];
     const validUntil2 = Date.now() + 999999999;
     const balances2 = await makeContentPurchase(
       contractPlatformTreasury,
@@ -2463,7 +2459,7 @@ describe("Platform Treasury Contract - Content", function () {
     const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
 
     const fullContentPurchase = [true];
-    const pricesToPay = [ethers.utils.parseEther("3")];
+    const pricesToPay = [ethers.parseEther("3")];
     const validUntil = Date.now() + 999999999;
     const balances = await makeContentPurchase(
       contractPlatformTreasury,
@@ -2500,7 +2496,7 @@ describe("Platform Treasury Contract - Content", function () {
     skipDays(refundWindowDaysNumber);
 
     //calculate total inst locked balance
-    let totalInstLB = ethers.BigNumber.from(0);
+    let totalInstLB = BigInt(0);
     for (let i = 0; i < refundWindowDaysNumber; i++) {
       let temp;
       temp = await contractPlatformTreasury.instLockedBalance(contentCreator.address, i);
@@ -2536,7 +2532,7 @@ describe("Platform Treasury Contract - Content", function () {
       userIds
     );
     //calculate total inst locked balance
-    let totalInstLB2 = ethers.BigNumber.from(0);
+    let totalInstLB2 = BigInt(0);
     for (let i = 0; i < newRefundWindow; i++) {
       let temp;
       temp = await contractPlatformTreasury.instLockedBalance(contentCreator.address, i);

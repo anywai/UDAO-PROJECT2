@@ -62,8 +62,8 @@ async function reDeploy(reApplyRolesViaVoucher = true, isDexRequired = false) {
   contractPriceGetter = replace.contractPriceGetter;
   const reApplyValidatorRoles = [validator, validator1, validator2, validator3, validator4, validator5];
   const reApplyJurorRoles = [jurorMember, jurorMember1, jurorMember2, jurorMember3, jurorMember4];
-  const VALIDATOR_ROLE = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("VALIDATOR_ROLE"));
-  const JUROR_ROLE = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("JUROR_ROLE"));
+  const VALIDATOR_ROLE = ethers.keccak256(ethers.toUtf8Bytes("VALIDATOR_ROLE"));
+  const JUROR_ROLE = ethers.keccak256(ethers.toUtf8Bytes("JUROR_ROLE"));
   contractGovernanceTreasury = replace.contractGovernanceTreasury;
 }
 
@@ -81,20 +81,20 @@ describe("Platform Treasury Contract - Coaching", function () {
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
     /// Send UDAO to the buyer's wallet
-    await contractUDAO.transfer(contentBuyer.address, ethers.utils.parseEther("100.0"));
+    await contractUDAO.transfer(contentBuyer.address, ethers.parseEther("100.0"));
     /// Get the amount of UDAO in the buyer's wallet
     const buyerBalance = await contractUDAO.balanceOf(contentBuyer.address);
     /// Content buyer needs to give approval to the platformtreasury
     await contractUDAO
       .connect(contentBuyer)
-      .approve(contractPlatformTreasury.address, ethers.utils.parseEther("999999999999.0"));
+      .approve(contractPlatformTreasury.address, ethers.parseEther("999999999999.0"));
 
     // Create CoachingVoucher to be able to buy coaching
     const lazyCoaching = new LazyCoaching({
       contract: contractVoucherVerifier,
       signer: backend,
     });
-    const coachingPrice = ethers.utils.parseEther("1.0");
+    const coachingPrice = ethers.parseEther("1.0");
     /// Get the current block timestamp
     const currentBlockTimestamp = (await hre.ethers.provider.getBlock()).timestamp;
     /// Coaching date is 3 days from now
@@ -128,20 +128,20 @@ describe("Platform Treasury Contract - Coaching", function () {
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
     /// Send UDAO to the buyer's wallet
-    //await contractUDAO.transfer(contentBuyer.address, ethers.utils.parseEther("100.0"));
+    //await contractUDAO.transfer(contentBuyer.address, ethers.parseEther("100.0"));
     /// Get the amount of UDAO in the buyer's wallet
     const buyerBalance = await contractUDAO.balanceOf(contentBuyer.address);
     /// Content buyer needs to give approval to the platformtreasury
     await contractUDAO
       .connect(contentBuyer)
-      .approve(contractPlatformTreasury.address, ethers.utils.parseEther("999999999999.0"));
+      .approve(contractPlatformTreasury.address, ethers.parseEther("999999999999.0"));
 
     // Create CoachingVoucher to be able to buy coaching
     const lazyCoaching = new LazyCoaching({
       contract: contractVoucherVerifier,
       signer: backend,
     });
-    const coachingPrice = ethers.utils.parseEther("1.0");
+    const coachingPrice = ethers.parseEther("1.0");
     /// Get the current block timestamp
     const currentBlockTimestamp = (await hre.ethers.provider.getBlock()).timestamp;
     /// Coaching date is 3 days from now
@@ -166,20 +166,20 @@ describe("Platform Treasury Contract - Coaching", function () {
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
     /// Send UDAO to the buyer's wallet
-    await contractUDAO.transfer(contentBuyer.address, ethers.utils.parseEther("100.0"));
+    await contractUDAO.transfer(contentBuyer.address, ethers.parseEther("100.0"));
     /// Get the amount of UDAO in the buyer's wallet
     const buyerBalance = await contractUDAO.balanceOf(contentBuyer.address);
     /// Content buyer needs to give approval to the platformtreasury
     //await contractUDAO
     //  .connect(contentBuyer)
-    //  .approve(contractPlatformTreasury.address, ethers.utils.parseEther("999999999999.0"));
+    //  .approve(contractPlatformTreasury.address, ethers.parseEther("999999999999.0"));
 
     // Create CoachingVoucher to be able to buy coaching
     const lazyCoaching = new LazyCoaching({
       contract: contractVoucherVerifier,
       signer: backend,
     });
-    const coachingPrice = ethers.utils.parseEther("1.0");
+    const coachingPrice = ethers.parseEther("1.0");
     /// Get the current block timestamp
     const currentBlockTimestamp = (await hre.ethers.provider.getBlock()).timestamp;
     /// Coaching date is 3 days from now
@@ -204,20 +204,20 @@ describe("Platform Treasury Contract - Coaching", function () {
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
     /// Send UDAO to the buyer's wallet
-    await contractUDAO.transfer(contentBuyer.address, ethers.utils.parseEther("100.0"));
+    await contractUDAO.transfer(contentBuyer.address, ethers.parseEther("100.0"));
     /// Get the amount of UDAO in the buyer's wallet
     const buyerBalance = await contractUDAO.balanceOf(contentBuyer.address);
     /// Content buyer needs to give approval to the platformtreasury
     await contractUDAO
       .connect(contentBuyer)
-      .approve(contractPlatformTreasury.address, ethers.utils.parseEther("999999999999.0"));
+      .approve(contractPlatformTreasury.address, ethers.parseEther("999999999999.0"));
 
     // Create CoachingVoucher to be able to buy coaching
     const lazyCoaching = new LazyCoaching({
       contract: contractVoucherVerifier,
       signer: contentCreator,
     });
-    const coachingPrice = ethers.utils.parseEther("1.0");
+    const coachingPrice = ethers.parseEther("1.0");
     /// Get the current block timestamp
     const currentBlockTimestamp = (await hre.ethers.provider.getBlock()).timestamp;
     /// Coaching date is 3 days from now
@@ -251,19 +251,19 @@ describe("Platform Treasury Contract - Coaching", function () {
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
     /// Send UDAO to the buyer's wallet
-    await contractUDAO.transfer(contentBuyer.address, ethers.utils.parseEther("100.0"));
+    await contractUDAO.transfer(contentBuyer.address, ethers.parseEther("100.0"));
 
     /// Content buyer needs to give approval to the platformtreasury
     await contractUDAO
       .connect(contentBuyer)
-      .approve(contractPlatformTreasury.address, ethers.utils.parseEther("999999999999.0"));
+      .approve(contractPlatformTreasury.address, ethers.parseEther("999999999999.0"));
 
     // Create CoachingVoucher to be able to buy coaching
     const lazyCoaching = new LazyCoaching({
       contract: contractVoucherVerifier,
       signer: backend,
     });
-    const coachingPrice = ethers.utils.parseEther("1.0");
+    const coachingPrice = ethers.parseEther("1.0");
     /// Get the current block timestamp
     const currentBlockTimestamp = (await hre.ethers.provider.getBlock()).timestamp;
     /// Coaching date is 3 days from now
@@ -290,19 +290,19 @@ describe("Platform Treasury Contract - Coaching", function () {
     await contractRoleManager.setKYC(contentBuyer.address, false);
 
     /// Send UDAO to the buyer's wallet
-    await contractUDAO.transfer(contentBuyer.address, ethers.utils.parseEther("100.0"));
+    await contractUDAO.transfer(contentBuyer.address, ethers.parseEther("100.0"));
 
     /// Content buyer needs to give approval to the platformtreasury
     await contractUDAO
       .connect(contentBuyer)
-      .approve(contractPlatformTreasury.address, ethers.utils.parseEther("999999999999.0"));
+      .approve(contractPlatformTreasury.address, ethers.parseEther("999999999999.0"));
 
     // Create CoachingVoucher to be able to buy coaching
     const lazyCoaching = new LazyCoaching({
       contract: contractVoucherVerifier,
       signer: backend,
     });
-    const coachingPrice = ethers.utils.parseEther("1.0");
+    const coachingPrice = ethers.parseEther("1.0");
     /// Get the current block timestamp
     const currentBlockTimestamp = (await hre.ethers.provider.getBlock()).timestamp;
     /// Coaching date is 3 days from now
@@ -328,19 +328,19 @@ describe("Platform Treasury Contract - Coaching", function () {
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
     /// Send UDAO to the buyer's wallet
-    await contractUDAO.transfer(contentBuyer.address, ethers.utils.parseEther("100.0"));
+    await contractUDAO.transfer(contentBuyer.address, ethers.parseEther("100.0"));
 
     /// Content buyer needs to give approval to the platformtreasury
     await contractUDAO
       .connect(contentBuyer)
-      .approve(contractPlatformTreasury.address, ethers.utils.parseEther("999999999999.0"));
+      .approve(contractPlatformTreasury.address, ethers.parseEther("999999999999.0"));
 
     // Create CoachingVoucher to be able to buy coaching
     const lazyCoaching = new LazyCoaching({
       contract: contractVoucherVerifier,
       signer: backend,
     });
-    const coachingPrice = ethers.utils.parseEther("1.0");
+    const coachingPrice = ethers.parseEther("1.0");
     /// Get the current block timestamp
     const currentBlockTimestamp = (await hre.ethers.provider.getBlock()).timestamp;
     /// Coaching date is 3 days from now
@@ -367,19 +367,19 @@ describe("Platform Treasury Contract - Coaching", function () {
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
     /// Send UDAO to the buyer's wallet
-    await contractUDAO.transfer(contentBuyer.address, ethers.utils.parseEther("100.0"));
+    await contractUDAO.transfer(contentBuyer.address, ethers.parseEther("100.0"));
 
     /// Content buyer needs to give approval to the platformtreasury
     await contractUDAO
       .connect(contentBuyer)
-      .approve(contractPlatformTreasury.address, ethers.utils.parseEther("999999999999.0"));
+      .approve(contractPlatformTreasury.address, ethers.parseEther("999999999999.0"));
 
     // Create CoachingVoucher to be able to buy coaching
     const lazyCoaching = new LazyCoaching({
       contract: contractVoucherVerifier,
       signer: backend,
     });
-    const coachingPrice = ethers.utils.parseEther("1.0");
+    const coachingPrice = ethers.parseEther("1.0");
     /// Get the current block timestamp
     const currentBlockTimestamp = (await hre.ethers.provider.getBlock()).timestamp;
     /// Coaching date is 3 days from now
@@ -404,20 +404,20 @@ describe("Platform Treasury Contract - Coaching", function () {
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
     /// Send UDAO to the buyer's wallet
-    await contractUDAO.transfer(contentBuyer.address, ethers.utils.parseEther("100.0"));
+    await contractUDAO.transfer(contentBuyer.address, ethers.parseEther("100.0"));
     /// Get the amount of UDAO in the buyer's wallet
     const buyerBalance = await contractUDAO.balanceOf(contentBuyer.address);
     /// Content buyer needs to give approval to the platformtreasury
     await contractUDAO
       .connect(contentBuyer)
-      .approve(contractPlatformTreasury.address, ethers.utils.parseEther("999999999999.0"));
+      .approve(contractPlatformTreasury.address, ethers.parseEther("999999999999.0"));
 
     // Create CoachingVoucher to be able to buy coaching
     const lazyCoaching = new LazyCoaching({
       contract: contractVoucherVerifier,
       signer: backend,
     });
-    const coachingPrice = ethers.utils.parseEther("1.0");
+    const coachingPrice = ethers.parseEther("1.0");
     /// Get the current block timestamp
     const currentBlockTimestamp = (await hre.ethers.provider.getBlock()).timestamp;
     /// Coaching date is 3 days from now
@@ -460,20 +460,20 @@ describe("Platform Treasury Contract - Coaching", function () {
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
     /// Send UDAO to the buyer's wallet
-    await contractUDAO.transfer(contentBuyer.address, ethers.utils.parseEther("100.0"));
+    await contractUDAO.transfer(contentBuyer.address, ethers.parseEther("100.0"));
     /// Get the amount of UDAO in the buyer's wallet
     const buyerBalance = await contractUDAO.balanceOf(contentBuyer.address);
     /// Content buyer needs to give approval to the platformtreasury
     await contractUDAO
       .connect(contentBuyer)
-      .approve(contractPlatformTreasury.address, ethers.utils.parseEther("999999999999.0"));
+      .approve(contractPlatformTreasury.address, ethers.parseEther("999999999999.0"));
 
     // Create CoachingVoucher to be able to buy coaching
     const lazyCoaching = new LazyCoaching({
       contract: contractVoucherVerifier,
       signer: backend,
     });
-    const coachingPrice = ethers.utils.parseEther("1.0");
+    const coachingPrice = ethers.parseEther("1.0");
     /// Get the current block timestamp
     const currentBlockTimestamp = (await hre.ethers.provider.getBlock()).timestamp;
     /// Coaching date is 3 days from now
@@ -514,20 +514,20 @@ describe("Platform Treasury Contract - Coaching", function () {
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
     /// Send UDAO to the buyer's wallet
-    await contractUDAO.transfer(contentBuyer.address, ethers.utils.parseEther("100.0"));
+    await contractUDAO.transfer(contentBuyer.address, ethers.parseEther("100.0"));
     /// Get the amount of UDAO in the buyer's wallet
     const buyerBalance = await contractUDAO.balanceOf(contentBuyer.address);
     /// Content buyer needs to give approval to the platformtreasury
     await contractUDAO
       .connect(contentBuyer)
-      .approve(contractPlatformTreasury.address, ethers.utils.parseEther("999999999999.0"));
+      .approve(contractPlatformTreasury.address, ethers.parseEther("999999999999.0"));
 
     // Create CoachingVoucher to be able to buy coaching
     const lazyCoaching = new LazyCoaching({
       contract: contractVoucherVerifier,
       signer: backend,
     });
-    const coachingPrice = ethers.utils.parseEther("1.0");
+    const coachingPrice = ethers.parseEther("1.0");
     /// Get the current block timestamp
     const currentBlockTimestamp = (await hre.ethers.provider.getBlock()).timestamp;
     /// Coaching date is 3 days from now
@@ -573,20 +573,20 @@ describe("Platform Treasury Contract - Coaching", function () {
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
     /// Send UDAO to the buyer's wallet
-    await contractUDAO.transfer(contentBuyer.address, ethers.utils.parseEther("100.0"));
+    await contractUDAO.transfer(contentBuyer.address, ethers.parseEther("100.0"));
     /// Get the amount of UDAO in the buyer's wallet
     const buyerBalance = await contractUDAO.balanceOf(contentBuyer.address);
     /// Content buyer needs to give approval to the platformtreasury
     await contractUDAO
       .connect(contentBuyer)
-      .approve(contractPlatformTreasury.address, ethers.utils.parseEther("999999999999.0"));
+      .approve(contractPlatformTreasury.address, ethers.parseEther("999999999999.0"));
 
     // Create CoachingVoucher to be able to buy coaching
     const lazyCoaching = new LazyCoaching({
       contract: contractVoucherVerifier,
       signer: backend,
     });
-    const coachingPrice = ethers.utils.parseEther("1.0");
+    const coachingPrice = ethers.parseEther("1.0");
     /// Get the current block timestamp
     const currentBlockTimestamp = (await hre.ethers.provider.getBlock()).timestamp;
     /// Coaching date is 3 days from now
@@ -636,20 +636,20 @@ describe("Platform Treasury Contract - Coaching", function () {
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
     /// Send UDAO to the buyer's wallet
-    await contractUDAO.transfer(contentBuyer.address, ethers.utils.parseEther("100.0"));
+    await contractUDAO.transfer(contentBuyer.address, ethers.parseEther("100.0"));
     /// Get the amount of UDAO in the buyer's wallet
     const buyerBalance = await contractUDAO.balanceOf(contentBuyer.address);
     /// Content buyer needs to give approval to the platformtreasury
     await contractUDAO
       .connect(contentBuyer)
-      .approve(contractPlatformTreasury.address, ethers.utils.parseEther("999999999999.0"));
+      .approve(contractPlatformTreasury.address, ethers.parseEther("999999999999.0"));
 
     // Create CoachingVoucher to be able to buy coaching
     const lazyCoaching = new LazyCoaching({
       contract: contractVoucherVerifier,
       signer: backend,
     });
-    const coachingPrice = ethers.utils.parseEther("1.0");
+    const coachingPrice = ethers.parseEther("1.0");
     /// Get the current block timestamp
     const currentBlockTimestamp = (await hre.ethers.provider.getBlock()).timestamp;
     /// Coaching date is 3 days from now
@@ -690,19 +690,19 @@ describe("Platform Treasury Contract - Coaching", function () {
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
     /// Send UDAO to the buyer's wallet
-    await contractUDAO.transfer(contentBuyer.address, ethers.utils.parseEther("100.0"));
+    await contractUDAO.transfer(contentBuyer.address, ethers.parseEther("100.0"));
 
     /// Content buyer needs to give approval to the platformtreasury
     await contractUDAO
       .connect(contentBuyer)
-      .approve(contractPlatformTreasury.address, ethers.utils.parseEther("999999999999.0"));
+      .approve(contractPlatformTreasury.address, ethers.parseEther("999999999999.0"));
 
     // Create CoachingVoucher to be able to buy coaching
     const lazyCoaching = new LazyCoaching({
       contract: contractVoucherVerifier,
       signer: backend,
     });
-    const coachingPrice = ethers.utils.parseEther("1.0");
+    const coachingPrice = ethers.parseEther("1.0");
     /// Get the current block timestamp
     const currentBlockTimestamp = (await hre.ethers.provider.getBlock()).timestamp;
     /// Coaching date is 3 days from now
@@ -738,19 +738,19 @@ describe("Platform Treasury Contract - Coaching", function () {
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
     /// Send UDAO to the buyer's wallet
-    await contractUDAO.transfer(contentBuyer.address, ethers.utils.parseEther("100.0"));
+    await contractUDAO.transfer(contentBuyer.address, ethers.parseEther("100.0"));
 
     /// Content buyer needs to give approval to the platformtreasury
     await contractUDAO
       .connect(contentBuyer)
-      .approve(contractPlatformTreasury.address, ethers.utils.parseEther("999999999999.0"));
+      .approve(contractPlatformTreasury.address, ethers.parseEther("999999999999.0"));
 
     // Create CoachingVoucher to be able to buy coaching
     const lazyCoaching = new LazyCoaching({
       contract: contractVoucherVerifier,
       signer: backend,
     });
-    const coachingPrice = ethers.utils.parseEther("1.0");
+    const coachingPrice = ethers.parseEther("1.0");
     /// Get the current block timestamp
     const currentBlockTimestamp = (await hre.ethers.provider.getBlock()).timestamp;
     /// Coaching date is 3 days from now
@@ -811,19 +811,19 @@ describe("Platform Treasury Contract - Coaching", function () {
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
     /// Send UDAO to the buyer's wallet
-    await contractUDAO.transfer(contentBuyer.address, ethers.utils.parseEther("100.0"));
+    await contractUDAO.transfer(contentBuyer.address, ethers.parseEther("100.0"));
 
     /// Content buyer needs to give approval to the platformtreasury
     await contractUDAO
       .connect(contentBuyer)
-      .approve(contractPlatformTreasury.address, ethers.utils.parseEther("999999999999.0"));
+      .approve(contractPlatformTreasury.address, ethers.parseEther("999999999999.0"));
 
     // Create CoachingVoucher to be able to buy coaching
     const lazyCoaching = new LazyCoaching({
       contract: contractVoucherVerifier,
       signer: backend,
     });
-    const coachingPrice = ethers.utils.parseEther("1.0");
+    const coachingPrice = ethers.parseEther("1.0");
     /// Get the current block timestamp
     const currentBlockTimestamp = (await hre.ethers.provider.getBlock()).timestamp;
     /// Coaching date is 3 days from now
@@ -889,19 +889,19 @@ describe("Platform Treasury Contract - Coaching", function () {
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
     /// Send UDAO to the buyer's wallet
-    await contractUDAO.transfer(contentBuyer.address, ethers.utils.parseEther("100.0"));
+    await contractUDAO.transfer(contentBuyer.address, ethers.parseEther("100.0"));
 
     /// Content buyer needs to give approval to the platformtreasury
     await contractUDAO
       .connect(contentBuyer)
-      .approve(contractPlatformTreasury.address, ethers.utils.parseEther("999999999999.0"));
+      .approve(contractPlatformTreasury.address, ethers.parseEther("999999999999.0"));
 
     // Create CoachingVoucher to be able to buy coaching
     const lazyCoaching = new LazyCoaching({
       contract: contractVoucherVerifier,
       signer: backend,
     });
-    const coachingPrice = ethers.utils.parseEther("1.0");
+    const coachingPrice = ethers.parseEther("1.0");
     /// Get the current block timestamp
     const currentBlockTimestamp = (await hre.ethers.provider.getBlock()).timestamp;
     /// Coaching date is 3 days from now
@@ -998,20 +998,20 @@ describe("Platform Treasury Contract - Coaching", function () {
     await contractPlatformTreasury.connect(backend).activateGovernanceTreasury(true);
 
     /// Send UDAO to the buyer's wallet
-    await contractUDAO.transfer(contentBuyer.address, ethers.utils.parseEther("100.0"));
+    await contractUDAO.transfer(contentBuyer.address, ethers.parseEther("100.0"));
     /// Get the amount of UDAO in the buyer's wallet
     const buyerBalance = await contractUDAO.balanceOf(contentBuyer.address);
     /// Content buyer needs to give approval to the platformtreasury
     await contractUDAO
       .connect(contentBuyer)
-      .approve(contractPlatformTreasury.address, ethers.utils.parseEther("999999999999.0"));
+      .approve(contractPlatformTreasury.address, ethers.parseEther("999999999999.0"));
 
     // Create CoachingVoucher to be able to buy coaching
     const lazyCoaching = new LazyCoaching({
       contract: contractVoucherVerifier,
       signer: backend,
     });
-    const coachingPrice = ethers.utils.parseEther("1.0");
+    const coachingPrice = ethers.parseEther("1.0");
     /// Get the current block timestamp
     const currentBlockTimestamp = (await hre.ethers.provider.getBlock()).timestamp;
     /// Coaching date is 3 days from now
@@ -1075,20 +1075,20 @@ describe("Platform Treasury Contract - Coaching", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer.address, true);
     /// Send UDAO to the buyer's wallet
-    await contractUDAO.transfer(contentBuyer.address, ethers.utils.parseEther("100.0"));
+    await contractUDAO.transfer(contentBuyer.address, ethers.parseEther("100.0"));
     /// Get the amount of UDAO in the buyer's wallet
     const buyerBalance = await contractUDAO.balanceOf(contentBuyer.address);
     /// Content buyer needs to give approval to the platformtreasury
     await contractUDAO
       .connect(contentBuyer)
-      .approve(contractPlatformTreasury.address, ethers.utils.parseEther("999999999999.0"));
+      .approve(contractPlatformTreasury.address, ethers.parseEther("999999999999.0"));
 
     // Create CoachingVoucher to be able to buy coaching
     const lazyCoaching = new LazyCoaching({
       contract: contractVoucherVerifier,
       signer: backend,
     });
-    const coachingPrice = ethers.utils.parseEther("1.0");
+    const coachingPrice = ethers.parseEther("1.0");
     /// Get the current block timestamp
     const currentBlockTimestamp = (await hre.ethers.provider.getBlock()).timestamp;
     /// Coaching date is 3 days from now
@@ -1125,20 +1125,20 @@ describe("Platform Treasury Contract - Coaching", function () {
     await contractRoleManager.setKYC(contentCreator.address, true);
     await contractRoleManager.setKYC(contentBuyer.address, true);
     /// Send UDAO to the buyer's wallet
-    await contractUDAO.transfer(contentBuyer.address, ethers.utils.parseEther("100.0"));
+    await contractUDAO.transfer(contentBuyer.address, ethers.parseEther("100.0"));
     /// Get the amount of UDAO in the buyer's wallet
     const buyerBalance = await contractUDAO.balanceOf(contentBuyer.address);
     /// Content buyer needs to give approval to the platformtreasury
     await contractUDAO
       .connect(contentBuyer)
-      .approve(contractPlatformTreasury.address, ethers.utils.parseEther("999999999999.0"));
+      .approve(contractPlatformTreasury.address, ethers.parseEther("999999999999.0"));
 
     // Create CoachingVoucher to be able to buy coaching
     const lazyCoaching = new LazyCoaching({
       contract: contractVoucherVerifier,
       signer: backend,
     });
-    const coachingPrice = ethers.utils.parseEther("1.0");
+    const coachingPrice = ethers.parseEther("1.0");
     /// Get the current block timestamp
     const currentBlockTimestamp = (await hre.ethers.provider.getBlock()).timestamp;
     /// Coaching date is 3 days from now
@@ -1163,19 +1163,17 @@ describe("Platform Treasury Contract - Coaching", function () {
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
     /// Send UDAO to the buyer's wallet
-    await contractUDAO.transfer(backend.address, ethers.utils.parseEther("100.0"));
+    await contractUDAO.transfer(backend.address, ethers.parseEther("100.0"));
     /// Get the amount of UDAO in the buyer's wallet
     const buyerBalance = await contractUDAO.balanceOf(backend.address);
     /// Content buyer needs to give approval to the platformtreasury
-    await contractUDAO
-      .connect(backend)
-      .approve(contractPlatformTreasury.address, ethers.utils.parseEther("999999999999.0"));
+    await contractUDAO.connect(backend).approve(contractPlatformTreasury.address, ethers.parseEther("999999999999.0"));
     // Create CoachingVoucher to be able to buy coaching
     const lazyCoaching = new LazyCoaching({
       contract: contractVoucherVerifier,
       signer: contentCreator,
     });
-    const coachingPrice = ethers.utils.parseEther("1.0");
+    const coachingPrice = ethers.parseEther("1.0");
     /// Get the current block timestamp
     const currentBlockTimestamp = (await hre.ethers.provider.getBlock()).timestamp;
     /// Coaching date is 3 days from now
@@ -1213,19 +1211,17 @@ describe("Platform Treasury Contract - Coaching", function () {
     await contractRoleManager.setKYC(contentBuyer.address, true);
 
     /// Send UDAO to the buyer's wallet
-    await contractUDAO.transfer(backend.address, ethers.utils.parseEther("100.0"));
+    await contractUDAO.transfer(backend.address, ethers.parseEther("100.0"));
     /// Get the amount of UDAO in the buyer's wallet
     const buyerBalance = await contractUDAO.balanceOf(backend.address);
     /// Content buyer needs to give approval to the platformtreasury
-    await contractUDAO
-      .connect(backend)
-      .approve(contractPlatformTreasury.address, ethers.utils.parseEther("999999999999.0"));
+    await contractUDAO.connect(backend).approve(contractPlatformTreasury.address, ethers.parseEther("999999999999.0"));
     // Create CoachingVoucher to be able to buy coaching
     const lazyCoaching = new LazyCoaching({
       contract: contractVoucherVerifier,
       signer: contentCreator,
     });
-    const coachingPrice = ethers.utils.parseEther("1.0");
+    const coachingPrice = ethers.parseEther("1.0");
     /// Get the current block timestamp
     const currentBlockTimestamp = (await hre.ethers.provider.getBlock()).timestamp;
     /// Coaching date is 3 days from now

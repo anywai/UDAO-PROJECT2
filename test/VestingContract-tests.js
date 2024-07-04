@@ -79,8 +79,8 @@ async function reDeploy(reApplyRolesViaVoucher = true, isDexRequired = false) {
   contractPriceGetter = replace.contractPriceGetter;
   const reApplyValidatorRoles = [validator, validator1, validator2, validator3, validator4, validator5];
   const reApplyJurorRoles = [jurorMember, jurorMember1, jurorMember2, jurorMember3, jurorMember4];
-  const VALIDATOR_ROLE = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("VALIDATOR_ROLE"));
-  const JUROR_ROLE = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("JUROR_ROLE"));
+  const VALIDATOR_ROLE = ethers.keccak256(ethers.toUtf8Bytes("VALIDATOR_ROLE"));
+  const JUROR_ROLE = ethers.keccak256(ethers.toUtf8Bytes("JUROR_ROLE"));
 }
 
 describe("Vesting Contract", function () {
@@ -91,20 +91,20 @@ describe("Vesting Contract", function () {
 
   it("Should assign DEFAULT_ADMIN_ROLE to backend during deployment", async function () {
     await reDeploy();
-    expect(await contractVesting.hasRole(ethers.constants.HashZero, backend.address)).to.equal(true);
+    expect(await contractVesting.hasRole(ethers.ZeroHash, backend.address)).to.equal(true);
   });
 
   it("Should assign DEPOSITOR_ROLE to backend during deployment", async function () {
     await reDeploy();
     /// Hash DEPOSITOR_ROLE
-    const DEPOSITOR_ROLE = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("DEPOSITOR_ROLE"));
+    const DEPOSITOR_ROLE = ethers.keccak256(ethers.toUtf8Bytes("DEPOSITOR_ROLE"));
     expect(await contractVesting.hasRole(DEPOSITOR_ROLE, backend.address)).to.equal(true);
   });
 
   it("Should allow backend to set new DEPOSITOR_ROLE to some other address", async function () {
     await reDeploy();
     /// Hash DEPOSITOR_ROLE
-    const DEPOSITOR_ROLE = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("DEPOSITOR_ROLE"));
+    const DEPOSITOR_ROLE = ethers.keccak256(ethers.toUtf8Bytes("DEPOSITOR_ROLE"));
     const newDepositor = account1.address;
     await contractVesting.connect(backend).grantDepositerRole(newDepositor);
     expect(await contractVesting.hasRole(DEPOSITOR_ROLE, newDepositor)).to.equal(true);
@@ -113,7 +113,7 @@ describe("Vesting Contract", function () {
   it("Should allow backend to revoke DEPOSITOR_ROLE from some other address", async function () {
     await reDeploy();
     /// Hash DEPOSITOR_ROLE
-    const DEPOSITOR_ROLE = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("DEPOSITOR_ROLE"));
+    const DEPOSITOR_ROLE = ethers.keccak256(ethers.toUtf8Bytes("DEPOSITOR_ROLE"));
     const newDepositor = account1.address;
     await contractVesting.connect(backend).grantDepositerRole(newDepositor);
     expect(await contractVesting.hasRole(DEPOSITOR_ROLE, newDepositor)).to.equal(true);
@@ -124,7 +124,7 @@ describe("Vesting Contract", function () {
   it("Should not allow non-backend to set new DEPOSITOR_ROLE to some other address", async function () {
     await reDeploy();
     /// Hash DEPOSITOR_ROLE
-    const DEPOSITOR_ROLE = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("DEPOSITOR_ROLE"));
+    const DEPOSITOR_ROLE = ethers.keccak256(ethers.toUtf8Bytes("DEPOSITOR_ROLE"));
     const newDepositor = account1.address;
     await expect(contractVesting.connect(account1).grantDepositerRole(newDepositor)).to.be.revertedWith(
       "Only admin can grant deposit role"
@@ -134,7 +134,7 @@ describe("Vesting Contract", function () {
   it("Should not allow non-backend to revoke DEPOSITOR_ROLE from some other address", async function () {
     await reDeploy();
     /// Hash DEPOSITOR_ROLE
-    const DEPOSITOR_ROLE = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("DEPOSITOR_ROLE"));
+    const DEPOSITOR_ROLE = ethers.keccak256(ethers.toUtf8Bytes("DEPOSITOR_ROLE"));
     const newDepositor = account1.address;
     await contractVesting.connect(backend).grantDepositerRole(newDepositor);
     expect(await contractVesting.hasRole(DEPOSITOR_ROLE, newDepositor)).to.equal(true);
@@ -148,7 +148,7 @@ describe("Vesting Contract", function () {
     const currentBalanceOfBackend = await contractUDAO.balanceOf(backend.address);
     const currentVestingIndex = 0;
     const beneficiary = account1.address;
-    const amount = ethers.utils.parseEther("1000");
+    const amount = ethers.parseEther("1000");
     /// Backend should give allowance to contractVesting
     await contractUDAO.connect(backend).approve(contractVesting.address, amount);
     /// @dev Get the current block number
@@ -167,9 +167,9 @@ describe("Vesting Contract", function () {
   it("Should not allow non-DEPOSITOR_ROLE to create new deposit for some other address", async function () {
     await reDeploy();
     // Hash DEPOSITOR_ROLE
-    const DEPOSITOR_ROLE = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("DEPOSITOR_ROLE"));
+    const DEPOSITOR_ROLE = ethers.keccak256(ethers.toUtf8Bytes("DEPOSITOR_ROLE"));
     const beneficiary = account1.address;
-    const amount = ethers.utils.parseEther("1000");
+    const amount = ethers.parseEther("1000");
     /// Backend should give allowance to contractVesting
     await contractUDAO.connect(backend).approve(contractVesting.address, amount);
     /// @dev Get the current block number
@@ -188,7 +188,7 @@ describe("Vesting Contract", function () {
     const beneficiary1 = account1.address;
     const beneficiary2 = account2.address;
     const beneficiary3 = account3.address;
-    const amounts = [ethers.utils.parseEther("1000"), ethers.utils.parseEther("2000"), ethers.utils.parseEther("3000")];
+    const amounts = [ethers.parseEther("1000"), ethers.parseEther("2000"), ethers.parseEther("3000")];
     /// Backend should give allowance to contractVesting
     await contractUDAO.connect(backend).approve(contractVesting.address, amounts[0].add(amounts[1]).add(amounts[2]));
     /// @dev Get the current block number
@@ -224,11 +224,11 @@ describe("Vesting Contract", function () {
   it("Should not allow non-DEPOSITOR_ROLE to create new deposits in batch for some other addresses", async function () {
     await reDeploy();
     // Hash DEPOSITOR_ROLE
-    const DEPOSITOR_ROLE = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("DEPOSITOR_ROLE"));
+    const DEPOSITOR_ROLE = ethers.keccak256(ethers.toUtf8Bytes("DEPOSITOR_ROLE"));
     const beneficiary1 = account1.address;
     const beneficiary2 = account2.address;
     const beneficiary3 = account3.address;
-    const amounts = [ethers.utils.parseEther("1000"), ethers.utils.parseEther("2000"), ethers.utils.parseEther("3000")];
+    const amounts = [ethers.parseEther("1000"), ethers.parseEther("2000"), ethers.parseEther("3000")];
     /// Backend should give allowance to contractVesting
     await contractUDAO.connect(backend).approve(contractVesting.address, amounts[0].add(amounts[1]).add(amounts[2]));
     /// @dev Get the current block number
@@ -250,7 +250,7 @@ describe("Vesting Contract", function () {
     const beneficiary1 = account1.address;
     const beneficiary2 = account2.address;
     const beneficiary3 = account3.address;
-    const amounts = [ethers.utils.parseEther("1000"), ethers.utils.parseEther("2000"), ethers.utils.parseEther("3000")];
+    const amounts = [ethers.parseEther("1000"), ethers.parseEther("2000"), ethers.parseEther("3000")];
     /// Backend should give allowance to contractVesting
     await contractUDAO.connect(backend).approve(contractVesting.address, amounts[0].add(amounts[1]).add(amounts[2]));
     /// @dev releaseTime is 1 day from now and missing 1 releaseTime
@@ -268,7 +268,7 @@ describe("Vesting Contract", function () {
     const currentBalanceOfBackend = await contractUDAO.balanceOf(backend.address);
     const currentVestingIndex = 0;
     const beneficiary = account1.address;
-    const amount = ethers.utils.parseEther("1000");
+    const amount = ethers.parseEther("1000");
     /// Backend should give allowance to contractVesting
     await contractUDAO.connect(backend).approve(contractVesting.address, amount);
     /// @dev Get the current block number
@@ -297,7 +297,7 @@ describe("Vesting Contract", function () {
     const currentBalanceOfBackend = await contractUDAO.balanceOf(backend.address);
     const currentVestingIndex = 0;
     const beneficiary = account1.address;
-    const amount = ethers.utils.parseEther("1000");
+    const amount = ethers.parseEther("1000");
     /// Backend should give allowance to contractVesting
     await contractUDAO.connect(backend).approve(contractVesting.address, amount);
     /// @dev Get the current block number
@@ -324,7 +324,7 @@ describe("Vesting Contract", function () {
     const currentBalanceOfBackend = await contractUDAO.balanceOf(backend.address);
     const currentVestingIndex = 0;
     const beneficiary = account1.address;
-    const amount = ethers.utils.parseEther("1000");
+    const amount = ethers.parseEther("1000");
     /// Backend should give allowance to contractVesting
     await contractUDAO.connect(backend).approve(contractVesting.address, amount);
     /// @dev Get the current block number
@@ -357,9 +357,9 @@ describe("Vesting Contract", function () {
     const currentBalanceOfBackend = await contractUDAO.balanceOf(backend.address);
     const currentVestingIndex = 0;
     const beneficiary = account1.address;
-    const amount1 = ethers.utils.parseEther("1000");
-    const amount2 = ethers.utils.parseEther("2000");
-    const amount3 = ethers.utils.parseEther("3000");
+    const amount1 = ethers.parseEther("1000");
+    const amount2 = ethers.parseEther("2000");
+    const amount3 = ethers.parseEther("3000");
     /// Backend should give allowance to contractVesting
     await contractUDAO.connect(backend).approve(contractVesting.address, amount1.add(amount2).add(amount3));
     /// @dev releaseTime is 1 day from now
@@ -407,9 +407,9 @@ describe("Vesting Contract", function () {
     const currentBalanceOfBackend = await contractUDAO.balanceOf(backend.address);
     const currentVestingIndex = 0;
     const beneficiary = account1.address;
-    const amount1 = ethers.utils.parseEther("1000");
-    const amount2 = ethers.utils.parseEther("2000");
-    const amount3 = ethers.utils.parseEther("3000");
+    const amount1 = ethers.parseEther("1000");
+    const amount2 = ethers.parseEther("2000");
+    const amount3 = ethers.parseEther("3000");
     /// Backend should give allowance to contractVesting
     await contractUDAO.connect(backend).approve(contractVesting.address, amount1.add(amount2).add(amount3));
     /// @dev releaseTime is 1 day from now
@@ -472,8 +472,8 @@ describe("Vesting Contract", function () {
     const currentVestingIndex = 0;
     const beneficiary1 = account1.address;
     const beneficiary2 = account2.address;
-    const amount1 = ethers.utils.parseEther("1000");
-    const amount2 = ethers.utils.parseEther("2000");
+    const amount1 = ethers.parseEther("1000");
+    const amount2 = ethers.parseEther("2000");
     /// Backend should give allowance to contractVesting
     await contractUDAO.connect(backend).approve(contractVesting.address, amount1.add(amount2));
     /// @dev Get the current block number
@@ -556,9 +556,9 @@ describe("Vesting Contract", function () {
     const currentBalanceOfBackend = await contractUDAO.balanceOf(backend.address);
     const currentVestingIndex = 0;
     const beneficiary1 = account1.address;
-    const amount1 = ethers.utils.parseEther("1000");
-    const amount2 = ethers.utils.parseEther("2000");
-    const amount3 = ethers.utils.parseEther("3000");
+    const amount1 = ethers.parseEther("1000");
+    const amount2 = ethers.parseEther("2000");
+    const amount3 = ethers.parseEther("3000");
     /// Backend should give allowance to contractVesting
     await contractUDAO.connect(backend).approve(contractVesting.address, amount1.add(amount2).add(amount3));
     /// @dev releaseTime is 1 day from now
@@ -601,9 +601,9 @@ describe("Vesting Contract", function () {
     const currentBalanceOfBackend = await contractUDAO.balanceOf(backend.address);
     const currentVestingIndex = 0;
     const beneficiary1 = account1.address;
-    const amount1 = ethers.utils.parseEther("1000");
-    const amount2 = ethers.utils.parseEther("2000");
-    const amount3 = ethers.utils.parseEther("3000");
+    const amount1 = ethers.parseEther("1000");
+    const amount2 = ethers.parseEther("2000");
+    const amount3 = ethers.parseEther("3000");
     /// Backend should give allowance to contractVesting
     await contractUDAO.connect(backend).approve(contractVesting.address, amount1.add(amount2).add(amount3));
     /// @dev releaseTime is 1 day from now
@@ -638,9 +638,9 @@ describe("Vesting Contract", function () {
     const currentBalanceOfBackend = await contractUDAO.balanceOf(backend.address);
     const currentVestingIndex = 0;
     const beneficiary1 = account1.address;
-    const amount1 = ethers.utils.parseEther("1000");
-    const amount2 = ethers.utils.parseEther("2000");
-    const amount3 = ethers.utils.parseEther("3000");
+    const amount1 = ethers.parseEther("1000");
+    const amount2 = ethers.parseEther("2000");
+    const amount3 = ethers.parseEther("3000");
     /// Backend should give allowance to contractVesting
     await contractUDAO.connect(backend).approve(contractVesting.address, amount1.add(amount2).add(amount3));
     /// @dev releaseTime is 1 day from now
