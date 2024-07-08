@@ -12,7 +12,6 @@ import "../interfaces/IUDAOC.sol";
 import "../interfaces/ISupervision.sol";
 import "../interfaces/IRoleManager.sol";
 import "../RoleLegacy.sol";
-import "hardhat/console.sol";
 
 contract UDAOContent is
     Pausable,
@@ -120,7 +119,6 @@ contract UDAOContent is
     ) public whenNotPaused {
         // make sure signature is valid and get the address of the signer
         address signer = _verify(voucher);
-        console.log("Signer: %s", signer);
         require(
             hasRole(VOUCHER_VERIFIER, signer),
             "Signature invalid or unauthorized"
