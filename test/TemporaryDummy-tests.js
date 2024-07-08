@@ -83,6 +83,6 @@ describe("Temporary Dummy", function () {
     await contractGovernanceTreasury.connect(backend).emergencyWithdraw();
     // check balance of governance treasury and backend
     expect(await contractUDAO.balanceOf(contractGovernanceTreasury.address)).to.be.equal(0);
-    expect(await contractUDAO.balanceOf(backend.address)).to.be.equal(balanceInGovernance.add(balanceInBackend));
+    expect(await contractUDAO.balanceOf(backend.address)).to.be.equal(balanceInGovernance + balanceInBackend);
   });
 });

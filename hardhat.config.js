@@ -1,16 +1,24 @@
 require("solidity-docgen");
 //require("@nomiclabs/hardhat-waffle");
 require("hardhat-contract-sizer");
-require("solidity-coverage");
-require("hardhat-gas-reporter");
+//require("solidity-coverage");
+//require("hardhat-gas-reporter");
 require("dotenv").config();
 //require("@nomiclabs/hardhat-ethers");
 //require("@nomiclabs/hardhat-etherscan");
 require("hardhat-contract-sizer");
-require("@nomicfoundation/hardhat-ignition-ethers");
+//require("@nomicfoundation/hardhat-ignition-ethers");
+//require("@nomicfoundation/hardhat-chai-matchers");
+require("@nomicfoundation/hardhat-toolbox");
 
-const { POLYGON_TEST_RPC_PROVIDER, TEST_PRIVATE_KEY, TEST_FOUND_PRIVATE_KEY, MAINNET_PRIVATE_KEY, POLYGON_RPC_PROVIDER, POLYGONSCAN_API_KEY } =
-  process.env;
+const {
+  POLYGON_TEST_RPC_PROVIDER,
+  TEST_PRIVATE_KEY,
+  TEST_FOUND_PRIVATE_KEY,
+  MAINNET_PRIVATE_KEY,
+  POLYGON_RPC_PROVIDER,
+  POLYGONSCAN_API_KEY,
+} = process.env;
 
 // This is a sample Hardhat task. To learn how to create your own go to
 // https://hardhat.org/guides/create-task.html

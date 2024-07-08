@@ -86,7 +86,7 @@ async function reDeploy(reApplyRolesViaVoucher = true, isDexRequired = false) {
 describe("Vesting Contract", function () {
   it("Should be able to deploy vesting contract", async function () {
     await reDeploy();
-    expect(contractVesting.address).to.not.equal(0);
+    expect(contractVesting).to.not.equal(0);
   });
 
   it("Should assign DEFAULT_ADMIN_ROLE to backend during deployment", async function () {
@@ -150,7 +150,7 @@ describe("Vesting Contract", function () {
     const beneficiary = account1.address;
     const amount = ethers.parseEther("1000");
     /// Backend should give allowance to contractVesting
-    await contractUDAO.connect(backend).approve(contractVesting.address, amount);
+    await contractUDAO.connect(backend).approve(contractVesting, amount);
     /// @dev Get the current block number
     const currentBlockNumber = await hre.ethers.provider.getBlockNumber();
     /// @dev releaseTime is 1 day from now.
@@ -159,9 +159,9 @@ describe("Vesting Contract", function () {
       .to.emit(contractVesting, "VestingDeposit")
       .withArgs(backend.address, beneficiary, currentVestingIndex, amount, releaseTime);
     // Check balance of backend
-    expect(await contractUDAO.balanceOf(backend.address)).to.be.equal(currentBalanceOfBackend.sub(amount));
+    expect(await contractUDAO.balanceOf(backend.address)).to.be.equal(currentBalanceOfBackend - amount);
     // Check balance of contractVesting
-    expect(await contractUDAO.balanceOf(contractVesting.address)).to.be.equal(amount);
+    expect(await contractUDAO.balanceOf(contractVesting)).to.be.equal(amount);
   });
 
   it("Should not allow non-DEPOSITOR_ROLE to create new deposit for some other address", async function () {
@@ -171,7 +171,7 @@ describe("Vesting Contract", function () {
     const beneficiary = account1.address;
     const amount = ethers.parseEther("1000");
     /// Backend should give allowance to contractVesting
-    await contractUDAO.connect(backend).approve(contractVesting.address, amount);
+    await contractUDAO.connect(backend).approve(contractVesting, amount);
     /// @dev Get the current block number
     const currentBlockNumber = await hre.ethers.provider.getBlockNumber();
     /// @dev releaseTime is 1 day from now.
@@ -190,7 +190,7 @@ describe("Vesting Contract", function () {
     const beneficiary3 = account3.address;
     const amounts = [ethers.parseEther("1000"), ethers.parseEther("2000"), ethers.parseEther("3000")];
     /// Backend should give allowance to contractVesting
-    await contractUDAO.connect(backend).approve(contractVesting.address, amounts[0].add(amounts[1]).add(amounts[2]));
+    await contractUDAO.connect(backend).approve(contractVesting, amounts[0] + amounts[1] + amounts[2]);
     /// @dev Get the current block number
     const currentBlockNumber = await hre.ethers.provider.getBlockNumber();
     /// @dev releaseTime is 1 day from now.
@@ -213,12 +213,10 @@ describe("Vesting Contract", function () {
     ]);
     // Check balance of backend
     expect(await contractUDAO.balanceOf(backend.address)).to.be.equal(
-      currentBalanceOfBackend.sub(amounts[0]).sub(amounts[1]).sub(amounts[2])
+      currentBalanceOfBackend - amounts[0] - amounts[1] - amounts[2]
     );
     // Check balance of contractVesting
-    expect(await contractUDAO.balanceOf(contractVesting.address)).to.be.equal(
-      amounts[0].add(amounts[1]).add(amounts[2])
-    );
+    expect(await contractUDAO.balanceOf(contractVesting)).to.be.equal(amounts[0] + amounts[1] + amounts[2]);
   });
 
   it("Should not allow non-DEPOSITOR_ROLE to create new deposits in batch for some other addresses", async function () {
@@ -230,7 +228,7 @@ describe("Vesting Contract", function () {
     const beneficiary3 = account3.address;
     const amounts = [ethers.parseEther("1000"), ethers.parseEther("2000"), ethers.parseEther("3000")];
     /// Backend should give allowance to contractVesting
-    await contractUDAO.connect(backend).approve(contractVesting.address, amounts[0].add(amounts[1]).add(amounts[2]));
+    await contractUDAO.connect(backend).approve(contractVesting, amounts[0] + amounts[1] + amounts[2]);
     /// @dev Get the current block number
     const currentBlockNumber = await hre.ethers.provider.getBlockNumber();
     /// @dev releaseTime is 1 day from now.
@@ -252,7 +250,7 @@ describe("Vesting Contract", function () {
     const beneficiary3 = account3.address;
     const amounts = [ethers.parseEther("1000"), ethers.parseEther("2000"), ethers.parseEther("3000")];
     /// Backend should give allowance to contractVesting
-    await contractUDAO.connect(backend).approve(contractVesting.address, amounts[0].add(amounts[1]).add(amounts[2]));
+    await contractUDAO.connect(backend).approve(contractVesting, amounts[0] + amounts[1] + amounts[2]);
     /// @dev releaseTime is 1 day from now and missing 1 releaseTime
     /// @dev Get the current block number
     const currentBlockNumber = await hre.ethers.provider.getBlockNumber();
@@ -270,16 +268,16 @@ describe("Vesting Contract", function () {
     const beneficiary = account1.address;
     const amount = ethers.parseEther("1000");
     /// Backend should give allowance to contractVesting
-    await contractUDAO.connect(backend).approve(contractVesting.address, amount);
+    await contractUDAO.connect(backend).approve(contractVesting, amount);
     /// @dev Get the current block number
     const currentBlockNumber = await hre.ethers.provider.getBlockNumber();
     /// @dev releaseTime is 1 day from now
     const releaseTime = (await hre.ethers.provider.getBlock(currentBlockNumber)).timestamp + 86400;
     await contractVesting.connect(backend).deposit(beneficiary, amount, releaseTime);
     // Check balance of backend
-    expect(await contractUDAO.balanceOf(backend.address)).to.be.equal(currentBalanceOfBackend.sub(amount));
+    expect(await contractUDAO.balanceOf(backend.address)).to.be.equal(currentBalanceOfBackend - amount);
     // Check balance of contractVesting
-    expect(await contractUDAO.balanceOf(contractVesting.address)).to.be.equal(amount);
+    expect(await contractUDAO.balanceOf(contractVesting)).to.be.equal(amount);
     // Check balance of beneficiary before withdraw
     expect(await contractUDAO.balanceOf(beneficiary)).to.be.equal(0);
     // Wait for 1 day
@@ -299,16 +297,16 @@ describe("Vesting Contract", function () {
     const beneficiary = account1.address;
     const amount = ethers.parseEther("1000");
     /// Backend should give allowance to contractVesting
-    await contractUDAO.connect(backend).approve(contractVesting.address, amount);
+    await contractUDAO.connect(backend).approve(contractVesting, amount);
     /// @dev Get the current block number
     const currentBlockNumber = await hre.ethers.provider.getBlockNumber();
     /// @dev releaseTime is 1 day from now. Mine 1 days worth of blocks
     const releaseTime = (await hre.ethers.provider.getBlock(currentBlockNumber)).timestamp + 86400;
     await contractVesting.connect(backend).deposit(beneficiary, amount, releaseTime);
     // Check balance of backend
-    expect(await contractUDAO.balanceOf(backend.address)).to.be.equal(currentBalanceOfBackend.sub(amount));
+    expect(await contractUDAO.balanceOf(backend.address)).to.be.equal(currentBalanceOfBackend - amount);
     // Check balance of contractVesting
-    expect(await contractUDAO.balanceOf(contractVesting.address)).to.be.equal(amount);
+    expect(await contractUDAO.balanceOf(contractVesting)).to.be.equal(amount);
     // Check balance of beneficiary before withdraw
     expect(await contractUDAO.balanceOf(beneficiary)).to.be.equal(0);
     // Beneficiary should not be able to withdraw
@@ -326,16 +324,16 @@ describe("Vesting Contract", function () {
     const beneficiary = account1.address;
     const amount = ethers.parseEther("1000");
     /// Backend should give allowance to contractVesting
-    await contractUDAO.connect(backend).approve(contractVesting.address, amount);
+    await contractUDAO.connect(backend).approve(contractVesting, amount);
     /// @dev Get the current block number
     const currentBlockNumber = await hre.ethers.provider.getBlockNumber();
     /// @dev releaseTime is 1 day from now
     const releaseTime = (await hre.ethers.provider.getBlock(currentBlockNumber)).timestamp + 86400;
     await contractVesting.connect(backend).deposit(beneficiary, amount, releaseTime);
     // Check balance of backend
-    expect(await contractUDAO.balanceOf(backend.address)).to.be.equal(currentBalanceOfBackend.sub(amount));
+    expect(await contractUDAO.balanceOf(backend.address)).to.be.equal(currentBalanceOfBackend - amount);
     // Check balance of contractVesting
-    expect(await contractUDAO.balanceOf(contractVesting.address)).to.be.equal(amount);
+    expect(await contractUDAO.balanceOf(contractVesting)).to.be.equal(amount);
     // Check balance of beneficiary before withdraw
     expect(await contractUDAO.balanceOf(beneficiary)).to.be.equal(0);
     // Wait for 1 day
@@ -361,7 +359,7 @@ describe("Vesting Contract", function () {
     const amount2 = ethers.parseEther("2000");
     const amount3 = ethers.parseEther("3000");
     /// Backend should give allowance to contractVesting
-    await contractUDAO.connect(backend).approve(contractVesting.address, amount1.add(amount2).add(amount3));
+    await contractUDAO.connect(backend).approve(contractVesting, amount1 + amount2 + amount3);
     /// @dev releaseTime is 1 day from now
     /// @dev Get the current block number
     const currentBlockNumber = await hre.ethers.provider.getBlockNumber();
@@ -374,10 +372,10 @@ describe("Vesting Contract", function () {
     await contractVesting.connect(backend).deposit(beneficiary, amount3, releaseTime3);
     // Check balance of backend
     expect(await contractUDAO.balanceOf(backend.address)).to.be.equal(
-      currentBalanceOfBackend.sub(amount1).sub(amount2).sub(amount3)
+      currentBalanceOfBackend - amount1 - amount2 - amount3
     );
     // Check balance of contractVesting
-    expect(await contractUDAO.balanceOf(contractVesting.address)).to.be.equal(amount1.add(amount2).add(amount3));
+    expect(await contractUDAO.balanceOf(contractVesting)).to.be.equal(amount1 + amount2 + amount3);
     // Check balance of beneficiary before withdraw
     expect(await contractUDAO.balanceOf(beneficiary)).to.be.equal(0);
     // Wait for 3 days
@@ -393,13 +391,13 @@ describe("Vesting Contract", function () {
       .to.emit(contractVesting, "VestingWithdrawal")
       .withArgs(beneficiary, currentVestingIndex + 1, amount2);
     // Check balance of beneficiary after withdraw
-    expect(await contractUDAO.balanceOf(account1.address)).to.be.equal(amount1.add(amount2));
+    expect(await contractUDAO.balanceOf(account1.address)).to.be.equal(amount1 + amount2);
     // Beneficiary should be able to withdraw amount3
     await expect(contractVesting.connect(account1).withdraw(currentVestingIndex + 2))
       .to.emit(contractVesting, "VestingWithdrawal")
       .withArgs(beneficiary, currentVestingIndex + 2, amount3);
     // Check balance of beneficiary after withdraw
-    expect(await contractUDAO.balanceOf(account1.address)).to.be.equal(amount1.add(amount2).add(amount3));
+    expect(await contractUDAO.balanceOf(account1.address)).to.be.equal(amount1 + amount2 + amount3);
   });
 
   it("Should allow a beneficiary to withdraw his vesting that vested period is over and not allow to withdraw his vesting that vested period is not over", async function () {
@@ -411,7 +409,7 @@ describe("Vesting Contract", function () {
     const amount2 = ethers.parseEther("2000");
     const amount3 = ethers.parseEther("3000");
     /// Backend should give allowance to contractVesting
-    await contractUDAO.connect(backend).approve(contractVesting.address, amount1.add(amount2).add(amount3));
+    await contractUDAO.connect(backend).approve(contractVesting, amount1 + amount2 + amount3);
     /// @dev releaseTime is 1 day from now
     /// @dev Get the current block number
     const currentBlockNumber = await hre.ethers.provider.getBlockNumber();
@@ -424,10 +422,10 @@ describe("Vesting Contract", function () {
     await contractVesting.connect(backend).deposit(beneficiary, amount3, releaseTime3);
     // Check balance of backend
     expect(await contractUDAO.balanceOf(backend.address)).to.be.equal(
-      currentBalanceOfBackend.sub(amount1).sub(amount2).sub(amount3)
+      currentBalanceOfBackend - amount1 - amount2 - amount3
     );
     // Check balance of contractVesting
-    expect(await contractUDAO.balanceOf(contractVesting.address)).to.be.equal(amount1.add(amount2).add(amount3));
+    expect(await contractUDAO.balanceOf(contractVesting)).to.be.equal(amount1 + amount2 + amount3);
     // Check balance of beneficiary before withdraw
     expect(await contractUDAO.balanceOf(beneficiary)).to.be.equal(0);
     // Wait for 1 day
@@ -457,13 +455,13 @@ describe("Vesting Contract", function () {
       .to.emit(contractVesting, "VestingWithdrawal")
       .withArgs(beneficiary, currentVestingIndex + 1, amount2);
     // Check balance of beneficiary after withdraw
-    expect(await contractUDAO.balanceOf(account1.address)).to.be.equal(amount1.add(amount2));
+    expect(await contractUDAO.balanceOf(account1.address)).to.be.equal(amount1 + amount2);
     // Beneficiary should be able to withdraw amount3
     await expect(contractVesting.connect(account1).withdraw(currentVestingIndex + 2))
       .to.emit(contractVesting, "VestingWithdrawal")
       .withArgs(beneficiary, currentVestingIndex + 2, amount3);
     // Check balance of beneficiary after withdraw
-    expect(await contractUDAO.balanceOf(account1.address)).to.be.equal(amount1.add(amount2).add(amount3));
+    expect(await contractUDAO.balanceOf(account1.address)).to.be.equal(amount1 + amount2 + amount3);
   });
 
   it("Should not allow a user to use an existing vesting index to withdraw someone else's vesting", async function () {
@@ -475,7 +473,7 @@ describe("Vesting Contract", function () {
     const amount1 = ethers.parseEther("1000");
     const amount2 = ethers.parseEther("2000");
     /// Backend should give allowance to contractVesting
-    await contractUDAO.connect(backend).approve(contractVesting.address, amount1.add(amount2));
+    await contractUDAO.connect(backend).approve(contractVesting, amount1 + amount2);
     /// @dev Get the current block number
     const currentBlockNumber = await hre.ethers.provider.getBlockNumber();
     /// @dev releaseTime is 1 day from now
@@ -484,11 +482,9 @@ describe("Vesting Contract", function () {
     await contractVesting.connect(backend).deposit(beneficiary1, amount1, releaseTime1);
     await contractVesting.connect(backend).deposit(beneficiary2, amount2, releaseTime2);
     // Check balance of backend
-    expect(await contractUDAO.balanceOf(backend.address)).to.be.equal(
-      currentBalanceOfBackend.sub(amount1).sub(amount2)
-    );
+    expect(await contractUDAO.balanceOf(backend.address)).to.be.equal(currentBalanceOfBackend - amount1 - amount2);
     // Check balance of contractVesting
-    expect(await contractUDAO.balanceOf(contractVesting.address)).to.be.equal(amount1.add(amount2));
+    expect(await contractUDAO.balanceOf(contractVesting)).to.be.equal(amount1 + amount2);
     // Check balance of beneficiary1 before withdraw
     expect(await contractUDAO.balanceOf(beneficiary1)).to.be.equal(0);
     // Check balance of beneficiary2 before withdraw
@@ -514,9 +510,9 @@ describe("Vesting Contract", function () {
     const currentBalanceOfBackend = await contractUDAO.balanceOf(backend.address);
     const beneficiary = account1.address;
     // Amount is more than backend's balance
-    const amount = currentBalanceOfBackend.add(1);
+    const amount = currentBalanceOfBackend + BigInt(1);
     /// Backend should give allowance to contractVesting
-    await contractUDAO.connect(backend).approve(contractVesting.address, amount);
+    await contractUDAO.connect(backend).approve(contractVesting, amount);
     /// @dev Get the current block number
     const currentBlockNumber = await hre.ethers.provider.getBlockNumber();
     /// @dev releaseTime is 1 day from now
@@ -533,9 +529,9 @@ describe("Vesting Contract", function () {
     const beneficiary2 = account2.address;
     const beneficiary3 = account3.address;
     // Amount is more than backend's balance
-    const amount = currentBalanceOfBackend.add(1);
+    const amount = currentBalanceOfBackend + BigInt(1);
     /// Backend should give allowance to contractVesting
-    await contractUDAO.connect(backend).approve(contractVesting.address, amount);
+    await contractUDAO.connect(backend).approve(contractVesting, amount);
     /// @dev releaseTime is 1 day from now
     /// @dev Get the current block number
     const currentBlockNumber = await hre.ethers.provider.getBlockNumber();
@@ -560,7 +556,7 @@ describe("Vesting Contract", function () {
     const amount2 = ethers.parseEther("2000");
     const amount3 = ethers.parseEther("3000");
     /// Backend should give allowance to contractVesting
-    await contractUDAO.connect(backend).approve(contractVesting.address, amount1.add(amount2).add(amount3));
+    await contractUDAO.connect(backend).approve(contractVesting, amount1 + amount2 + amount3);
     /// @dev releaseTime is 1 day from now
     /// @dev Get the current block number
     const currentBlockNumber = await hre.ethers.provider.getBlockNumber();
@@ -572,10 +568,10 @@ describe("Vesting Contract", function () {
     await contractVesting.connect(backend).deposit(beneficiary1, amount3, releaseTime3);
     // Check balance of backend
     expect(await contractUDAO.balanceOf(backend.address)).to.be.equal(
-      currentBalanceOfBackend.sub(amount1).sub(amount2).sub(amount3)
+      currentBalanceOfBackend - amount1 - amount2 - amount3
     );
     // Check balance of contractVesting
-    expect(await contractUDAO.balanceOf(contractVesting.address)).to.be.equal(amount1.add(amount2).add(amount3));
+    expect(await contractUDAO.balanceOf(contractVesting)).to.be.equal(amount1 + amount2 + amount3);
     // Check balance of beneficiary1 before withdraw
     expect(await contractUDAO.balanceOf(beneficiary1)).to.be.equal(0);
     // Wait for 3 days
@@ -590,10 +586,10 @@ describe("Vesting Contract", function () {
       .withArgs(
         beneficiary1,
         [currentVestingIndex, currentVestingIndex + 1, currentVestingIndex + 2],
-        amount1.add(amount2).add(amount3)
+        amount1 + amount2 + amount3
       );
     // Check balance of beneficiary1 after withdraw
-    expect(await contractUDAO.balanceOf(account1.address)).to.be.equal(amount1.add(amount2).add(amount3));
+    expect(await contractUDAO.balanceOf(account1.address)).to.be.equal(amount1 + amount2 + amount3);
   });
 
   it("Should fail to allow a beneficiary to withdraw his vested amount if caller isnt beneficiary", async function () {
@@ -605,7 +601,7 @@ describe("Vesting Contract", function () {
     const amount2 = ethers.parseEther("2000");
     const amount3 = ethers.parseEther("3000");
     /// Backend should give allowance to contractVesting
-    await contractUDAO.connect(backend).approve(contractVesting.address, amount1.add(amount2).add(amount3));
+    await contractUDAO.connect(backend).approve(contractVesting, amount1 + amount2 + amount3);
     /// @dev releaseTime is 1 day from now
     /// @dev Get the current block number
     const currentBlockNumber = await hre.ethers.provider.getBlockNumber();
@@ -617,10 +613,10 @@ describe("Vesting Contract", function () {
     await contractVesting.connect(backend).deposit(beneficiary1, amount3, releaseTime3);
     // Check balance of backend
     expect(await contractUDAO.balanceOf(backend.address)).to.be.equal(
-      currentBalanceOfBackend.sub(amount1).sub(amount2).sub(amount3)
+      currentBalanceOfBackend - amount1 - amount2 - amount3
     );
     // Check balance of contractVesting
-    expect(await contractUDAO.balanceOf(contractVesting.address)).to.be.equal(amount1.add(amount2).add(amount3));
+    expect(await contractUDAO.balanceOf(contractVesting)).to.be.equal(amount1 + amount2 + amount3);
     // Check balance of beneficiary1 before withdraw
     expect(await contractUDAO.balanceOf(beneficiary1)).to.be.equal(0);
     // Wait for 3 days
@@ -642,7 +638,7 @@ describe("Vesting Contract", function () {
     const amount2 = ethers.parseEther("2000");
     const amount3 = ethers.parseEther("3000");
     /// Backend should give allowance to contractVesting
-    await contractUDAO.connect(backend).approve(contractVesting.address, amount1.add(amount2).add(amount3));
+    await contractUDAO.connect(backend).approve(contractVesting, amount1 + amount2 + amount3);
     /// @dev releaseTime is 1 day from now
     /// @dev Get the current block number
     const currentBlockNumber = await hre.ethers.provider.getBlockNumber();
@@ -654,10 +650,10 @@ describe("Vesting Contract", function () {
     await contractVesting.connect(backend).deposit(beneficiary1, amount3, releaseTime3);
     // Check balance of backend
     expect(await contractUDAO.balanceOf(backend.address)).to.be.equal(
-      currentBalanceOfBackend.sub(amount1).sub(amount2).sub(amount3)
+      currentBalanceOfBackend - amount1 - amount2 - amount3
     );
     // Check balance of contractVesting
-    expect(await contractUDAO.balanceOf(contractVesting.address)).to.be.equal(amount1.add(amount2).add(amount3));
+    expect(await contractUDAO.balanceOf(contractVesting)).to.be.equal(amount1 + amount2 + amount3);
     // Check balance of beneficiary1 before withdraw
     expect(await contractUDAO.balanceOf(beneficiary1)).to.be.equal(0);
     // Wait for 2 days
@@ -669,9 +665,9 @@ describe("Vesting Contract", function () {
         .withdrawFromBatch([currentVestingIndex, currentVestingIndex + 1, currentVestingIndex + 2])
     )
       .to.emit(contractVesting, "VestingsWithdrawal")
-      .withArgs(beneficiary1, [currentVestingIndex, currentVestingIndex + 1], amount1.add(amount2));
+      .withArgs(beneficiary1, [currentVestingIndex, currentVestingIndex + 1], amount1 + amount2);
     // Check balance of beneficiary1 after withdraw
-    expect(await contractUDAO.balanceOf(account1.address)).to.be.equal(amount1.add(amount2));
+    expect(await contractUDAO.balanceOf(account1.address)).to.be.equal(amount1 + amount2);
     // Wait for 1 more day
     await hre.ethers.provider.send("evm_increaseTime", [1 * 24 * 60 * 60]);
     // Beneficiary1 should be able to withdraw amount3
@@ -679,6 +675,6 @@ describe("Vesting Contract", function () {
       .to.emit(contractVesting, "VestingsWithdrawal")
       .withArgs(beneficiary1, [currentVestingIndex + 2], amount3);
     // Check balance of beneficiary1 after withdraw
-    expect(await contractUDAO.balanceOf(account1.address)).to.be.equal(amount1.add(amount2).add(amount3));
+    expect(await contractUDAO.balanceOf(account1.address)).to.be.equal(amount1 + amount2 + amount3);
   });
 });

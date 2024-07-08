@@ -139,9 +139,7 @@ async function runValidation(
 async function setupGovernanceMember(contractRoleManager, contractUDAO, contractUDAOStaker, governanceCandidate) {
   await contractRoleManager.setKYC(governanceCandidate.address, true);
   await contractUDAO.transfer(governanceCandidate.address, ethers.parseEther("100.0"));
-  await contractUDAO
-    .connect(governanceCandidate)
-    .approve(contractUDAOStaker.address, ethers.parseEther("999999999999.0"));
+  await contractUDAO.connect(governanceCandidate).approve(contractUDAOStaker, ethers.parseEther("999999999999.0"));
   await expect(contractUDAOStaker.connect(governanceCandidate).stakeForGovernance(ethers.parseEther("10"), 30))
     .to.emit(contractUDAOStaker, "GovernanceStake") // transfer from null address to minter
     .withArgs(governanceCandidate.address, ethers.parseEther("10"), ethers.parseEther("300"));
@@ -213,7 +211,7 @@ async function _createContent(
   /// Redeem content
   await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample))
     .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
-    .withArgs(ethers.constants.AddressZero, contentCreator.address, 0);
+    .withArgs(ethers.ZeroAddress, contentCreator.address, 0);
 
   /// Start validation and finalize it
   await runValidation(
@@ -247,9 +245,7 @@ async function makeContentPurchase(
   /// Send UDAO to the buyer's wallet
   await contractUDAO.transfer(contentBuyer.address, ethers.parseEther("100.0"));
   /// Content buyer needs to give approval to the platformtreasury
-  await contractUDAO
-    .connect(contentBuyer)
-    .approve(contractPlatformTreasury.address, ethers.parseEther("999999999999.0"));
+  await contractUDAO.connect(contentBuyer).approve(contractPlatformTreasury, ethers.parseEther("999999999999.0"));
   /// Create content purchase vouchers
   /*
   ContentDiscountVoucher: [
@@ -309,9 +305,7 @@ async function makeCoachingPurchase(
   // Send some UDAO to contentBuyer
   await contractUDAO.transfer(contentBuyer.address, ethers.parseEther("100.0"));
   // Content buyer needs to give approval to the platformtreasury
-  await contractUDAO
-    .connect(contentBuyer)
-    .approve(contractPlatformTreasury.address, ethers.parseEther("999999999999.0"));
+  await contractUDAO.connect(contentBuyer).approve(contractPlatformTreasury, ethers.parseEther("999999999999.0"));
 
   // Create CoachingVoucher to be able to buy coaching
   const lazyCoaching = new LazyCoaching({
@@ -382,12 +376,12 @@ describe("Platform Treasury Updated General", function () {
     // Create content with voucher
     await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample))
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
-      .withArgs(ethers.constants.AddressZero, contentCreator.address, 1);
+      .withArgs(ethers.ZeroAddress, contentCreator.address, 1);
 
     // common parts in the purchase voucher
     const tokenIds = [1];
     const purchasedParts = [[1]];
-    const giftReceiver = [ethers.constants.AddressZero];
+    const giftReceiver = [ethers.ZeroAddress];
     const fullContentPurchase = [false];
     const pricesToPay = [ethers.parseEther("1")];
     const validUntil = Date.now() + 999999999;
@@ -442,10 +436,10 @@ describe("Platform Treasury Updated General", function () {
     const _contentValidCut = await contractPlatformTreasury.contentValidCut();
     const contentValidCut = totalPrice.mul(_contentValidCut).div(100000);
     // Get total cut
-    const totalCut = contentGoverCut.add(contentJurorCut).add(contentValidCut).add(contentFoundCut);
+    const totalCut = contentGoverCut + contentJurorCut + contentValidCut + contentFoundCut;
     // Use total cut to get what instructor should receive and check if it is recorded in the correct index
     expect(instructorLockedBalanceArrayBN[currentBlockTimestampIndex]).to.equal(
-      ethers.utils.formatEther(pricesToPay[0].sub(totalCut))
+      ethers.utils.formatEther(pricesToPay[0] - totalCut)
     );
   });
 
@@ -483,7 +477,7 @@ describe("Platform Treasury Updated General", function () {
     // Create content with voucher
     await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample))
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
-      .withArgs(ethers.constants.AddressZero, contentCreator.address, 1);
+      .withArgs(ethers.ZeroAddress, contentCreator.address, 1);
     // Create content 1
     const contentParts2 = [0, 1];
     const redeemer2 = contentCreator;
@@ -500,12 +494,12 @@ describe("Platform Treasury Updated General", function () {
     // Create content with voucher
     await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample2))
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
-      .withArgs(ethers.constants.AddressZero, contentCreator.address, 2);
+      .withArgs(ethers.ZeroAddress, contentCreator.address, 2);
 
     // common parts in the purchase voucher
     const tokenIds = [1];
     const purchasedParts = [[1]];
-    const giftReceiver = [ethers.constants.AddressZero];
+    const giftReceiver = [ethers.ZeroAddress];
     const fullContentPurchase = [true];
     const pricesToPay = [ethers.parseEther("1")];
     const validUntil = Date.now() + 999999999;
@@ -560,10 +554,10 @@ describe("Platform Treasury Updated General", function () {
     const _contentValidCut = await contractPlatformTreasury.contentValidCut();
     const contentValidCut = totalPrice.mul(_contentValidCut).div(100000);
     // Get total cut
-    const totalCut = contentGoverCut.add(contentJurorCut).add(contentValidCut).add(contentFoundCut);
+    const totalCut = contentGoverCut + contentJurorCut + contentValidCut + contentFoundCut;
     // Use total cut to get what instructor should receive and check if it is recorded in the correct index
     expect(instructorLockedBalanceArrayBN[currentBlockTimestampIndex]).to.equal(
-      ethers.utils.formatEther(pricesToPay[0].sub(totalCut))
+      ethers.utils.formatEther(pricesToPay[0] - totalCut)
     );
     // skip 1 day
     skipDays(1);
@@ -612,10 +606,10 @@ describe("Platform Treasury Updated General", function () {
     // Get contentValidCut
     const contentValidCut2 = totalPrice2.mul(_contentValidCut).div(100000);
     // Get total cut
-    const totalCut2 = contentGoverCut2.add(contentJurorCut2).add(contentValidCut2).add(contentFoundCut2);
+    const totalCut2 = contentGoverCut2 + contentJurorCut2 + contentValidCut2 + contentFoundCut2;
     // Use total cut to get what instructor should receive and check if it is recorded in the correct index
     expect(instructorLockedBalanceArrayBN2[currentBlockTimestampIndex]).to.equal(
-      ethers.utils.formatEther(pricesToPay2[0].sub(totalCut2))
+      ethers.utils.formatEther(pricesToPay2[0] - totalCut2)
     );
   });
 
@@ -653,7 +647,7 @@ describe("Platform Treasury Updated General", function () {
     // Create content with voucher
     await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample))
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
-      .withArgs(ethers.constants.AddressZero, contentCreator.address, 1);
+      .withArgs(ethers.ZeroAddress, contentCreator.address, 1);
     // Create content 2
     const contentParts2 = [0, 1];
     const redeemer2 = contentCreator;
@@ -670,7 +664,7 @@ describe("Platform Treasury Updated General", function () {
     // Create content with voucher
     await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample2))
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
-      .withArgs(ethers.constants.AddressZero, contentCreator.address, 2);
+      .withArgs(ethers.ZeroAddress, contentCreator.address, 2);
     // Create content 3
     const contentParts3 = [0, 1];
     const redeemer3 = contentCreator;
@@ -687,12 +681,12 @@ describe("Platform Treasury Updated General", function () {
     // Create content with voucher
     await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample3))
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
-      .withArgs(ethers.constants.AddressZero, contentCreator.address, 3);
+      .withArgs(ethers.ZeroAddress, contentCreator.address, 3);
 
     // common parts in the purchase voucher
     const tokenIds = [1];
     const purchasedParts = [[1]];
-    const giftReceiver = [ethers.constants.AddressZero];
+    const giftReceiver = [ethers.ZeroAddress];
     const fullContentPurchase = [true];
     const pricesToPay = [ethers.parseEther("1")];
     const validUntil = Date.now() + 999999999;
@@ -747,10 +741,10 @@ describe("Platform Treasury Updated General", function () {
     const _contentValidCut = await contractPlatformTreasury.contentValidCut();
     const contentValidCut = totalPrice.mul(_contentValidCut).div(100000);
     // Get total cut
-    const totalCut = contentGoverCut.add(contentJurorCut).add(contentValidCut).add(contentFoundCut);
+    const totalCut = contentGoverCut + contentJurorCut + contentValidCut + contentFoundCut;
     // Use total cut to get what instructor should receive and check if it is recorded in the correct index
     expect(instructorLockedBalanceArrayBN[currentBlockTimestampIndex]).to.equal(
-      ethers.utils.formatEther(pricesToPay[0].sub(totalCut))
+      ethers.utils.formatEther(pricesToPay[0] - totalCut)
     );
     // skip 1 day
     skipDays(1);
@@ -799,10 +793,10 @@ describe("Platform Treasury Updated General", function () {
     // Get contentValidCut
     const contentValidCut2 = totalPrice2.mul(_contentValidCut).div(100000);
     // Get total cut
-    const totalCut2 = contentGoverCut2.add(contentJurorCut2).add(contentValidCut2).add(contentFoundCut2);
+    const totalCut2 = contentGoverCut2 + contentJurorCut2 + contentValidCut2 + contentFoundCut2;
     // Use total cut to get what instructor should receive and check if it is recorded in the correct index
     expect(instructorLockedBalanceArrayBN2[currentBlockTimestampIndex]).to.equal(
-      ethers.utils.formatEther(pricesToPay2[0].sub(totalCut2))
+      ethers.utils.formatEther(pricesToPay2[0] - totalCut2)
     );
     // skip 1 day
     skipDays(1);
@@ -851,10 +845,10 @@ describe("Platform Treasury Updated General", function () {
     // Get contentValidCut
     const contentValidCut3 = totalPrice3.mul(_contentValidCut).div(100000);
     // Get total cut
-    const totalCut3 = contentGoverCut3.add(contentJurorCut3).add(contentValidCut3).add(contentFoundCut3);
+    const totalCut3 = contentGoverCut3 + contentJurorCut3 + contentValidCut3 + contentFoundCut3;
     // Use total cut to get what instructor should receive and check if it is recorded in the correct index
     expect(instructorLockedBalanceArrayBN3[currentBlockTimestampIndex]).to.equal(
-      ethers.utils.formatEther(pricesToPay3[0].sub(totalCut3))
+      ethers.utils.formatEther(pricesToPay3[0] - totalCut3)
     );
   });
 
@@ -892,14 +886,14 @@ describe("Platform Treasury Updated General", function () {
     // Create content with voucher
     await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample))
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
-      .withArgs(ethers.constants.AddressZero, contentCreator.address, 1);
+      .withArgs(ethers.ZeroAddress, contentCreator.address, 1);
 
     /// @dev Change the refund window to 5 days
     await contractPlatformTreasury.connect(backend).changeRefundWindow(5);
     // common parts in the purchase voucher
     const tokenIds = [1];
     const purchasedParts = [[1]];
-    const giftReceiver = [ethers.constants.AddressZero];
+    const giftReceiver = [ethers.ZeroAddress];
     const fullContentPurchase = [true];
     const pricesToPay = [ethers.parseEther("1")];
     const validUntil = Date.now() + 999999999;
@@ -959,10 +953,10 @@ describe("Platform Treasury Updated General", function () {
     const _contentValidCut = await contractPlatformTreasury.contentValidCut();
     const contentValidCut = totalPrice.mul(_contentValidCut).div(100000);
     // Get total cut
-    const totalCut = contentGoverCut.add(contentJurorCut).add(contentValidCut).add(contentFoundCut);
+    const totalCut = contentGoverCut + contentJurorCut + contentValidCut + contentFoundCut;
     // Use total cut to get what instructor should receive and check if it is recorded in the correct index
     expect(instructorLockedBalanceArrayBN[currentBlockTimestampIndex]).to.equal(
-      ethers.utils.formatEther(pricesToPay[0].sub(totalCut))
+      ethers.utils.formatEther(pricesToPay[0] - totalCut)
     );
     expect(contentLockedBalanceArrayBN[currentBlockTimestampIndex]).to.equal(ethers.utils.formatEther(totalCut));
   });
@@ -1001,7 +995,7 @@ describe("Platform Treasury Updated General", function () {
     // Create content with voucher
     await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample))
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
-      .withArgs(ethers.constants.AddressZero, contentCreator.address, 1);
+      .withArgs(ethers.ZeroAddress, contentCreator.address, 1);
     // Create content 2
     const contentParts2 = [0, 1];
     const redeemer2 = contentCreator;
@@ -1018,12 +1012,12 @@ describe("Platform Treasury Updated General", function () {
     // Create content with voucher
     await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample2))
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
-      .withArgs(ethers.constants.AddressZero, contentCreator.address, 2);
+      .withArgs(ethers.ZeroAddress, contentCreator.address, 2);
 
     // common parts in the purchase voucher
     const tokenIds = [1];
     const purchasedParts = [[1]];
-    const giftReceiver = [ethers.constants.AddressZero];
+    const giftReceiver = [ethers.ZeroAddress];
     const fullContentPurchase = [true];
     const pricesToPay = [ethers.parseEther("1")];
     const validUntil = Date.now() + 999999999;
@@ -1083,10 +1077,10 @@ describe("Platform Treasury Updated General", function () {
     const _contentValidCut = await contractPlatformTreasury.contentValidCut();
     const contentValidCut = totalPrice.mul(_contentValidCut).div(100000);
     // Get total cut
-    const totalCut = contentGoverCut.add(contentJurorCut).add(contentValidCut).add(contentFoundCut);
+    const totalCut = contentGoverCut + contentJurorCut + contentValidCut + contentFoundCut;
     // Use total cut to get what instructor should receive and check if it is recorded in the correct index
     expect(instructorLockedBalanceArrayBN[currentBlockTimestampIndex]).to.equal(
-      ethers.utils.formatEther(pricesToPay[0].sub(totalCut))
+      ethers.utils.formatEther(pricesToPay[0] - totalCut)
     );
     expect(contentLockedBalanceArrayBN[currentBlockTimestampIndex]).to.equal(ethers.utils.formatEther(totalCut));
     /// @dev Change the refund window to 5 days
@@ -1108,7 +1102,7 @@ describe("Platform Treasury Updated General", function () {
       );
     }
     expect(instructorLockedBalanceArrayBN2[currentBlockTimestampIndex]).to.equal(
-      ethers.utils.formatEther(pricesToPay[0].sub(totalCut))
+      ethers.utils.formatEther(pricesToPay[0] - totalCut)
     );
     // Get current blocks timestamp to check if the content cut is recorded in the correct index
     currentBlockTimestampIndex = Math.floor(
@@ -1166,13 +1160,13 @@ describe("Platform Treasury Updated General", function () {
     // Get contentValidCut
     const contentValidCut2 = totalPrice2.mul(_contentValidCut).div(100000);
     // Get total cut
-    const totalCut2 = contentGoverCut2.add(contentJurorCut2).add(contentValidCut2).add(contentFoundCut2);
+    const totalCut2 = contentGoverCut2 + contentJurorCut2 + contentValidCut2 + contentFoundCut2;
 
     expect(instructorLockedBalanceArrayBN3[currentBlockTimestampIndex]).to.equal(
-      ethers.utils.formatEther(pricesToPay2[0].sub(totalCut2).add(pricesToPay[0].sub(totalCut)))
+      ethers.utils.formatEther(pricesToPay2[0] - totalCut2 + pricesToPay[0] - totalCut)
     );
     expect(contentLockedBalanceArrayBN3[currentBlockTimestampIndex]).to.equal(
-      ethers.utils.formatEther(totalCut.add(totalCut2))
+      ethers.utils.formatEther(totalCut + totalCut2)
     );
   });
 
@@ -1210,7 +1204,7 @@ describe("Platform Treasury Updated General", function () {
     // Create content with voucher
     await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample))
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
-      .withArgs(ethers.constants.AddressZero, contentCreator.address, 1);
+      .withArgs(ethers.ZeroAddress, contentCreator.address, 1);
     // Create content 2
     const contentParts2 = [0, 1];
     const redeemer2 = contentCreator;
@@ -1227,12 +1221,12 @@ describe("Platform Treasury Updated General", function () {
     // Create content with voucher
     await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample2))
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
-      .withArgs(ethers.constants.AddressZero, contentCreator.address, 2);
+      .withArgs(ethers.ZeroAddress, contentCreator.address, 2);
 
     // common parts in the purchase voucher
     const tokenIds = [1];
     const purchasedParts = [[1]];
-    const giftReceiver = [ethers.constants.AddressZero];
+    const giftReceiver = [ethers.ZeroAddress];
     const fullContentPurchase = [true];
     const pricesToPay = [ethers.parseEther("1")];
     const validUntil = Date.now() + 999999999;
@@ -1292,10 +1286,10 @@ describe("Platform Treasury Updated General", function () {
     const _contentValidCut = await contractPlatformTreasury.contentValidCut();
     const contentValidCut = totalPrice.mul(_contentValidCut).div(100000);
     // Get total cut
-    const totalCut = contentGoverCut.add(contentJurorCut).add(contentValidCut).add(contentFoundCut);
+    const totalCut = contentGoverCut + contentJurorCut + contentValidCut + contentFoundCut;
     // Use total cut to get what instructor should receive and check if it is recorded in the correct index
     expect(instructorLockedBalanceArrayBN[currentBlockTimestampIndex]).to.equal(
-      ethers.utils.formatEther(pricesToPay[0].sub(totalCut))
+      ethers.utils.formatEther(pricesToPay[0] - totalCut)
     );
     expect(contentLockedBalanceArrayBN[currentBlockTimestampIndex]).to.equal(ethers.utils.formatEther(totalCut));
     /// @dev Change the refund window to 5 days
@@ -1317,7 +1311,7 @@ describe("Platform Treasury Updated General", function () {
       );
     }
     expect(instructorLockedBalanceArrayBN2[currentBlockTimestampIndex]).to.equal(
-      ethers.utils.formatEther(pricesToPay[0].sub(totalCut))
+      ethers.utils.formatEther(pricesToPay[0] - totalCut)
     );
 
     // Get current blocks timestamp to check if the content cut is recorded in the correct index
@@ -1378,9 +1372,9 @@ describe("Platform Treasury Updated General", function () {
     // Get contentValidCut
     const contentValidCut2 = totalPrice2.mul(_contentValidCut).div(100000);
     // Get total cut
-    const totalCut2 = contentGoverCut2.add(contentJurorCut2).add(contentValidCut2).add(contentFoundCut2);
+    const totalCut2 = contentGoverCut2 + contentJurorCut2 + contentValidCut2 + contentFoundCut2;
     expect(instructorLockedBalanceArrayBN3[currentBlockTimestampIndex]).to.equal(
-      ethers.utils.formatEther(pricesToPay2[0].sub(totalCut2).add(pricesToPay[0].sub(totalCut)))
+      ethers.utils.formatEther(pricesToPay2[0] - totalCut2 + pricesToPay[0] - totalCut)
     );
     /// @dev Cuts are not added together since the 2nd sale is 1 day later
     expect(contentLockedBalanceArrayBN3[currentBlockTimestampIndex]).to.equal(ethers.utils.formatEther(totalCut2));
@@ -1423,12 +1417,12 @@ describe("Platform Treasury Updated General", function () {
     // Create content with voucher
     await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample))
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
-      .withArgs(ethers.constants.AddressZero, contentCreator.address, 1);
+      .withArgs(ethers.ZeroAddress, contentCreator.address, 1);
 
     // Buy the content
     const tokenIds = [1];
     const purchasedParts = [[1]];
-    const giftReceiver = [ethers.constants.AddressZero];
+    const giftReceiver = [ethers.ZeroAddress];
     const fullContentPurchase = [true];
     const pricesToPay = [ethers.parseEther("1")];
     const validUntil = Date.now() + 999999999;
@@ -1486,10 +1480,10 @@ describe("Platform Treasury Updated General", function () {
     const _contentValidCut = await contractPlatformTreasury.contentValidCut();
     const contentValidCut = totalPrice.mul(_contentValidCut).div(100000);
     // Get total cut
-    const totalCut = contentGoverCut.add(contentJurorCut).add(contentValidCut).add(contentFoundCut);
+    const totalCut = contentGoverCut + contentJurorCut + contentValidCut + contentFoundCut;
     // Use total cut to get what instructor should receive and check if it is recorded in the correct index
     expect(instructorLockedBalanceArrayBN[currentBlockTimestampIndex]).to.equal(
-      ethers.utils.formatEther(pricesToPay[0].sub(totalCut))
+      ethers.utils.formatEther(pricesToPay[0] - totalCut)
     );
     expect(contentLockedBalanceArrayBN[currentBlockTimestampIndex]).to.equal(ethers.utils.formatEther(totalCut));
     /// @dev Change the refund window to 5 days
@@ -1540,12 +1534,12 @@ describe("Platform Treasury Updated General", function () {
     // Create content with voucher
     await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample))
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
-      .withArgs(ethers.constants.AddressZero, contentCreator.address, 1);
+      .withArgs(ethers.ZeroAddress, contentCreator.address, 1);
 
     // Buy the content
     const tokenIds = [1];
     const purchasedParts = [[1]];
-    const giftReceiver = [ethers.constants.AddressZero];
+    const giftReceiver = [ethers.ZeroAddress];
     const fullContentPurchase = [true];
     const pricesToPay = [ethers.parseEther("1")];
     const validUntil = Date.now() + 999999999;
@@ -1603,10 +1597,10 @@ describe("Platform Treasury Updated General", function () {
     const _contentValidCut = await contractPlatformTreasury.contentValidCut();
     const contentValidCut = totalPrice.mul(_contentValidCut).div(100000);
     // Get total cut
-    const totalCut = contentGoverCut.add(contentJurorCut).add(contentValidCut).add(contentFoundCut);
+    const totalCut = contentGoverCut + contentJurorCut + contentValidCut + contentFoundCut;
     // Use total cut to get what instructor should receive and check if it is recorded in the correct index
     expect(instructorLockedBalanceArrayBN[currentBlockTimestampIndex]).to.equal(
-      ethers.utils.formatEther(pricesToPay[0].sub(totalCut))
+      ethers.utils.formatEther(pricesToPay[0] - totalCut)
     );
     expect(contentLockedBalanceArrayBN[currentBlockTimestampIndex]).to.equal(ethers.utils.formatEther(totalCut));
     /// @dev Change the refund window to 5 days
@@ -1666,7 +1660,7 @@ describe("Platform Treasury Updated General", function () {
     // Create content with voucher
     await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample))
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
-      .withArgs(ethers.constants.AddressZero, contentCreator.address, 1);
+      .withArgs(ethers.ZeroAddress, contentCreator.address, 1);
     // Create content 2
     // Create content voucher
     const createContentVoucherSample2 = await createContentVoucher(
@@ -1682,11 +1676,11 @@ describe("Platform Treasury Updated General", function () {
     // Create content with voucher
     await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample2))
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
-      .withArgs(ethers.constants.AddressZero, contentCreator.address, 2);
+      .withArgs(ethers.ZeroAddress, contentCreator.address, 2);
     // Buy the content
     const tokenIds = [1];
     const purchasedParts = [[1]];
-    const giftReceiver = [ethers.constants.AddressZero];
+    const giftReceiver = [ethers.ZeroAddress];
     const fullContentPurchase = [true];
     const pricesToPay = [ethers.parseEther("1")];
     const validUntil = Date.now() + 999999999;
@@ -1744,10 +1738,10 @@ describe("Platform Treasury Updated General", function () {
     const _contentValidCut = await contractPlatformTreasury.contentValidCut();
     const contentValidCut = totalPrice.mul(_contentValidCut).div(100000);
     // Get total cut
-    const totalCut = contentGoverCut.add(contentJurorCut).add(contentValidCut).add(contentFoundCut);
+    const totalCut = contentGoverCut + contentJurorCut + contentValidCut + contentFoundCut;
     // Use total cut to get what instructor should receive and check if it is recorded in the correct index
     expect(instructorLockedBalanceArrayBN[currentBlockTimestampIndex]).to.equal(
-      ethers.utils.formatEther(pricesToPay[0].sub(totalCut))
+      ethers.utils.formatEther(pricesToPay[0] - totalCut)
     );
     expect(contentLockedBalanceArrayBN[currentBlockTimestampIndex]).to.equal(ethers.utils.formatEther(totalCut));
     /// @dev Change the refund window to 5 days
@@ -1806,7 +1800,7 @@ describe("Platform Treasury Updated General", function () {
     // create content with voucher
     await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample))
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
-      .withArgs(ethers.constants.AddressZero, contentCreator.address, 1);
+      .withArgs(ethers.ZeroAddress, contentCreator.address, 1);
     // change the refund window to 60 days
     await contractPlatformTreasury.connect(backend).changeRefundWindow(60);
     // get the refund window
@@ -1816,7 +1810,7 @@ describe("Platform Treasury Updated General", function () {
     // make a content purchase
     const tokenIds = [1];
     const purchasedParts = [[1]];
-    const giftReceiver = [ethers.constants.AddressZero];
+    const giftReceiver = [ethers.ZeroAddress];
     const fullContentPurchase = [true];
     const pricesToPay = [ethers.parseEther("1")];
     const validUntil = Date.now() + 999999999;
@@ -1871,10 +1865,10 @@ describe("Platform Treasury Updated General", function () {
     const _contentValidCut = await contractPlatformTreasury.contentValidCut();
     const contentValidCut = totalPrice.mul(_contentValidCut).div(100000);
     // Get total cut
-    const totalCut = contentGoverCut.add(contentJurorCut).add(contentValidCut).add(contentFoundCut);
+    const totalCut = contentGoverCut + contentJurorCut + contentValidCut + contentFoundCut;
     // Use total cut to get what instructor should receive and check if it is recorded in the correct index
     expect(instructorLockedBalanceArrayBN[currentBlockTimestampIndex]).to.equal(
-      ethers.utils.formatEther(pricesToPay[0].sub(totalCut))
+      ethers.utils.formatEther(pricesToPay[0] - totalCut)
     );
     expect(contentLockedBalanceArrayBN[currentBlockTimestampIndex]).to.equal(ethers.utils.formatEther(totalCut));
 
@@ -1905,7 +1899,7 @@ describe("Platform Treasury Updated General", function () {
 
     // Use total cut to get what instructor should receive and check if it is recorded in the correct index according to the new index
     expect(instructorLockedBalanceArrayBN2[currentBlockTimestampIndex]).to.equal(
-      ethers.utils.formatEther(pricesToPay[0].sub(totalCut))
+      ethers.utils.formatEther(pricesToPay[0] - totalCut)
     );
     expect(contentLockedBalanceArrayBN2[currentBlockTimestampIndex]).to.equal(ethers.utils.formatEther(totalCut));
     // skip days by the new refund window
@@ -1918,7 +1912,7 @@ describe("Platform Treasury Updated General", function () {
     const currentBalanceInstS1 = ethers.utils.formatEther(
       await contractPlatformTreasury.instBalance(contentCreator.address)
     );
-    expect(currentBalanceInstS1).to.equal(ethers.utils.formatEther(pricesToPay[0].sub(totalCut)));
+    expect(currentBalanceInstS1).to.equal(ethers.utils.formatEther(pricesToPay[0] - totalCut));
     const currentCutBalanceS1 = ethers.utils.formatEther(await contractPlatformTreasury.contentCutPool());
     expect(currentCutBalanceS1).to.equal(ethers.utils.formatEther(totalCut));
 
@@ -1928,7 +1922,7 @@ describe("Platform Treasury Updated General", function () {
       await contractPlatformTreasury.getWithdrawableBalanceInstructor(contentCreator.address);
     const getWithdrawableBalanceS2 = ethers.utils.formatEther(getWithdrawableBalanceS1);
     const getRefundendBalanceS2 = ethers.utils.formatEther(getRefundendBalanceS1);
-    expect(getWithdrawableBalanceS2).to.equal(ethers.utils.formatEther(pricesToPay[0].sub(totalCut)));
+    expect(getWithdrawableBalanceS2).to.equal(ethers.utils.formatEther(pricesToPay[0] - totalCut));
     expect(getRefundendBalanceS2).to.equal("0.0");
     await expect(contractPlatformTreasury.connect(contentCreator).withdrawInstructor()).to.be.revertedWith(
       "Precaution withdrawal period is not over"
@@ -1961,8 +1955,8 @@ describe("Platform Treasury Updated General", function () {
     // get instructor positive and refunded balance
     const [getWithdrawableBalanceS3, getRefundendBalanceS3] =
       await contractPlatformTreasury.getWithdrawableBalanceInstructor(contentCreator.address);
-    expect(getWithdrawableBalanceS3).to.equal(pricesToPay[0].sub(totalCut));
-    expect(getRefundendBalanceS3).to.equal(pricesToPay[0].sub(totalCut));
+    expect(getWithdrawableBalanceS3).to.equal(pricesToPay[0] - totalCut);
+    expect(getRefundendBalanceS3).to.equal(pricesToPay[0] - totalCut);
     const getRefundendCutBalanceS3 = ethers.utils.formatEther(
       await contractPlatformTreasury.contentCutRefundedBalance()
     );
@@ -1991,12 +1985,12 @@ describe("Platform Treasury Updated General", function () {
     // create content with voucher
     await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample))
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
-      .withArgs(ethers.constants.AddressZero, contentCreator.address, 1);
+      .withArgs(ethers.ZeroAddress, contentCreator.address, 1);
 
     // make a content purchase
     const tokenIds = [1];
     const purchasedParts = [[1]];
-    const giftReceiver = [ethers.constants.AddressZero];
+    const giftReceiver = [ethers.ZeroAddress];
     const fullContentPurchase = [true];
     const pricesToPay = [ethers.parseEther("1")];
     const validUntil = Date.now() + 999999999;

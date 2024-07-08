@@ -306,12 +306,12 @@ describe("Contract Manager", function () {
   it("Should allow backend to bulk set address and sync after deployment of UDAO Version 1.0", async function () {
     await reDeploy();
     // @dev Dummy contract address
-    const testAddressUdao = contractUDAO.address;
-    const testAddressRoleManager = contractRoleManager.address;
-    const testAddressUdaoc = contractUDAOContent.address;
-    const testAddressUdaoCert = contractUDAOCertificate.address;
-    const testAddressVoucherVerifier = contractVoucherVerifier.address;
-    const testAddressPlatformTreasury = contractPlatformTreasury.address;
+    const testAddressUdao = contractUDAO;
+    const testAddressRoleManager = contractRoleManager;
+    const testAddressUdaoc = contractUDAOContent;
+    const testAddressUdaoCert = contractUDAOCertificate;
+    const testAddressVoucherVerifier = contractVoucherVerifier;
+    const testAddressPlatformTreasury = contractPlatformTreasury;
 
     await contractContractManager
       .connect(backend)
@@ -333,7 +333,7 @@ describe("Contract Manager", function () {
     await reDeploy();
     // @dev Dummy contract address
     const testAddressGovernanceTreasury = contractGovernanceTreasury.address;
-    const testAddressSupervision = contractSupervision.address;
+    const testAddressSupervision = contractSupervision;
     await contractContractManager
       .connect(backend)
       .setAddresesCommonInVersion1and2(testAddressGovernanceTreasury, testAddressSupervision);
@@ -347,12 +347,12 @@ describe("Contract Manager", function () {
   it("Should fail backend-else role to use sync function after deployment of UDAO Version 1.0", async function () {
     await reDeploy();
     // @dev Dummy contract address
-    const testAddressUdao = contractUDAO.address;
-    const testAddressRoleManager = contractRoleManager.address;
-    const testAddressUdaoc = contractUDAOContent.address;
-    const testAddressUdaoCert = contractUDAOCertificate.address;
-    const testAddressVoucherVerifier = contractVoucherVerifier.address;
-    const testAddressPlatformTreasury = contractPlatformTreasury.address;
+    const testAddressUdao = contractUDAO;
+    const testAddressRoleManager = contractRoleManager;
+    const testAddressUdaoc = contractUDAOContent;
+    const testAddressUdaoCert = contractUDAOCertificate;
+    const testAddressVoucherVerifier = contractVoucherVerifier;
+    const testAddressPlatformTreasury = contractPlatformTreasury;
 
     await contractContractManager
       .connect(backend)
@@ -374,7 +374,7 @@ describe("Contract Manager", function () {
     await reDeploy();
     // @dev Dummy contract address
     const testAddressGovernanceTreasury = contractGovernanceTreasury.address;
-    const testAddressSupervision = contractSupervision.address;
+    const testAddressSupervision = contractSupervision;
     await contractContractManager
       .connect(backend)
       .setAddresesCommonInVersion1and2(testAddressGovernanceTreasury, testAddressSupervision);

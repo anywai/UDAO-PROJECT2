@@ -140,9 +140,7 @@ async function runValidation(
 async function setupGovernanceMember(contractRoleManager, contractUDAO, contractUDAOStaker, governanceCandidate) {
   await contractRoleManager.setKYC(governanceCandidate.address, true);
   await contractUDAO.transfer(governanceCandidate.address, ethers.parseEther("100.0"));
-  await contractUDAO
-    .connect(governanceCandidate)
-    .approve(contractUDAOStaker.address, ethers.parseEther("999999999999.0"));
+  await contractUDAO.connect(governanceCandidate).approve(contractUDAOStaker, ethers.parseEther("999999999999.0"));
   await expect(contractUDAOStaker.connect(governanceCandidate).stakeForGovernance(ethers.parseEther("10"), 30))
     .to.emit(contractUDAOStaker, "GovernanceStake") // transfer from null address to minter
     .withArgs(governanceCandidate.address, ethers.parseEther("10"), ethers.parseEther("300"));
@@ -214,7 +212,7 @@ async function _createContent(
   /// Redeem content
   await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample))
     .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
-    .withArgs(ethers.constants.AddressZero, contentCreator.address, 0);
+    .withArgs(ethers.ZeroAddress, contentCreator.address, 0);
 
   /// Start validation and finalize it
   await runValidation(
@@ -248,9 +246,7 @@ async function makeContentPurchase(
   /// Send UDAO to the buyer's wallet
   await contractUDAO.transfer(contentBuyer.address, ethers.parseEther("100.0"));
   /// Content buyer needs to give approval to the platformtreasury
-  await contractUDAO
-    .connect(contentBuyer)
-    .approve(contractPlatformTreasury.address, ethers.parseEther("999999999999.0"));
+  await contractUDAO.connect(contentBuyer).approve(contractPlatformTreasury, ethers.parseEther("999999999999.0"));
   /// Create content purchase vouchers
   /*
   ContentDiscountVoucher: [
@@ -310,9 +306,7 @@ async function makeCoachingPurchase(
   // Send some UDAO to contentBuyer
   await contractUDAO.transfer(contentBuyer.address, ethers.parseEther("100.0"));
   // Content buyer needs to give approval to the platformtreasury
-  await contractUDAO
-    .connect(contentBuyer)
-    .approve(contractPlatformTreasury.address, ethers.parseEther("999999999999.0"));
+  await contractUDAO.connect(contentBuyer).approve(contractPlatformTreasury, ethers.parseEther("999999999999.0"));
 
   // Create CoachingVoucher to be able to buy coaching
   const lazyCoaching = new LazyCoaching({
@@ -423,7 +417,7 @@ async function getTotalRoleBalances() {
   const _jurorBalance = await contractPlatformTreasury.jurorBalance();
   const _validatorBalance = await contractPlatformTreasury.validatorsBalance();
   const _sumOfBalances = ethers.utils.formatEther(
-    _foundationBalance.add(_governanceBalance).add(_jurorBalance).add(_validatorBalance)
+    _foundationBalance + _governanceBalance + _jurorBalance + _validatorBalance
   );
   return _sumOfBalances;
 }
@@ -620,13 +614,13 @@ describe("Platform Treasury Visual Tests", function () {
     // Instructor uses this voucher to Create Content on platform
     await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample))
       .to.emit(contractUDAOContent, "Transfer") // transfer from null address to minter
-      .withArgs(ethers.constants.AddressZero, contentCreator.address, 1);
+      .withArgs(ethers.ZeroAddress, contentCreator.address, 1);
 
     /// Backend should supply to buyers a purchase voucher
     // Common parts in the purchase voucher will be used in all purchases
     const tokenIds = [1];
     const purchasedParts = [[1]];
-    const giftReceiver = [ethers.constants.AddressZero];
+    const giftReceiver = [ethers.ZeroAddress];
     const fullContentPurchase = [false];
     const pricesToPay = [ethers.parseEther("2")];
     const validUntil = Date.now() + 999999999;
@@ -718,9 +712,7 @@ describe("Platform Treasury Visual Tests", function () {
     //Send UDAO to the buyer's wallet
     await contractUDAO.transfer(contentBuyer1.address, ethers.parseEther("100.0"));
     //Content buyer needs to give approval to the platformtreasury
-    await contractUDAO
-      .connect(contentBuyer1)
-      .approve(contractPlatformTreasury.address, ethers.parseEther("999999999999.0"));
+    await contractUDAO.connect(contentBuyer1).approve(contractPlatformTreasury, ethers.parseEther("999999999999.0"));
     //Create CoachingVoucher to be able to buy coaching
     const lazyCoaching = new LazyCoaching({
       contract: contractVoucherVerifier,
@@ -986,9 +978,7 @@ describe("Platform Treasury Visual Tests", function () {
     //Send UDAO to the buyer's wallet
     await contractUDAO.transfer(contentBuyer2.address, ethers.parseEther("100.0"));
     //Content buyer needs to give approval to the platformtreasury
-    await contractUDAO
-      .connect(contentBuyer2)
-      .approve(contractPlatformTreasury.address, ethers.parseEther("999999999999.0"));
+    await contractUDAO.connect(contentBuyer2).approve(contractPlatformTreasury, ethers.parseEther("999999999999.0"));
     //Create CoachingVoucher to be able to buy coaching
     const lazyCoaching2 = new LazyCoaching({
       contract: contractVoucherVerifier,
@@ -1449,9 +1439,7 @@ describe("Platform Treasury Visual Tests", function () {
     //Send UDAO to the buyer's wallet
     await contractUDAO.transfer(contentBuyer3.address, ethers.parseEther("100.0"));
     //Content buyer needs to give approval to the platformtreasury
-    await contractUDAO
-      .connect(contentBuyer3)
-      .approve(contractPlatformTreasury.address, ethers.parseEther("999999999999.0"));
+    await contractUDAO.connect(contentBuyer3).approve(contractPlatformTreasury, ethers.parseEther("999999999999.0"));
     //Create CoachingVoucher to be able to buy coaching
     const lazyCoaching3 = new LazyCoaching({
       contract: contractVoucherVerifier,
@@ -1767,9 +1755,9 @@ describe("Platform Treasury Visual Tests", function () {
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////
     // Try to withdraw foundation balance
-    const foundationBalanceBefore = await contractUDAO.balanceOf(contractPlatformTreasury.address);
+    const foundationBalanceBefore = await contractUDAO.balanceOf(contractPlatformTreasury);
     await contractPlatformTreasury.connect(foundation).withdrawFoundation();
-    const foundationBalanceAfter = await contractUDAO.balanceOf(contractPlatformTreasury.address);
+    const foundationBalanceAfter = await contractUDAO.balanceOf(contractPlatformTreasury);
     let foundationBalanceChange = foundationBalanceAfter - foundationBalanceBefore;
     // console log the foundation balance change
     //empty space

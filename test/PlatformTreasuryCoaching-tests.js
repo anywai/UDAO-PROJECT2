@@ -85,9 +85,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     /// Get the amount of UDAO in the buyer's wallet
     const buyerBalance = await contractUDAO.balanceOf(contentBuyer.address);
     /// Content buyer needs to give approval to the platformtreasury
-    await contractUDAO
-      .connect(contentBuyer)
-      .approve(contractPlatformTreasury.address, ethers.parseEther("999999999999.0"));
+    await contractUDAO.connect(contentBuyer).approve(contractPlatformTreasury, ethers.parseEther("999999999999.0"));
 
     // Create CoachingVoucher to be able to buy coaching
     const lazyCoaching = new LazyCoaching({
@@ -114,7 +112,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     // Get the amount of UDAO in the buyer's wallet after buying coaching
     const buyerBalanceAfter = await contractUDAO.balanceOf(contentBuyer.address);
     // Check if correct amount of UDAO was deducted from the buyer's wallet
-    expect(buyerBalance.sub(buyerBalanceAfter)).to.equal(coachingPrice);
+    expect(buyerBalance - buyerBalanceAfter).to.equal(coachingPrice);
     // Get coaching struct
     const coachingStruct = await contractPlatformTreasury.coachSales(coachingSaleID);
     // Check if returned learner address is the same as the buyer address
@@ -132,9 +130,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     /// Get the amount of UDAO in the buyer's wallet
     const buyerBalance = await contractUDAO.balanceOf(contentBuyer.address);
     /// Content buyer needs to give approval to the platformtreasury
-    await contractUDAO
-      .connect(contentBuyer)
-      .approve(contractPlatformTreasury.address, ethers.parseEther("999999999999.0"));
+    await contractUDAO.connect(contentBuyer).approve(contractPlatformTreasury, ethers.parseEther("999999999999.0"));
 
     // Create CoachingVoucher to be able to buy coaching
     const lazyCoaching = new LazyCoaching({
@@ -172,7 +168,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     /// Content buyer needs to give approval to the platformtreasury
     //await contractUDAO
     //  .connect(contentBuyer)
-    //  .approve(contractPlatformTreasury.address, ethers.parseEther("999999999999.0"));
+    //  .approve(contractPlatformTreasury, ethers.parseEther("999999999999.0"));
 
     // Create CoachingVoucher to be able to buy coaching
     const lazyCoaching = new LazyCoaching({
@@ -208,9 +204,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     /// Get the amount of UDAO in the buyer's wallet
     const buyerBalance = await contractUDAO.balanceOf(contentBuyer.address);
     /// Content buyer needs to give approval to the platformtreasury
-    await contractUDAO
-      .connect(contentBuyer)
-      .approve(contractPlatformTreasury.address, ethers.parseEther("999999999999.0"));
+    await contractUDAO.connect(contentBuyer).approve(contractPlatformTreasury, ethers.parseEther("999999999999.0"));
 
     // Create CoachingVoucher to be able to buy coaching
     const lazyCoaching = new LazyCoaching({
@@ -237,7 +231,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     // Get the amount of UDAO in the buyer's wallet after buying coaching
     const buyerBalanceAfter = await contractUDAO.balanceOf(contentBuyer.address);
     // Check if correct amount of UDAO was deducted from the buyer's wallet
-    expect(buyerBalance.sub(buyerBalanceAfter)).to.equal(coachingPrice);
+    expect(buyerBalance - buyerBalanceAfter).to.equal(coachingPrice);
     // Get coaching struct
     const coachingStruct = await contractPlatformTreasury.coachSales(coachingSaleID);
     // Check if returned learner address is the same as the buyer address
@@ -254,9 +248,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     await contractUDAO.transfer(contentBuyer.address, ethers.parseEther("100.0"));
 
     /// Content buyer needs to give approval to the platformtreasury
-    await contractUDAO
-      .connect(contentBuyer)
-      .approve(contractPlatformTreasury.address, ethers.parseEther("999999999999.0"));
+    await contractUDAO.connect(contentBuyer).approve(contractPlatformTreasury, ethers.parseEther("999999999999.0"));
 
     // Create CoachingVoucher to be able to buy coaching
     const lazyCoaching = new LazyCoaching({
@@ -293,9 +285,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     await contractUDAO.transfer(contentBuyer.address, ethers.parseEther("100.0"));
 
     /// Content buyer needs to give approval to the platformtreasury
-    await contractUDAO
-      .connect(contentBuyer)
-      .approve(contractPlatformTreasury.address, ethers.parseEther("999999999999.0"));
+    await contractUDAO.connect(contentBuyer).approve(contractPlatformTreasury, ethers.parseEther("999999999999.0"));
 
     // Create CoachingVoucher to be able to buy coaching
     const lazyCoaching = new LazyCoaching({
@@ -331,9 +321,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     await contractUDAO.transfer(contentBuyer.address, ethers.parseEther("100.0"));
 
     /// Content buyer needs to give approval to the platformtreasury
-    await contractUDAO
-      .connect(contentBuyer)
-      .approve(contractPlatformTreasury.address, ethers.parseEther("999999999999.0"));
+    await contractUDAO.connect(contentBuyer).approve(contractPlatformTreasury, ethers.parseEther("999999999999.0"));
 
     // Create CoachingVoucher to be able to buy coaching
     const lazyCoaching = new LazyCoaching({
@@ -370,9 +358,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     await contractUDAO.transfer(contentBuyer.address, ethers.parseEther("100.0"));
 
     /// Content buyer needs to give approval to the platformtreasury
-    await contractUDAO
-      .connect(contentBuyer)
-      .approve(contractPlatformTreasury.address, ethers.parseEther("999999999999.0"));
+    await contractUDAO.connect(contentBuyer).approve(contractPlatformTreasury, ethers.parseEther("999999999999.0"));
 
     // Create CoachingVoucher to be able to buy coaching
     const lazyCoaching = new LazyCoaching({
@@ -408,9 +394,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     /// Get the amount of UDAO in the buyer's wallet
     const buyerBalance = await contractUDAO.balanceOf(contentBuyer.address);
     /// Content buyer needs to give approval to the platformtreasury
-    await contractUDAO
-      .connect(contentBuyer)
-      .approve(contractPlatformTreasury.address, ethers.parseEther("999999999999.0"));
+    await contractUDAO.connect(contentBuyer).approve(contractPlatformTreasury, ethers.parseEther("999999999999.0"));
 
     // Create CoachingVoucher to be able to buy coaching
     const lazyCoaching = new LazyCoaching({
@@ -437,7 +421,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     // Get the amount of UDAO in the buyer's wallet after buying coaching
     const buyerBalanceAfter = await contractUDAO.balanceOf(contentBuyer.address);
     // Check if correct amount of UDAO was deducted from the buyer's wallet
-    expect(buyerBalance.sub(buyerBalanceAfter)).to.equal(coachingPrice);
+    expect(buyerBalance - buyerBalanceAfter).to.equal(coachingPrice);
     // Get coaching struct
     const coachingStruct = await contractPlatformTreasury.coachSales(coachingSaleID);
     // Check if returned learner address is the same as the buyer address
@@ -450,7 +434,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     // Get the amount of UDAO in the buyer's wallet after refunding coaching
     const buyerBalanceAfterRefund = await contractUDAO.balanceOf(contentBuyer.address);
     // Check if correct amount of UDAO was refunded to the buyer's wallet
-    expect(buyerBalanceAfterRefund.sub(buyerBalanceAfter)).to.equal(coachingPrice);
+    expect(buyerBalanceAfterRefund - buyerBalanceAfter).to.equal(coachingPrice);
   });
 
   it("Should fail refund payment for coaching if caller is not payee or coach", async function () {
@@ -464,9 +448,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     /// Get the amount of UDAO in the buyer's wallet
     const buyerBalance = await contractUDAO.balanceOf(contentBuyer.address);
     /// Content buyer needs to give approval to the platformtreasury
-    await contractUDAO
-      .connect(contentBuyer)
-      .approve(contractPlatformTreasury.address, ethers.parseEther("999999999999.0"));
+    await contractUDAO.connect(contentBuyer).approve(contractPlatformTreasury, ethers.parseEther("999999999999.0"));
 
     // Create CoachingVoucher to be able to buy coaching
     const lazyCoaching = new LazyCoaching({
@@ -493,7 +475,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     // Get the amount of UDAO in the buyer's wallet after buying coaching
     const buyerBalanceAfter = await contractUDAO.balanceOf(contentBuyer.address);
     // Check if correct amount of UDAO was deducted from the buyer's wallet
-    expect(buyerBalance.sub(buyerBalanceAfter)).to.equal(coachingPrice);
+    expect(buyerBalance - buyerBalanceAfter).to.equal(coachingPrice);
     // Get coaching struct
     const coachingStruct = await contractPlatformTreasury.coachSales(coachingSaleID);
     // Check if returned learner address is the same as the buyer address
@@ -518,9 +500,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     /// Get the amount of UDAO in the buyer's wallet
     const buyerBalance = await contractUDAO.balanceOf(contentBuyer.address);
     /// Content buyer needs to give approval to the platformtreasury
-    await contractUDAO
-      .connect(contentBuyer)
-      .approve(contractPlatformTreasury.address, ethers.parseEther("999999999999.0"));
+    await contractUDAO.connect(contentBuyer).approve(contractPlatformTreasury, ethers.parseEther("999999999999.0"));
 
     // Create CoachingVoucher to be able to buy coaching
     const lazyCoaching = new LazyCoaching({
@@ -547,7 +527,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     // Get the amount of UDAO in the buyer's wallet after buying coaching
     const buyerBalanceAfter = await contractUDAO.balanceOf(contentBuyer.address);
     // Check if correct amount of UDAO was deducted from the buyer's wallet
-    expect(buyerBalance.sub(buyerBalanceAfter)).to.equal(coachingPrice);
+    expect(buyerBalance - buyerBalanceAfter).to.equal(coachingPrice);
     // Get coaching struct
     const coachingStruct = await contractPlatformTreasury.coachSales(coachingSaleID);
     // Check if returned learner address is the same as the buyer address
@@ -563,7 +543,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     // Get the amount of UDAO in the buyer's wallet after refunding coaching
     const buyerBalanceAfterRefund = await contractUDAO.balanceOf(contentBuyer.address);
     // Check if correct amount of UDAO was refunded to the buyer's wallet
-    expect(buyerBalanceAfterRefund.sub(buyerBalanceAfter)).to.equal(coachingPrice);
+    expect(buyerBalanceAfterRefund - buyerBalanceAfter).to.equal(coachingPrice);
   });
 
   it("Should fail refund coaching by instructor or learner if it is already refunded", async function () {
@@ -577,9 +557,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     /// Get the amount of UDAO in the buyer's wallet
     const buyerBalance = await contractUDAO.balanceOf(contentBuyer.address);
     /// Content buyer needs to give approval to the platformtreasury
-    await contractUDAO
-      .connect(contentBuyer)
-      .approve(contractPlatformTreasury.address, ethers.parseEther("999999999999.0"));
+    await contractUDAO.connect(contentBuyer).approve(contractPlatformTreasury, ethers.parseEther("999999999999.0"));
 
     // Create CoachingVoucher to be able to buy coaching
     const lazyCoaching = new LazyCoaching({
@@ -606,7 +584,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     // Get the amount of UDAO in the buyer's wallet after buying coaching
     const buyerBalanceAfter = await contractUDAO.balanceOf(contentBuyer.address);
     // Check if correct amount of UDAO was deducted from the buyer's wallet
-    expect(buyerBalance.sub(buyerBalanceAfter)).to.equal(coachingPrice);
+    expect(buyerBalance - buyerBalanceAfter).to.equal(coachingPrice);
     // Get coaching struct
     const coachingStruct = await contractPlatformTreasury.coachSales(coachingSaleID);
     // Check if returned learner address is the same as the buyer address
@@ -622,7 +600,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     // Get the amount of UDAO in the buyer's wallet after refunding coaching
     const buyerBalanceAfterRefund = await contractUDAO.balanceOf(contentBuyer.address);
     // Check if correct amount of UDAO was refunded to the buyer's wallet
-    expect(buyerBalanceAfterRefund.sub(buyerBalanceAfter)).to.equal(coachingPrice);
+    expect(buyerBalanceAfterRefund - buyerBalanceAfter).to.equal(coachingPrice);
 
     await expect(
       contractPlatformTreasury.connect(contentCreator).refundCoachingByInstructorOrLearner(coachingSaleID)
@@ -640,9 +618,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     /// Get the amount of UDAO in the buyer's wallet
     const buyerBalance = await contractUDAO.balanceOf(contentBuyer.address);
     /// Content buyer needs to give approval to the platformtreasury
-    await contractUDAO
-      .connect(contentBuyer)
-      .approve(contractPlatformTreasury.address, ethers.parseEther("999999999999.0"));
+    await contractUDAO.connect(contentBuyer).approve(contractPlatformTreasury, ethers.parseEther("999999999999.0"));
 
     // Create CoachingVoucher to be able to buy coaching
     const lazyCoaching = new LazyCoaching({
@@ -669,7 +645,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     // Get the amount of UDAO in the buyer's wallet after buying coaching
     const buyerBalanceAfter = await contractUDAO.balanceOf(contentBuyer.address);
     // Check if correct amount of UDAO was deducted from the buyer's wallet
-    expect(buyerBalance.sub(buyerBalanceAfter)).to.equal(coachingPrice);
+    expect(buyerBalance - buyerBalanceAfter).to.equal(coachingPrice);
     // Get coaching struct
     const coachingStruct = await contractPlatformTreasury.coachSales(coachingSaleID);
     // Check if returned learner address is the same as the buyer address
@@ -693,9 +669,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     await contractUDAO.transfer(contentBuyer.address, ethers.parseEther("100.0"));
 
     /// Content buyer needs to give approval to the platformtreasury
-    await contractUDAO
-      .connect(contentBuyer)
-      .approve(contractPlatformTreasury.address, ethers.parseEther("999999999999.0"));
+    await contractUDAO.connect(contentBuyer).approve(contractPlatformTreasury, ethers.parseEther("999999999999.0"));
 
     // Create CoachingVoucher to be able to buy coaching
     const lazyCoaching = new LazyCoaching({
@@ -741,9 +715,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     await contractUDAO.transfer(contentBuyer.address, ethers.parseEther("100.0"));
 
     /// Content buyer needs to give approval to the platformtreasury
-    await contractUDAO
-      .connect(contentBuyer)
-      .approve(contractPlatformTreasury.address, ethers.parseEther("999999999999.0"));
+    await contractUDAO.connect(contentBuyer).approve(contractPlatformTreasury, ethers.parseEther("999999999999.0"));
 
     // Create CoachingVoucher to be able to buy coaching
     const lazyCoaching = new LazyCoaching({
@@ -772,7 +744,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     // Get buyer's UDAO balance after buying coaching
     const buyerBalanceAfter = await contractUDAO.balanceOf(contentBuyer.address);
     // Check if correct amount of UDAO was deducted from the buyer's wallet
-    expect(buyerBalance.sub(buyerBalanceAfter)).to.equal(coachingPrice);
+    expect(buyerBalance - buyerBalanceAfter).to.equal(coachingPrice);
     // Get coaching struct
     const coachingStruct = await contractPlatformTreasury.coachSales(coachingSaleID);
     // Check if returned learner address is the same as the buyer address
@@ -801,7 +773,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     // Get buyer's UDAO balance after refunding coaching
     const buyerBalanceAfterRefund = await contractUDAO.balanceOf(contentBuyer.address);
     // Check if correct amount of UDAO was refunded to the buyer's wallet
-    expect(buyerBalanceAfterRefund.sub(buyerBalanceAfter)).to.equal(coachingPrice);
+    expect(buyerBalanceAfterRefund - buyerBalanceAfter).to.equal(coachingPrice);
   });
 
   it("Should fail refund coaching with voucher if it is already refunded", async function () {
@@ -814,9 +786,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     await contractUDAO.transfer(contentBuyer.address, ethers.parseEther("100.0"));
 
     /// Content buyer needs to give approval to the platformtreasury
-    await contractUDAO
-      .connect(contentBuyer)
-      .approve(contractPlatformTreasury.address, ethers.parseEther("999999999999.0"));
+    await contractUDAO.connect(contentBuyer).approve(contractPlatformTreasury, ethers.parseEther("999999999999.0"));
 
     // Create CoachingVoucher to be able to buy coaching
     const lazyCoaching = new LazyCoaching({
@@ -845,7 +815,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     // Get buyer's UDAO balance after buying coaching
     const buyerBalanceAfter = await contractUDAO.balanceOf(contentBuyer.address);
     // Check if correct amount of UDAO was deducted from the buyer's wallet
-    expect(buyerBalance.sub(buyerBalanceAfter)).to.equal(coachingPrice);
+    expect(buyerBalance - buyerBalanceAfter).to.equal(coachingPrice);
     // Get coaching struct
     const coachingStruct = await contractPlatformTreasury.coachSales(coachingSaleID);
     // Check if returned learner address is the same as the buyer address
@@ -874,7 +844,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     // Get buyer's UDAO balance after refunding coaching
     const buyerBalanceAfterRefund = await contractUDAO.balanceOf(contentBuyer.address);
     // Check if correct amount of UDAO was refunded to the buyer's wallet
-    expect(buyerBalanceAfterRefund.sub(buyerBalanceAfter)).to.equal(coachingPrice);
+    expect(buyerBalanceAfterRefund - buyerBalanceAfter).to.equal(coachingPrice);
 
     // Refund coaching
     await expect(contractPlatformTreasury.connect(contentCreator).newRefundCoaching(refund_voucher)).to.be.revertedWith(
@@ -892,9 +862,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     await contractUDAO.transfer(contentBuyer.address, ethers.parseEther("100.0"));
 
     /// Content buyer needs to give approval to the platformtreasury
-    await contractUDAO
-      .connect(contentBuyer)
-      .approve(contractPlatformTreasury.address, ethers.parseEther("999999999999.0"));
+    await contractUDAO.connect(contentBuyer).approve(contractPlatformTreasury, ethers.parseEther("999999999999.0"));
 
     // Create CoachingVoucher to be able to buy coaching
     const lazyCoaching = new LazyCoaching({
@@ -923,7 +891,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     // Get buyer's UDAO balance after buying coaching
     const buyerBalanceAfter = await contractUDAO.balanceOf(contentBuyer.address);
     // Check if correct amount of UDAO was deducted from the buyer's wallet
-    expect(buyerBalance.sub(buyerBalanceAfter)).to.equal(coachingPrice);
+    expect(buyerBalance - buyerBalanceAfter).to.equal(coachingPrice);
     // Get coaching struct
     const coachingStruct = await contractPlatformTreasury.coachSales(coachingSaleID);
     // Check if returned learner address is the same as the buyer address
@@ -1002,9 +970,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     /// Get the amount of UDAO in the buyer's wallet
     const buyerBalance = await contractUDAO.balanceOf(contentBuyer.address);
     /// Content buyer needs to give approval to the platformtreasury
-    await contractUDAO
-      .connect(contentBuyer)
-      .approve(contractPlatformTreasury.address, ethers.parseEther("999999999999.0"));
+    await contractUDAO.connect(contentBuyer).approve(contractPlatformTreasury, ethers.parseEther("999999999999.0"));
 
     // Create CoachingVoucher to be able to buy coaching
     const lazyCoaching = new LazyCoaching({
@@ -1031,7 +997,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     // Get the amount of UDAO in the buyer's wallet after buying coaching
     const buyerBalanceAfter = await contractUDAO.balanceOf(contentBuyer.address);
     // Check if correct amount of UDAO was deducted from the buyer's wallet
-    expect(buyerBalance.sub(buyerBalanceAfter)).to.equal(coachingPrice);
+    expect(buyerBalance - buyerBalanceAfter).to.equal(coachingPrice);
     // Get coaching struct
     const coachingStruct = await contractPlatformTreasury.coachSales(coachingSaleID);
     // Check if returned learner address is the same as the buyer address
@@ -1060,7 +1026,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     // Get coachValidCut
     const coachValidCut = totalPrice.mul(_coachValidCut).div(100000);
     // Get total cut
-    const totalCut = coachGoverCut.add(coachJurorCut).add(coachValidCut);
+    const totalCut = coachGoverCut + coachJurorCut + coachValidCut;
     // Check if the governance treasury has the correct amount with respect to the platform cut percentages
     expect(governanceTreasuryBalance).to.equal(totalCut);
 
@@ -1079,9 +1045,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     /// Get the amount of UDAO in the buyer's wallet
     const buyerBalance = await contractUDAO.balanceOf(contentBuyer.address);
     /// Content buyer needs to give approval to the platformtreasury
-    await contractUDAO
-      .connect(contentBuyer)
-      .approve(contractPlatformTreasury.address, ethers.parseEther("999999999999.0"));
+    await contractUDAO.connect(contentBuyer).approve(contractPlatformTreasury, ethers.parseEther("999999999999.0"));
 
     // Create CoachingVoucher to be able to buy coaching
     const lazyCoaching = new LazyCoaching({
@@ -1129,9 +1093,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     /// Get the amount of UDAO in the buyer's wallet
     const buyerBalance = await contractUDAO.balanceOf(contentBuyer.address);
     /// Content buyer needs to give approval to the platformtreasury
-    await contractUDAO
-      .connect(contentBuyer)
-      .approve(contractPlatformTreasury.address, ethers.parseEther("999999999999.0"));
+    await contractUDAO.connect(contentBuyer).approve(contractPlatformTreasury, ethers.parseEther("999999999999.0"));
 
     // Create CoachingVoucher to be able to buy coaching
     const lazyCoaching = new LazyCoaching({
@@ -1167,7 +1129,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     /// Get the amount of UDAO in the buyer's wallet
     const buyerBalance = await contractUDAO.balanceOf(backend.address);
     /// Content buyer needs to give approval to the platformtreasury
-    await contractUDAO.connect(backend).approve(contractPlatformTreasury.address, ethers.parseEther("999999999999.0"));
+    await contractUDAO.connect(backend).approve(contractPlatformTreasury, ethers.parseEther("999999999999.0"));
     // Create CoachingVoucher to be able to buy coaching
     const lazyCoaching = new LazyCoaching({
       contract: contractVoucherVerifier,
@@ -1192,7 +1154,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     const coachingSaleID = queueTxEvent.args[1];
     // Get the amount of UDAO in the buyer's wallet after buying coaching
     const buyerBalanceAfter = await contractUDAO.balanceOf(backend.address);
-    const changeOnBalance = buyerBalance.sub(buyerBalanceAfter);
+    const changeOnBalance = buyerBalance - buyerBalanceAfter;
     // Get total price
     const totalCutRatio = await contractPlatformTreasury.coachTotalCut();
     const totalCut = coachingPrice.mul(totalCutRatio).div(100000);
@@ -1215,7 +1177,7 @@ describe("Platform Treasury Contract - Coaching", function () {
     /// Get the amount of UDAO in the buyer's wallet
     const buyerBalance = await contractUDAO.balanceOf(backend.address);
     /// Content buyer needs to give approval to the platformtreasury
-    await contractUDAO.connect(backend).approve(contractPlatformTreasury.address, ethers.parseEther("999999999999.0"));
+    await contractUDAO.connect(backend).approve(contractPlatformTreasury, ethers.parseEther("999999999999.0"));
     // Create CoachingVoucher to be able to buy coaching
     const lazyCoaching = new LazyCoaching({
       contract: contractVoucherVerifier,

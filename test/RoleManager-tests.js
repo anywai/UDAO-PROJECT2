@@ -181,7 +181,7 @@ describe("Role Manager", function () {
 
   it("Should allow backend to set update addresses", async function () {
     await reDeploy();
-    const newSupervisionAddress = contractSupervision.address;
+    const newSupervisionAddress = contractSupervision;
 
     await expect(contractRoleManager.connect(backend).updateAddresses(newSupervisionAddress))
       .to.emit(contractRoleManager, "AddressesUpdated")
@@ -190,7 +190,7 @@ describe("Role Manager", function () {
 
   it("Should fail backend-else role to update addresses", async function () {
     await reDeploy();
-    const newSupervisionAddress = contractSupervision.address;
+    const newSupervisionAddress = contractSupervision;
 
     await expect(contractRoleManager.connect(contentBuyer1).updateAddresses(newSupervisionAddress)).to.be.revertedWith(
       "Only backend can update addresses"

@@ -1,12 +1,12 @@
 {
-  "DeployAmoyContracts#DummySupervision": "0x53Fb25Dae7fFFD5d4F1b89fCF41240B95Fdf8774",
-  "DeployAmoyContracts#UDAO": "0x5E2575e9930Bb86606BFCAA2e0B288515e6D4063",
-  "DeployAmoyContracts#RoleManager": "0xFB634b3b26a8F1D4c62c28b71bb7245416B6a760",
-  "DeployAmoyContracts#ContractManager": "0x32064eFcC39a0c395eCc69DB8b41A97819857439",
-  "DeployAmoyContracts#GovernanceTreasury": "0xac0f769fD8363B091B8CD7fb4eCb6b8bFf99cB29",
-  "DeployAmoyContracts#UDAOCertificate": "0x9245FCA85d7833f9801E7732210D3ED4c55c814D",
-  "DeployAmoyContracts#UDAOContent": "0x2b481EDfcbeFF608908C807806d986Dc90fBf763",
-  "DeployAmoyContracts#Vesting": "0xE723C9118B1cC528d0de9f1ea2B1ee4A4A06252c",
-  "DeployAmoyContracts#VoucherVerifier": "0x29D860881646d31dB5fF018Ba0B08d8291387ccC",
-  "DeployAmoyContracts#PlatformTreasury": "0xb9eA1917c4c13aF63f82DCB3FD90af7FB0f3b521"
+  "DeployAmoyContracts#DummySupervision": "0xd22330DaaE13C4e8b760F478377Ad4879145EB9a",
+  "DeployAmoyContracts#RoleManager": "0x9868567B4963e34dd2aF24622228B28E3a098f7b",
+  "DeployAmoyContracts#UDAO": "0x5439B32DAe12cc6F62d23e22e788c720d2517C68",
+  "DeployAmoyContracts#ContractManager": "0x386985242189074e3B9bEba5af51f2e4336eD75F",
+  "DeployAmoyContracts#GovernanceTreasury": "0x21eEa6e463353912eA2fd72B9c057e366fF689EB",
+  "DeployAmoyContracts#UDAOCertificate": "0x27EDa556d7c7bE2c075fd09f5DB0379b83e5C060",
+  "DeployAmoyContracts#UDAOContent": "0x357446c689443f0F77A337b70473C7F7F7A9eC3B",
+  "DeployAmoyContracts#Vesting": "0xc52b408806D38d6DcACfFD3DBA26d8EEC8b9E6a0",
+  "DeployAmoyContracts#VoucherVerifier": "0x4D972F51956a1911b619754b505D52049ff63c1e",
+  "DeployAmoyContracts#PlatformTreasury": "0x125220eE6826Ede51F5197Da2d7dcB3fE3751260"
 }

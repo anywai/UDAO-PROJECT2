@@ -102,8 +102,8 @@ describe("UDAOC Contract", function () {
 
   it("Should allow backend to set update addresses", async function () {
     await reDeploy();
-    const newRoleManagerAddress = contractRoleManager.address;
-    const newSupervisionAddress = contractSupervision.address;
+    const newRoleManagerAddress = contractRoleManager;
+    const newSupervisionAddress = contractSupervision;
 
     await expect(contractUDAOContent.connect(backend).updateAddresses(newRoleManagerAddress, newSupervisionAddress))
       .to.emit(contractUDAOContent, "AddressesUpdated")
@@ -112,8 +112,8 @@ describe("UDAOC Contract", function () {
 
   it("Should allow foundation to update addresses after ownership of contract transfered", async function () {
     await reDeploy();
-    const newRoleManagerAddress = contractRoleManager.address;
-    const newSupervisionAddress = contractSupervision.address;
+    const newRoleManagerAddress = contractRoleManager;
+    const newSupervisionAddress = contractSupervision;
 
     await expect(contractUDAOContent.connect(foundation).updateAddresses(newRoleManagerAddress, newSupervisionAddress))
       .to.emit(contractUDAOContent, "AddressesUpdated")
@@ -122,8 +122,8 @@ describe("UDAOC Contract", function () {
 
   it("Should fail foundation-else or backend-else role to update addresses", async function () {
     await reDeploy();
-    const newRoleManagerAddress = contractRoleManager.address;
-    const newSupervisionAddress = contractSupervision.address;
+    const newRoleManagerAddress = contractRoleManager;
+    const newSupervisionAddress = contractSupervision;
 
     await expect(
       contractUDAOContent.connect(contentBuyer1).updateAddresses(newRoleManagerAddress, newSupervisionAddress)

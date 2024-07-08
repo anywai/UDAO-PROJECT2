@@ -65,7 +65,7 @@ describe("UDAO Cert Contract", function () {
 
   it("Should allow backend to set update addresses", async function () {
     await reDeploy();
-    const newRoleManagerAddress = contractRoleManager.address;
+    const newRoleManagerAddress = contractRoleManager;
 
     await expect(contractUDAOCertificate.connect(backend).updateAddresses(newRoleManagerAddress))
       .to.emit(contractUDAOCertificate, "AddressesUpdated")
@@ -74,7 +74,7 @@ describe("UDAO Cert Contract", function () {
 
   it("Should allow foundation to update addresses after ownership of contract transfered", async function () {
     await reDeploy();
-    const newRoleManagerAddress = contractRoleManager.address;
+    const newRoleManagerAddress = contractRoleManager;
 
     await expect(contractUDAOCertificate.connect(foundation).updateAddresses(newRoleManagerAddress))
       .to.emit(contractUDAOCertificate, "AddressesUpdated")
@@ -83,7 +83,7 @@ describe("UDAO Cert Contract", function () {
 
   it("Should fail foundation-else or backend-else role to update addresses", async function () {
     await reDeploy();
-    const newRoleManagerAddress = contractRoleManager.address;
+    const newRoleManagerAddress = contractRoleManager;
 
     await expect(
       contractUDAOCertificate.connect(contentBuyer1).updateAddresses(newRoleManagerAddress)

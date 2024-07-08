@@ -1,8 +1,7 @@
 const { expect } = require("chai");
 const hardhat = require("hardhat");
 const { ethers } = hardhat;
-const chai = require("chai");
-const BN = require("bn.js");
+
 const { DiscountedPurchase } = require("../lib/DiscountedPurchase");
 const { RefundVoucher } = require("../lib/RefundVoucher");
 const { Redeem } = require("../lib/Redeem");
@@ -11,6 +10,8 @@ const helpers = require("@nomicfoundation/hardhat-network-helpers");
 const { deploy } = require("../lib/deployments");
 
 // Enable and inject BN dependency
+const chai = require("chai");
+const BN = require("bn.js");
 chai.use(require("chai-bn")(BN));
 
 /// @dev Deploy contracts and assign them
@@ -97,7 +98,7 @@ describe("Voucher Verifier", function () {
 
   it("Should allow backend to set update addresses", async function () {
     await reDeploy();
-    const newRoleManagerAddress = contractRoleManager.address;
+    const newRoleManagerAddress = contractRoleManager;
 
     await expect(contractVoucherVerifier.connect(backend).updateAddresses(newRoleManagerAddress))
       .to.emit(contractVoucherVerifier, "AddressesUpdated")
@@ -106,7 +107,7 @@ describe("Voucher Verifier", function () {
 
   it("Should allow foundation to update addresses after ownership of contract transfered", async function () {
     await reDeploy();
-    const newRoleManagerAddress = contractRoleManager.address;
+    const newRoleManagerAddress = contractRoleManager;
 
     await expect(contractVoucherVerifier.connect(foundation).updateAddresses(newRoleManagerAddress))
       .to.emit(contractVoucherVerifier, "AddressesUpdated")
@@ -115,7 +116,7 @@ describe("Voucher Verifier", function () {
 
   it("Should fail foundation-else or backend-else role to update addresses", async function () {
     await reDeploy();
-    const newRoleManagerAddress = contractRoleManager.address;
+    const newRoleManagerAddress = contractRoleManager;
 
     await expect(
       contractVoucherVerifier.connect(contentBuyer1).updateAddresses(newRoleManagerAddress)
@@ -147,6 +148,7 @@ describe("Voucher Verifier", function () {
     const receipt = await tx.wait();
     const tokenId = receipt.events[0].args[2].toNumber();
     // You need to use all parts of the content to buy it. Get all parts of the content
+    console.log("Sıkıntı yok 0.1");
 
     const parts = await contractUDAOContent.getContentParts(tokenId);
 
@@ -154,11 +156,12 @@ describe("Voucher Verifier", function () {
     const tokenIds = [1];
     const purchasedParts = [parts];
     const redeemers = [contentBuyer1.address];
-    const giftReceiver = [ethers.constants.AddressZero];
+    const giftReceiver = [ethers.ZeroAddress];
     const fullContentPurchase = [true];
     const pricesToPay = [ethers.parseEther("1")];
     const validUntil = Date.now() + 999999999;
     const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
+    console.log("Sıkıntı yok 0.2");
 
     ///////////////////////MAKE CONTENT PURCHASE//////////////////////////
     contentBuyer = contentBuyer1;
@@ -168,11 +171,11 @@ describe("Voucher Verifier", function () {
     /// Send UDAO to the buyer's wallet
     await contractUDAO.transfer(contentBuyer.address, ethers.parseEther("100.0"));
     const balanceBeforePurchase = await contractUDAO.balanceOf(contentBuyer.address);
-    /// Content buyer needs to give approval to the platformtreasury
-    await contractUDAO
-      .connect(contentBuyer)
-      .approve(contractPlatformTreasury.address, ethers.parseEther("999999999999.0"));
+    console.log("Sıkıntı yok 0.3");
 
+    /// Content buyer needs to give approval to the platformtreasury
+    await contractUDAO.connect(contentBuyer).approve(contractPlatformTreasury, ethers.parseEther("999999999999.0"));
+    console.log("Sıkıntı yok 1");
     /// Create content purchase vouchers
     /*
     ContentDiscountVoucher: [
@@ -205,6 +208,8 @@ describe("Voucher Verifier", function () {
       // Save the voucher to the array
       contentPurchaseVouchers.push(contentPurchaseVoucher);
     }
+    console.log("Sıkıntı yok 2");
+
     /// Try to buy content and revert with "Signature invalid or unauthorized"
     const transaction = contractPlatformTreasury.connect(contentCreator).buyContent(contentPurchaseVouchers);
     await expect(transaction).to.be.revertedWith("Signature invalid or unauthorized");
@@ -252,7 +257,7 @@ describe("Voucher Verifier", function () {
     const tokenIds = [1];
     const purchasedParts = [parts];
     const redeemers = [contentBuyer1.address];
-    const giftReceiver = [ethers.constants.AddressZero];
+    const giftReceiver = [ethers.ZeroAddress];
     const fullContentPurchase = [true];
     const pricesToPay = [ethers.parseEther("1")];
     const validUntil = 1000000;
@@ -267,9 +272,7 @@ describe("Voucher Verifier", function () {
     await contractUDAO.transfer(contentBuyer.address, ethers.parseEther("100.0"));
     const balanceBeforePurchase = await contractUDAO.balanceOf(contentBuyer.address);
     /// Content buyer needs to give approval to the platformtreasury
-    await contractUDAO
-      .connect(contentBuyer)
-      .approve(contractPlatformTreasury.address, ethers.parseEther("999999999999.0"));
+    await contractUDAO.connect(contentBuyer).approve(contractPlatformTreasury, ethers.parseEther("999999999999.0"));
 
     /// Create content purchase vouchers
 
@@ -334,7 +337,7 @@ describe("Voucher Verifier", function () {
     const tokenIds = [1];
     const purchasedParts = [parts];
     const redeemers = [contentBuyer1.address];
-    const giftReceiver = [ethers.constants.AddressZero];
+    const giftReceiver = [ethers.ZeroAddress];
     const fullContentPurchase = [true];
     const pricesToPay = [ethers.parseEther("1")];
     const validUntil = Date.now() + 999999999;
@@ -349,9 +352,7 @@ describe("Voucher Verifier", function () {
     await contractUDAO.transfer(contentBuyer.address, ethers.parseEther("100.0"));
     const balanceBeforePurchase = await contractUDAO.balanceOf(contentBuyer.address);
     /// Content buyer needs to give approval to the platformtreasury
-    await contractUDAO
-      .connect(contentBuyer)
-      .approve(contractPlatformTreasury.address, ethers.parseEther("999999999999.0"));
+    await contractUDAO.connect(contentBuyer).approve(contractPlatformTreasury, ethers.parseEther("999999999999.0"));
 
     /// Create content purchase vouchers
 
@@ -383,7 +384,7 @@ describe("Voucher Verifier", function () {
     const contentStruct = await contractPlatformTreasury.contentSales(contentSaleID);
     // Check if returned learner address is the same as the buyer address
     for (let i = 0; i < tokenIds.length; i++) {
-      if (giftReceiver[i] == ethers.constants.AddressZero) {
+      if (giftReceiver[i] == ethers.ZeroAddress) {
         expect(contentStruct.contentReceiver).to.equal(contentBuyer.address);
       } else {
         expect(contentStruct.contentReceiver).to.equal(giftReceiver[i]);
@@ -403,7 +404,7 @@ describe("Voucher Verifier", function () {
     /// Get tokenId 0 price with calculatePriceToPay function
     const priceToPay = pricesToPay[0];
     /// Check if the buyer paid the correct amount
-    expect(balanceBefore.sub(balanceAfter)).to.equal(priceToPay);
+    expect(balanceBefore - balanceAfter).to.equal(priceToPay);
     //  Create RefundVoucher
     const refundVoucher = new RefundVoucher({
       contract: contractVoucherVerifier,
@@ -444,9 +445,7 @@ describe("Voucher Verifier", function () {
     /// Get the amount of UDAO in the buyer's wallet
     const buyerBalance = await contractUDAO.balanceOf(contentBuyer.address);
     /// Content buyer needs to give approval to the platformtreasury
-    await contractUDAO
-      .connect(contentBuyer)
-      .approve(contractPlatformTreasury.address, ethers.parseEther("999999999999.0"));
+    await contractUDAO.connect(contentBuyer).approve(contractPlatformTreasury, ethers.parseEther("999999999999.0"));
 
     // Create CoachingVoucher to be able to buy coaching
     const lazyCoaching = new LazyCoaching({

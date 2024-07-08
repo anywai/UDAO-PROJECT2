@@ -237,7 +237,7 @@ describe("UDAOC Contract", function () {
     await contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample);
     // Check getApproved
     const getApproved = await contractUDAOContent.getApproved(1);
-    expect(getApproved).to.eql(ethers.constants.AddressZero);
+    expect(getApproved).to.eql(ethers.ZeroAddress);
   });
   it("Should return false to isApprovedForAll", async function () {
     await reDeploy();
