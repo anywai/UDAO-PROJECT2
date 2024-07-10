@@ -12,7 +12,6 @@ import "../interfaces/IUDAOC.sol";
 import "../interfaces/ISupervision.sol";
 import "../interfaces/IRoleManager.sol";
 import "../RoleLegacy.sol";
-import "hardhat/console.sol";
 
 contract UDAOContent is
     Pausable,
@@ -120,17 +119,6 @@ contract UDAOContent is
     ) public whenNotPaused {
         // make sure signature is valid and get the address of the signer
         address signer = _verify(voucher);
-        //console.log("ValidUntil:", voucher.validUntil);
-        //console.log("Parts[0]:", voucher._parts[0]);
-        //console.log("Parts[1]:", voucher._parts[1]);
-        //console.log("TokenId:", voucher.tokenId);
-        //console.log("URI:", voucher._uri);
-        //console.log("ContentCreator:", voucher._contentCreator);
-        //console.log("Redeemer:", voucher._redeemer);
-        //console.log("RedeemType:", voucher.redeemType);
-        //console.log("ValidationScore:", voucher.validationScore);
-        //
-        console.log("Signer:", signer);
         require(
             hasRole(VOUCHER_VERIFIER, signer),
             "Signature invalid or unauthorized"
@@ -388,7 +376,6 @@ contract UDAOContent is
     ///  the eth_chainId RPC method. See https://github.com/protocol/nft-website/issues/121 for context.
     function getChainID() external view returns (uint256) {
         uint256 id;
-        //console.log("id:", id);
         assembly {
             id := chainid()
         }
