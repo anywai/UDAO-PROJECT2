@@ -148,7 +148,6 @@ describe("Voucher Verifier", function () {
     const receipt = await tx.wait();
     const tokenId = receipt.events[0].args[2].toNumber();
     // You need to use all parts of the content to buy it. Get all parts of the content
-    console.log("Sıkıntı yok 0.1");
 
     const parts = await contractUDAOContent.getContentParts(tokenId);
 
@@ -161,7 +160,6 @@ describe("Voucher Verifier", function () {
     const pricesToPay = [ethers.parseEther("1")];
     const validUntil = Date.now() + 999999999;
     const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
-    console.log("Sıkıntı yok 0.2");
 
     ///////////////////////MAKE CONTENT PURCHASE//////////////////////////
     contentBuyer = contentBuyer1;
@@ -171,11 +169,9 @@ describe("Voucher Verifier", function () {
     /// Send UDAO to the buyer's wallet
     await contractUDAO.transfer(contentBuyer.address, ethers.parseEther("100.0"));
     const balanceBeforePurchase = await contractUDAO.balanceOf(contentBuyer.address);
-    console.log("Sıkıntı yok 0.3");
 
     /// Content buyer needs to give approval to the platformtreasury
     await contractUDAO.connect(contentBuyer).approve(contractPlatformTreasury, ethers.parseEther("999999999999.0"));
-    console.log("Sıkıntı yok 1");
     /// Create content purchase vouchers
     /*
     ContentDiscountVoucher: [
@@ -208,7 +204,6 @@ describe("Voucher Verifier", function () {
       // Save the voucher to the array
       contentPurchaseVouchers.push(contentPurchaseVoucher);
     }
-    console.log("Sıkıntı yok 2");
 
     /// Try to buy content and revert with "Signature invalid or unauthorized"
     const transaction = contractPlatformTreasury.connect(contentCreator).buyContent(contentPurchaseVouchers);
@@ -228,11 +223,8 @@ describe("Voucher Verifier", function () {
     // Create content
     const contentParts = [0, 1];
     const redeemer = contentCreator;
-    console.log("redeemer", redeemer.address);
-    console.log("backend", backend.address);
     //Check if backend has role of VOUCHER_VERIFIER
     //const hasRole = await contractRoleManager.hasRole("VOUCHER_VERIFIER", backend.address);
-    //console.log("hasRole", hasRole);
     // Create content voucher
     const createContentVoucherSample = await createContentVoucher(
       contractUDAOContent,
