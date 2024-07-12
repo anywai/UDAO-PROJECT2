@@ -146,10 +146,10 @@ describe("Voucher Verifier", function () {
     const tx = await contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample);
     // Get NewContentCreated event and get tokenId
     const receipt = await tx.wait();
-    const tokenId = receipt.events[0].args[2].toNumber();
+    const tokenId = receipt.logs[0].args[2];
     // You need to use all parts of the content to buy it. Get all parts of the content
 
-    const parts = await contractUDAOContent.getContentParts(tokenId);
+    const parts = (await contractUDAOContent.getContentParts(tokenId)).map(Number);
 
     // Make a content purchase
     const tokenIds = [1];
@@ -240,10 +240,10 @@ describe("Voucher Verifier", function () {
     const tx = await contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample);
     // Get NewContentCreated event and get tokenId
     const receipt = await tx.wait();
-    const tokenId = receipt.events[0].args[2].toNumber();
+    const tokenId = receipt.logs[0].args[2];
     // You need to use all parts of the content to buy it. Get all parts of the content
 
-    const parts = await contractUDAOContent.getContentParts(tokenId);
+    const parts = (await contractUDAOContent.getContentParts(tokenId)).map(Number);
 
     // Make a content purchase
     const tokenIds = [1];
@@ -286,7 +286,6 @@ describe("Voucher Verifier", function () {
       // Save the voucher to the array
       contentPurchaseVouchers.push(contentPurchaseVoucher);
     }
-
     /// Try to buy content and revert with "Signature invalid or unauthorized"
     const transaction = contractPlatformTreasury.connect(contentCreator).buyContent(contentPurchaseVouchers);
     await expect(transaction).to.be.revertedWith("Voucher has expired.");
@@ -320,10 +319,10 @@ describe("Voucher Verifier", function () {
     const tx = await contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample);
     // Get NewContentCreated event and get tokenId
     const receipt = await tx.wait();
-    const tokenId = receipt.events[0].args[2].toNumber();
+    const tokenId = receipt.logs[0].args[2];
     // You need to use all parts of the content to buy it. Get all parts of the content
 
-    const parts = await contractUDAOContent.getContentParts(tokenId);
+    const parts = (await contractUDAOContent.getContentParts(tokenId)).map(Number);
 
     // Make a content purchase
     const tokenIds = [1];
@@ -367,10 +366,13 @@ describe("Voucher Verifier", function () {
       contentPurchaseVouchers.push(contentPurchaseVoucher);
     }
 
+    
     /// Buy content
     const purchaseTx = await contractPlatformTreasury.connect(contentBuyer).buyContent(contentPurchaseVouchers);
     const queueTxReceipt = await purchaseTx.wait();
-    const queueTxEvent = queueTxReceipt.events.find((e) => e.event == "ContentBought");
+    const queueTxEvent = await queueTxReceipt.logs[4];
+    // Make sure this is the ContentBought event
+    expect(queueTxEvent.fragment.name).to.equal("ContentBought");
     const contentSaleID = queueTxEvent.args[2];
     // Get content struct
     const contentStruct = await contractPlatformTreasury.contentSales(contentSaleID);
