@@ -277,18 +277,39 @@ async function makeContentPurchase(
     // Save the voucher to the array
     contentPurchaseVouchers.push(contentPurchaseVoucher);
   }
-  /// Buy content
+  /// Call buyContent function from the platform treasury contract
   const purchaseTx = await contractPlatformTreasury.connect(contentBuyer).buyContent(contentPurchaseVouchers);
-  const queueTxReceipt = await purchaseTx.wait();
-  const queueTxEvent = queueTxReceipt.events.find((e) => e.event == "ContentBought");
-  const contentSaleID = queueTxEvent.args[2];
-  const userId = queueTxEvent.args[0];
-  // Expect that the userId is equal to the userId of the first voucher
-  expect(userIds[0]).to.equal(userId);
+  /// Get transaction receipt
+  const receiptx = await ethers.provider.getTransactionReceipt(purchaseTx.hash);
+  /// Prepare an interface for ContentBought event
+  const interface = new ethers.Interface([
+    "event ContentBought(string userId, uint256 indexed cartSaleID, uint256 indexed contentSaleID)",
+  ]);
 
-  // Get content struct
+  /// Filter for the specific ContentBought event
+  const contentBoughtEvent = receiptx.logs.find((log) => {
+    try {
+      return interface.parseLog(log).name === "ContentBought";
+    } catch (error) {
+      return false;
+    }
+  });
+
+  if (!contentBoughtEvent) {
+    throw new Error("ContentBought event not found in logs");
+  }
+
+  /// Decode the event log
+  const decodedEvent = interface.decodeEventLog("ContentBought", contentBoughtEvent.data, contentBoughtEvent.topics);
+
+  /// Decoded results for ContentBought event
+  const contentSaleID = decodedEvent[2];
+  const userId = decodedEvent[0];
+  /// Expect that the emited userId is the same as the userId in the voucher
+  expect(userIds[0]).to.equal(userId);
+  /// Get contentSale Record from contract using the contentSaleID
   const contentStruct = await contractPlatformTreasury.contentSales(contentSaleID);
-  // Check if returned learner address is the same as the buyer address
+  /// Expect that recorded ContentBuyer adress in the contract is same with the buyer address in the voucher
   expect(contentStruct.contentReceiver).to.equal(contentBuyer.address);
 }
 async function makeCoachingPurchase(
