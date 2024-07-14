@@ -522,21 +522,19 @@ describe("Platform Treasury General", function () {
     /// @dev Skip "refund window" days to allow foundation to withdraw funds
     const refundWindowDays = await contractPlatformTreasury.refundWindow();
     /// convert big number to number
-    const refundWindowDaysNumber = refundWindowDays.toNumber();
+    const refundWindowDaysNumber = Number(refundWindowDays);
 
     skipDays(refundWindowDaysNumber);
-
     /// @dev Withdraw foundation funds from the treasury
     await contractPlatformTreasury.connect(foundation).withdrawFoundation();
-
     /// @dev Get the current percent cut of the foundation
     const currentFoundationCut = await contractPlatformTreasury.contentFoundCut();
     /// Get the current foundation balance
     const currentFoundationBalance = await contractUDAO.balanceOf(foundation.address);
     const contentPrice = pricesToPay[0];
     /// Multiply the content price with the current foundation cut and divide by 100000 to get the expected foundation balance
-    const expectedFoundationBalanceBeforePercentage = contentPrice.mul(currentFoundationCut);
-    const expectedFoundationBalance = expectedFoundationBalanceBeforePercentage.div(100000);
+    const expectedFoundationBalanceBeforePercentage = contentPrice * currentFoundationCut;
+    const expectedFoundationBalance = expectedFoundationBalanceBeforePercentage / BigInt(100000);
 
     /// Check if the governance treasury balance is equal to the expected governance treasury balance
     await expect(currentFoundationBalance).to.equal(expectedFoundationBalance);
@@ -627,7 +625,7 @@ describe("Platform Treasury General", function () {
     /// @dev Skip "refund window" days to allow foundation to withdraw funds
     const refundWindowDays = await contractPlatformTreasury.refundWindow();
     /// convert big number to number
-    const refundWindowDaysNumber = refundWindowDays.toNumber();
+    const refundWindowDaysNumber = Number(refundWindowDays);
 
     /// @dev Skip 20 days to allow foundation to withdraw funds
     skipDays(refundWindowDaysNumber);
@@ -642,10 +640,10 @@ describe("Platform Treasury General", function () {
     const currentFoundationBalance = await contractUDAO.balanceOf(foundation.address);
     const contentPrice = pricesToPay[0];
     /// Multiply content price with 3 since 3 content purchases were made
-    const contentPriceTimesThree = contentPrice.mul(3);
+    const contentPriceTimesThree = contentPrice * BigInt(3);
     /// Multiply the content price with the current foundation cut and divide by 100000 to get the expected foundation balance
-    const expectedFoundationBalanceBeforePercentage = contentPriceTimesThree.mul(currentFoundationCut);
-    const expectedFoundationBalance = expectedFoundationBalanceBeforePercentage.div(100000);
+    const expectedFoundationBalanceBeforePercentage = contentPriceTimesThree * currentFoundationCut;
+    const expectedFoundationBalance = expectedFoundationBalanceBeforePercentage / BigInt(100000);
 
     /// Check if the governance treasury balance is equal to the expected governance treasury balance
     await expect(currentFoundationBalance).to.equal(expectedFoundationBalance);
@@ -708,7 +706,7 @@ describe("Platform Treasury General", function () {
     /// @dev Skip "refund window" days to allow foundation to withdraw funds
     const refundWindowDays = await contractPlatformTreasury.refundWindow();
     /// convert big number to number
-    const refundWindowDaysNumber = refundWindowDays.toNumber();
+    const refundWindowDaysNumber = Number(refundWindowDays);
 
     /// @dev Skip 20 days to allow foundation to withdraw funds
     skipDays(refundWindowDaysNumber);
@@ -723,18 +721,18 @@ describe("Platform Treasury General", function () {
     const contentPrice = pricesToPay[0];
     // Calculate the foundation cut
     const currentFoundationCut = await contractPlatformTreasury.contentFoundCut();
-    const expectedFoundationBalanceBeforePercentage = contentPrice.mul(currentFoundationCut);
-    const expectedFoundationBalance = expectedFoundationBalanceBeforePercentage.div(100000);
+    const expectedFoundationBalanceBeforePercentage = contentPrice * currentFoundationCut;
+    const expectedFoundationBalance = expectedFoundationBalanceBeforePercentage / BigInt(100000);
     // Calculate the governance cut
     const currentGovernanceTreasuryCut = await contractPlatformTreasury.contentGoverCut();
-    const expectedGovernanceTreasuryBalanceBeforePercentage = contentPrice.mul(currentGovernanceTreasuryCut);
-    const expectedGovernanceTreasuryBalance = expectedGovernanceTreasuryBalanceBeforePercentage.div(100000);
+    const expectedGovernanceTreasuryBalanceBeforePercentage = contentPrice * currentGovernanceTreasuryCut;
+    const expectedGovernanceTreasuryBalance = expectedGovernanceTreasuryBalanceBeforePercentage / BigInt(100000);
     // Calculate the validator cut
     const validatorCut = await contractPlatformTreasury.contentValidCut();
-    const validatorBalance = contentPrice.mul(validatorCut).div(100000);
+    const validatorBalance = (contentPrice * validatorCut) / BigInt(100000);
     // Calculate the juror cut
     const jurorCut = await contractPlatformTreasury.contentJurorCut();
-    const jurorBalance = contentPrice.mul(jurorCut).div(100000);
+    const jurorBalance = (contentPrice * jurorCut) / BigInt(100000);
     // Expect instructerBalance to be equal to priceToPay minus the sum of all cuts
     await expect(instructerBalanceAfter).to.equal(
       contentPrice - expectedFoundationBalance - expectedGovernanceTreasuryBalance - validatorBalance - jurorBalance
@@ -798,7 +796,7 @@ describe("Platform Treasury General", function () {
     /// @dev Skip "refund window" days to allow foundation to withdraw funds
     const refundWindowDays = await contractPlatformTreasury.refundWindow();
     /// convert big number to number
-    const refundWindowDaysNumber = refundWindowDays.toNumber();
+    const refundWindowDaysNumber = Number(refundWindowDays);
 
     /// @dev Skip 20 days to allow foundation to withdraw funds
     skipDays(refundWindowDaysNumber);
@@ -813,18 +811,18 @@ describe("Platform Treasury General", function () {
     const contentPrice = pricesToPay[0];
     // Calculate the foundation cut
     const currentFoundationCut = await contractPlatformTreasury.contentFoundCut();
-    const expectedFoundationBalanceBeforePercentage = contentPrice.mul(currentFoundationCut);
-    const expectedFoundationBalance = expectedFoundationBalanceBeforePercentage.div(100000);
+    const expectedFoundationBalanceBeforePercentage = contentPrice * currentFoundationCut;
+    const expectedFoundationBalance = expectedFoundationBalanceBeforePercentage / BigInt(100000);
     // Calculate the governance cut
     const currentGovernanceTreasuryCut = await contractPlatformTreasury.contentGoverCut();
-    const expectedGovernanceTreasuryBalanceBeforePercentage = contentPrice.mul(currentGovernanceTreasuryCut);
-    const expectedGovernanceTreasuryBalance = expectedGovernanceTreasuryBalanceBeforePercentage.div(100000);
+    const expectedGovernanceTreasuryBalanceBeforePercentage = contentPrice * currentGovernanceTreasuryCut;
+    const expectedGovernanceTreasuryBalance = expectedGovernanceTreasuryBalanceBeforePercentage / BigInt(100000);
     // Calculate the validator cut
     const validatorCut = await contractPlatformTreasury.contentValidCut();
-    const validatorBalance = contentPrice.mul(validatorCut).div(100000);
+    const validatorBalance = (contentPrice * validatorCut) / BigInt(100000);
     // Calculate the juror cut
     const jurorCut = await contractPlatformTreasury.contentJurorCut();
-    const jurorBalance = contentPrice.mul(jurorCut).div(100000);
+    const jurorBalance = (contentPrice * jurorCut) / BigInt(100000);
     // Expect instructerBalance to be equal to priceToPay minus the sum of all cuts
     await expect(instructerBalanceAfter).to.equal(
       contentPrice - expectedFoundationBalance - expectedGovernanceTreasuryBalance - validatorBalance - jurorBalance
@@ -1267,7 +1265,7 @@ describe("Platform Treasury General", function () {
     /// @dev Skip "refund window" days to allow foundation to withdraw funds
     const refundWindowDays = await contractPlatformTreasury.refundWindow();
     /// convert big number to number
-    const refundWindowDaysNumber = refundWindowDays.toNumber();
+    const refundWindowDaysNumber = Number(refundWindowDays);
 
     /// @dev Skip 20 days to allow foundation to withdraw funds
     skipDays(refundWindowDaysNumber);
@@ -1438,7 +1436,7 @@ describe("Platform Treasury General", function () {
     /// @dev Skip "refund window" days to allow foundation to withdraw funds
     const refundWindowDays = await contractPlatformTreasury.refundWindow();
     /// convert big number to number
-    const refundWindowDaysNumber = refundWindowDays.toNumber();
+    const refundWindowDaysNumber = Number(refundWindowDays);
 
     /// @dev Skip 20 days to allow foundation to withdraw funds
     skipDays(refundWindowDaysNumber);
