@@ -225,6 +225,34 @@ async function _createContent(
     contentCreator
   );
 }
+async function readEvent(tx, eventName, contract) {
+  /// Wait for the transaction to be mined and get the receipt
+  const txReceipt = await tx.wait();
+  /// Access ABI from contract instance
+  const contractABI = contract.interface.fragments;
+  /// create ether.js interface using the contract ABI
+  const interfaceOfContract = new ethers.Interface(contractABI);
+  /// Get the logs from the transaction receipt
+  const logs = txReceipt.logs;
+
+  /// Find the log entry that matches the event name
+  const matchingLog = logs.find((logEntry) => {
+    try {
+      const parsedLog = interfaceOfContract.parseLog(logEntry);
+      return parsedLog.name === eventName;
+    } catch (error) {
+      // Handle or ignore the error if the log doesn't match any event in the interface
+      return false;
+    }
+  });
+
+  if (matchingLog) {
+    const parsedLog = interfaceOfContract.parseLog(matchingLog);
+    return parsedLog.args;
+  } else {
+    console.error(`${eventName} event not found in transaction receipt.`);
+  }
+}
 async function makeContentPurchase(
   contractPlatformTreasury,
   contractVoucherVerifier,
@@ -279,32 +307,11 @@ async function makeContentPurchase(
   }
   /// Call buyContent function from the platform treasury contract
   const purchaseTx = await contractPlatformTreasury.connect(contentBuyer).buyContent(contentPurchaseVouchers);
-  /// Get transaction receipt
-  const receiptx = await ethers.provider.getTransactionReceipt(purchaseTx.hash);
-  /// Prepare an interface for ContentBought event
-  const interface = new ethers.Interface([
-    "event ContentBought(string userId, uint256 indexed cartSaleID, uint256 indexed contentSaleID)",
-  ]);
-
-  /// Filter for the specific ContentBought event
-  const contentBoughtEvent = receiptx.logs.find((log) => {
-    try {
-      return interface.parseLog(log).name === "ContentBought";
-    } catch (error) {
-      return false;
-    }
-  });
-
-  if (!contentBoughtEvent) {
-    throw new Error("ContentBought event not found in logs");
-  }
-
-  /// Decode the event log
-  const decodedEvent = interface.decodeEventLog("ContentBought", contentBoughtEvent.data, contentBoughtEvent.topics);
-
+  /// get decoded event from the transaction
+  const decodedEvent = await readEvent(purchaseTx, "ContentBought", contractPlatformTreasury);
   /// Decoded results for ContentBought event
-  const contentSaleID = decodedEvent[2];
   const userId = decodedEvent[0];
+  const contentSaleID = decodedEvent[2];
   /// Expect that the emited userId is the same as the userId in the voucher
   expect(userIds[0]).to.equal(userId);
   /// Get contentSale Record from contract using the contentSaleID
@@ -346,16 +353,17 @@ async function makeCoachingPurchase(
   );
   // Buy coaching
   const purchaseTx = await contractPlatformTreasury.connect(contentBuyer).buyCoaching(role_voucher);
-  const queueTxReceipt = await purchaseTx.wait();
-  const queueTxEvent = queueTxReceipt.events.find((e) => e.event == "CoachingBought");
-  const coachingSaleID = queueTxEvent.args[1];
+  /// get decoded event from the transaction
+  const decodedEvent = await readEvent(purchaseTx, "CoachingBought", contractPlatformTreasury);
+  console.log("decodedEvent", decodedEvent);
+  /// Decoded results for CoachingBought event
+  const coachingSaleID = decodedEvent[1];
   // Get coaching struct
   const coachingStruct = await contractPlatformTreasury.coachSales(coachingSaleID);
   // Check if returned learner address is the same as the buyer address
   expect(coachingStruct.contentReceiver).to.equal(contentBuyer.address);
   return coachingSaleID;
 }
-
 async function skipDays(_days) {
   // There is 86400 second in a day (24h*60m*60s=86400s), and also in polygon 1 block is mined every 2 seconds
   const numBlocksToMine = Math.ceil((_days * 24 * 60 * 60) / 2);
@@ -886,8 +894,8 @@ describe("Platform Treasury General", function () {
     const validUntil = Date.now() + 999999999;
     // _checkPartReceiver should return the content buyer's address
     const validAddress = await contractPlatformTreasury._checkPartReceiver(
-      tokenIds,
-      purchasedParts,
+      tokenIds[0],
+      purchasedParts[0],
       contentBuyer1.address
     );
 
@@ -931,8 +939,8 @@ describe("Platform Treasury General", function () {
 
     // _checkPartReceiver should return the content buyer's address
     const validAddress = await contractPlatformTreasury._checkPartReceiver(
-      tokenIds,
-      purchasedParts,
+      tokenIds[0],
+      purchasedParts[0],
       contentBuyer1.address
     );
 
@@ -978,8 +986,8 @@ describe("Platform Treasury General", function () {
 
     // _checkPartReceiver should return the content buyer's address
     const validAddress = await contractPlatformTreasury._checkPartReceiver(
-      tokenIds,
-      purchasedParts,
+      tokenIds[0],
+      purchasedParts[0],
       contentBuyer1.address
     );
 
@@ -1021,15 +1029,19 @@ describe("Platform Treasury General", function () {
       (redeemType = 1),
       (validationScore = 1)
     );
-
     // Create content with voucher
     const tx = await contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample);
-    // Get NewContentCreated event and get tokenId
-    const receipt = await tx.wait();
-    const tokenId = receipt.events[0].args[2].toNumber();
+    /// get decoded event from the transaction
+    const decodedEvent = await readEvent(tx, "NewContentCreated", contractUDAOContent);
+    /// Decoded results for ContentBought event
+    const tokenId = Number(decodedEvent[0]);
     // You need to use all parts of the content to buy it. Get all parts of the content
-
     const parts = await contractUDAOContent.getContentParts(tokenId);
+    // convert bigNumber parts to number
+    const partsNumber = parts.map((part) => Number(part));
+    // convert map to array
+    const partsNumberArray = Array.from(partsNumber);
+    /// Set the user id
     const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
 
     /// Make content purchase
@@ -1041,7 +1053,7 @@ describe("Platform Treasury General", function () {
         contractRoleManager,
         contractUDAO,
         [tokenId],
-        [parts],
+        [partsNumberArray],
         [ethers.parseEther("1")],
         [false],
         Date.now() + 999999999,
@@ -1084,30 +1096,10 @@ describe("Platform Treasury General", function () {
       "c8d53630-233a-4f95-90cb-4df253ae9283"
     );
     const purchaseTx = await contractPlatformTreasury.connect(contentBuyer).buyCoaching(role_voucher);
-    const queueTxReceipt = await purchaseTx.wait();
-    // Access ABI from contract instance
-    const contractPlatformTreasuryABI = contractPlatformTreasury.interface.fragments;
-    // Decode the logs using the contract interface
-    const iface = new ethers.Interface(contractPlatformTreasuryABI);
-    const logs = queueTxReceipt.logs;
-    let coachingSaleID;
+    /// get decoded event from the transaction
+    const decodedEvent = await readEvent(purchaseTx, "CoachingBought", contractPlatformTreasury);
+    const coachingSaleID = decodedEvent[1];
 
-    logs.forEach((log) => {
-      try {
-        const parsedLog = iface.parseLog(log);
-        if (parsedLog.name === "CoachingBought") {
-          coachingSaleID = parsedLog.args[1];
-        }
-      } catch (error) {
-        // Handle or ignore the error if the log doesn't match any event in the interface
-      }
-    });
-
-    if (coachingSaleID !== undefined) {
-      //console.log("Coaching Sale ID:", coachingSaleID);
-    } else {
-      console.error("CoachingBought event not found in transaction receipt.");
-    }
     // Get the amount of UDAO in the buyer's wallet after buying coaching
     const buyerBalanceAfter = await contractUDAO.balanceOf(contentBuyer.address);
     // Check if correct amount of UDAO was deducted from the buyer's wallet
@@ -1166,14 +1158,19 @@ describe("Platform Treasury General", function () {
 
     // Create content with voucher
     const tx = await contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample);
-    // Get NewContentCreated event and get tokenId
-    const receipt = await tx.wait();
-    const tokenId = receipt.events[0].args[2].toNumber();
+    /// get decoded event from the transaction
+    const decodedEvent = await readEvent(tx, "NewContentCreated", contractUDAOContent);
+    /// Decoded results for ContentBought event
+    const tokenId = Number(decodedEvent[0]);
     // You need to use all parts of the content to buy it. Get all parts of the content
     const parts = await contractUDAOContent.getContentParts(tokenId);
+    // convert bigNumber parts to number
+    const partsNumber = parts.map((part) => Number(part));
+    // convert map to array
+    const partsNumberArray = Array.from(partsNumber);
     // Make a content purchase
     const tokenIds = [1];
-    const purchasedParts = [parts];
+    const purchasedParts = [partsNumberArray];
     const redeemers = [contentBuyer1.address];
     const giftReceiver = [ethers.ZeroAddress];
     const fullContentPurchase = [true];
