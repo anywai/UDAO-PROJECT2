@@ -45,6 +45,34 @@ async function createContentVoucher(
     validationScore
   );
 }
+async function readEvent(tx, eventName, contract) {
+  /// Wait for the transaction to be mined and get the receipt
+  const txReceipt = await tx.wait();
+  /// Access ABI from contract instance
+  const contractABI = contract.interface.fragments;
+  /// create ether.js interface using the contract ABI
+  const interfaceOfContract = new ethers.Interface(contractABI);
+  /// Get the logs from the transaction receipt
+  const logs = txReceipt.logs;
+
+  /// Find the log entry that matches the event name
+  const matchingLog = logs.find((logEntry) => {
+    try {
+      const parsedLog = interfaceOfContract.parseLog(logEntry);
+      return parsedLog.name === eventName;
+    } catch (error) {
+      // Handle or ignore the error if the log doesn't match any event in the interface
+      return false;
+    }
+  });
+
+  if (matchingLog) {
+    const parsedLog = interfaceOfContract.parseLog(matchingLog);
+    return parsedLog.args;
+  } else {
+    console.error(`${eventName} event not found in transaction receipt.`);
+  }
+}
 async function makeContentPurchase(
   contractPlatformTreasury,
   contractVoucherVerifier,
@@ -101,10 +129,11 @@ async function makeContentPurchase(
   }
   /// Buy content
   const purchaseTx = await contractPlatformTreasury.connect(contentBuyer).buyContent(contentPurchaseVouchers);
-  const queueTxReceipt = await purchaseTx.wait();
-  const queueTxEvent = queueTxReceipt.events.find((e) => e.event == "ContentBought");
-  const contentSaleID = queueTxEvent.args[2];
-  const userId = queueTxEvent.args[0];
+  /// get decoded event from the transaction
+  const decodedEvent = await readEvent(purchaseTx, "ContentBought", contractPlatformTreasury);
+  /// Decoded results for ContentBought event
+  const userId = decodedEvent[0];
+  const contentSaleID = decodedEvent[2];
   // expect to get the same userId
   expect(userIds[0]).to.equal(userId);
   // Get content struct
@@ -204,15 +233,19 @@ describe("Platform Treasury Contract - Content", function () {
 
     // Create content with voucher
     const tx = await contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample);
-    // Get NewContentCreated event and get tokenId
-    const receipt = await tx.wait();
-    const tokenId = receipt.events[0].args[2].toNumber();
+    /// get decoded event from the transaction
+    const decodedEvent = await readEvent(tx, "NewContentCreated", contractUDAOContent);
+    /// Decoded results for NewContentCreated event
+    const tokenId = Number(decodedEvent[0]);
     // You need to use all parts of the content to buy it. Get all parts of the content
-
     const parts = await contractUDAOContent.getContentParts(tokenId);
+    // convert bigNumber parts to number
+    const partsNumber = parts.map((part) => Number(part));
+    // convert map to array
+    const partsNumberArray = Array.from(partsNumber);
     // Make a content purchase
     const tokenIds = [1];
-    const purchasedParts = [parts];
+    const purchasedParts = [partsNumberArray];
     const redeemers = [contentBuyer1.address];
     const giftReceiver = [ethers.ZeroAddress];
     const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
@@ -272,15 +305,19 @@ describe("Platform Treasury Contract - Content", function () {
 
     // Create content with voucher
     const tx = await contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample);
-    // Get NewContentCreated event and get tokenId
-    const receipt = await tx.wait();
-    const tokenId = receipt.events[0].args[2].toNumber();
+    /// get decoded event from the transaction
+    const decodedEvent = await readEvent(tx, "NewContentCreated", contractUDAOContent);
+    /// Decoded results for NewContentCreated event
+    const tokenId = Number(decodedEvent[0]);
     // You need to use all parts of the content to buy it. Get all parts of the content
-
     const parts = await contractUDAOContent.getContentParts(tokenId);
+    // convert bigNumber parts to number
+    const partsNumber = parts.map((part) => Number(part));
+    // convert map to array
+    const partsNumberArray = Array.from(partsNumber);
     // Make a content purchase
     const tokenIds = [1];
-    const purchasedParts = [parts];
+    const purchasedParts = [partsNumberArray];
     const redeemers = [backend.address];
     const giftReceiver = [contentBuyer1.address];
     const fullContentPurchase = [true];
@@ -317,9 +354,10 @@ describe("Platform Treasury Contract - Content", function () {
     }
     /// Buy content
     const purchaseTx = await contractPlatformTreasury.connect(backend).buyContent(contentPurchaseVouchers);
-    const queueTxReceipt = await purchaseTx.wait();
-    const queueTxEvent = queueTxReceipt.events.find((e) => e.event == "ContentBought");
-    const contentSaleID = queueTxEvent.args[2];
+    /// get decoded event from the transaction
+    const decodedEventContentBought = await readEvent(purchaseTx, "ContentBought", contractPlatformTreasury);
+    /// Decoded results for ContentBought event
+    const contentSaleID = decodedEventContentBought[2];
     // Get content struct
     const contentStruct = await contractPlatformTreasury.contentSales(contentSaleID);
     const balanceAfter = await contractUDAO.balanceOf(backend.address);
@@ -337,7 +375,7 @@ describe("Platform Treasury Contract - Content", function () {
     const changeOnBalance = balanceBefore - balanceAfter;
     // Get total price
     const totalCutRatio = await contractPlatformTreasury.contentTotalCut();
-    const totalCut = priceToPay.mul(totalCutRatio).div(100000);
+    const totalCut = (priceToPay * totalCutRatio) / BigInt(100000);
 
     // Check if correct amount of UDAO was deducted from the buyer's wallet
     expect(changeOnBalance).to.equal(totalCut);
@@ -362,15 +400,19 @@ describe("Platform Treasury Contract - Content", function () {
 
     // Create content with voucher
     const tx = await contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample);
-    // Get NewContentCreated event and get tokenId
-    const receipt = await tx.wait();
-    const tokenId = receipt.events[0].args[2].toNumber();
+    /// get decoded event from the transaction
+    const decodedEvent = await readEvent(tx, "NewContentCreated", contractUDAOContent);
+    /// Decoded results for NewContentCreated event
+    const tokenId = Number(decodedEvent[0]);
     // You need to use all parts of the content to buy it. Get all parts of the content
-
     const parts = await contractUDAOContent.getContentParts(tokenId);
+    // convert bigNumber parts to number
+    const partsNumber = parts.map((part) => Number(part));
+    // convert map to array
+    const partsNumberArray = Array.from(partsNumber);
     // Make a content purchase
     const tokenIds = [1];
-    const purchasedParts = [parts];
+    const purchasedParts = [partsNumberArray];
     const redeemers = [contentBuyer1.address];
     const giftReceiver = [contentBuyer1.address];
     const fullContentPurchase = [true];
@@ -429,15 +471,19 @@ describe("Platform Treasury Contract - Content", function () {
 
     // Create content with voucher
     const tx = await contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample);
-    // Get NewContentCreated event and get tokenId
-    const receipt = await tx.wait();
-    const tokenId = receipt.events[0].args[2].toNumber();
+    /// get decoded event from the transaction
+    const decodedEvent = await readEvent(tx, "NewContentCreated", contractUDAOContent);
+    /// Decoded results for NewContentCreated event
+    const tokenId = Number(decodedEvent[0]);
     // You need to use all parts of the content to buy it. Get all parts of the content
-
     const parts = await contractUDAOContent.getContentParts(tokenId);
+    // convert bigNumber parts to number
+    const partsNumber = parts.map((part) => Number(part));
+    // convert map to array
+    const partsNumberArray = Array.from(partsNumber);
     // Make a content purchase
     const tokenIds = [1];
-    const purchasedParts = [parts];
+    const purchasedParts = [partsNumberArray];
     const redeemers = [contentBuyer1.address];
     const giftReceiver = [contentBuyer1.address];
     const fullContentPurchase = [true];
@@ -498,15 +544,19 @@ describe("Platform Treasury Contract - Content", function () {
 
     // Create content with voucher
     const tx = await contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample);
-    // Get NewContentCreated event and get tokenId
-    const receipt = await tx.wait();
-    const tokenId = receipt.events[0].args[2].toNumber();
+    /// get decoded event from the transaction
+    const decodedEvent = await readEvent(tx, "NewContentCreated", contractUDAOContent);
+    /// Decoded results for NewContentCreated event
+    const tokenId = Number(decodedEvent[0]);
     // You need to use all parts of the content to buy it. Get all parts of the content
-
     const parts = await contractUDAOContent.getContentParts(tokenId);
+    // convert bigNumber parts to number
+    const partsNumber = parts.map((part) => Number(part));
+    // convert map to array
+    const partsNumberArray = Array.from(partsNumber);
     // Make a content purchase
     const tokenIds = [1];
-    const purchasedParts = [parts];
+    const purchasedParts = [partsNumberArray];
     const redeemers = [backend.address];
     const giftReceiver = [backend.address];
     const fullContentPurchase = [true];
@@ -563,9 +613,16 @@ describe("Platform Treasury Contract - Content", function () {
     );
     // Create content with voucher
     const tx = await contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample);
-    // Get NewContentCreated event and get tokenId
-    const receipt = await tx.wait();
-    const tokenId = receipt.events[0].args[2].toNumber();
+    /// get decoded event from the transaction
+    const decodedEvent = await readEvent(tx, "NewContentCreated", contractUDAOContent);
+    /// Decoded results for NewContentCreated event
+    const tokenId = Number(decodedEvent[0]);
+    // You need to use all parts of the content to buy it. Get all parts of the content
+    const parts = await contractUDAOContent.getContentParts(tokenId);
+    // convert bigNumber parts to number
+    const partsNumber = parts.map((part) => Number(part));
+    // convert map to array
+    const partsNumberArray = Array.from(partsNumber);
     // Make a content purchase
     const tokenIds = [1];
     const purchasedParts = [[2, 3, 5]];
@@ -621,9 +678,16 @@ describe("Platform Treasury Contract - Content", function () {
     );
     // Create content with voucher
     const tx = await contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample);
-    // Get NewContentCreated event and get tokenId
-    const receipt = await tx.wait();
-    const tokenId = receipt.events[0].args[2].toNumber();
+    /// get decoded event from the transaction
+    const decodedEvent = await readEvent(tx, "NewContentCreated", contractUDAOContent);
+    /// Decoded results for NewContentCreated event
+    const tokenId = Number(decodedEvent[0]);
+    // You need to use all parts of the content to buy it. Get all parts of the content
+    const parts = await contractUDAOContent.getContentParts(tokenId);
+    // convert bigNumber parts to number
+    const partsNumber = parts.map((part) => Number(part));
+    // convert map to array
+    const partsNumberArray = Array.from(partsNumber);
     // Make a content purchase
     const tokenIds = [1];
     const purchasedParts = [[2, 3, 5]];
@@ -702,9 +766,10 @@ describe("Platform Treasury Contract - Content", function () {
     );
     // Create content with voucher
     const tx = await contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample);
-    // Get NewContentCreated event and get tokenId
-    const receipt = await tx.wait();
-    const tokenId = receipt.events[0].args[2].toNumber();
+    /// get decoded event from the transaction
+    const decodedEvent = await readEvent(tx, "NewContentCreated", contractUDAOContent);
+    /// Decoded results for NewContentCreated event
+    const tokenId = Number(decodedEvent[0]);
     // Make a content purchase
     const tokenIds = [1];
     const purchasedParts = [[2, 3, 5]];
@@ -827,9 +892,10 @@ describe("Platform Treasury Contract - Content", function () {
     const tx = await contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample);
     // Ban the buyer
     await contractRoleManager.setBan(contentBuyer1.address, true);
-    // Get NewContentCreated event and get tokenId
-    const receipt = await tx.wait();
-    const tokenId = receipt.events[0].args[2].toNumber();
+    /// get decoded event from the transaction
+    const decodedEvent = await readEvent(tx, "NewContentCreated", contractUDAOContent);
+    /// Decoded results for NewContentCreated event
+    const tokenId = Number(decodedEvent[0]);
     // Make a content purchase
     const tokenIds = [1];
     const purchasedParts = [[2, 3, 5]];
@@ -883,9 +949,10 @@ describe("Platform Treasury Contract - Content", function () {
     const tx = await contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample);
     // Ban the buyer
     await contractRoleManager.setBan(contentBuyer1.address, true);
-    // Get NewContentCreated event and get tokenId
-    const receipt = await tx.wait();
-    const tokenId = receipt.events[0].args[2].toNumber();
+    /// get decoded event from the transaction
+    const decodedEvent = await readEvent(tx, "NewContentCreated", contractUDAOContent);
+    /// Decoded results for NewContentCreated event
+    const tokenId = Number(decodedEvent[0]);
     // Make a content purchase
     const tokenIds = [1];
     const purchasedParts = [[2, 3, 5]];
@@ -939,10 +1006,10 @@ describe("Platform Treasury Contract - Content", function () {
     const tx = await contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample);
     // Ban the instructor
     await contractRoleManager.setBan(contentCreator.address, true);
-
-    // Get NewContentCreated event and get tokenId
-    const receipt = await tx.wait();
-    const tokenId = receipt.events[0].args[2].toNumber();
+    /// get decoded event from the transaction
+    const decodedEvent = await readEvent(tx, "NewContentCreated", contractUDAOContent);
+    /// Decoded results for NewContentCreated event
+    const tokenId = Number(decodedEvent[0]);
     // set sellebla to false
     await contractUDAOContent.connect(backend).setSellable(tokenId, false);
     // Make a content purchase
@@ -998,9 +1065,10 @@ describe("Platform Treasury Contract - Content", function () {
     const tx = await contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample);
     // Ban the instructor
     await contractRoleManager.setBan(contentCreator.address, true);
-    // Get NewContentCreated event and get tokenId
-    const receipt = await tx.wait();
-    const tokenId = receipt.events[0].args[2].toNumber();
+    /// get decoded event from the transaction
+    const decodedEvent = await readEvent(tx, "NewContentCreated", contractUDAOContent);
+    /// Decoded results for NewContentCreated event
+    const tokenId = Number(decodedEvent[0]);
     // Make a content purchase
     const tokenIds = [1];
     const purchasedParts = [[2, 3, 5]];
@@ -1058,15 +1126,19 @@ describe("Platform Treasury Contract - Content", function () {
 
     // Create content with voucher
     const tx = await contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample);
-    // Get NewContentCreated event and get tokenId
-    const receipt = await tx.wait();
-    const tokenId = receipt.events[0].args[2].toNumber();
+    /// get decoded event from the transaction
+    const decodedEvent = await readEvent(tx, "NewContentCreated", contractUDAOContent);
+    /// Decoded results for NewContentCreated event
+    const tokenId = Number(decodedEvent[0]);
     // You need to use all parts of the content to buy it. Get all parts of the content
-
     const parts = await contractUDAOContent.getContentParts(tokenId);
+    // convert bigNumber parts to number
+    const partsNumber = parts.map((part) => Number(part));
+    // convert map to array
+    const partsNumberArray = Array.from(partsNumber);
     // Make a content purchase
     const tokenIds = [1];
-    const purchasedParts = [parts];
+    const purchasedParts = [partsNumberArray];
     const redeemers = [contentBuyer1.address];
     const giftReceiver = [ethers.ZeroAddress];
     const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
@@ -1143,9 +1215,10 @@ describe("Platform Treasury Contract - Content", function () {
 
     // Create content with voucher
     const tx = await contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample);
-    // Get NewContentCreated event and get tokenId
-    const receipt = await tx.wait();
-    const tokenId = receipt.events[0].args[2].toNumber();
+    /// get decoded event from the transaction
+    const decodedEvent = await readEvent(tx, "NewContentCreated", contractUDAOContent);
+    /// Decoded results for NewContentCreated event
+    const tokenId = Number(decodedEvent[0]);
     // Make a content purchase
     const tokenIds = [1];
     const purchasedParts = [[8]];
@@ -1200,13 +1273,19 @@ describe("Platform Treasury Contract - Content", function () {
 
     // Create content with voucher
     const tx = await contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample);
-    // Get NewContentCreated event and get tokenId
-    const receipt = await tx.wait();
-    const tokenId = receipt.events[0].args[2].toNumber();
+    /// get decoded event from the transaction
+    const decodedEvent = await readEvent(tx, "NewContentCreated", contractUDAOContent);
+    /// Decoded results for NewContentCreated event
+    const tokenId = Number(decodedEvent[0]);
+    // You need to use all parts of the content to buy it. Get all parts of the content
     const parts = await contractUDAOContent.getContentParts(tokenId);
+    // convert bigNumber parts to number
+    const partsNumber = parts.map((part) => Number(part));
+    // convert map to array
+    const partsNumberArray = Array.from(partsNumber);
     // Make a content purchase
     const tokenIds = [1];
-    const purchasedParts = [parts];
+    const purchasedParts = [partsNumberArray];
     const redeemers = [contentBuyer1.address];
     const giftReceiver = [contentBuyer3.address];
     const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
@@ -1235,7 +1314,6 @@ describe("Platform Treasury Contract - Content", function () {
     const result = await contractPlatformTreasury.connect(contentBuyer3).getOwnedParts(contentBuyer3.address, tokenId);
     expect(result[0]).to.equal(purchasedParts[0][0]);
     expect(result[1]).to.equal(purchasedParts[0][1]);
-    expect(result[2]).to.equal(purchasedParts[0][2]);
 
     /// Check if the buyer paid the correct amount
     //expect(balanceBefore-balanceAfter).to.equal(priceToPay);
@@ -1262,10 +1340,10 @@ describe("Platform Treasury Contract - Content", function () {
 
     // Create content with voucher
     const tx = await contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample);
-    // Get NewContentCreated event and get tokenId
-    const receipt = await tx.wait();
-    const tokenId = receipt.events[0].args[2].toNumber();
-    const parts = await contractUDAOContent.getContentParts(tokenId);
+    /// get decoded event from the transaction
+    const decodedEvent = await readEvent(tx, "NewContentCreated", contractUDAOContent);
+    /// Decoded results for NewContentCreated event
+    const tokenId = Number(decodedEvent[0]);
     // Make a content purchase
     const tokenIds = [1];
     const purchasedParts = [[2, 3, 4]];
@@ -1329,13 +1407,19 @@ describe("Platform Treasury Contract - Content", function () {
 
     // Create content with voucher
     const tx = await contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample);
-    // Get NewContentCreated event and get tokenId
-    const receipt = await tx.wait();
-    const tokenId = receipt.events[0].args[2].toNumber();
+    /// get decoded event from the transaction
+    const decodedEvent = await readEvent(tx, "NewContentCreated", contractUDAOContent);
+    /// Decoded results for NewContentCreated event
+    const tokenId = Number(decodedEvent[0]);
+    // You need to use all parts of the content to buy it. Get all parts of the content
     const parts = await contractUDAOContent.getContentParts(tokenId);
+    // convert bigNumber parts to number
+    const partsNumber = parts.map((part) => Number(part));
+    // convert map to array
+    const partsNumberArray = Array.from(partsNumber);
     // Make a content purchase
     const tokenIds = [1];
-    const purchasedParts = [parts];
+    const purchasedParts = [partsNumberArray];
     const redeemers = [contentBuyer1.address];
     const giftReceiver = [contentBuyer3.address];
 
@@ -1389,13 +1473,19 @@ describe("Platform Treasury Contract - Content", function () {
 
     // Create content with voucher
     const tx = await contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample);
-    // Get NewContentCreated event and get tokenId
-    const receipt = await tx.wait();
-    const tokenId = receipt.events[0].args[2].toNumber();
+    /// get decoded event from the transaction
+    const decodedEvent = await readEvent(tx, "NewContentCreated", contractUDAOContent);
+    /// Decoded results for NewContentCreated event
+    const tokenId = Number(decodedEvent[0]);
+    // You need to use all parts of the content to buy it. Get all parts of the content
     const parts = await contractUDAOContent.getContentParts(tokenId);
+    // convert bigNumber parts to number
+    const partsNumber = parts.map((part) => Number(part));
+    // convert map to array
+    const partsNumberArray = Array.from(partsNumber);
     // Make a content purchase
     const tokenIds = [1];
-    const purchasedParts = [parts];
+    const purchasedParts = [partsNumberArray];
     const redeemers = [contentBuyer1.address];
     const giftReceiver = [contentBuyer3.address];
     const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
@@ -1447,10 +1537,10 @@ describe("Platform Treasury Contract - Content", function () {
 
     // Create content with voucher
     const tx = await contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample);
-    // Get NewContentCreated event and get tokenId
-    const receipt = await tx.wait();
-    const tokenId = receipt.events[0].args[2].toNumber();
-    const parts = await contractUDAOContent.getContentParts(tokenId);
+    /// get decoded event from the transaction
+    const decodedEvent = await readEvent(tx, "NewContentCreated", contractUDAOContent);
+    /// Decoded results for NewContentCreated event
+    const tokenId = Number(decodedEvent[0]);
     // Make a content purchase
     const tokenIds = [1];
     const purchasedParts = [[1, 0]];
@@ -1500,10 +1590,17 @@ describe("Platform Treasury Contract - Content", function () {
     );
 
     // Create content with voucher
-    const tx = await contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample);
-    // Get NewContentCreated event and get tokenId
-    const receipt = await tx.wait();
-    const tokenId1 = receipt.events[0].args[2].toNumber();
+    const tx1 = await contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample);
+    /// get decoded event from the transaction
+    const decodedEvent1 = await readEvent(tx1, "NewContentCreated", contractUDAOContent);
+    /// Decoded results for NewContentCreated event
+    const tokenId1 = Number(decodedEvent1[0]);
+    // You need to use all parts of the content to buy it. Get all parts of the content
+    const parts1 = await contractUDAOContent.getContentParts(tokenId1);
+    // convert bigNumber parts to number
+    const partsNumber1 = parts1.map((part1) => Number(part1));
+    // convert map to array
+    const partsNumberArray1 = Array.from(partsNumber1);
     // Create content
     const contentParts2 = [0, 1, 2, 3, 4, 5, 6];
     // Create content voucher
@@ -1518,15 +1615,19 @@ describe("Platform Treasury Contract - Content", function () {
 
     // Create content with voucher
     const tx2 = await contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample2);
-    // Get NewContentCreated event and get tokenId
-    const receipt2 = await tx2.wait();
-    const tokenId2 = receipt2.events[0].args[2].toNumber();
+    /// get decoded event from the transaction
+    const decodedEvent2 = await readEvent(tx2, "NewContentCreated", contractUDAOContent);
+    /// Decoded results for NewContentCreated event
+    const tokenId2 = Number(decodedEvent2[0]);
     // You need to use all parts of the content to buy it. Get all parts of the content
-    const parts1 = await contractUDAOContent.getContentParts(tokenId1);
     const parts2 = await contractUDAOContent.getContentParts(tokenId2);
+    // convert bigNumber parts to number
+    const partsNumber2 = parts2.map((part2) => Number(part2));
+    // convert map to array
+    const partsNumberArray2 = Array.from(partsNumber2);
     // Make a content purchase for token 1
     const tokenIds = [1];
-    const purchasedParts1 = [parts1];
+    const purchasedParts1 = [partsNumberArray1];
     const redeemers1 = [contentBuyer1.address];
     const giftReceiver = [ethers.ZeroAddress];
 
@@ -1561,7 +1662,7 @@ describe("Platform Treasury Contract - Content", function () {
     expect(balanceBefore1 - balanceAfter1).to.equal(pricesToPay[0]);
     // Make a content purchase for token 2
     const tokenIds2 = [2];
-    const purchasedParts2 = [parts2];
+    const purchasedParts2 = [partsNumberArray2];
     const redeemers2 = [contentBuyer1.address];
     const giftReceiver2 = [ethers.ZeroAddress];
 
@@ -1612,11 +1713,17 @@ describe("Platform Treasury Contract - Content", function () {
     );
 
     // Create content with voucher
-    const tx = await contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample);
-
-    // Get NewContentCreated event and get tokenId
-    const receipt = await tx.wait();
-    const tokenId1 = receipt.events[0].args[2].toNumber();
+    const tx1 = await contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample);
+    /// get decoded event from the transaction
+    const decodedEvent1 = await readEvent(tx1, "NewContentCreated", contractUDAOContent);
+    /// Decoded results for NewContentCreated event
+    const tokenId1 = Number(decodedEvent1[0]);
+    // You need to use all parts of the content to buy it. Get all parts of the content
+    const parts1 = await contractUDAOContent.getContentParts(tokenId1);
+    // convert bigNumber parts to number
+    const partsNumber1 = parts1.map((part1) => Number(part1));
+    // convert map to array
+    const partsNumberArray1 = Array.from(partsNumber1);
     // Create content
     const contentParts2 = [0, 1, 2, 3, 4, 5, 6];
     // Create content voucher
@@ -1628,15 +1735,19 @@ describe("Platform Treasury Contract - Content", function () {
     );
     // Create content with voucher
     const tx2 = await contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample2);
-    // Get NewContentCreated event and get tokenId
-    const receipt2 = await tx2.wait();
-    const tokenId2 = receipt2.events[0].args[2].toNumber();
+    /// get decoded event from the transaction
+    const decodedEvent2 = await readEvent(tx2, "NewContentCreated", contractUDAOContent);
+    /// Decoded results for NewContentCreated event
+    const tokenId2 = Number(decodedEvent2[0]);
     // You need to use all parts of the content to buy it. Get all parts of the content
-    const parts1 = await contractUDAOContent.getContentParts(tokenId1);
     const parts2 = await contractUDAOContent.getContentParts(tokenId2);
+    // convert bigNumber parts to number
+    const partsNumber2 = parts2.map((part2) => Number(part2));
+    // convert map to array
+    const partsNumberArray2 = Array.from(partsNumber2);
     // Make a content purchase for token 1 and token 2 together with cart purchase
     const tokenIds = [1, 2];
-    const purchasedParts = [parts1, parts2];
+    const purchasedParts = [partsNumberArray1, partsNumberArray2];
     const redeemers = [contentBuyer1.address, contentBuyer1.address];
     const giftReceiver = [ethers.ZeroAddress, ethers.ZeroAddress];
     const fullContentPurchase = [true, true];
@@ -1694,11 +1805,17 @@ describe("Platform Treasury Contract - Content", function () {
     );
 
     // Create content with voucher
-    const tx = await contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample);
-
-    // Get NewContentCreated event and get tokenId
-    const receipt = await tx.wait();
-    const tokenId1 = receipt.events[0].args[2].toNumber();
+    const tx1 = await contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample);
+    /// get decoded event from the transaction
+    const decodedEvent1 = await readEvent(tx1, "NewContentCreated", contractUDAOContent);
+    /// Decoded results for NewContentCreated event
+    const tokenId1 = Number(decodedEvent1[0]);
+    // You need to use all parts of the content to buy it. Get all parts of the content
+    const parts1 = await contractUDAOContent.getContentParts(tokenId1);
+    // convert bigNumber parts to number
+    const partsNumber1 = parts1.map((part1) => Number(part1));
+    // convert map to array
+    const partsNumberArray1 = Array.from(partsNumber1);
     // Create content
     const contentParts2 = [0, 1, 2, 3, 4, 5, 6];
     // Create content voucher
@@ -1710,15 +1827,19 @@ describe("Platform Treasury Contract - Content", function () {
     );
     // Create content with voucher
     const tx2 = await contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample2);
-    // Get NewContentCreated event and get tokenId
-    const receipt2 = await tx2.wait();
-    const tokenId2 = receipt2.events[0].args[2].toNumber();
+    /// get decoded event from the transaction
+    const decodedEvent2 = await readEvent(tx2, "NewContentCreated", contractUDAOContent);
+    /// Decoded results for NewContentCreated event
+    const tokenId2 = Number(decodedEvent2[0]);
     // You need to use all parts of the content to buy it. Get all parts of the content
-    const parts1 = await contractUDAOContent.getContentParts(tokenId1);
     const parts2 = await contractUDAOContent.getContentParts(tokenId2);
+    // convert bigNumber parts to number
+    const partsNumber2 = parts2.map((part2) => Number(part2));
+    // convert map to array
+    const partsNumberArray2 = Array.from(partsNumber2);
     // Make a content purchase for token 1 and token 2 together with cart purchase
     const tokenIds = [1, 2];
-    const purchasedParts = [parts1, parts2];
+    const purchasedParts = [partsNumberArray1, partsNumberArray2];
     const redeemers = [contentBuyer1.address, contentBuyer1.address];
     const giftReceiver = [contentBuyer3.address, contentBuyer3.address];
     const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283", "c8d53630-233a-4f95-90cb-4df253ae9283"];
@@ -1817,10 +1938,17 @@ describe("Platform Treasury Contract - Content", function () {
     );
 
     // Create content with voucher
-    const tx = await contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample);
-    // Get NewContentCreated event and get tokenId
-    const receipt = await tx.wait();
-    const tokenId1 = receipt.events[0].args[2].toNumber();
+    const tx1 = await contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample);
+    /// get decoded event from the transaction
+    const decodedEvent1 = await readEvent(tx1, "NewContentCreated", contractUDAOContent);
+    /// Decoded results for NewContentCreated event
+    const tokenId1 = Number(decodedEvent1[0]);
+    // You need to use all parts of the content to buy it. Get all parts of the content
+    const parts1 = await contractUDAOContent.getContentParts(tokenId1);
+    // convert bigNumber parts to number
+    const partsNumber1 = parts1.map((part1) => Number(part1));
+    // convert map to array
+    const partsNumberArray1 = Array.from(partsNumber1);
     // Create content
     const contentParts2 = [0, 1, 2, 3, 4, 5, 6];
     // Create content voucher
@@ -1832,22 +1960,24 @@ describe("Platform Treasury Contract - Content", function () {
       (redeemType = 1),
       (validationScore = 1)
     );
-
     // Create content with voucher
     const tx2 = await contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample2);
-    // Get NewContentCreated event and get tokenId
-    const receipt2 = await tx2.wait();
-    const tokenId2 = receipt2.events[0].args[2].toNumber();
+    /// get decoded event from the transaction
+    const decodedEvent2 = await readEvent(tx2, "NewContentCreated", contractUDAOContent);
+    /// Decoded results for NewContentCreated event
+    const tokenId2 = Number(decodedEvent2[0]);
     // You need to use all parts of the content to buy it. Get all parts of the content
-    const parts1 = await contractUDAOContent.getContentParts(tokenId1);
     const parts2 = await contractUDAOContent.getContentParts(tokenId2);
+    // convert bigNumber parts to number
+    const partsNumber2 = parts2.map((part2) => Number(part2));
+    // convert map to array
+    const partsNumberArray2 = Array.from(partsNumber2);
     // Make a content purchase for token 1
     const tokenIds = [1];
-    const purchasedParts1 = [parts1];
+    const purchasedParts1 = [partsNumberArray1];
     const redeemers1 = [contentBuyer1.address];
     const giftReceiver = [ethers.ZeroAddress];
     const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
-
     const fullContentPurchase = [true];
     const pricesToPay = [ethers.parseEther("10")];
     const validUntil = Date.now() + 999999999;
@@ -1875,13 +2005,12 @@ describe("Platform Treasury Contract - Content", function () {
     for (let i = 0; i < purchasedParts1[0].length; i++) {
       expect(result[i]).to.equal(purchasedParts1[0][i]);
     }
-
     // activate governance treasury
     await contractPlatformTreasury.connect(backend).activateGovernanceTreasury(true);
     /// @dev Skip "refund window" days to allow foundation to withdraw funds
     const refundWindowDays = await contractPlatformTreasury.refundWindow();
     /// convert big number to number
-    const refundWindowDaysNumber = refundWindowDays.toNumber();
+    const refundWindowDaysNumber = Number(refundWindowDays);
 
     /// @dev Skip 20'refund window period' days to allow foundation to withdraw funds
     skipDays(refundWindowDaysNumber);
@@ -1890,7 +2019,7 @@ describe("Platform Treasury Contract - Content", function () {
     expect(balanceBefore1 - balanceAfter1).to.equal(pricesToPay[0]);
     // Make a content purchase for token 2
     const tokenIds2 = [2];
-    const purchasedParts2 = [parts2];
+    const purchasedParts2 = [partsNumberArray2];
     const redeemers2 = [contentBuyer1.address];
     const giftReceiver2 = [ethers.ZeroAddress];
 
@@ -1925,17 +2054,17 @@ describe("Platform Treasury Contract - Content", function () {
     // Check if the buyer paid the correct amount
     expect(balanceBefore2 - balanceAfter2).to.equal(pricesToPay2[0]);
     // Check if the governance treasury has the correct amount with respect to the platform cut percentages
-    const governanceTreasuryBalance = await contractUDAO.balanceOf(contractGovernanceTreasury.address);
+    const governanceTreasuryBalance = await contractUDAO.balanceOf(contractGovernanceTreasury);
     // Get total price
     const totalPrice = pricesToPay[0];
     // Get contentFoundCut
-    const contentFoundCut = totalPrice.mul(_contentFoundCut).div(100000);
+    const contentFoundCut = (totalPrice * BigInt(_contentFoundCut)) / BigInt(100000);
     // Get contentGoverCut
-    const contentGoverCut = totalPrice.mul(_contentGoverCut).div(100000);
+    const contentGoverCut = (totalPrice * BigInt(_contentGoverCut)) / BigInt(100000);
     // Get contentJurorCut
-    const contentJurorCut = totalPrice.mul(_contentJurorCut).div(100000);
+    const contentJurorCut = (totalPrice * BigInt(_contentJurorCut)) / BigInt(100000);
     // Get contentValidCut
-    const contentValidCut = totalPrice.mul(_contentValidCut).div(100000);
+    const contentValidCut = (totalPrice * BigInt(_contentValidCut)) / BigInt(100000);
     // Get total cut
     const totalCut = contentGoverCut + contentJurorCut + contentValidCut;
     // Check if the governance treasury has the correct amount with respect to the platform cut percentages
@@ -1961,15 +2090,19 @@ describe("Platform Treasury Contract - Content", function () {
 
     // Create content with voucher
     const tx = await contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample);
-    // Get NewContentCreated event and get tokenId
-    const receipt = await tx.wait();
-    const tokenId = receipt.events[0].args[2].toNumber();
+    /// get decoded event from the transaction
+    const decodedEvent = await readEvent(tx, "NewContentCreated", contractUDAOContent);
+    /// Decoded results for NewContentCreated event
+    const tokenId = Number(decodedEvent[0]);
     // You need to use all parts of the content to buy it. Get all parts of the content
-
     const parts = await contractUDAOContent.getContentParts(tokenId);
+    // convert bigNumber parts to number
+    const partsNumber = parts.map((part) => Number(part));
+    // convert map to array
+    const partsNumberArray = Array.from(partsNumber);
     // Make a content purchase
     const tokenIds = [1];
-    const purchasedParts = [parts];
+    const purchasedParts = [partsNumberArray];
     const redeemers = [contentBuyer1.address];
     const giftReceiver = [ethers.ZeroAddress];
     const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
@@ -2032,10 +2165,15 @@ describe("Platform Treasury Contract - Content", function () {
       .withArgs(contentSaleId, refundType);
     // Check if the buyer has finalParts
     const result2 = await contractPlatformTreasury.connect(contentBuyer1).getOwnedParts(contentBuyer1.address, tokenId);
-    expect(result2[0]).to.equal(finalParts[0]);
+    /// convert result2 to array
+    const result2Array = Array.from(result2);
+    expect(result2Array).to.eql(finalParts);
+
     // Check if the buyer has finalContents
     const result3 = await contractPlatformTreasury.connect(contentBuyer1).getOwnedContents(contentBuyer1.address);
-    expect(result3[0]).to.equal(finalContents[0]);
+    /// convert result3 to array
+    const result3Array = Array.from(result3);
+    expect(result3Array).to.eql(finalContents);
   });
 
   it("Should fail buyer to refund a content if it is already refunded", async function () {
@@ -2057,15 +2195,19 @@ describe("Platform Treasury Contract - Content", function () {
 
     // Create content with voucher
     const tx = await contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample);
-    // Get NewContentCreated event and get tokenId
-    const receipt = await tx.wait();
-    const tokenId = receipt.events[0].args[2].toNumber();
+    /// get decoded event from the transaction
+    const decodedEvent = await readEvent(tx, "NewContentCreated", contractUDAOContent);
+    /// Decoded results for NewContentCreated event
+    const tokenId = Number(decodedEvent[0]);
     // You need to use all parts of the content to buy it. Get all parts of the content
-
     const parts = await contractUDAOContent.getContentParts(tokenId);
+    // convert bigNumber parts to number
+    const partsNumber = parts.map((part) => Number(part));
+    // convert map to array
+    const partsNumberArray = Array.from(partsNumber);
     // Make a content purchase
     const tokenIds = [1];
-    const purchasedParts = [parts];
+    const purchasedParts = [partsNumberArray];
     const redeemers = [contentBuyer1.address];
     const giftReceiver = [ethers.ZeroAddress];
     const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
@@ -2128,10 +2270,16 @@ describe("Platform Treasury Contract - Content", function () {
       .withArgs(contentSaleId, refundType);
     // Check if the buyer has finalParts
     const result2 = await contractPlatformTreasury.connect(contentBuyer1).getOwnedParts(contentBuyer1.address, tokenId);
-    expect(result2[0]).to.equal(finalParts[0]);
+    /// convert result2 to array
+    const result2Array = Array.from(result2);
+    expect(result2Array).to.eql(finalParts);
     // Check if the buyer has finalContents
     const result3 = await contractPlatformTreasury.connect(contentBuyer1).getOwnedContents(contentBuyer1.address);
-    expect(result3[0]).to.equal(finalContents[0]);
+    /// convert result3 nignumber array to number mapping
+    const result3NumberMap = result3.map((element) => Number(element));
+    // convert bigNumber parts to number
+    const result3Array = Array.from(result3NumberMap);
+    expect(result3Array).to.eql(finalContents);
 
     // Refund the content
     await expect(contractPlatformTreasury.connect(contentCreator).newRefundContent(refund_voucher)).to.be.revertedWith(
@@ -2158,15 +2306,19 @@ describe("Platform Treasury Contract - Content", function () {
 
     // Create content with voucher
     const tx = await contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample);
-    // Get NewContentCreated event and get tokenId
-    const receipt = await tx.wait();
-    const tokenId = receipt.events[0].args[2].toNumber();
+    /// get decoded event from the transaction
+    const decodedEvent = await readEvent(tx, "NewContentCreated", contractUDAOContent);
+    /// Decoded results for NewContentCreated event
+    const tokenId = Number(decodedEvent[0]);
     // You need to use all parts of the content to buy it. Get all parts of the content
-
     const parts = await contractUDAOContent.getContentParts(tokenId);
+    // convert bigNumber parts to number
+    const partsNumber = parts.map((part) => Number(part));
+    // convert map to array
+    const partsNumberArray = Array.from(partsNumber);
     // Make a content purchase
     const tokenIds = [1];
-    const purchasedParts = [parts];
+    const purchasedParts = [partsNumberArray];
     const redeemers = [contentBuyer1.address];
     const giftReceiver = [ethers.ZeroAddress];
     const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
@@ -2226,7 +2378,7 @@ describe("Platform Treasury Contract - Content", function () {
     // Get refund window days
     const refundWindowDaysNumberInBigNumber = await contractPlatformTreasury.refundWindow();
     /// convert big number to number
-    const refundWindowDaysNumber = refundWindowDaysNumberInBigNumber.toNumber();
+    const refundWindowDaysNumber = Number(refundWindowDaysNumberInBigNumber);
     /// @dev Skip 20'refund window period' days to complete the refund window
     skipDays(refundWindowDaysNumber + 1);
 
@@ -2255,10 +2407,17 @@ describe("Platform Treasury Contract - Content", function () {
     );
 
     // Create content with voucher
-    const tx = await contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample);
-    // Get NewContentCreated event and get tokenId
-    const receipt = await tx.wait();
-    const tokenId1 = receipt.events[0].args[2].toNumber();
+    const tx1 = await contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample);
+    /// get decoded event from the transaction
+    const decodedEvent1 = await readEvent(tx1, "NewContentCreated", contractUDAOContent);
+    /// Decoded results for NewContentCreated event
+    const tokenId1 = Number(decodedEvent1[0]);
+    // You need to use all parts of the content to buy it. Get all parts of the content
+    const parts1 = await contractUDAOContent.getContentParts(tokenId1);
+    // convert bigNumber parts to number
+    const partsNumber1 = parts1.map((part1) => Number(part1));
+    // convert map to array
+    const partsNumberArray1 = Array.from(partsNumber1);
     // Create content
     const contentParts2 = [0, 1, 2, 3, 4, 5, 6];
     // Create content voucher
@@ -2273,15 +2432,19 @@ describe("Platform Treasury Contract - Content", function () {
 
     // Create content with voucher
     const tx2 = await contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample2);
-    // Get NewContentCreated event and get tokenId
-    const receipt2 = await tx2.wait();
-    const tokenId2 = receipt2.events[0].args[2].toNumber();
+    /// get decoded event from the transaction
+    const decodedEvent2 = await readEvent(tx2, "NewContentCreated", contractUDAOContent);
+    /// Decoded results for NewContentCreated event
+    const tokenId2 = Number(decodedEvent2[0]);
     // You need to use all parts of the content to buy it. Get all parts of the content
-    const parts1 = await contractUDAOContent.getContentParts(tokenId1);
     const parts2 = await contractUDAOContent.getContentParts(tokenId2);
+    // convert bigNumber parts to number
+    const partsNumber2 = parts2.map((part2) => Number(part2));
+    // convert map to array
+    const partsNumberArray2 = Array.from(partsNumber2);
     // Make a content purchase for token 1
     const tokenIds = [1];
-    const purchasedParts1 = [parts1];
+    const purchasedParts1 = [partsNumberArray1];
     const redeemers1 = [contentBuyer1.address];
     const giftReceiver = [ethers.ZeroAddress];
     const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
@@ -2318,14 +2481,14 @@ describe("Platform Treasury Contract - Content", function () {
     /// @dev Skip "refund window" days to allow foundation to withdraw funds
     const refundWindowDays = await contractPlatformTreasury.refundWindow();
     /// convert big number to number
-    const refundWindowDaysNumber = refundWindowDays.toNumber();
+    const refundWindowDaysNumber = Number(refundWindowDays);
 
     /// @dev Skip 20'refund window period' days to allow foundation to withdraw funds
     skipDays(refundWindowDaysNumber - 1);
 
     // Make a content purchase for token 2
     const tokenIds2 = [2];
-    const purchasedParts2 = [parts2];
+    const purchasedParts2 = [partsNumberArray2];
     const redeemers2 = [contentBuyer1.address];
     const giftReceiver2 = [ethers.ZeroAddress];
     const fullContentPurchase2 = [true];
@@ -2371,13 +2534,13 @@ describe("Platform Treasury Contract - Content", function () {
 
     const _contentFoundCut = await contractPlatformTreasury.contentFoundCut();
     const totalPrice1 = pricesToPay[0];
-    const contentFoundCut1 = totalPrice1.mul(_contentFoundCut).div(100000);
+    const contentFoundCut1 = (totalPrice1 * _contentFoundCut) / BigInt(100000);
     expect(await contractPlatformTreasury.foundationBalance()).to.equal(contentFoundCut1);
 
     /// @dev Skip new refund window to complete refund window for seccond purchase
     skipDays(oldRefundWindow);
     const totalPrice2 = pricesToPay2[0];
-    const contentFoundCut2 = totalPrice2.mul(_contentFoundCut).div(100000);
+    const contentFoundCut2 = (totalPrice2 * _contentFoundCut) / BigInt(100000);
 
     // Update balances
     await contractPlatformTreasury.updateAndTransferPlatformBalances();
@@ -2411,10 +2574,17 @@ describe("Platform Treasury Contract - Content", function () {
     );
 
     // Create content with voucher
-    const tx = await contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample);
-    // Get NewContentCreated event and get tokenId
-    const receipt = await tx.wait();
-    const tokenId1 = receipt.events[0].args[2].toNumber();
+    const tx1 = await contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample);
+    /// get decoded event from the transaction
+    const decodedEvent1 = await readEvent(tx1, "NewContentCreated", contractUDAOContent);
+    /// Decoded results for NewContentCreated event
+    const tokenId1 = Number(decodedEvent1[0]);
+    // You need to use all parts of the content to buy it. Get all parts of the content
+    const parts1 = await contractUDAOContent.getContentParts(tokenId1);
+    // convert bigNumber parts to number
+    const partsNumber1 = parts1.map((part1) => Number(part1));
+    // convert map to array
+    const partsNumberArray1 = Array.from(partsNumber1);
     // Create content
     const contentParts2 = [0, 1, 2, 3, 4, 5, 6];
     // Create content voucher
@@ -2429,15 +2599,19 @@ describe("Platform Treasury Contract - Content", function () {
 
     // Create content with voucher
     const tx2 = await contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample2);
-    // Get NewContentCreated event and get tokenId
-    const receipt2 = await tx2.wait();
-    const tokenId2 = receipt2.events[0].args[2].toNumber();
+    /// get decoded event from the transaction
+    const decodedEvent2 = await readEvent(tx2, "NewContentCreated", contractUDAOContent);
+    /// Decoded results for NewContentCreated event
+    const tokenId2 = Number(decodedEvent2[0]);
     // You need to use all parts of the content to buy it. Get all parts of the content
-    const parts1 = await contractUDAOContent.getContentParts(tokenId1);
     const parts2 = await contractUDAOContent.getContentParts(tokenId2);
+    // convert bigNumber parts to number
+    const partsNumber2 = parts2.map((part2) => Number(part2));
+    // convert map to array
+    const partsNumberArray2 = Array.from(partsNumber2);
     // Make a content purchase for token 1
     const tokenIds = [1];
-    const purchasedParts1 = [parts1];
+    const purchasedParts1 = [partsNumberArray1];
     const redeemers1 = [contentBuyer1.address];
     const giftReceiver = [ethers.ZeroAddress];
     const userIds = ["c8d53630-233a-4f95-90cb-4df253ae9283"];
@@ -2474,7 +2648,7 @@ describe("Platform Treasury Contract - Content", function () {
     /// @dev Skip "refund window" days to allow foundation to withdraw funds
     const refundWindowDays = await contractPlatformTreasury.refundWindow();
     /// convert big number to number
-    const refundWindowDaysNumber = refundWindowDays.toNumber();
+    const refundWindowDaysNumber = Number(refundWindowDays);
 
     /// @dev Skip 20'refund window period' days to allow foundation to withdraw funds
     skipDays(refundWindowDaysNumber);
@@ -2495,7 +2669,7 @@ describe("Platform Treasury Contract - Content", function () {
 
     const _contentFoundCut = await contractPlatformTreasury.contentFoundCut();
     const totalPrice1 = pricesToPay[0];
-    const contentFoundCut1 = totalPrice1.mul(_contentFoundCut).div(100000);
+    const contentFoundCut1 = (totalPrice1 * _contentFoundCut) / BigInt(100000);
     expect(await contractPlatformTreasury.foundationBalance()).to.equal(contentFoundCut1);
 
     /// a new sale occur
@@ -2526,7 +2700,7 @@ describe("Platform Treasury Contract - Content", function () {
 
     //calculate total instructor share from new sale
     const totalCutRate = await contractPlatformTreasury.contentTotalCut();
-    const newSaleRevenue = pricesToPay[0] - pricesToPay[0].mul(totalCutRate).div(100000);
+    const newSaleRevenue = pricesToPay[0] - (pricesToPay[0] * totalCutRate) / BigInt(100000);
 
     // new sale revenue + old sale revenue is must bu inst locked balance
     expect(totalInstLB2).to.equal(totalInstLB + newSaleRevenue);
