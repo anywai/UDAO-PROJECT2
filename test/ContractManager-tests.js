@@ -332,7 +332,7 @@ describe("Contract Manager", function () {
 
     await reDeploy();
     // @dev Dummy contract address
-    const testAddressGovernanceTreasury = contractGovernanceTreasury.address;
+    const testAddressGovernanceTreasury = contractGovernanceTreasury;
     const testAddressSupervision = contractSupervision;
     await contractContractManager
       .connect(backend)
@@ -373,7 +373,7 @@ describe("Contract Manager", function () {
 
     await reDeploy();
     // @dev Dummy contract address
-    const testAddressGovernanceTreasury = contractGovernanceTreasury.address;
+    const testAddressGovernanceTreasury = contractGovernanceTreasury;
     const testAddressSupervision = contractSupervision;
     await contractContractManager
       .connect(backend)
