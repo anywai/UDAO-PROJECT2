@@ -226,6 +226,34 @@ async function _createContent(
     contentCreator
   );
 }
+async function readEvent(tx, eventName, contract) {
+  /// Wait for the transaction to be mined and get the receipt
+  const txReceipt = await tx.wait();
+  /// Access ABI from contract instance
+  const contractABI = contract.interface.fragments;
+  /// create ether.js interface using the contract ABI
+  const interfaceOfContract = new ethers.Interface(contractABI);
+  /// Get the logs from the transaction receipt
+  const logs = txReceipt.logs;
+
+  /// Find the log entry that matches the event name
+  const matchingLog = logs.find((logEntry) => {
+    try {
+      const parsedLog = interfaceOfContract.parseLog(logEntry);
+      return parsedLog.name === eventName;
+    } catch (error) {
+      // Handle or ignore the error if the log doesn't match any event in the interface
+      return false;
+    }
+  });
+
+  if (matchingLog) {
+    const parsedLog = interfaceOfContract.parseLog(matchingLog);
+    return parsedLog.args;
+  } else {
+    console.error(`${eventName} event not found in transaction receipt.`);
+  }
+}
 async function makeContentPurchase(
   contractPlatformTreasury,
   contractVoucherVerifier,
@@ -278,18 +306,18 @@ async function makeContentPurchase(
     // Save the voucher to the array
     contentPurchaseVouchers.push(contentPurchaseVoucher);
   }
-  /// Buy content
+  /// Call buyContent function from the platform treasury contract
   const purchaseTx = await contractPlatformTreasury.connect(contentBuyer).buyContent(contentPurchaseVouchers);
-  const queueTxReceipt = await purchaseTx.wait();
-  const queueTxEvent = queueTxReceipt.events.find((e) => e.event == "ContentBought");
-  const contentSaleID = queueTxEvent.args[2];
-  const userId = queueTxEvent.args[0];
-  // Expect that the userId is equal to the userId of the first voucher
+  /// get decoded event from the transaction
+  const decodedEvent = await readEvent(purchaseTx, "ContentBought", contractPlatformTreasury);
+  /// Decoded results for ContentBought event
+  const userId = decodedEvent[0];
+  const contentSaleID = decodedEvent[2];
+  /// Expect that the emited userId is the same as the userId in the voucher
   expect(userIds[0]).to.equal(userId);
-
-  // Get content struct
+  /// Get contentSale Record from contract using the contentSaleID
   const contentStruct = await contractPlatformTreasury.contentSales(contentSaleID);
-  // Check if returned learner address is the same as the buyer address
+  /// Expect that recorded ContentBuyer adress in the contract is same with the buyer address in the voucher
   expect(contentStruct.contentReceiver).to.equal(contentBuyer.address);
 }
 async function makeCoachingPurchase(
@@ -326,9 +354,11 @@ async function makeCoachingPurchase(
   );
   // Buy coaching
   const purchaseTx = await contractPlatformTreasury.connect(contentBuyer).buyCoaching(role_voucher);
-  const queueTxReceipt = await purchaseTx.wait();
-  const queueTxEvent = queueTxReceipt.events.find((e) => e.event == "CoachingBought");
-  const coachingSaleID = queueTxEvent.args[1];
+  /// get decoded event from the transaction
+  const decodedEvent = await readEvent(purchaseTx, "CoachingBought", contractPlatformTreasury);
+  console.log("decodedEvent", decodedEvent);
+  /// Decoded results for CoachingBought event
+  const coachingSaleID = decodedEvent[1];
   // Get coaching struct
   const coachingStruct = await contractPlatformTreasury.coachSales(coachingSaleID);
   // Check if returned learner address is the same as the buyer address
@@ -376,16 +406,12 @@ async function getCoachingLockedBalanceArray(_refundWindow) {
 }
 
 async function getInstructorCurrentUnlockedRefundedBalances(_contentCreator) {
-  const _currentBalanceInst = ethers.formatEther(
-    await contractPlatformTreasury.instBalance(contentCreator.address)
-  );
+  const _currentBalanceInst = ethers.formatEther(await contractPlatformTreasury.instBalance(contentCreator.address));
   const [_unlockedBalanceInstBN, _refundendBalanceInstBN] =
     await contractPlatformTreasury.getWithdrawableBalanceInstructor(contentCreator.address);
   const _unlockedBalanceInst = ethers.formatEther(_unlockedBalanceInstBN);
   const _refundendBalanceInst = ethers.formatEther(_refundendBalanceInstBN);
-  const _iRefBalance = ethers.formatEther(
-    await contractPlatformTreasury.instRefundedBalance(contentCreator.address)
-  );
+  const _iRefBalance = ethers.formatEther(await contractPlatformTreasury.instRefundedBalance(contentCreator.address));
   if (_iRefBalance - _refundendBalanceInst != 0) {
     console.log("ERROR: getWithdarwableBalanceInstructor() is not working properly");
   }
@@ -554,7 +580,7 @@ describe("Platform Treasury Visual Tests", function () {
       colorReset
     );
     /// To show the console logs uncomment the console.log lines below
-    consoleLogOn = true;
+    consoleLogOn = false;
     instroctorBalances_consoleLogOn = true;
     contentPool_consoleLogOn = true;
     coachingPool_consoleLogOn = true;
@@ -1582,7 +1608,7 @@ describe("Platform Treasury Visual Tests", function () {
     consoleLog_coachingPoolOtherBalances(coachCurB_S8R, coachRefundendB_S8R, coachSumRB_S8R);
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////
-    governanceTreasuryAddress = contractGovernanceTreasury.address;
+    governanceTreasuryAddress = contractGovernanceTreasury;
     const governanceTreasuryBalance_G00 = await contractUDAO.balanceOf(governanceTreasuryAddress);
     // Enable governance treasury to see token flow into the governance treasury
     await contractPlatformTreasury.connect(backend).activateGovernanceTreasury(true);
