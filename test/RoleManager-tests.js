@@ -5,7 +5,6 @@ const chai = require("chai");
 const BN = require("bn.js");
 const helpers = require("@nomicfoundation/hardhat-network-helpers");
 const { deploy } = require("../lib/deployments");
-const { ADDRESS_ZERO } = require("@uniswap/v3-sdk");
 
 // Enable and inject BN dependency
 chai.use(require("chai-bn")(BN));
@@ -87,10 +86,11 @@ describe("Role Manager", function () {
     // and now new DEFAULT_ADMIN_ROLE is contentbuyer1 and it can revoke DEFAULT_ADMIN_ROLE from foundation
     await contractRoleManager.connect(contentBuyer1).revokeRole(ethers.ZeroHash, foundation.address);
     // foundation can not grant role to anyone after it has been revoked from DEFAULT_ADMIN_ROLE
+    const encoded_DEFAULT_ADMIN_ROLE = await contractRoleManager.DEFAULT_ADMIN_ROLE()
     await expect(
       contractRoleManager.connect(foundation).grantRole(BACKEND_ROLE, contentBuyer1.address)
     ).to.be.revertedWith(
-      "AccessControl: account " + foundation.address.toLowerCase() + " is missing role " + ADDRESS_ZERO
+      "AccessControl: account " + foundation.address.toLowerCase() + " is missing role " + encoded_DEFAULT_ADMIN_ROLE
     );
     // contentBuyer1 has the role DEFAULT_ADMIN_ROLE
     expect(await contractRoleManager.hasRole(ethers.ZeroHash, contentBuyer1.address)).to.equal(true);
