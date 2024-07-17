@@ -73,16 +73,16 @@ describe("Temporary Dummy", function () {
   it("Should DummyGovernanceTreasury emergencyWithdraw function can transfer all udao tokens to caller", async function () {
     await reDeploy();
     // send udao tokens to governance treasury and backend
-    await contractUDAO.transfer(contractGovernanceTreasury.address, 100);
+    await contractUDAO.transfer(contractGovernanceTreasury, 100);
     await contractUDAO.transfer(backend.address, 100);
     // check balance of governance treasury and backend
-    const balanceInGovernance = await contractUDAO.balanceOf(contractGovernanceTreasury.address);
+    const balanceInGovernance = await contractUDAO.balanceOf(contractGovernanceTreasury);
     // check balance of backend
     const balanceInBackend = await contractUDAO.balanceOf(backend.address);
     // call emergency withdraw by backend
     await contractGovernanceTreasury.connect(backend).emergencyWithdraw();
     // check balance of governance treasury and backend
-    expect(await contractUDAO.balanceOf(contractGovernanceTreasury.address)).to.be.equal(0);
+    expect(await contractUDAO.balanceOf(contractGovernanceTreasury)).to.be.equal(0);
     expect(await contractUDAO.balanceOf(backend.address)).to.be.equal(balanceInGovernance + balanceInBackend);
   });
 });
