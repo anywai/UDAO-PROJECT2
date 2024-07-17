@@ -1080,13 +1080,13 @@ describe("UDAOC Contract", function () {
       (validationScore = 1)
     );
     await expect(contractUDAOContent.connect(contentCreator).createContent(createContentVoucherSample)).to.revertedWith(
-      "Redeemer is banned"
+      "Redeemer is banned!"
     );
 
     const createContentVoucherSampleArray = [createContentVoucherSample];
     await expect(
       contractUDAOContent.connect(contentCreator).batchCreateContents(createContentVoucherSampleArray)
-    ).to.revertedWith("Redeemer is banned");
+    ).to.revertedWith("Redeemer is banned!");
   });
 
   it("Should fail create content and batch create if content creator is not kyced", async function () {
@@ -1188,13 +1188,13 @@ describe("UDAOC Contract", function () {
       (validationScore = 1)
     );
     await expect(contractUDAOContent.connect(backend).createContent(createContentVoucherSample)).to.revertedWith(
-      "Content creator is banned"
+      "Content creator is banned!"
     );
 
     const createContentVoucherSampleArray = [createContentVoucherSample];
     await expect(
       contractUDAOContent.connect(backend).batchCreateContents(createContentVoucherSampleArray)
-    ).to.revertedWith("Content creator is banned");
+    ).to.revertedWith("Content creator is banned!");
   });
 
   it("Should fail modify content if content creator is banned", async function () {
@@ -1321,12 +1321,11 @@ describe("UDAOC Contract", function () {
       .withArgs("0x0000000000000000000000000000000000000000", contentCreator.address, 1);
 
     //modify content
-
     const modifyContentVoucherSample = await new Redeem({
       contract: contractUDAOContent,
       signer: backend,
     }).createVoucher(
-      futureBlockBigNumber - 1000,
+      futureBlockBigNumber - BigInt(1000),
       contentParts,
       1,
       "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
