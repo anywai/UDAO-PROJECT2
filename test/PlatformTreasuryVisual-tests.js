@@ -352,7 +352,7 @@ async function calculateLockBalanceIndex(_refundWindow) {
 async function getInstructorLockedBalanceArray(_refundWindow, _contentCreator) {
   let _instructorLockedBalanceArray = [];
   for (let i = 0; i < _refundWindow; i++) {
-    _instructorLockedBalanceArray[i] = ethers.utils.formatEther(
+    _instructorLockedBalanceArray[i] = ethers.formatEther(
       await contractPlatformTreasury.instLockedBalance(_contentCreator.address, i)
     );
   }
@@ -362,7 +362,7 @@ async function getInstructorLockedBalanceArray(_refundWindow, _contentCreator) {
 async function getContentLockedBalanceArray(_refundWindow) {
   let _contentLockedBalanceArray = [];
   for (let i = 0; i < _refundWindow; i++) {
-    _contentLockedBalanceArray[i] = ethers.utils.formatEther(await contractPlatformTreasury.contentCutLockedPool(i));
+    _contentLockedBalanceArray[i] = ethers.formatEther(await contractPlatformTreasury.contentCutLockedPool(i));
   }
   return _contentLockedBalanceArray;
 }
@@ -370,20 +370,20 @@ async function getContentLockedBalanceArray(_refundWindow) {
 async function getCoachingLockedBalanceArray(_refundWindow) {
   let _coachingLockedBalanceArray = [];
   for (let i = 0; i < _refundWindow; i++) {
-    _coachingLockedBalanceArray[i] = ethers.utils.formatEther(await contractPlatformTreasury.coachingCutLockedPool(i));
+    _coachingLockedBalanceArray[i] = ethers.formatEther(await contractPlatformTreasury.coachingCutLockedPool(i));
   }
   return _coachingLockedBalanceArray;
 }
 
 async function getInstructorCurrentUnlockedRefundedBalances(_contentCreator) {
-  const _currentBalanceInst = ethers.utils.formatEther(
+  const _currentBalanceInst = ethers.formatEther(
     await contractPlatformTreasury.instBalance(contentCreator.address)
   );
   const [_unlockedBalanceInstBN, _refundendBalanceInstBN] =
     await contractPlatformTreasury.getWithdrawableBalanceInstructor(contentCreator.address);
-  const _unlockedBalanceInst = ethers.utils.formatEther(_unlockedBalanceInstBN);
-  const _refundendBalanceInst = ethers.utils.formatEther(_refundendBalanceInstBN);
-  const _iRefBalance = ethers.utils.formatEther(
+  const _unlockedBalanceInst = ethers.formatEther(_unlockedBalanceInstBN);
+  const _refundendBalanceInst = ethers.formatEther(_refundendBalanceInstBN);
+  const _iRefBalance = ethers.formatEther(
     await contractPlatformTreasury.instRefundedBalance(contentCreator.address)
   );
   if (_iRefBalance - _refundendBalanceInst != 0) {
@@ -393,8 +393,8 @@ async function getInstructorCurrentUnlockedRefundedBalances(_contentCreator) {
 }
 
 async function getContentCurrentRefundedBalances() {
-  const _currentBalanceContent = ethers.utils.formatEther(await contractPlatformTreasury.contentCutPool());
-  const _refundendBalanceContent = ethers.utils.formatEther(await contractPlatformTreasury.contentCutRefundedBalance());
+  const _currentBalanceContent = ethers.formatEther(await contractPlatformTreasury.contentCutPool());
+  const _refundendBalanceContent = ethers.formatEther(await contractPlatformTreasury.contentCutRefundedBalance());
 
   //Calculate the distributed content cuts
   const _totalRoleBalances = await getTotalRoleBalances();
@@ -402,8 +402,8 @@ async function getContentCurrentRefundedBalances() {
   return [_currentBalanceContent, _refundendBalanceContent, _totalRoleBalances];
 }
 async function getCoachingCurrentRefundedBalances() {
-  const _currentBalanceCoach = ethers.utils.formatEther(await contractPlatformTreasury.coachingCutPool());
-  const _refundendBalanceCoach = ethers.utils.formatEther(await contractPlatformTreasury.coachingCutRefundedBalance());
+  const _currentBalanceCoach = ethers.formatEther(await contractPlatformTreasury.coachingCutPool());
+  const _refundendBalanceCoach = ethers.formatEther(await contractPlatformTreasury.coachingCutRefundedBalance());
 
   //Calculate the distributed content cuts
   const _totalRoleBalances = await getTotalRoleBalances();
@@ -416,7 +416,7 @@ async function getTotalRoleBalances() {
   const _governanceBalance = await contractPlatformTreasury.governanceBalance();
   const _jurorBalance = await contractPlatformTreasury.jurorBalance();
   const _validatorBalance = await contractPlatformTreasury.validatorsBalance();
-  const _sumOfBalances = ethers.utils.formatEther(
+  const _sumOfBalances = ethers.formatEther(
     _foundationBalance + _governanceBalance + _jurorBalance + _validatorBalance
   );
   return _sumOfBalances;
@@ -581,10 +581,10 @@ describe("Platform Treasury Visual Tests", function () {
     expect(await contractPlatformTreasury.coachTotalCut()).to.equal(50000);
 
     // Get the refund window in the first place
-    const initialRefundWindow = (await contractPlatformTreasury.refundWindow()).toNumber();
+    const initialRefundWindow = Number(await contractPlatformTreasury.refundWindow());
     // Change refund window to 5 days to work with smaller locked balance arrays
     await contractPlatformTreasury.connect(backend).changeRefundWindow(5);
-    let refundWindowC1 = (await contractPlatformTreasury.refundWindow()).toNumber();
+    let refundWindowC1 = Number(await contractPlatformTreasury.refundWindow());
     //Empty space
     consoleLog_emptySpace();
     if (consoleLogOn) {
@@ -908,7 +908,7 @@ describe("Platform Treasury Visual Tests", function () {
     ///////////////////////////////////////////////////////////////////////////////////////////////////
     // Change refund window to 3 days to work to see the effect of the change
     await contractPlatformTreasury.connect(backend).changeRefundWindow(3);
-    let refundWindowC2 = (await contractPlatformTreasury.refundWindow()).toNumber();
+    let refundWindowC2 = Number(await contractPlatformTreasury.refundWindow());
     //Empty space
     consoleLog_emptySpace();
     if (consoleLogOn) {
@@ -1210,7 +1210,7 @@ describe("Platform Treasury Visual Tests", function () {
         colorReset,
         "UDAO Balance change:",
         colorGreen,
-        ethers.utils.formatEther(instructerBalanceChange.toString()),
+        ethers.formatEther(instructerBalanceChange.toString()),
         colorReset
       );
     }
@@ -1291,7 +1291,7 @@ describe("Platform Treasury Visual Tests", function () {
     ///////////////////////////////////////////////////////////////////////////////////////////////////
     // Change refund window to 2 days to work to see the effect of the change
     await contractPlatformTreasury.connect(backend).changeRefundWindow(2);
-    let refundWindowC3 = (await contractPlatformTreasury.refundWindow()).toNumber();
+    let refundWindowC3 = Number(await contractPlatformTreasury.refundWindow());
     //Empty space
     consoleLog_emptySpace();
     if (consoleLogOn) {
@@ -1356,7 +1356,7 @@ describe("Platform Treasury Visual Tests", function () {
     ///////////////////////////////////////////////////////////////////////////////////////////////////
     // Change refund window to 6 days to work to see the effect of the change
     await contractPlatformTreasury.connect(backend).changeRefundWindow(6);
-    let refundWindowC4 = (await contractPlatformTreasury.refundWindow()).toNumber();
+    let refundWindowC4 = Number(await contractPlatformTreasury.refundWindow());
     //Empty space
     consoleLog_emptySpace();
     if (consoleLogOn) {
@@ -1605,10 +1605,10 @@ describe("Platform Treasury Visual Tests", function () {
         colorReset,
         "UDAO Balance change:",
         colorGreen,
-        ethers.utils.formatEther(governanceTreasuryBalanceChangeG00toG0.toString()),
+        ethers.formatEther(governanceTreasuryBalanceChangeG00toG0.toString()),
         colorReset
       );
-      _foundationBalance00 = ethers.utils.formatEther(await contractPlatformTreasury.foundationBalance());
+      _foundationBalance00 = ethers.formatEther(await contractPlatformTreasury.foundationBalance());
       console.log(colorYellow, "Foundation", colorReset, "balance:", colorGreen, _foundationBalance00, colorReset);
     }
 
@@ -1632,7 +1632,7 @@ describe("Platform Treasury Visual Tests", function () {
     ///////////////////////////////////////////////////////////////////////////////////////////////////
     //// Change refund window to 2 days to work to see the effect of the change
     await contractPlatformTreasury.connect(backend).changeRefundWindow(2);
-    let refundWindowC5 = (await contractPlatformTreasury.refundWindow()).toNumber();
+    let refundWindowC5 = Number(await contractPlatformTreasury.refundWindow());
     //Empty space
     consoleLog_emptySpace();
     if (consoleLogOn) {
@@ -1677,10 +1677,10 @@ describe("Platform Treasury Visual Tests", function () {
         colorReset,
         "UDAO Balance change:",
         colorGreen,
-        ethers.utils.formatEther(governanceTreasuryBalanceChangeG0toG1.toString()),
+        ethers.formatEther(governanceTreasuryBalanceChangeG0toG1.toString()),
         colorReset
       );
-      _foundationBalance01 = ethers.utils.formatEther(await contractPlatformTreasury.foundationBalance());
+      _foundationBalance01 = ethers.formatEther(await contractPlatformTreasury.foundationBalance());
       console.log(colorYellow, "Foundation", colorReset, "balance:", colorGreen, _foundationBalance01, colorReset);
     }
 
@@ -1746,10 +1746,10 @@ describe("Platform Treasury Visual Tests", function () {
         colorReset,
         "UDAO Balance change:",
         colorGreen,
-        ethers.utils.formatEther(governanceTreasuryBalanceChangeG1toG2.toString()),
+        ethers.formatEther(governanceTreasuryBalanceChangeG1toG2.toString()),
         colorReset
       );
-      _foundationBalance02 = ethers.utils.formatEther(await contractPlatformTreasury.foundationBalance());
+      _foundationBalance02 = ethers.formatEther(await contractPlatformTreasury.foundationBalance());
       console.log(colorYellow, "Foundation", colorReset, "balance:", colorGreen, _foundationBalance02, colorReset);
     }
 
@@ -1770,7 +1770,7 @@ describe("Platform Treasury Visual Tests", function () {
         colorReset,
         "UDAO Balance change:",
         colorGreen,
-        ethers.utils.formatEther(foundationBalanceChange.toString()),
+        ethers.formatEther(foundationBalanceChange.toString()),
         colorReset
       );
     }
@@ -1812,10 +1812,10 @@ describe("Platform Treasury Visual Tests", function () {
         colorReset,
         "UDAO Balance change:",
         colorGreen,
-        ethers.utils.formatEther(governanceTreasuryBalanceChangeG2toG3.toString()),
+        ethers.formatEther(governanceTreasuryBalanceChangeG2toG3.toString()),
         colorReset
       );
-      _foundationBalance03 = ethers.utils.formatEther(await contractPlatformTreasury.foundationBalance());
+      _foundationBalance03 = ethers.formatEther(await contractPlatformTreasury.foundationBalance());
       console.log(colorYellow, "Foundation", colorReset, "balance:", colorGreen, _foundationBalance03, colorReset);
     }
 
@@ -1867,7 +1867,7 @@ describe("Platform Treasury Visual Tests", function () {
         colorReset,
         "UDAO Balance change:",
         colorGreen,
-        ethers.utils.formatEther(instructorBalanceChange1.toString()),
+        ethers.formatEther(instructorBalanceChange1.toString()),
         colorReset
       );
     }
@@ -1882,10 +1882,10 @@ describe("Platform Treasury Visual Tests", function () {
         colorReset,
         "UDAO Balance change:",
         colorGreen,
-        ethers.utils.formatEther(governanceTreasuryBalanceChangeG3toG4.toString()),
+        ethers.formatEther(governanceTreasuryBalanceChangeG3toG4.toString()),
         colorReset
       );
-      _foundationBalance04 = ethers.utils.formatEther(await contractPlatformTreasury.foundationBalance());
+      _foundationBalance04 = ethers.formatEther(await contractPlatformTreasury.foundationBalance());
       console.log(colorYellow, "Foundation", colorReset, "balance:", colorGreen, _foundationBalance04, colorReset);
     }
 
@@ -1925,10 +1925,10 @@ describe("Platform Treasury Visual Tests", function () {
         colorReset,
         "UDAO Balance change:",
         colorGreen,
-        ethers.utils.formatEther(governanceTreasuryBalanceChangeG4toG5.toString()),
+        ethers.formatEther(governanceTreasuryBalanceChangeG4toG5.toString()),
         colorReset
       );
-      _foundationBalance05 = ethers.utils.formatEther(await contractPlatformTreasury.foundationBalance());
+      _foundationBalance05 = ethers.formatEther(await contractPlatformTreasury.foundationBalance());
       console.log(colorYellow, "Foundation", colorReset, "balance:", colorGreen, _foundationBalance05, colorReset);
     }
 
