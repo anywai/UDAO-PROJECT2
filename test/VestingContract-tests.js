@@ -665,7 +665,7 @@ describe("Vesting Contract", function () {
         .withdrawFromBatch([currentVestingIndex, currentVestingIndex + 1, currentVestingIndex + 2])
     )
       .to.emit(contractVesting, "VestingsWithdrawal")
-      .withArgs(beneficiary1, [currentVestingIndex, currentVestingIndex + 1], amount1 + amount2);
+      .withArgs(beneficiary1, [currentVestingIndex, currentVestingIndex + 1, currentVestingIndex + 2], amount1 + amount2);
     // Check balance of beneficiary1 after withdraw
     expect(await contractUDAO.balanceOf(account1.address)).to.be.equal(amount1 + amount2);
     // Wait for 1 more day
