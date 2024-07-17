@@ -66,7 +66,34 @@ async function reDeploy(reApplyRolesViaVoucher = true, isDexRequired = false) {
   const JUROR_ROLE = ethers.keccak256(ethers.toUtf8Bytes("JUROR_ROLE"));
   contractGovernanceTreasury = replace.contractGovernanceTreasury;
 }
+async function readEvent(tx, eventName, contract) {
+  /// Wait for the transaction to be mined and get the receipt
+  const txReceipt = await tx.wait();
+  /// Access ABI from contract instance
+  const contractABI = contract.interface.fragments;
+  /// create ether.js interface using the contract ABI
+  const interfaceOfContract = new ethers.Interface(contractABI);
+  /// Get the logs from the transaction receipt
+  const logs = txReceipt.logs;
 
+  /// Find the log entry that matches the event name
+  const matchingLog = logs.find((logEntry) => {
+    try {
+      const parsedLog = interfaceOfContract.parseLog(logEntry);
+      return parsedLog.name === eventName;
+    } catch (error) {
+      // Handle or ignore the error if the log doesn't match any event in the interface
+      return false;
+    }
+  });
+
+  if (matchingLog) {
+    const parsedLog = interfaceOfContract.parseLog(matchingLog);
+    return parsedLog.args;
+  } else {
+    console.error(`${eventName} event not found in transaction receipt.`);
+  }
+}
 async function skipDays(_days) {
   // There is 86400 second in a day (24h*60m*60s=86400s), and also in polygon 1 block is mined every 2 seconds
   const numBlocksToMine = Math.ceil((_days * 24 * 60 * 60) / 2);
@@ -107,8 +134,10 @@ describe("Platform Treasury Contract - Coaching", function () {
     // Buy coaching
     const purchaseTx = await contractPlatformTreasury.connect(contentBuyer).buyCoaching(role_voucher);
     const queueTxReceipt = await purchaseTx.wait();
-    const queueTxEvent = queueTxReceipt.events.find((e) => e.event == "CoachingBought");
-    const coachingSaleID = queueTxEvent.args[1];
+    /// get decoded event from the transaction
+    const decodedEvent = await readEvent(purchaseTx, "CoachingBought", contractPlatformTreasury);
+    /// Decoded results for ContentBought event
+    const coachingSaleID = decodedEvent[1];
     // Get the amount of UDAO in the buyer's wallet after buying coaching
     const buyerBalanceAfter = await contractUDAO.balanceOf(contentBuyer.address);
     // Check if correct amount of UDAO was deducted from the buyer's wallet
@@ -226,8 +255,10 @@ describe("Platform Treasury Contract - Coaching", function () {
     // Buy coaching
     const purchaseTx = await contractPlatformTreasury.connect(contentBuyer).buyCoaching(role_voucher);
     const queueTxReceipt = await purchaseTx.wait();
-    const queueTxEvent = queueTxReceipt.events.find((e) => e.event == "CoachingBought");
-    const coachingSaleID = queueTxEvent.args[1];
+    /// get decoded event from the transaction
+    const decodedEvent = await readEvent(purchaseTx, "CoachingBought", contractPlatformTreasury);
+    /// Decoded results for ContentBought event
+    const coachingSaleID = decodedEvent[1];
     // Get the amount of UDAO in the buyer's wallet after buying coaching
     const buyerBalanceAfter = await contractUDAO.balanceOf(contentBuyer.address);
     // Check if correct amount of UDAO was deducted from the buyer's wallet
@@ -416,8 +447,10 @@ describe("Platform Treasury Contract - Coaching", function () {
     // Buy coaching
     const purchaseTx = await contractPlatformTreasury.connect(contentBuyer).buyCoaching(role_voucher);
     const queueTxReceipt = await purchaseTx.wait();
-    const queueTxEvent = queueTxReceipt.events.find((e) => e.event == "CoachingBought");
-    const coachingSaleID = queueTxEvent.args[1];
+    /// get decoded event from the transaction
+    const decodedEvent = await readEvent(purchaseTx, "CoachingBought", contractPlatformTreasury);
+    /// Decoded results for ContentBought event
+    const coachingSaleID = decodedEvent[1];
     // Get the amount of UDAO in the buyer's wallet after buying coaching
     const buyerBalanceAfter = await contractUDAO.balanceOf(contentBuyer.address);
     // Check if correct amount of UDAO was deducted from the buyer's wallet
@@ -470,8 +503,10 @@ describe("Platform Treasury Contract - Coaching", function () {
     // Buy coaching
     const purchaseTx = await contractPlatformTreasury.connect(contentBuyer).buyCoaching(role_voucher);
     const queueTxReceipt = await purchaseTx.wait();
-    const queueTxEvent = queueTxReceipt.events.find((e) => e.event == "CoachingBought");
-    const coachingSaleID = queueTxEvent.args[1];
+    /// get decoded event from the transaction
+    const decodedEvent = await readEvent(purchaseTx, "CoachingBought", contractPlatformTreasury);
+    /// Decoded results for ContentBought event
+    const coachingSaleID = decodedEvent[1];
     // Get the amount of UDAO in the buyer's wallet after buying coaching
     const buyerBalanceAfter = await contractUDAO.balanceOf(contentBuyer.address);
     // Check if correct amount of UDAO was deducted from the buyer's wallet
@@ -522,8 +557,10 @@ describe("Platform Treasury Contract - Coaching", function () {
     // Buy coaching
     const purchaseTx = await contractPlatformTreasury.connect(contentBuyer).buyCoaching(role_voucher);
     const queueTxReceipt = await purchaseTx.wait();
-    const queueTxEvent = queueTxReceipt.events.find((e) => e.event == "CoachingBought");
-    const coachingSaleID = queueTxEvent.args[1];
+    /// get decoded event from the transaction
+    const decodedEvent = await readEvent(purchaseTx, "CoachingBought", contractPlatformTreasury);
+    /// Decoded results for ContentBought event
+    const coachingSaleID = decodedEvent[1];
     // Get the amount of UDAO in the buyer's wallet after buying coaching
     const buyerBalanceAfter = await contractUDAO.balanceOf(contentBuyer.address);
     // Check if correct amount of UDAO was deducted from the buyer's wallet
@@ -579,8 +616,10 @@ describe("Platform Treasury Contract - Coaching", function () {
     // Buy coaching
     const purchaseTx = await contractPlatformTreasury.connect(contentBuyer).buyCoaching(role_voucher);
     const queueTxReceipt = await purchaseTx.wait();
-    const queueTxEvent = queueTxReceipt.events.find((e) => e.event == "CoachingBought");
-    const coachingSaleID = queueTxEvent.args[1];
+    /// get decoded event from the transaction
+    const decodedEvent = await readEvent(purchaseTx, "CoachingBought", contractPlatformTreasury);
+    /// Decoded results for ContentBought event
+    const coachingSaleID = decodedEvent[1];
     // Get the amount of UDAO in the buyer's wallet after buying coaching
     const buyerBalanceAfter = await contractUDAO.balanceOf(contentBuyer.address);
     // Check if correct amount of UDAO was deducted from the buyer's wallet
@@ -640,8 +679,10 @@ describe("Platform Treasury Contract - Coaching", function () {
     // Buy coaching
     const purchaseTx = await contractPlatformTreasury.connect(contentBuyer).buyCoaching(role_voucher);
     const queueTxReceipt = await purchaseTx.wait();
-    const queueTxEvent = queueTxReceipt.events.find((e) => e.event == "CoachingBought");
-    const coachingSaleID = queueTxEvent.args[1];
+    /// get decoded event from the transaction
+    const decodedEvent = await readEvent(purchaseTx, "CoachingBought", contractPlatformTreasury);
+    /// Decoded results for ContentBought event
+    const coachingSaleID = decodedEvent[1];
     // Get the amount of UDAO in the buyer's wallet after buying coaching
     const buyerBalanceAfter = await contractUDAO.balanceOf(contentBuyer.address);
     // Check if correct amount of UDAO was deducted from the buyer's wallet
@@ -651,8 +692,10 @@ describe("Platform Treasury Contract - Coaching", function () {
     // Check if returned learner address is the same as the buyer address
     expect(coachingStruct.contentReceiver).to.equal(contentBuyer.address);
     const refundWindow = await contractPlatformTreasury.refundWindow();
+    /// convert bigInt refundwindow to number
+    const refundWindowNumber = Number(refundWindow);
     // Mine days of blocks that bigger than refundWindow days:
-    skipDays(refundWindow + 1);
+    skipDays(refundWindowNumber + 1);
     // Refund coaching
     await expect(
       contractPlatformTreasury.connect(contentCreator).refundCoachingByInstructorOrLearner(coachingSaleID)
@@ -691,8 +734,10 @@ describe("Platform Treasury Contract - Coaching", function () {
     // Buy coaching
     const purchaseTx = await contractPlatformTreasury.connect(contentBuyer).buyCoaching(role_voucher);
     const queueTxReceipt = await purchaseTx.wait();
-    const queueTxEvent = queueTxReceipt.events.find((e) => e.event == "CoachingBought");
-    const coachingSaleID = queueTxEvent.args[1];
+    /// get decoded event from the transaction
+    const decodedEvent = await readEvent(purchaseTx, "CoachingBought", contractPlatformTreasury);
+    /// Decoded results for ContentBought event
+    const coachingSaleID = decodedEvent[1];
     // Get coaching struct
     const coachingStruct = await contractPlatformTreasury.coachSales(coachingSaleID);
     // Check if returned learner address is the same as the buyer address
@@ -739,8 +784,10 @@ describe("Platform Treasury Contract - Coaching", function () {
     // Buy coaching
     const purchaseTx = await contractPlatformTreasury.connect(contentBuyer).buyCoaching(role_voucher);
     const queueTxReceipt = await purchaseTx.wait();
-    const queueTxEvent = queueTxReceipt.events.find((e) => e.event == "CoachingBought");
-    const coachingSaleID = queueTxEvent.args[1];
+    /// get decoded event from the transaction
+    const decodedEvent = await readEvent(purchaseTx, "CoachingBought", contractPlatformTreasury);
+    /// Decoded results for ContentBought event
+    const coachingSaleID = decodedEvent[1];
     // Get buyer's UDAO balance after buying coaching
     const buyerBalanceAfter = await contractUDAO.balanceOf(contentBuyer.address);
     // Check if correct amount of UDAO was deducted from the buyer's wallet
@@ -810,8 +857,10 @@ describe("Platform Treasury Contract - Coaching", function () {
     // Buy coaching
     const purchaseTx = await contractPlatformTreasury.connect(contentBuyer).buyCoaching(role_voucher);
     const queueTxReceipt = await purchaseTx.wait();
-    const queueTxEvent = queueTxReceipt.events.find((e) => e.event == "CoachingBought");
-    const coachingSaleID = queueTxEvent.args[1];
+    /// get decoded event from the transaction
+    const decodedEvent = await readEvent(purchaseTx, "CoachingBought", contractPlatformTreasury);
+    /// Decoded results for ContentBought event
+    const coachingSaleID = decodedEvent[1];
     // Get buyer's UDAO balance after buying coaching
     const buyerBalanceAfter = await contractUDAO.balanceOf(contentBuyer.address);
     // Check if correct amount of UDAO was deducted from the buyer's wallet
@@ -886,8 +935,10 @@ describe("Platform Treasury Contract - Coaching", function () {
     // Buy coaching
     const purchaseTx = await contractPlatformTreasury.connect(contentBuyer).buyCoaching(role_voucher);
     const queueTxReceipt = await purchaseTx.wait();
-    const queueTxEvent = queueTxReceipt.events.find((e) => e.event == "CoachingBought");
-    const coachingSaleID = queueTxEvent.args[1];
+    /// get decoded event from the transaction
+    const decodedEvent = await readEvent(purchaseTx, "CoachingBought", contractPlatformTreasury);
+    /// Decoded results for ContentBought event
+    const coachingSaleID = decodedEvent[1];
     // Get buyer's UDAO balance after buying coaching
     const buyerBalanceAfter = await contractUDAO.balanceOf(contentBuyer.address);
     // Check if correct amount of UDAO was deducted from the buyer's wallet
@@ -898,8 +949,10 @@ describe("Platform Treasury Contract - Coaching", function () {
     expect(coachingStruct.contentReceiver).to.equal(contentBuyer.address);
     // Mine more than refund period
     const refundWindow = await contractPlatformTreasury.refundWindow();
+    /// convert bigInt refundwindow to number
+    const refundWindowNumber = Number(refundWindow);
     // Mine days of blocks that bigger than refundWindow days:
-    skipDays(refundWindow + 1);
+    skipDays(refundWindowNumber + 1);
     //  Create RefundVoucher
     const refundVoucher = new RefundVoucher({
       contract: contractVoucherVerifier,
@@ -992,8 +1045,10 @@ describe("Platform Treasury Contract - Coaching", function () {
     // Buy coaching
     const purchaseTx = await contractPlatformTreasury.connect(contentBuyer).buyCoaching(role_voucher);
     const queueTxReceipt = await purchaseTx.wait();
-    const queueTxEvent = queueTxReceipt.events.find((e) => e.event == "CoachingBought");
-    const coachingSaleID = queueTxEvent.args[1];
+    /// get decoded event from the transaction
+    const decodedEvent = await readEvent(purchaseTx, "CoachingBought", contractPlatformTreasury);
+    /// Decoded results for ContentBought event
+    const coachingSaleID = decodedEvent[1];
     // Get the amount of UDAO in the buyer's wallet after buying coaching
     const buyerBalanceAfter = await contractUDAO.balanceOf(contentBuyer.address);
     // Check if correct amount of UDAO was deducted from the buyer's wallet
@@ -1006,25 +1061,25 @@ describe("Platform Treasury Contract - Coaching", function () {
     /// @dev Skip "refund window" days to allow foundation to withdraw funds
     const refundWindowDays = await contractPlatformTreasury.refundWindow();
     /// convert big number to number
-    const refundWindowDaysNumber = refundWindowDays.toNumber();
+    const refundWindowDaysNumber = Number(refundWindowDays);
 
     /// @dev Skip 20'refund window period' days to allow foundation to withdraw funds
     skipDays(refundWindowDaysNumber);
     // Update transfer platform balances
     await contractPlatformTreasury.connect(backend).updateAndTransferPlatformBalances();
     /// @dev Check if the governance treasury has the correct amount with respect to the platform cut percentages
-    const governanceTreasuryBalance = await contractUDAO.balanceOf(contractGovernanceTreasury.address);
+    const governanceTreasuryBalance = await contractUDAO.balanceOf(contractGovernanceTreasury);
 
     // Get total price
     const totalPrice = coachingPrice;
     // Get coachFoundCut
-    const coachFoundCut = totalPrice.mul(_coachFoundCut).div(100000);
+    const coachFoundCut = (totalPrice * BigInt(_coachFoundCut)) / BigInt(100000);
     // Get coachGoverCut
-    const coachGoverCut = totalPrice.mul(_coachGoverCut).div(100000);
+    const coachGoverCut = (totalPrice * BigInt(_coachGoverCut)) / BigInt(100000);
     // Get conachJurorCut
-    const coachJurorCut = totalPrice.mul(_coachJurorCut).div(100000);
+    const coachJurorCut = (totalPrice * BigInt(_coachJurorCut)) / BigInt(100000);
     // Get coachValidCut
-    const coachValidCut = totalPrice.mul(_coachValidCut).div(100000);
+    const coachValidCut = (totalPrice * BigInt(_coachValidCut)) / BigInt(100000);
     // Get total cut
     const totalCut = coachGoverCut + coachJurorCut + coachValidCut;
     // Check if the governance treasury has the correct amount with respect to the platform cut percentages
@@ -1150,14 +1205,16 @@ describe("Platform Treasury Contract - Coaching", function () {
     // Buy coaching
     const purchaseTx = await contractPlatformTreasury.connect(backend).buyCoaching(role_voucher);
     const queueTxReceipt = await purchaseTx.wait();
-    const queueTxEvent = queueTxReceipt.events.find((e) => e.event == "CoachingBought");
-    const coachingSaleID = queueTxEvent.args[1];
+    /// get decoded event from the transaction
+    const decodedEvent = await readEvent(purchaseTx, "CoachingBought", contractPlatformTreasury);
+    /// Decoded results for ContentBought event
+    const coachingSaleID = decodedEvent[1];
     // Get the amount of UDAO in the buyer's wallet after buying coaching
     const buyerBalanceAfter = await contractUDAO.balanceOf(backend.address);
     const changeOnBalance = buyerBalance - buyerBalanceAfter;
     // Get total price
     const totalCutRatio = await contractPlatformTreasury.coachTotalCut();
-    const totalCut = coachingPrice.mul(totalCutRatio).div(100000);
+    const totalCut = (coachingPrice * totalCutRatio) / BigInt(100000);
     // Check if correct amount of UDAO was deducted from the buyer's wallet
     expect(changeOnBalance).to.equal(totalCut);
     // Get coaching struct
