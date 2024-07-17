@@ -1804,7 +1804,7 @@ describe("Platform Treasury Updated General", function () {
     // change the refund window to 60 days
     await contractPlatformTreasury.connect(backend).changeRefundWindow(60);
     // get the refund window
-    const refundWindow = (await contractPlatformTreasury.refundWindow()).toNumber();
+    const refundWindow = Number(await contractPlatformTreasury.refundWindow());
     // skip 60 days
     skipDays(refundWindow + 1);
     // make a content purchase
