@@ -465,7 +465,7 @@ describe("UDAO Cert Contract", function () {
 
   it("Should fail to create certificate when paused", async function () {
     await reDeploy();
-    await contractRoleManager.setKYC(contentBuyer.address, false);
+    await contractRoleManager.setKYC(contentBuyer.address, true);
 
     const tx = await contractUDAOCertificate.getChainID();
     const lazyMinter = new LazyUDAOCertMinter({
