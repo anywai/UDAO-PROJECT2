@@ -6,23 +6,12 @@ const { ethers } = require("ethers");
 module.exports = buildModule("DeployAmoyContracts", (m) => {
   const backendPK = "0ecbb4aa5a7ab07b88076b9a92b809b54fb82f664599965616a0ebb399584b24";
   const backend = new ethers.Wallet(backendPK, ethers.provider);
-  //const backend = new ethers.Wallet(
-  //  "0ecbb4aa5a7ab07b88076b9a92b809b54fb82f664599965616a0ebb399584b24",
-  //  ethers.provider
-  //);
   const foundationPK = "106c89731b42c90935018001a2a550767d406c3847966e36b440bbc12cf00f54";
   const foundation = new ethers.Wallet(foundationPK, ethers.provider);
 
-  //const foundation = new ethers.Wallet(
-  //  "c65a58d97cfc1a35f67fba197655b9df253ffddbdf31d9cc18ec1447cb454818",
-  //  ethers.provider
-  //);
-  //backend = new ethers.Wallet(backend, ethers.provider);
-  //foundation = new ethers.Wallet(foundation, ethers.provider);
-
   // UDAO Contract
   console.log("sa 1.0");
-
+  
   const contractUDAO = m.contract("UDAO");
   console.log("sa 2.0");
   // RoleManager Contract
@@ -143,6 +132,7 @@ module.exports = buildModule("DeployAmoyContracts", (m) => {
   console.log("sa 21.0");
   const zero = "0x0000000000000000000000000000000000000000000000000000000000000000";
 
+  /*
   // Return ownership of contractRoleManager to foundation from backend after deployment
   const deneme1 = m.call(contractRoleManager, "grantRole", [zero, foundation.address], {
     id: "grantAdminRoleToFoundation",
@@ -156,5 +146,6 @@ module.exports = buildModule("DeployAmoyContracts", (m) => {
     after: [deneme1]
   });
   console.log("sa 23.0");
+  */
   
 });
