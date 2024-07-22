@@ -2,26 +2,6 @@
 
 ## UDAOContent
 
-### _tokenIds
-
-```solidity
-struct Counters.Counter _tokenIds
-```
-
-_The counter for content token ids._
-
-### SIGNING_DOMAIN
-
-```solidity
-string SIGNING_DOMAIN
-```
-
-### SIGNATURE_VERSION
-
-```solidity
-string SIGNATURE_VERSION
-```
-
 ### supervision
 
 ```solidity
@@ -39,14 +19,6 @@ constructor(address roleManagerAddress) public
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | roleManagerAddress | address | The address of the deployed role manager |
-
-### isAllowedToBurn
-
-```solidity
-bool isAllowedToBurn
-```
-
-_isAllowedToBurn is a bool variable that controls whether the backend is allowed to burn a content or not._
 
 ### isSellable
 
@@ -126,12 +98,6 @@ Allows sale controller to set sellable status of a content
 | ---- | ---- | ----------- |
 | _tokenId | uint256 | id of the content |
 | _isSellable | bool | is content sellable |
-
-### setIsAllowedToBurn
-
-```solidity
-function setIsAllowedToBurn(bool status) external
-```
 
 ### updateAddresses
 
@@ -217,50 +183,6 @@ function getPartNumberOfContent(uint256 tokenId) external view returns (uint256)
 ```
 
 Returns the part numbers that a content has
-
-### burn
-
-```solidity
-function burn(uint256 tokenId) external
-```
-
-Burns a content which is not allowed
-
-#### Parameters
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| tokenId | uint256 | The id of the token to burn |
-
-### _burn
-
-```solidity
-function _burn(uint256 tokenId) internal
-```
-
-Burns a content which is not allowed
-
-#### Parameters
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| tokenId | uint256 | The id of the token to burn |
-
-### _beforeTokenTransfer
-
-```solidity
-function _beforeTokenTransfer(address from, address to, uint256 tokenId) internal virtual
-```
-
-Allows transfer of a content with KYC and ban checks
-
-#### Parameters
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| from | address | The current token owner |
-| to | address | Token to send to |
-| tokenId | uint256 | The id of the token to transfer |
 
 ### existsBatch
 

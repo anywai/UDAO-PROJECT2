@@ -142,30 +142,6 @@ event InstructorLockedBalanceUpdated(address _instructor)
 
 Emitted when the instructor locked balances is updated
 
-### contentSaleID
-
-```solidity
-struct Counters.Counter contentSaleID
-```
-
-Used to generate unique ids for content sales
-
-### coachingSaleID
-
-```solidity
-struct Counters.Counter coachingSaleID
-```
-
-Used to generate unique ids for coaching sales
-
-### cartSaleID
-
-```solidity
-struct Counters.Counter cartSaleID
-```
-
-Used to generate unique ids for cart sales
-
 ### ContentSale
 
 ```solidity
