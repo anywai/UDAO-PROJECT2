@@ -498,8 +498,9 @@ describe("UDAO Cert Contract", function () {
     );
 
     await expect(contractUDAOCertificate.pause());
-    await expect(contractUDAOCertificate.unpause());
+    await expect(contractUDAOCertificate.connect(contentBuyer).redeem(voucher)).to.revertedWith("Pausable: paused");
 
+    await expect(contractUDAOCertificate.unpause());
     await expect(contractUDAOCertificate.connect(contentBuyer).redeem(voucher)).to.emit(
       contractUDAOCertificate,
       "Transfer"
