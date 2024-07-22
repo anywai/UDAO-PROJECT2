@@ -1,14 +1,9 @@
 const { expect } = require("chai");
 const hardhat = require("hardhat");
 const { ethers } = hardhat;
-const chai = require("chai");
-const BN = require("bn.js");
 const { LazyUDAOCertMinter } = require("../lib/LazyUDAOCertMinter");
-const helpers = require("@nomicfoundation/hardhat-network-helpers");
 const { deploy } = require("../lib/deployments");
 
-// Enable and inject BN dependency
-chai.use(require("chai-bn")(BN));
 /// HELPERS---------------------------------------------------------------------
 /// @dev Deploy contracts and assign them
 async function reDeploy(reApplyRolesViaVoucher = true, isDexRequired = false) {

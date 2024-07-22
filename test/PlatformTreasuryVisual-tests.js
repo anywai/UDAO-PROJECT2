@@ -1,18 +1,12 @@
 const { expect } = require("chai");
 const hardhat = require("hardhat");
 const { ethers } = hardhat;
-const chai = require("chai");
-const BN = require("bn.js");
 const { DiscountedPurchase } = require("../lib/DiscountedPurchase");
 const { LazyCoaching } = require("../lib/LazyCoaching");
 const { RefundVoucher } = require("../lib/RefundVoucher");
-const helpers = require("@nomicfoundation/hardhat-network-helpers");
 const { Redeem } = require("../lib/Redeem");
 const { deploy } = require("../lib/deployments");
-const { anyValue } = require("@nomicfoundation/hardhat-chai-matchers/withArgs");
 
-// Enable and inject BN dependency
-chai.use(require("chai-bn")(BN));
 require("dotenv").config();
 
 // @dev Proposal states

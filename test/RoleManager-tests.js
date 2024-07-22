@@ -1,13 +1,8 @@
 const { expect } = require("chai");
 const hardhat = require("hardhat");
 const { ethers } = hardhat;
-const chai = require("chai");
-const BN = require("bn.js");
-const helpers = require("@nomicfoundation/hardhat-network-helpers");
 const { deploy } = require("../lib/deployments");
 
-// Enable and inject BN dependency
-chai.use(require("chai-bn")(BN));
 /// HELPERS---------------------------------------------------------------------
 /// @dev Deploy contracts and assign them
 async function reDeploy(reApplyRolesViaVoucher = true, isDexRequired = false) {
@@ -86,7 +81,7 @@ describe("Role Manager", function () {
     // and now new DEFAULT_ADMIN_ROLE is contentbuyer1 and it can revoke DEFAULT_ADMIN_ROLE from foundation
     await contractRoleManager.connect(contentBuyer1).revokeRole(ethers.ZeroHash, foundation.address);
     // foundation can not grant role to anyone after it has been revoked from DEFAULT_ADMIN_ROLE
-    const encoded_DEFAULT_ADMIN_ROLE = await contractRoleManager.DEFAULT_ADMIN_ROLE()
+    const encoded_DEFAULT_ADMIN_ROLE = await contractRoleManager.DEFAULT_ADMIN_ROLE();
     await expect(
       contractRoleManager.connect(foundation).grantRole(BACKEND_ROLE, contentBuyer1.address)
     ).to.be.revertedWith(

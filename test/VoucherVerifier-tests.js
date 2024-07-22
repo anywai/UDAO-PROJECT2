@@ -6,13 +6,7 @@ const { DiscountedPurchase } = require("../lib/DiscountedPurchase");
 const { RefundVoucher } = require("../lib/RefundVoucher");
 const { Redeem } = require("../lib/Redeem");
 const { LazyCoaching } = require("../lib/LazyCoaching");
-const helpers = require("@nomicfoundation/hardhat-network-helpers");
 const { deploy } = require("../lib/deployments");
-
-// Enable and inject BN dependency
-const chai = require("chai");
-const BN = require("bn.js");
-chai.use(require("chai-bn")(BN));
 
 /// @dev Deploy contracts and assign them
 async function reDeploy(reApplyRolesViaVoucher = true, isDexRequired = false) {
@@ -366,7 +360,6 @@ describe("Voucher Verifier", function () {
       contentPurchaseVouchers.push(contentPurchaseVoucher);
     }
 
-    
     /// Buy content
     const purchaseTx = await contractPlatformTreasury.connect(contentBuyer).buyContent(contentPurchaseVouchers);
     const queueTxReceipt = await purchaseTx.wait();

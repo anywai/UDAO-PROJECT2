@@ -1,9 +1,6 @@
 const { expect } = require("chai");
 const hardhat = require("hardhat");
 const { ethers } = hardhat;
-const chai = require("chai");
-const BN = require("bn.js");
-const helpers = require("@nomicfoundation/hardhat-network-helpers");
 const { deploy } = require("../lib/deployments");
 const { Redeem } = require("../lib/Redeem");
 
@@ -91,9 +88,6 @@ async function createContentVoucher(
     validationScore
   );
 }
-
-// Enable and inject BN dependency
-chai.use(require("chai-bn")(BN));
 
 describe("UDAOC Contract", function () {
   it("Should deploy", async function () {

@@ -1,17 +1,8 @@
 const { expect } = require("chai");
 const hardhat = require("hardhat");
 const { ethers } = hardhat;
-const chai = require("chai");
-const BN = require("bn.js");
-const { LazyCoaching } = require("../lib/LazyCoaching");
-const { DiscountedPurchase } = require("../lib/DiscountedPurchase");
-const helpers = require("@nomicfoundation/hardhat-network-helpers");
-const { Redeem } = require("../lib/Redeem");
 const { deploy } = require("../lib/deployments");
-const { anyValue } = require("@nomicfoundation/hardhat-chai-matchers/withArgs");
 
-// Enable and inject BN dependency
-chai.use(require("chai-bn")(BN));
 require("dotenv").config();
 
 // @dev Proposal states
@@ -665,7 +656,11 @@ describe("Vesting Contract", function () {
         .withdrawFromBatch([currentVestingIndex, currentVestingIndex + 1, currentVestingIndex + 2])
     )
       .to.emit(contractVesting, "VestingsWithdrawal")
-      .withArgs(beneficiary1, [currentVestingIndex, currentVestingIndex + 1, currentVestingIndex + 2], amount1 + amount2);
+      .withArgs(
+        beneficiary1,
+        [currentVestingIndex, currentVestingIndex + 1, currentVestingIndex + 2],
+        amount1 + amount2
+      );
     // Check balance of beneficiary1 after withdraw
     expect(await contractUDAO.balanceOf(account1.address)).to.be.equal(amount1 + amount2);
     // Wait for 1 more day
