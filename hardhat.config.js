@@ -16,6 +16,7 @@ const {
   TEST_PRIVATE_KEY,
   TEST_FOUND_PRIVATE_KEY,
   MAINNET_PRIVATE_KEY,
+  MAINNET_FOUND_PRIVATE_KEY,
   POLYGON_RPC_PROVIDER,
   POLYGONSCAN_API_KEY,
 } = process.env;
@@ -58,14 +59,14 @@ module.exports = {
     },
     polygon: {
       url: POLYGON_RPC_PROVIDER,
-      accounts: [`0x${MAINNET_PRIVATE_KEY}`],
+      accounts: [`0x${MAINNET_PRIVATE_KEY}`, `0x${MAINNET_FOUND_PRIVATE_KEY}`],
     },
   },
   ignition: {
     blockPollingInterval: 1_000,
     timeBeforeBumpingFees: 3 * 60 * 1_000,
-    maxFeePerGasLimit: 50_000_000_0n, // 50 gwei
-    maxPriorityFeePerGas: 2_000_000_0n, // 2 gwei
+    maxFeePerGasLimit: 50_000_000_000n, // 50 gwei
+    maxPriorityFeePerGas: 2_000_000_000n, // 2 gwei
     maxFeeBumps: 4,
     requiredConfirmations: 5,
     modules: {
@@ -106,8 +107,8 @@ module.exports = {
         network: "amoy",
         chainId: 80002,
         urls: {
-          apiURL: "https://www.oklink.com/api/explorer/v1/contract/verify/async/api/polygonAmoy",
-          browserURL: "https://www.oklink.com/polygonAmoy",
+          apiURL: "https://api-amoy.polygonscan.com/api",
+          browserURL: "https://amoy.polygonscan.com/",
         },
       },
     ],
