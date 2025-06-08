@@ -31,7 +31,7 @@ contract NewTreasury is AccessControl {
 
     struct Payment {
         uint256 courseId;
-        address buyer; 
+        address buyer;
         address tokenAddress; // erc20 adressi or 0x0 for native token
         uint256 amount;
         uint256 timestamp; // end of refund window
@@ -54,14 +54,13 @@ contract NewTreasury is AccessControl {
 
     mapping(uint256 => Course) public courses; // courseId => Course struct
     mapping(uint256 => address[]) public authorizedWithdrawers; // courseId => list of addresses authorized to withdraw
-    mapping(address => (uint256 => bool)) public isAuthorizedWithdrawer; // address => true if the address is authorized to withdraw
-    
+    mapping(address => mapping(uint256 => bool)) public isAuthorizedWithdrawer;
+
     mapping(uint256 => Payment) public payments; // paymentId => Payment struct
     mapping(address => uint256[]) public ownedCourses; // buyer => list of courseIds owned by the buyer
-    mapping(address => mapping (uint256 => bool) ) public hasOwnedCourse; // buyer => courseId => true if the buyer has owned the course
+    mapping(address => mapping(uint256 => bool)) public hasOwnedCourse; // buyer => courseId => true if the buyer has owned the course
 
     mapping(address => uint256[]) public ownedPayments; // buyer => list of paymentIds owned by the buyer
-
 
     modifier onlyWithdrawer(uint256 courseId) {
         bool found = false;
@@ -81,58 +80,61 @@ contract NewTreasury is AccessControl {
         voucherVerifier = IVoucherVerifier(verifier);
     }
 
-function createCourseWithVoucher(
-    CourseVoucher calldata voucher
-) external {
-    require(voucher.authorizedWithdrawers.length > 0, "At least one withdrawer required");
-
-    for (uint i = 0; i < voucher.authorizedWithdrawers.length; i++) {
-        require(voucher.authorizedWithdrawers[i] != address(0), "Zero address not allowed");
-    }
-
-    address signer = voucherVerifier.verifyCourseVoucher(
-        voucher.authorizedWithdrawers[0], // signer olarak ilk withdrawer varsayımı
-        voucher.redeemer,
-        voucher.uri,
-        voucher.validUntil,
-        voucher.signature
-    );
-
-    // signer valid mi kontrolü: redeemer, authorizedWithdrawer veya msg.sender
-    bool isValidSigner = signer == voucher.redeemer || signer == msg.sender;
-    for (uint i = 0; i < voucher.authorizedWithdrawers.length && !isValidSigner; i++) {
-        if (signer == voucher.authorizedWithdrawers[i]) {
-            isValidSigner = true;
-        }
-    }
-    require(isValidSigner, "Invalid or unauthorized signature");
-
-    if (msg.sender != voucher.redeemer) {
+    function createCourseWithVoucher(CourseVoucher calldata voucher) external {
         require(
-            hasRole(INSTRUCTOR_ROLE, msg.sender),
-            "Only instructor or redeemer can create course"
+            voucher.authorizedWithdrawers.length > 0,
+            "At least one withdrawer required"
         );
+
+        for (uint i = 0; i < voucher.authorizedWithdrawers.length; i++) {
+            require(
+                voucher.authorizedWithdrawers[i] != address(0),
+                "Zero address not allowed"
+            );
+        }
+
+        address signer = voucherVerifier.verifyCourseVoucher(
+            voucher.authorizedWithdrawers[0], // signer olarak ilk withdrawer varsayımı
+            voucher.redeemer,
+            voucher.uri,
+            voucher.validUntil,
+            voucher.signature
+        );
+
+        // signer valid mi kontrolü: redeemer, authorizedWithdrawer veya msg.sender
+        bool isValidSigner = signer == voucher.redeemer || signer == msg.sender;
+        for (
+            uint i = 0;
+            i < voucher.authorizedWithdrawers.length && !isValidSigner;
+            i++
+        ) {
+            if (signer == voucher.authorizedWithdrawers[i]) {
+                isValidSigner = true;
+            }
+        }
+        require(isValidSigner, "Invalid or unauthorized signature");
+
+        if (msg.sender != voucher.redeemer) {
+            require(
+                hasRole(INSTRUCTOR_ROLE, msg.sender),
+                "Only instructor or redeemer can create course"
+            );
+        }
+
+        require(voucher.validUntil >= block.timestamp, "Voucher expired");
+        require(bytes(voucher.uri).length > 0, "Course URI empty");
+
+        uint256 newCourseId = ++courseCounter;
+        courses[newCourseId] = Course({uri: voucher.uri, sellable: true});
+
+        for (uint i = 0; i < voucher.authorizedWithdrawers.length; i++) {
+            address withdrawer = voucher.authorizedWithdrawers[i];
+            authorizedWithdrawers[newCourseId].push(withdrawer);
+            isAuthorizedWithdrawer[withdrawer][newCourseId] = true;
+        }
+
+        emit CourseCreated(newCourseId);
     }
-
-    require(voucher.validUntil >= block.timestamp, "Voucher expired");
-    require(bytes(voucher.uri).length > 0, "Course URI empty");
-
-    uint256 newCourseId = ++courseCounter;
-    courses[newCourseId] = Course({
-        uri: voucher.uri,
-        sellable: true
-    });
-
-    for (uint i = 0; i < voucher.authorizedWithdrawers.length; i++) {
-        address withdrawer = voucher.authorizedWithdrawers[i];
-        authorizedWithdrawers[newCourseId].push(withdrawer);
-        isAuthorizedWithdrawer[withdrawer][newCourseId] = true;
-    }
-
-    emit CourseCreated(newCourseId);
-}
-
-
 
     function recordPayment(
         uint256 courseId,
