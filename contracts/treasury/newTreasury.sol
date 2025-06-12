@@ -253,71 +253,434 @@ contract NewTreasury is AccessControl {
         return ECDSA.recover(digest, signature);
     }
 
-    mapping(uint256 => Payment) public payments; // paymentId => Payment struct
-    mapping(address => uint256[]) public ownedCourses; // buyer => list of courseIds owned by the buyer
-    mapping(address => mapping(uint256 => bool)) public hasOwnedCourse; // buyer => courseId => true if the buyer has owned the course
+    ////////////PAYMENT LOGIC////////////
+    ////////////PAYMENT LOGIC////////////
+    ////////////PAYMENT LOGIC////////////
+    ////////////PAYMENT LOGIC////////////
+    event ContentPurchased(
+        uint256 indexed paymentId,
+        uint256 indexed courseId,
+        address indexed payer,
+        address courseReceiver,
+        address tokenAddress,
+        uint256 totalAmount
+    );
 
-    mapping(address => uint256[]) public ownedPayments; // buyer => list of paymentIds owned by the buyer
+    ////////////PAYMENT LOGIC////////////
+    uint256 public paymentCounter;
+    mapping(uint256 => Payment) public payments; // paymentId => Payment struct
+
+    mapping(uint256 => uint256) public anyCourseSaleCounter; // courseId => howManySalesMadeForThisCourse
+    mapping(uint256 => mapping(uint256 => uint256)) public anyCourseSales; // courseId => (coursesSaleCounter => paymentId)
+
+    mapping(address => uint256[]) public ownedCourses; // aUser => list of courseIds owned by the buyer
+    mapping(address => mapping(uint256 => uint256)) public ownedCourseOneIndex; // aUser => courseId => index in the ownedCourses array
+    mapping(address => mapping(uint256 => bool)) public hasOwnedCourse; // aUser => courseId => true if the buyer has owned the course
+
+    struct BuyContentVoucher {
+        uint256 courseId;
+        address redeemer; // who pays for the course
+        address courseReceiver; // who will owns the course after payment
+        address tokenAddress; // erc20 adressi or 0x0 for native token
+        uint256 coursePrice; // Total amount of the payment
+        bytes signature; // signature of the voucher
+    }
+
+    bytes32 private constant BUY_CONTENT_VOUCHER_TYPEHASH =
+        keccak256(
+            "BuyContentVoucher(uint256 courseId,address redeemer,address courseReceiver,address tokenAddress,uint256 coursePrice)"
+        );
 
     struct Payment {
         uint256 courseId;
-        address buyer;
+        address payer;
+        address courseReceiver; // who owns the course after payment
         address tokenAddress; // erc20 adressi or 0x0 for native token
-        uint256 amount;
-        uint256 timestamp; // end of refund window
+        uint256 totalAmount; // total amount of the payment
+        uint256 instructorShare; // amount delivered to the instructor
+        uint256 foundationShare; // amount delivered to the foundation
+        uint256 governanceShare; // amount delivered to the governance
+        uint256 jurorShare; // amount delivered to the juror
+        uint256 validatorShare; // amount delivered to the validator
+        uint256 endOfRefundWindow; // end of refund window
         bool isRefunded; // true if refunded
+        bool isWithdrawn; // true if withdrawn
     }
 
-    uint256 public paymentCounter;
     uint256 public refundWindow = 20 days;
 
-    function recordPayment(
-        uint256 courseId,
-        address buyer,
-        uint256 amount
-    ) external onlyRole(BACKEND_ROLE) {
-        payments[++paymentCounter] = Payment({
-            id: paymentCounter,
-            courseId: courseId,
-            buyer: buyer,
-            amount: amount,
-            timestamp: block.timestamp,
-            refunded: false
+    uint256 csFoundCut = 4000; // %4 course sale foundation cut
+    uint256 csGoverCut = 1000; // %1 course sale governance cut
+    uint256 csJurorCut = 1000; // %1 course sale juror cut
+    uint256 csValidCut = 1000; // %1 course sale valid cut
+    uint256 csTotalCut = csFoundCut + csGoverCut + csJurorCut + csValidCut;
+
+    event CourseCutsUpdated(
+        uint256 foundationCut,
+        uint256 governanceCut,
+        uint256 jurorCut,
+        uint256 validatorCut,
+        uint256 totalCut
+    );
+
+    function setCourseCuts(
+        uint256 _csFoundCut,
+        uint256 _csGoverCut,
+        uint256 _csJurorCut,
+        uint256 _csValidCut
+    ) external {
+        require(
+            hasRole(BACKEND_ROLE, msg.sender) ||
+                hasRole(FOUNDATION_ROLE, msg.sender),
+            "Not authorized"
+        );
+
+        uint256 newTotal = _csFoundCut +
+            _csGoverCut +
+            _csJurorCut +
+            _csValidCut;
+        require(newTotal < 100000, "Cuts can't exceed 100%");
+
+        csFoundCut = _csFoundCut;
+        csGoverCut = _csGoverCut;
+        csJurorCut = _csJurorCut;
+        csValidCut = _csValidCut;
+        csTotalCut = newTotal;
+
+        emit CourseCutsUpdated(
+            csFoundCut,
+            csGoverCut,
+            csJurorCut,
+            csValidCut,
+            csTotalCut
+        );
+    }
+
+    function _calculateCourseCutShares(
+        uint256 _totalAmount
+    )
+        internal
+        view
+        returns (
+            uint256 foundShare,
+            uint256 goverShare,
+            uint256 jurorShare,
+            uint256 validShare,
+            uint256 instructorShare
+        )
+    {
+        goverShare = (_totalAmount * csGoverCut) / csTotalCut;
+        jurorShare = (_totalAmount * csJurorCut) / csTotalCut;
+        validShare = (_totalAmount * csValidCut) / csTotalCut;
+        foundShare = (_totalAmount * csFoundCut) / csTotalCut;
+        uint256 cutSum = foundShare + goverShare + jurorShare + validShare;
+        instructorShare = _totalAmount - cutSum;
+    }
+
+    function buyContentWithVoucher(
+        BuyContentVoucher calldata voucher
+    ) external payable {
+        require(
+            voucher.courseId > 0 && voucher.courseId <= courseCounter,
+            "Invalid courseId"
+        );
+        require(courses[voucher.courseId].sellable, "Course is not sellable");
+        require(
+            voucher.redeemer == msg.sender,
+            "Only redeemer can use this voucher"
+        );
+        //content receiver has to be dont have the course already
+        require(
+            !hasOwnedCourse[voucher.courseReceiver][voucher.courseId],
+            "Content receiver already owns this course"
+        );
+        //TODO: token address must be valid supply of erc20 token should be greater than 0
+        //course price must be greater than 0
+        require(voucher.coursePrice > 0, "Course price must be greater than 0");
+
+        // Signature verification
+        // Get encoded fields for BuyContentVoucher struct
+        bytes memory encodedWithType = abi.encode(
+            BUY_CONTENT_VOUCHER_TYPEHASH,
+            voucher.courseId,
+            voucher.redeemer,
+            voucher.courseReceiver,
+            voucher.tokenAddress,
+            voucher.coursePrice
+        );
+        // Recover the signer with ECDSA using digest and signature
+        address signer = _verifyVoucher(encodedWithType, voucher.signature);
+
+        // Check if the signer has the BACKEND_ROLE
+        require(
+            hasRole(BACKEND_ROLE, signer),
+            "Signature invalid or unauthorized"
+        );
+
+        // calculate shares
+        (
+            uint256 foundShare,
+            uint256 goverShare,
+            uint256 jurorShare,
+            uint256 validShare,
+            uint256 instructorShare
+        ) = _calculateCourseCutShares(voucher.coursePrice);
+
+        // check if the payment is made in native token or erc20 token
+        if (voucher.tokenAddress == address(0)) {
+            // payment in native token
+            require(
+                msg.value == voucher.coursePrice,
+                "Incorrect amount sent for native token payment"
+            );
+        } else {
+            // payment in erc20 token
+            require(
+                msg.value == 0,
+                "Native token payment not allowed for ERC20 token purchase"
+            );
+            // transfer the erc20 token from redeemer to this contract
+            IERC20(voucher.tokenAddress).transferFrom(
+                voucher.redeemer,
+                address(this),
+                voucher.coursePrice
+            );
+        }
+        // save the payment details
+        paymentCounter++;
+        uint256 newPaymentId = paymentCounter;
+        payments[newPaymentId] = Payment({
+            courseId: voucher.courseId,
+            payer: voucher.redeemer,
+            courseReceiver: voucher.courseReceiver,
+            tokenAddress: voucher.tokenAddress,
+            totalAmount: voucher.coursePrice,
+            instructorShare: instructorShare,
+            foundationShare: foundShare,
+            governanceShare: goverShare,
+            jurorShare: jurorShare,
+            validatorShare: validShare,
+            endOfRefundWindow: block.timestamp + refundWindow,
+            isRefunded: false,
+            isWithdrawn: false
         });
-        ownedCourses[buyer].push(courseId);
+        // increase anyCourseSaleCounter for this course
+        anyCourseSaleCounter[voucher.courseId]++;
+        // save paymentId to anyCourseSales mapping according to CourseSaleCounter for this course
+        anyCourseSales[voucher.courseId][
+            anyCourseSaleCounter[voucher.courseId]
+        ] = newPaymentId;
 
-        emit PaymentRecorded(paymentCounter, courseId, buyer, amount);
+        // add the courseId to the ownedCourses mapping
+        ownedCourses[voucher.courseReceiver].push(voucher.courseId);
+        // save the index of the courseId in the ownedCourses mapping
+        ownedCourseOneIndex[voucher.courseReceiver][
+            voucher.courseId
+        ] = ownedCourses[voucher.courseReceiver].length;
+        // update hasOwnedCourse mapping
+        hasOwnedCourse[voucher.courseReceiver][voucher.courseId] = true;
+
+        emit ContentPurchased(
+            newPaymentId,
+            voucher.courseId,
+            voucher.redeemer,
+            voucher.courseReceiver,
+            voucher.tokenAddress,
+            voucher.coursePrice
+        );
     }
 
-    function refund(uint256 paymentId) external onlyRole(BACKEND_ROLE) {
-        require(paymentId <= paymentCounter, "Invalid paymentId");
-        payments[paymentId].refunded = true;
+    //REFUND LOGIC
 
-        emit Refunded(paymentId);
+    struct RefundCourseVoucher {
+        uint256 paymentId;
+        address redeemer;
+        bytes signature;
     }
 
-    function withdraw(uint256 paymentId, address to) external {
-        Payment storage p = payments[paymentId];
-        require(!p.refunded, "Payment refunded");
+    bytes32 private constant REFUND_COURSE_VOUCHER_TYPEHASH =
+        keccak256("RefundCourseVoucher(uint256 paymentId,address redeemer)");
+
+    event CourseRefunded(
+        uint256 indexed paymentId,
+        uint256 amount,
+        address indexed receiver,
+        address tokenAddress
+    );
+
+    function refundContentWithVoucher(
+        RefundCourseVoucher calldata voucher
+    ) external {
         require(
-            block.timestamp >= p.timestamp + refundWindow,
-            "Refund window not passed"
+            voucher.paymentId > 0 && voucher.paymentId <= paymentCounter,
+            "Invalid paymentId"
         );
 
-        require(to != address(0), "Cannot withdraw to zero");
-        require(p.amount > 0, "Already withdrawn");
+        Payment storage payment = payments[voucher.paymentId];
 
+        require(!payment.isRefunded, "Already refunded");
+        require(!payment.isWithdrawn, "Already withdrawn");
         require(
-            _isAuthorizedWithdrawer(p.courseId, msg.sender),
-            "Not authorized withdrawer"
+            payment.endOfRefundWindow >= block.timestamp,
+            "Refund window passed"
+        );
+        require(voucher.redeemer == msg.sender, "Not redeemer");
+
+        // Signature verification
+        bytes memory encoded = abi.encode(
+            BUY_CONTENT_REFUND_VOUCHER_TYPEHASH,
+            voucher.paymentId,
+            voucher.redeemer
+        );
+        address signer = _verifyVoucher(encoded, voucher.signature);
+        require(
+            hasRole(BACKEND_ROLE, signer),
+            "Signature invalid or unauthorized"
         );
 
-        uint amount = p.amount;
-        p.amount = 0; // prevent reentrancy
-        (bool success, ) = to.call{value: amount}("");
-        require(success, "Withdraw failed");
+        // Mark refunded before transfer to prevent re-entrancy
+        payment.isRefunded = true;
 
-        emit Withdrawn(paymentId, to);
+        // update hasOwnedCourse mapping
+        hasOwnedCourse[payment.courseReceiver][payment.courseId] = false;
+        // remove the courseId from the ownedCourses list and update the indexes
+        uint256 courseIndex = ownedCourseOneIndex[payment.courseReceiver][
+            payment.courseId
+        ];
+        require(courseIndex > 0, "Course not owned by receiver");
+        uint256 lastIndex = ownedCourses[payment.courseReceiver].length;
+        uint256 lastCourseId = ownedCourses[payment.courseReceiver][
+            lastIndex - 1
+        ];
+
+        //swap & pop
+        ownedCourses[payment.courseReceiver][courseIndex - 1] = lastCourseId; // swap with the last element
+        ownedCourseOneIndex[payment.courseReceiver][lastCourseId] = courseIndex; // update the index of the last element
+
+        ownedCourses[payment.courseReceiver].pop(); // remove the last element
+        delete ownedCourseOneIndex[payment.courseReceiver][payment.courseId]; // delete the index of the removed courseId
+
+        // Transfer refund
+        if (payment.tokenAddress == address(0)) {
+            // native token
+            (bool sent, ) = payable(payment.payer).call{
+                value: payment.totalAmount
+            }("");
+            require(sent, "Native refund failed");
+        } else {
+            // ERC20
+            IERC20(payment.tokenAddress).transfer(
+                payment.payer,
+                payment.totalAmount
+            );
+        }
+
+        emit CourseRefunded(
+            voucher.paymentId,
+            payment.totalAmount,
+            payment.payer,
+            payment.tokenAddress
+        );
+    }
+
+    // withdraw logic
+    struct WithdrawVoucher {
+        uint256 courseId;
+        uint256 fromIndex; // inclusive
+        uint256 toIndex; // inclusive
+        address redeemer;
+        bytes signature;
+    }
+
+    bytes32 private constant WITHDRAW_VOUCHER_TYPEHASH =
+        keccak256(
+            "WithdrawVoucher(uint256 courseId,uint256 fromIndex,uint256 toIndex,address redeemer)"
+        );
+
+    event CoursePaymentsWithdrawn(
+        uint256 indexed courseId,
+        uint256 fromIndex,
+        uint256 toIndex,
+        address indexed redeemer,
+        address tokenAddress,
+        uint256 totalAmount
+    );
+
+    function withdrawPaymentsWithVoucher(
+        WithdrawVoucher calldata voucher
+    ) external {
+        require(
+            voucher.courseId > 0 && voucher.courseId <= courseCounter,
+            "Invalid courseId"
+        );
+        require(voucher.fromIndex <= voucher.toIndex, "Invalid index range");
+        require(voucher.redeemer == msg.sender, "Not redeemer");
+
+        // Signature verification
+        bytes32 structHash = keccak256(
+            abi.encode(
+                WITHDRAW_VOUCHER_TYPEHASH,
+                voucher.courseId,
+                voucher.fromIndex,
+                voucher.toIndex,
+                voucher.redeemer
+            )
+        );
+        address signer = _verifyVoucher(structHash, voucher.signature);
+        require(
+            hasRole(BACKEND_ROLE, signer),
+            "Signature invalid or unauthorized"
+        );
+
+        require(
+            isAuthorizedWithdrawer[voucher.redeemer][voucher.courseId],
+            "Not authorized withdrawer for this course"
+        );
+
+        uint256 totalAmount = 0;
+        address tokenAddress = address(0); // to be set after first match
+
+        for (uint256 i = voucher.fromIndex; i <= voucher.toIndex; i++) {
+            uint256 paymentId = anyCourseSales[voucher.courseId][i];
+            if (paymentId == 0) continue; // no payment recorded at this index
+
+            Payment storage payment = payments[paymentId];
+            if (payment.isRefunded || payment.isWithdrawn) continue;
+
+            // Enforce consistent token
+            if (totalAmount == 0) {
+                tokenAddress = payment.tokenAddress;
+            } else {
+                require(
+                    payment.tokenAddress == tokenAddress,
+                    "Inconsistent token type"
+                );
+            }
+
+            totalAmount += payment.instructorShare;
+            payment.isWithdrawn = true;
+        }
+
+        require(totalAmount > 0, "Nothing to withdraw");
+
+        // Transfer payment
+        if (tokenAddress == address(0)) {
+            (bool sent, ) = payable(voucher.redeemer).call{value: totalAmount}(
+                ""
+            );
+            require(sent, "Native transfer failed");
+        } else {
+            IERC20(tokenAddress).transfer(voucher.redeemer, totalAmount);
+        }
+
+        emit CoursePaymentsWithdrawn(
+            voucher.courseId,
+            voucher.fromIndex,
+            voucher.toIndex,
+            voucher.redeemer,
+            tokenAddress,
+            totalAmount
+        );
     }
 
     receive() external payable {}
