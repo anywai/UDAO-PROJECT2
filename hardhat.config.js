@@ -81,7 +81,7 @@ module.exports = {
     gasPriceApi: "https://api.polygonscan.com/api?module=proxy&action=eth_gasPrice",
   },
   solidity: {
-    version: "0.8.17",
+    version: "0.8.20",
     settings: {
       optimizer: {
         enabled: true,
