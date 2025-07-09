@@ -6,23 +6,61 @@ import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+using SafeERC20 for IERC20;
+
+interface IGovernanceTreasury {
+    function addGovernanceFunds(address tokenAddress, uint256 amount) external;
+}
 
 contract NewTreasury is AccessControl, EIP712, ReentrancyGuard {
     string private constant SIGNING_DOMAIN = "TreasuryVouchers";
     string private constant SIGNATURE_VERSION = "1";
 
+    /////### ROLES AND AFFILIATIONS ###/////
     bytes32 public constant BACKEND_ROLE = keccak256("BACKEND_ROLE");
     bytes32 public constant FOUNDATION_ROLE = keccak256("FOUNDATION_ROLE");
 
+    address public foundationWallet; // address of the foundation wallet
+    event FoundationWalletUpdated(
+        address indexed newFoundationWallet,
+        address indexed previousFoundationWallet
+    );
+
+    function setFoundationWallet(address _foundationWallet) external {
+        require(hasRole(FOUNDATION_ROLE, msg.sender), "Not authorized");
+        require(
+            _foundationWallet != address(0),
+            "Foundation wallet address cannot be zero"
+        );
+
+        foundationWallet = _foundationWallet;
+        _grantRole(FOUNDATION_ROLE, _foundationWallet); // ensure foundation wallet has the role
+        // grant also backend role to the foundation wallet
+        _grantRole(BACKEND_ROLE, _foundationWallet);
+
+        // revoke the role from the previous foundation wallet if it was set
+        if (
+            hasRole(FOUNDATION_ROLE, msg.sender) &&
+            msg.sender != _foundationWallet
+        ) {
+            _revokeRole(FOUNDATION_ROLE, msg.sender);
+        }
+        // revoke backend role from the previous foundation wallet if it was set
+        if (
+            hasRole(BACKEND_ROLE, msg.sender) && msg.sender != _foundationWallet
+        ) {
+            _revokeRole(BACKEND_ROLE, msg.sender);
+        }
+
+        emit FoundationWalletUpdated(_foundationWallet, msg.sender);
+    }
+
     address public udaoTokenAddress; // address of the udao token, set by the foundation
-    event UdaoTokenAddressUpdated(address newUdaoTokenAddress);
+    event UdaoTokenAddressUpdated(address indexed newUdaoTokenAddress);
 
     function setUdaoTokenAddress(address _udaoTokenAddress) external {
-        require(
-            hasRole(BACKEND_ROLE, msg.sender) ||
-                hasRole(FOUNDATION_ROLE, msg.sender),
-            "Not authorized"
-        );
+        require(hasRole(BACKEND_ROLE, msg.sender), "Not authorized");
         require(
             _udaoTokenAddress != address(0),
             "Udao token address cannot be zero"
@@ -33,14 +71,72 @@ contract NewTreasury is AccessControl, EIP712, ReentrancyGuard {
         emit UdaoTokenAddressUpdated(_udaoTokenAddress);
     }
 
+    address public governanceContract; // address of the governance treasury
+    event GovernanceContractUpdated(address indexed newGovernanceContract);
+
+    function setGovernanceContract(address _governanceContract) external {
+        require(hasRole(BACKEND_ROLE, msg.sender), "Not authorized");
+        require(
+            _governanceContract != address(0),
+            "Governance contract address cannot be zero"
+        );
+
+        governanceContract = _governanceContract;
+
+        emit GovernanceContractUpdated(_governanceContract);
+    }
+
+    function grantBackendRole(address _backendAddress) external {
+        require(
+            hasRole(FOUNDATION_ROLE, msg.sender),
+            "Only foundation can grant backend role"
+        );
+        require(
+            _backendAddress != address(0),
+            "Backend address cannot be zero"
+        );
+
+        _grantRole(BACKEND_ROLE, _backendAddress);
+    }
+
+    function revokeBackendRole(address _backendAddress) external {
+        require(
+            hasRole(FOUNDATION_ROLE, msg.sender),
+            "Only foundation can revoke backend role"
+        );
+        require(
+            _backendAddress != address(0),
+            "Backend address cannot be zero"
+        );
+
+        _revokeRole(BACKEND_ROLE, _backendAddress);
+    }
+
     constructor(
-        address foundation,
-        address _udaoTokenAddress
+        address _foundationWallet,
+        address _udaoTokenAddress,
+        address _governanceContract
     ) EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION) {
-        _grantRole(DEFAULT_ADMIN_ROLE, foundation); // TODO BATU1 Bunu istiyormuyuz set foundation olacak mı?
-        _grantRole(FOUNDATION_ROLE, foundation);
+        require(
+            _foundationWallet != address(0),
+            "Foundation address cannot be zero"
+        );
+        require(
+            _udaoTokenAddress != address(0),
+            "Udao token address cannot be zero"
+        );
+        require(
+            _governanceContract != address(0),
+            "Governance contract address cannot be zero"
+        );
+
+        foundationWallet = _foundationWallet; // set foundation wallet address
+        governanceContract = _governanceContract; // set governance contract address
+        udaoTokenAddress = _udaoTokenAddress; // set udao token address
+
+        _grantRole(FOUNDATION_ROLE, _foundationWallet);
+        _grantRole(BACKEND_ROLE, _foundationWallet); // ensure foundation wallet has the backend role
         _grantRole(BACKEND_ROLE, msg.sender);
-        udaoTokenAddress = _udaoTokenAddress;
     }
 
     /////### COURSE CREATION & UPDATING LOGIC ###/////
@@ -109,7 +205,6 @@ contract NewTreasury is AccessControl, EIP712, ReentrancyGuard {
     }
 
     event CourseUpdated(uint256 indexed courseId);
-
     struct UpdateCourseVoucher {
         uint256 courseId;
         bool sellable; // true if sellable, false if not
@@ -253,30 +348,20 @@ contract NewTreasury is AccessControl, EIP712, ReentrancyGuard {
     }
 
     // course sale cuts with any other token else udao
-    uint256 atFoundCut = 4000; // %4 any token course sale foundation cut
-    uint256 atGoverCut = 1000; // %1 any token course sale governance cut
-    uint256 atJurorCut = 1000; // %1 any token course sale juror cut
-    uint256 atValidCut = 1000; // %1 any token course sale valid cut
-    uint256 atTotalCut = atFoundCut + atGoverCut + atJurorCut + atValidCut;
+    uint256 atFoundCut = 4000; // %4 foundation cut (any token)
+    uint256 atGoverCut = 1000; // %1 governance cut (any token)
 
     // course sale cuts with udao token
-    uint256 utFoundCut = 4000; // %4 any token course sale foundation cut
-    uint256 utGoverCut = 1000; // %1 any token course sale governance cut
-    uint256 utJurorCut = 1000; // %1 any token course sale juror cut
-    uint256 utValidCut = 1000; // %1 any token course sale valid cut
-    uint256 utTotalCut = utFoundCut + utGoverCut + utJurorCut + utValidCut;
+    uint256 utFoundCut = 4000; // %4 foundation cut (udao)
+    uint256 utGoverCut = 1000; // %1 governance cut (udao)
 
     event CourseCutsUpdated();
 
     function setCourseCuts(
         uint256 _atFoundCut,
         uint256 _atGoverCut,
-        uint256 _atJurorCut,
-        uint256 _atValidCut,
         uint256 _utFoundCut,
-        uint256 _utGoverCut,
-        uint256 _utJurorCut,
-        uint256 _utValidCut
+        uint256 _utGoverCut
     ) external {
         require(
             hasRole(BACKEND_ROLE, msg.sender) ||
@@ -284,29 +369,17 @@ contract NewTreasury is AccessControl, EIP712, ReentrancyGuard {
             "Not authorized"
         );
 
-        uint256 newATotal = _atFoundCut +
-            _atGoverCut +
-            _atJurorCut +
-            _atValidCut;
+        uint256 newATotal = _atFoundCut + _atGoverCut;
         require(newATotal < 100000, "Cuts can't exceed 100%");
 
-        uint256 newUTotal = _utFoundCut +
-            _utGoverCut +
-            _utJurorCut +
-            _utValidCut;
+        uint256 newUTotal = _utFoundCut + _utGoverCut;
         require(newUTotal < 100000, "Cuts can't exceed 100%");
 
         atFoundCut = _atFoundCut;
         atGoverCut = _atGoverCut;
-        atJurorCut = _atJurorCut;
-        atValidCut = _atValidCut;
-        atTotalCut = newATotal;
 
         utFoundCut = _utFoundCut;
         utGoverCut = _utGoverCut;
-        utJurorCut = _utJurorCut;
-        utValidCut = _utValidCut;
-        utTotalCut = newUTotal;
 
         emit CourseCutsUpdated();
     }
@@ -320,35 +393,21 @@ contract NewTreasury is AccessControl, EIP712, ReentrancyGuard {
         returns (
             uint256 foundShare,
             uint256 goverShare,
-            uint256 jurorShare,
-            uint256 validShare,
             uint256 instructorShare
         )
     {
-        uint256 found;
-        uint256 gover;
-        uint256 juror;
-        uint256 valid;
+        uint256 found = atFoundCut;
+        uint256 gover = atGoverCut;
 
         if (_tokenAddress == udaoTokenAddress) {
             found = utFoundCut;
             gover = utGoverCut;
-            juror = utJurorCut;
-            valid = utValidCut;
-        } else {
-            found = atFoundCut;
-            gover = atGoverCut;
-            juror = atJurorCut;
-            valid = atValidCut;
         }
 
         foundShare = (_totalAmount * found) / 100000;
         goverShare = (_totalAmount * gover) / 100000;
-        jurorShare = (_totalAmount * juror) / 100000;
-        validShare = (_totalAmount * valid) / 100000;
 
-        uint256 cutSum = foundShare + goverShare + jurorShare + validShare;
-        instructorShare = _totalAmount - cutSum;
+        instructorShare = _totalAmount - foundShare - goverShare;
     }
 
     /////### VOUCHER LOGIC ###/////
@@ -378,6 +437,9 @@ contract NewTreasury is AccessControl, EIP712, ReentrancyGuard {
     mapping(address => mapping(uint256 => uint256))
         public ownedCourseIndexPlusOne; // aUser => courseId => index in the ownedCourses array
     mapping(address => mapping(uint256 => bool)) public hasOwnedCourse; // aUser => courseId => true if the buyer has owned the course
+    // refund directly to the course receiver - courseID
+    mapping(address => mapping(uint256 => uint256)) public courseOwnerToPayment; // aUser => courseId => paymentId
+
     struct Payment {
         uint256 courseId;
         address payer; // buyer who paid for the course
@@ -387,8 +449,6 @@ contract NewTreasury is AccessControl, EIP712, ReentrancyGuard {
         uint256 instructorShare; // amount delivered to the instructor
         uint256 foundationShare; // amount delivered to the foundation
         uint256 governanceShare; // amount delivered to the governance
-        uint256 jurorShare; // amount delivered to the juror
-        uint256 validatorShare; // amount delivered to the validator
         uint256 endOfRefundWindow; // end of refund window
         bool isRefunded; // true if already refunded
         bool isWithdrawn; // true if already withdrawn
@@ -474,8 +534,6 @@ contract NewTreasury is AccessControl, EIP712, ReentrancyGuard {
         (
             uint256 foundShare,
             uint256 goverShare,
-            uint256 jurorShare,
-            uint256 validShare,
             uint256 instructorShare
         ) = _calculateCourseCutShares(_coursePrice, _tokenAddress);
 
@@ -498,7 +556,7 @@ contract NewTreasury is AccessControl, EIP712, ReentrancyGuard {
                 "Native token payment not allowed for ERC20 token purchase"
             );
             // transfer the erc20 token from redeemer to this contract
-            IERC20(_tokenAddress).transferFrom(
+            IERC20(_tokenAddress).safeTransferFrom(
                 msg.sender,
                 address(this),
                 _coursePrice
@@ -518,8 +576,6 @@ contract NewTreasury is AccessControl, EIP712, ReentrancyGuard {
             instructorShare: instructorShare,
             foundationShare: foundShare,
             governanceShare: goverShare,
-            jurorShare: jurorShare,
-            validatorShare: validShare,
             endOfRefundWindow: block.timestamp + refundWindow,
             isRefunded: false,
             isWithdrawn: false
@@ -531,6 +587,9 @@ contract NewTreasury is AccessControl, EIP712, ReentrancyGuard {
         courseSaleRecords[_courseId][
             saleCounterPerCourse[_courseId]
         ] = newPaymentId;
+
+        // pair paymentId with courseReceiver and courseId
+        courseOwnerToPayment[_courseReceiver][_courseId] = newPaymentId;
 
         if (ownedCourses[_courseReceiver].length == 0) {
             // if the course receiver does not have any courses yet, initialize the mapping
@@ -548,12 +607,6 @@ contract NewTreasury is AccessControl, EIP712, ReentrancyGuard {
 
         emit ContentPurchased(newPaymentId, _courseId, _courseReceiver);
     }
-
-    // TODO BATU1 ADD BACKEND ROLE setter
-    // TODO BATU2 check what is SafeERC20 kullanımı önerilir. .safeTransferFrom Yoksa revert yerine false döner
-    // TODO BATU3 check voucher reuse problem,  İmza Yeniden Kullanımı (Replay Attack) Engeli
-    // TODO BATU4 content owner - courseId versiyonunu hazırla.
-    // TODO BATU5 daha verimli bir withdraw fonksiyonu yaz.
 
     /////### COURSE REFUND LOGIC ###/////
     event CourseRefunded(
@@ -589,6 +642,55 @@ contract NewTreasury is AccessControl, EIP712, ReentrancyGuard {
                 abi.encode(
                     REFUND_COURSE_VOUCHER_TYPEHASH,
                     paymentId,
+                    redeemer,
+                    validUntil
+                )
+            )
+        );
+
+        _verifyVoucherSignerAndValidity(
+            digest,
+            voucher.signature,
+            redeemer,
+            validUntil
+        );
+
+        _refundCourse(paymentId);
+    }
+
+    struct RefundCourseByOwnerAndCourseIdVoucher {
+        address courseOwner;
+        uint256 courseId;
+        address redeemer;
+        uint256 validUntil; // voucher valid until timestamp
+        bytes signature;
+    }
+
+    bytes32
+        private constant REFUND_COURSE_BY_OWNER_AND_COURSE_ID_VOUCHER_TYPEHASH =
+        keccak256(
+            "RefundCourseByOwnerAndCourseIdVoucher(address courseOwner,uint256 courseId,address redeemer,uint256 validUntil)"
+        );
+
+    function refundCourseByOwnerAndCourseId(
+        RefundCourseByOwnerAndCourseIdVoucher calldata voucher
+    ) external nonReentrant {
+        // encode the voucher fields to reduce gas cost
+        address courseOwner = voucher.courseOwner;
+        uint256 courseId = voucher.courseId;
+
+        uint256 paymentId = courseOwnerToPayment[courseOwner][courseId];
+        require(paymentId > 0, "No payment found for this course and owner");
+
+        address redeemer = voucher.redeemer;
+        uint256 validUntil = voucher.validUntil;
+
+        bytes32 digest = _hashTypedDataV4(
+            keccak256(
+                abi.encode(
+                    REFUND_COURSE_BY_OWNER_AND_COURSE_ID_VOUCHER_TYPEHASH,
+                    courseOwner,
+                    courseId,
                     redeemer,
                     validUntil
                 )
@@ -645,6 +747,7 @@ contract NewTreasury is AccessControl, EIP712, ReentrancyGuard {
 
         ownedCourses[_receiver].pop(); // remove the last element
         delete ownedCourseIndexPlusOne[_receiver][_courseId]; // delete the index of the removed courseId
+        delete courseOwnerToPayment[_receiver][_courseId]; // remove the paymentId for the course owner
 
         // Transfer refund
         if (_tokenAddress == address(0)) {
@@ -653,7 +756,7 @@ contract NewTreasury is AccessControl, EIP712, ReentrancyGuard {
             require(sent, "Native refund failed");
         } else {
             // ERC20
-            IERC20(_tokenAddress).transfer(_payer, _totalAmount);
+            IERC20(_tokenAddress).safeTransfer(_payer, _totalAmount);
         }
 
         emit CourseRefunded(
@@ -666,7 +769,22 @@ contract NewTreasury is AccessControl, EIP712, ReentrancyGuard {
         );
     }
 
+    event MaxWithdrawBatchSizeUpdated(uint256 indexed maxWithdrawBatchSize);
+
     /////### WITHDRAW LOGIC ###/////
+    uint256 public maxWithdrawBatchSize = 100; // max 100 sales can be withdrawn at once
+
+    function setMaxWithdrawRange(uint256 newRange) external {
+        require(
+            hasRole(BACKEND_ROLE, msg.sender) ||
+                hasRole(FOUNDATION_ROLE, msg.sender),
+            "Not authorized"
+        );
+        require(newRange > 0, "Max withdraw range must be greater than 0");
+        maxWithdrawBatchSize = newRange;
+
+        emit MaxWithdrawBatchSizeUpdated(newRange);
+    }
 
     // withdraw logic
     struct WithdrawVoucher {
@@ -695,6 +813,10 @@ contract NewTreasury is AccessControl, EIP712, ReentrancyGuard {
 
         require(courseId > 0 && courseId <= courseCounter, "Invalid courseId");
         require(fromIndex <= toIndex, "Invalid index range");
+        require(
+            toIndex - fromIndex + 1 <= maxWithdrawBatchSize,
+            "Max withdraw range exceeded"
+        );
         require(
             fromIndex > 0 && toIndex <= saleCounterPerCourse[courseId],
             "Invalid index range"
@@ -730,121 +852,169 @@ contract NewTreasury is AccessControl, EIP712, ReentrancyGuard {
         _withdrawCoursePayments(courseId, fromIndex, toIndex);
     }
 
+    event CoursePaymentsWithdrawn(
+        uint256 indexed courseId,
+        uint256 fromIndex,
+        uint256 toIndex,
+        address indexed withdrawer,
+        uint256 withdrawnCompleted
+    );
+
     function _withdrawCoursePayments(
         uint256 courseId,
         uint256 fromIndex,
         uint256 toIndex
     ) internal {
-        uint256[] memory refunded = new uint256[](toIndex - fromIndex + 1);
-        uint256[] memory withdrawn = new uint256[](toIndex - fromIndex + 1);
-        uint256[] memory inWindow = new uint256[](toIndex - fromIndex + 1);
-        uint256[] memory completed = new uint256[](toIndex - fromIndex + 1);
-
-        uint r = 0;
-        uint w = 0;
-        uint i = 0;
-        uint c = 0;
+        uint256 withdrawnCompleted = 0;
 
         for (uint256 j = fromIndex; j <= toIndex; j++) {
-            uint256 paymentId = courseSaleRecords[courseId][i];
-            if (paymentId == 0) break; //bu gereklimi?
+            uint256 paymentId = courseSaleRecords[courseId][j];
+            if (paymentId == 0) continue;
 
             Payment storage p = payments[paymentId];
 
-            if (p.isRefunded) {
-                refunded[r++] = j;
-                continue;
-            }
+            if (
+                p.isRefunded ||
+                p.isWithdrawn ||
+                p.endOfRefundWindow >= block.timestamp
+            ) continue;
 
-            if (p.isWithdrawn) {
-                withdrawn[w++] = j;
-                continue;
-            }
+            // mark as withdrawn before attempting (reentrancy protection)
+            p.isWithdrawn = true;
 
-            if (p.endOfRefundWindow >= block.timestamp) {
-                inWindow[i++] = j;
-                continue;
-            }
-
-            p.isWithdrawn = true; // Mark as withdrawn before processing
-            completed[c++] = j;
-
-            if (p.tokenAddress == address(0)) {
-                (bool sent, ) = payable(msg.sender).call{
-                    value: p.instructorShare
-                }("");
-                require(sent, "Native token transfer failed");
-            } else {
-                IERC20(p.tokenAddress).transfer(msg.sender, p.instructorShare);
+            try this.attemptSingleWithdrawOrRevert(paymentId, msg.sender) {
+                // no rollback gas efficient on here // p.isWithdrawn = true;
+                withdrawnCompleted++;
+            } catch {
+                p.isWithdrawn = false; // rollback if transfer failed
             }
         }
 
-        // Emit only used portion of arrays
         emit CoursePaymentsWithdrawn(
             courseId,
-            slice(refunded, r),
-            slice(withdrawn, w),
-            slice(inWindow, i),
-            slice(completed, c)
+            fromIndex,
+            toIndex,
+            msg.sender,
+            withdrawnCompleted
         );
     }
 
-    function slice(
-        uint256[] memory array,
-        uint256 length
-    ) internal pure returns (uint256[] memory) {
-        uint256[] memory result = new uint256[](length);
-        for (uint256 i = 0; i < length; i++) {
-            result[i] = array[i];
+    function attemptSingleWithdrawOrRevert(
+        uint256 paymentId,
+        address instructor
+    ) external {
+        require(msg.sender == address(this), "Only callable internally");
+
+        Payment memory p = payments[paymentId];
+
+        address tokenAddress = p.tokenAddress;
+        uint256 iShare = p.instructorShare;
+        uint256 fShare = p.foundationShare;
+        uint256 gShare = p.governanceShare;
+
+        if (tokenAddress == address(0)) {
+            // Native token transfers
+            (bool iOK, ) = payable(instructor).call{value: iShare}("");
+            require(iOK);
+
+            (bool fOK, ) = payable(foundationWallet).call{value: fShare}("");
+            require(fOK);
+
+            (bool gOK, ) = payable(governanceContract).call{value: gShare}("");
+            require(gOK);
+        } else {
+            // ERC20 transfers
+            IERC20(tokenAddress).safeTransfer(instructor, iShare);
+            IERC20(tokenAddress).safeTransfer(foundationWallet, fShare);
+            IERC20(tokenAddress).safeTransfer(governanceContract, gShare);
+
+            try
+                IGovernanceTreasury(governanceContract).addGovernanceFunds(
+                    tokenAddress,
+                    gShare
+                )
+            {} catch {
+                revert("Governance fund record failed");
+            }
         }
-        return result;
     }
 
-    event CoursePaymentsWithdrawn(
-        uint256 indexed courseId,
-        uint256[] refundedIndexes,
-        uint256[] withdrawnIndexes,
-        uint256[] inWindowIndexes,
-        uint256[] completedIndexes
-    );
+    function checkWithdrawStatus(
+        uint256 courseId,
+        uint256 fromIndex,
+        uint256 toIndex
+    )
+        external
+        view
+        returns (
+            uint256[] memory refunded,
+            uint256[] memory withdrawn,
+            uint256[] memory inWindow,
+            uint256[] memory ready
+        )
+    {
+        require(courseId > 0 && courseId <= courseCounter, "Invalid courseId");
+        require(fromIndex <= toIndex, "Invalid index range");
+        require(
+            fromIndex > 0 && toIndex <= saleCounterPerCourse[courseId],
+            "Index out of bounds"
+        );
+
+        // max length = toIndex - fromIndex + 1
+        uint256 len = toIndex - fromIndex + 1;
+
+        refunded = new uint256[](len);
+        withdrawn = new uint256[](len);
+        inWindow = new uint256[](len);
+        ready = new uint256[](len);
+
+        uint256 r = 0;
+        uint256 w = 0;
+        uint256 i = 0;
+        uint256 e = 0;
+
+        for (uint256 j = fromIndex; j <= toIndex; j++) {
+            uint256 paymentId = courseSaleRecords[courseId][j];
+            if (paymentId == 0) continue;
+
+            Payment memory p = payments[paymentId];
+
+            if (p.isRefunded) {
+                refunded[r] = j;
+                r++;
+            } else if (p.isWithdrawn) {
+                withdrawn[w] = j;
+                w++;
+            } else if (p.endOfRefundWindow >= block.timestamp) {
+                inWindow[i] = j;
+                i++;
+            } else {
+                ready[e] = j;
+                e++;
+            }
+        }
+
+        // shrink arrays
+        assembly {
+            mstore(refunded, r)
+            mstore(withdrawn, w)
+            mstore(inWindow, i)
+            mstore(ready, e)
+        }
+    }
 
     receive() external payable {}
 }
 
-/*
+// TODO BATU1 voucher reuse (Replay Attack) problemi neredeyse yok dilenirse, dilenirse createCourse fonksiyonuna aynı uri'ın kullanımı engellenebilir
+// TODO BATU2 testlerde encodePacked'dan encode'a geç daha sonra.
+// keccak256(abi.encodePacked(withdrawers))     // Hash collision riski vardır, tip ve sınır bilgisi kaybolur
+// keccak256(abi.encode(withdrawers))           // Daha güvenli, Array length + elemanları tam olarak kayıtlı olur.
 
-function _withdrawCoursePayments(
-    uint256 courseId,
-    uint256 fromIndex,
-    uint256 toIndex
-) internal {
-    for (uint256 i = fromIndex; i <= toIndex; i++) {
-        uint256 paymentId = courseSaleRecords[courseId][i];
-        if (paymentId == 0) continue;
+// address[] memory a = [0x1234, 0x5678]; ve address[] memory b = [0x12345678];
+// keccak256(abi.encodePacked(a)) == keccak256(abi.encodePacked(b))
 
-        Payment storage p = payments[paymentId];
+// Concatenation için (string vs)	!!--> abi.encodePacked (ama dikkatli)
+// abi.encode(withdrawers)	-->	Hash için doğru
 
-        if (p.isRefunded || p.isWithdrawn || p.endOfRefundWindow >= block.timestamp) {
-            continue;
-        }
-
-        p.isWithdrawn = true;
-
-        if (p.tokenAddress == address(0)) {
-            (bool sent, ) = payable(msg.sender).call{value: p.instructorShare}("");
-            require(sent, "Native transfer failed");
-        } else {
-            IERC20(p.tokenAddress).transfer(msg.sender, p.instructorShare);
-        }
-
-        emit CoursePaymentWithdrawn(
-            courseId,
-            i,
-            paymentId,
-            p.tokenAddress,
-            p.instructorShare
-        );
-    }
-}
-
-*/
+// withdrawers bir address[] olduğu için her zaman abi.encode kullan.
