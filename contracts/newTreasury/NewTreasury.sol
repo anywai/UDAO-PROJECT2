@@ -1003,7 +1003,7 @@ contract NewTreasury is AccessControl, EIP712, ReentrancyGuard {
         }
     }
 
-    receive() external payable {}
+    //receive() external payable {}
 }
 
 // TODO BATU1 voucher reuse (Replay Attack) problemi neredeyse yok dilenirse, dilenirse createCourse fonksiyonuna aynı uri'ın kullanımı engellenebilir
