@@ -14,7 +14,7 @@ interface IGovernanceTreasury {
 }
 
 contract NewTreasury is AccessControl, EIP712, ReentrancyGuard {
-    string private constant SIGNING_DOMAIN = "TreasuryVouchers";
+    string private constant SIGNING_DOMAIN = "NewTreasuryVouchers";
     string private constant SIGNATURE_VERSION = "1";
 
     /////### ROLES AND AFFILIATIONS ###/////
