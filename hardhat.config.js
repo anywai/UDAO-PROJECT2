@@ -1,15 +1,16 @@
 require("solidity-docgen");
-//require("@nomiclabs/hardhat-waffle");
-require("hardhat-contract-sizer");
-//require("solidity-coverage");
-//require("hardhat-gas-reporter");
 require("dotenv").config();
-//require("@nomiclabs/hardhat-ethers");
-//require("@nomiclabs/hardhat-etherscan");
 require("hardhat-contract-sizer");
-//require("@nomicfoundation/hardhat-ignition-ethers");
-//require("@nomicfoundation/hardhat-chai-matchers");
+// Toolbox includes: ethers.js & hardhat-ethers, Mocha/Chai-Matchers, Waffle, ...
+// ...h-ignition, h-verify, h-gas-reporter, h-network-helpers, solidity-coverage
 require("@nomicfoundation/hardhat-toolbox");
+// @openzeppelin/contracts-upgradeable
+require("@openzeppelin/hardhat-upgrades");
+
+// Check package.json used older version contratcs for:
+// For (@openzeppelin/contracts) contracts used in v. ">=4.6.0 <4.8.0" but "5.3.0" is available.
+// @openzeppelin/contracts-upgradeable also used in 4.8.0 for compatibility. but 5.3.0 is available.
+// For (@chainlink/contracts) contracts used in v. "^0.6.1" but "1.4.0" is available.
 
 const {
   POLYGON_TEST_RPC_PROVIDER,
