@@ -606,5 +606,158 @@ describe("NewTreasury Contract Tests", function () {
     expect(ready.length).to.equal(0);
   });
 
+  it("should allow instructor1 to withdraw payments from mixed tokens (MTK1, MTK2, ETH)", async function () {
+    const latestBlock = await ethers.provider.getBlock("latest");
+    const now = Number(latestBlock.timestamp);
+
+    const createHelper = new CreateCourseVoucherHelper({
+      contractAddress: NewTreasury.target,
+      signer: backend,
+    });
+
+    const buyHelper = new BuyCourseVoucherHelper({
+      contractAddress: NewTreasury.target,
+      signer: backend,
+    });
+
+    const withdrawHelper = new WithdrawVoucherHelper({
+      contractAddress: NewTreasury.target,
+      signer: backend,
+    });
+
+    // 1. instructor1 creates a course
+    const createVoucher = await createHelper.signVoucher({
+      uri: "https://example.com/mixed-course/1",
+      withdrawers: [instructor1.address],
+      redeemer: instructor1.address,
+      validUntil: now + 86400,
+    });
+
+    await NewTreasury.connect(instructor1).createCourse(createVoucher);
+
+    const courseId = 1;
+    const validUntil = now + 86400;
+
+    // === Sales ===
+    // Buyer1 buys for person1 with 10 MTK1
+    const buyVoucher1 = await buyHelper.signVoucher({
+      courseId,
+      tokenAddress: MKT1.target,
+      coursePrice: ethers.parseEther("10"),
+      courseReceiver: person1.address,
+      redeemer: buyer1.address,
+      validUntil,
+    });
+    await NewTreasury.connect(buyer1).buyCourse(buyVoucher1);
+
+    // Buyer2 buys for person2 with 5 MTK2
+    const buyVoucher2 = await buyHelper.signVoucher({
+      courseId,
+      tokenAddress: MKT2.target,
+      coursePrice: ethers.parseEther("5"),
+      courseReceiver: person2.address,
+      redeemer: buyer2.address,
+      validUntil,
+    });
+    await NewTreasury.connect(buyer2).buyCourse(buyVoucher2);
+
+    // Buyer3 buys for person3 with 10 ETH
+    const buyVoucher3 = await buyHelper.signVoucher({
+      courseId,
+      tokenAddress: ethers.ZeroAddress,
+      coursePrice: ethers.parseEther("10"),
+      courseReceiver: person3.address,
+      redeemer: buyer3.address,
+      validUntil,
+    });
+    await NewTreasury.connect(buyer3).buyCourse(buyVoucher3, {
+      value: ethers.parseEther("10"),
+    });
+
+    // Buyer4 buys for person4 with 10 ETH
+    const buyVoucher4 = await buyHelper.signVoucher({
+      courseId,
+      tokenAddress: ethers.ZeroAddress,
+      coursePrice: ethers.parseEther("10"),
+      courseReceiver: person4.address,
+      redeemer: buyer4.address,
+      validUntil,
+    });
+    await NewTreasury.connect(buyer4).buyCourse(buyVoucher4, {
+      value: ethers.parseEther("10"),
+    });
+
+    // Buyer5 buys for person5 with 10 ETH
+    const buyVoucher5 = await buyHelper.signVoucher({
+      courseId,
+      tokenAddress: ethers.ZeroAddress,
+      coursePrice: ethers.parseEther("10"),
+      courseReceiver: person5.address,
+      redeemer: buyer5.address,
+      validUntil,
+    });
+    await NewTreasury.connect(buyer5).buyCourse(buyVoucher5, {
+      value: ethers.parseEther("10"),
+    });
+
+    // 2. Time travel after refund window
+    await ethers.provider.send("evm_increaseTime", [86400 * 25]); // 25 gün
+    await ethers.provider.send("evm_mine");
+
+    // 3. Balances before
+    const mtk1Before = await MKT1.balanceOf(instructor1.address);
+    const mtk2Before = await MKT2.balanceOf(instructor1.address);
+    const ethBefore = await ethers.provider.getBalance(instructor1.address);
+
+    // 4. Withdraw 1 → 5
+    const withdrawVoucher = await withdrawHelper.signVoucher({
+      courseId,
+      fromIndex: 1,
+      toIndex: 5,
+      redeemer: instructor1.address,
+      validUntil: validUntil + 86400 * 25,
+    });
+
+    const tx = await NewTreasury.connect(instructor1).withdrawCoursePayments(withdrawVoucher);
+    const receipt = await tx.wait();
+
+    // 5. Event kontrolü
+    const iface = NewTreasury.interface;
+    const topic = iface.getEvent("CoursePaymentsWithdrawn").topicHash;
+    const log = receipt.logs.find((l) => l.topics[0] === topic);
+    expect(log).to.exist;
+
+    const decoded = iface.decodeEventLog("CoursePaymentsWithdrawn", log.data, log.topics);
+    expect(decoded.courseId).to.equal(courseId);
+    expect(decoded.fromIndex).to.equal(1n);
+    expect(decoded.toIndex).to.equal(5n);
+    expect(decoded.withdrawer).to.equal(instructor1.address);
+    expect(decoded.withdrawnCompleted).to.equal(5n);
+    // governance conract failing.
+
+    // 6. Check flags
+    for (let j = 1; j <= 5; j++) {
+      const paymentId = await NewTreasury.courseSaleRecords(courseId, j);
+      const payment = await NewTreasury.payments(paymentId);
+      expect(payment.isWithdrawn).to.equal(true);
+    }
+
+    // 7. Withdraw status check
+    const [refunded, withdrawn, inWindow, ready] = await NewTreasury.checkWithdrawStatus(courseId, 1, 5);
+    expect(withdrawn.map(Number)).to.deep.equal([1, 2, 3, 4, 5]);
+    expect(refunded.length).to.equal(0);
+    expect(inWindow.length).to.equal(0);
+    expect(ready.length).to.equal(0);
+
+    // 8. Balance check
+    const mtk1After = await MKT1.balanceOf(instructor1.address);
+    const mtk2After = await MKT2.balanceOf(instructor1.address);
+    const ethAfter = await ethers.provider.getBalance(instructor1.address);
+
+    expect(mtk1After).to.be.gt(mtk1Before);
+    expect(mtk2After).to.be.gt(mtk2Before);
+    expect(ethAfter).to.be.gt(ethBefore); // withdraw sonrası eth arttı
+  });
+
   // End of tests
 });

@@ -3,6 +3,7 @@ pragma solidity ^0.8.20;
 
 contract NewGovernanceTreasuryDummy {
     mapping(address => uint256) public tokenBalances;
+    uint256 public maticBalance;
 
     event GovernanceFundReceived(address indexed token, uint256 amount);
 
@@ -10,8 +11,11 @@ contract NewGovernanceTreasuryDummy {
         // Ödemeyi bu kontratın alması gerekiyor
         // Dolayısıyla ödeme token.transfer(governanceContract, amount) ile yapılmış olmalı
         // Bu fonksiyon sadece kaydı tutar
-
-        tokenBalances[tokenAddress] += amount;
+        if (tokenAddress != address(0)) {
+            tokenBalances[tokenAddress] += amount;
+        } else {
+            maticBalance += amount;
+        }
 
         emit GovernanceFundReceived(tokenAddress, amount);
     }
@@ -20,6 +24,8 @@ contract NewGovernanceTreasuryDummy {
     function getBalance(address token) external view returns (uint256) {
         return tokenBalances[token];
     }
+
+    receive() external payable {}
 }
 /*
 

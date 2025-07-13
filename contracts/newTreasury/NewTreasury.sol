@@ -927,15 +927,14 @@ contract NewTreasury is AccessControl, EIP712, ReentrancyGuard {
             IERC20(tokenAddress).safeTransfer(instructor, iShare);
             IERC20(tokenAddress).safeTransfer(foundationWallet, fShare);
             IERC20(tokenAddress).safeTransfer(governanceContract, gShare);
-
-            try
-                IGovernanceTreasury(governanceContract).addGovernanceFunds(
-                    tokenAddress,
-                    gShare
-                )
-            {} catch {
-                revert("Governance fund record failed");
-            }
+        }
+        try
+            IGovernanceTreasury(governanceContract).addGovernanceFunds(
+                tokenAddress,
+                gShare
+            )
+        {} catch {
+            revert("Governance fund record failed");
         }
     }
 
