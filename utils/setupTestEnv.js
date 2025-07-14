@@ -2,59 +2,58 @@ const { ethers } = require("hardhat");
 
 // Initializes the test environment: assigns global wallets and contract placeholders
 async function initTestEnv({ walletNames = [], contractNames = [] }) {
-  // Retrieve available signers provided by Hardhat
+  // Get all available signers from Hardhat
   const signers = await ethers.getSigners();
-  // Create empty user and contract containers
-  const users = {};
-  const contracts = {};
-
-  // Ensure "backend" is always included as the first wallet
+  // Ensure "backend" is always the first wallet
   const finalWalletLabels = walletNames.includes("backend") ? walletNames : ["backend", ...walletNames];
-
-  // Map each label to a signer and populate the users object
+  // Map each wallet label to its signer and assign to global scope (e.g., globalThis.instructor1)
   finalWalletLabels.forEach((label, index) => {
-    // Ensure there's a signer available for this label
+    // There should be enough signers for the labels
     if (!signers[index]) {
       throw new Error(`Signer "${label}" is not available at index ${index}`);
     }
-    users[label] = signers[index];
+    // Expose signer globally (e.g., backend, instructor1, etc.)
+    globalThis[label] = signers[index];
   });
 
-  // Expose users globally: accessible via globalThis.users and globalThis.<label>
-  globalThis.users = users;
-  Object.entries(users).forEach(([label, signer]) => {
-    globalThis[label] = signer;
+  // For each contract label, prepare global getter/setter (lazy assignment via assignContracts)
+  contractNames.forEach((name) => {
+    let internal = null; // internal value holder
+    Object.defineProperty(global, name, {
+      get: () => internal, // when accessed, return current value
+      set: (val) => {
+        internal = val;
+      }, // when assigned, update internal value
+      configurable: true, // allow future redefinition if needed
+    });
   });
-
-  // Initialize contracts object and expose it globally
-  contractNames.forEach((name) => (contracts[name] = null));
-  globalThis.contracts = contracts;
 }
 
-// Registers deployed contract instances to global scope and `contracts` object
+// Registers deployed contract instances to global scope using dynamic accessors
 function assignContracts(contractMap) {
-  // Assign each contract instance to globalThis and contracts object
   Object.entries(contractMap).forEach(([name, instance]) => {
-    contracts[name] = instance;
-    globalThis.contracts[name] = instance; // ✔ contracts.x erişimi
-    globalThis[name] = instance; // ✔ global.x erişimi
+    global[name] = instance; // triggers global setter, updates internal value
   });
 }
 
 // Transfers tokens to a list of users and optionally sets approval to a spender
-async function batchDistributeTokens({ token, users, amount, from = users.backend, skip = [], spenderAddress = "" }) {
+async function batchDistributeTokens({
+  token,
+  amount,
+  from = backend, // default sender is 'backend'
+  skip = [], // addresses to exclude from transfer
+  spenderAddress = "", // optional: approve this address after transfer
+  walletList = [], // list of wallet labels to iterate
+}) {
   const parsedAmount = ethers.parseEther(amount);
-  const userList = Object.values(users);
-
-  // Iterate through each user
-  for (const user of userList) {
-    // Skip the sender's own wallet
-    if (user.address === from.address) continue;
-    // Skip if user address is in the exclusion list
-    if (skip.includes(user.address)) continue;
-    // Transfer tokens from sender to user
+  for (const label of walletList) {
+    // get wallet by label from global scope
+    const user = globalThis[label];
+    // Skip sender or any address in skip list
+    if (user.address === from.address || skip.includes(user.address)) continue;
+    // Transfer tokens from sender to current wallet
     await token.connect(from).transfer(user.address, parsedAmount);
-    // If spender is provided, set approval for the spender on behalf of user
+    // Optionally approve spender for this wallet
     if (spenderAddress) {
       await token.connect(user).approve(spenderAddress, parsedAmount);
     }
@@ -62,15 +61,12 @@ async function batchDistributeTokens({ token, users, amount, from = users.backen
 }
 
 // Allows a group of users to approve a spender for a given token
-async function batchApproveSpender({ token, users, spenderAddress, amount, skip = [] }) {
+async function batchApproveSpender({ token, spenderAddress, amount, skip = [], walletList = [] }) {
   const parsedAmount = ethers.parseEther(amount);
-  const userList = Object.values(users);
-
-  // Iterate through each user
-  for (const user of userList) {
-    // Skip if user is in the exclusion list
+  for (const label of walletList) {
+    const user = globalThis[label];
     if (skip.includes(user.address)) continue;
-    // Approve the spender to spend the specified amount
+    // Approve spender to spend `amount` on behalf of this wallet
     await token.connect(user).approve(spenderAddress, parsedAmount);
   }
 }
