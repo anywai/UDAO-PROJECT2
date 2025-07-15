@@ -275,6 +275,7 @@ contract NewTreasury is AccessControl, EIP712, ReentrancyGuard {
         string memory _uri
     ) internal view {
         require(_withdrawers.length > 0, "Withdrawers required");
+        // _withdrawers[0] yerine herhangi biri şeklinde taranabilir belki. Yada 0x0 komple engellenir
         require(_withdrawers[0] != address(0), "Main withdrawer required");
         require(
             _withdrawers.length <= maxWithdrawer,
@@ -303,6 +304,7 @@ contract NewTreasury is AccessControl, EIP712, ReentrancyGuard {
         uint256 _courseId,
         address[] memory _withdrawers
     ) internal {
+        // elemanları tek tek arraye pushluyorsub bu doğrumu? eğer authorizedWithdrawers bütün pushlanırsa damı iyi?
         for (uint256 i = 0; i < _withdrawers.length; i++) {
             address w = _withdrawers[i];
             if (w != address(0)) {
@@ -348,12 +350,12 @@ contract NewTreasury is AccessControl, EIP712, ReentrancyGuard {
     }
 
     // course sale cuts with any other token else udao
-    uint256 atFoundCut = 4000; // %4 foundation cut (any token)
-    uint256 atGoverCut = 1000; // %1 governance cut (any token)
+    uint256 public atFoundCut = 4000; // %4 foundation cut (any token)
+    uint256 public atGoverCut = 1000; // %1 governance cut (any token)
 
     // course sale cuts with udao token
-    uint256 utFoundCut = 4000; // %4 foundation cut (udao)
-    uint256 utGoverCut = 1000; // %1 governance cut (udao)
+    uint256 public utFoundCut = 4000; // %4 foundation cut (udao)
+    uint256 public utGoverCut = 1000; // %1 governance cut (udao)
 
     event CourseCutsUpdated();
 
@@ -1002,7 +1004,59 @@ contract NewTreasury is AccessControl, EIP712, ReentrancyGuard {
         }
     }
 
-    //receive() external payable {}
+    function getAuthorizedWithdrawers(
+        uint256 courseId
+    ) external view returns (address[] memory) {
+        return authorizedWithdrawers[courseId];
+    }
+
+    function getOwnedCourses(
+        address user
+    ) external view returns (uint256[] memory) {
+        return ownedCourses[user];
+    }
+
+    function getCourse(
+        uint256 courseId
+    ) external view returns (string memory uri, bool sellable) {
+        Course memory c = courses[courseId];
+        return (c.uri, c.sellable);
+    }
+
+    function getPayment(
+        uint256 id
+    )
+        external
+        view
+        returns (
+            uint256 courseId,
+            address payer,
+            address courseReceiver,
+            address tokenAddress,
+            uint256 totalAmount,
+            uint256 instructorShare,
+            uint256 foundationShare,
+            uint256 governanceShare,
+            bool isRefunded,
+            bool isWithdrawn
+        )
+    {
+        Payment memory p = payments[id];
+        return (
+            p.courseId,
+            p.payer,
+            p.courseReceiver,
+            p.tokenAddress,
+            p.totalAmount,
+            p.instructorShare,
+            p.foundationShare,
+            p.governanceShare,
+            p.isRefunded,
+            p.isWithdrawn
+        );
+    }
+
+    receive() external payable {}
 }
 
 // TODO BATU1 voucher reuse (Replay Attack) problemi neredeyse yok dilenirse, dilenirse createCourse fonksiyonuna aynı uri'ın kullanımı engellenebilir

@@ -31,164 +31,371 @@ const walletNames = [
 ];
 const contractNames = ["NewTreasury", "NewGovDummy", "MKT1", "MKT2"];
 
+let snapshotId; // Use fixtures instead of manual snapshots Bir ara bak buna!
+
 before(async () => {
   //Initialize wallet(signers) and contract labels, expose globally
   await initTestEnv({ walletNames, contractNames });
+  //// ### DEPLOY LOGIC ### ////
+  // Create Factory for MockERC20 contract and deploy MKT1 and MKT2 tokens
+  const MockERC20Factory = await ethers.getContractFactory("contracts/newTreasury/MockERC20.sol:MockERC20");
+  MKT1 = await MockERC20Factory.connect(backend).deploy("MockToken1", "MKT1", ethers.parseEther("100000"));
+  MKT2 = await MockERC20Factory.connect(backend).deploy("MockToken2", "MKT2", ethers.parseEther("1000000"));
+  await Promise.all([MKT1.waitForDeployment(), MKT2.waitForDeployment()]);
+
+  // Create Factory for NewGovernanceTreasuryDummy contract and deploy it
+  const NewGovernanceDummyFactory = await ethers.getContractFactory(
+    "contracts/newTreasury/NewGovernanceTreasuryDummy.sol:NewGovernanceTreasuryDummy"
+  );
+  NewGovDummy = await NewGovernanceDummyFactory.connect(backend).deploy();
+  await NewGovDummy.waitForDeployment();
+
+  // Create Factory for NewTreasury contract and deploy it
+  const NewTreasuryFactory = await ethers.getContractFactory("contracts/newTreasury/NewTreasury.sol:NewTreasury");
+  NewTreasury = await NewTreasuryFactory.connect(backend).deploy(foundation.address, MKT1.target, NewGovDummy.target);
+  await NewTreasury.waitForDeployment();
+
+  // Expose contract(x) instances to contract(.x) scope and global(.x) scope
+  assignContracts({
+    MKT1,
+    MKT2,
+    NewTreasury,
+    NewGovDummy,
+  });
+
+  // Distribute mock tokens to users and approve them for NewTreasury
+  await batchDistributeTokens({
+    token: MKT1,
+    amount: "1000",
+    spenderAddress: NewTreasury.target,
+    walletList: walletNames,
+  });
+  await batchDistributeTokens({
+    token: MKT2,
+    amount: "1000",
+    spenderAddress: NewTreasury.target,
+    walletList: walletNames,
+  });
+
+  // Project-specific initialization logic
+  await NewTreasury.connect(backend).setRefundWindow(19); // 1 gün
+  //// ### END OF DEPLOY LOGIC ### ////
+  // Take a snapshot of the current state
+  snapshotId = await ethers.provider.send("evm_snapshot");
 });
+
+// EVM time utils for test-time manipulation:
+// `now` holds timestamp, updatenow() refreshes it, fastForwardTime skip it()
+let now;
+async function updatenow() {
+  const block = await ethers.provider.getBlock("latest");
+  now = Number(block.timestamp);
+}
+async function fastForwardTime({ days = 0, hours = 0, minutes = 0, seconds = 0 }) {
+  const totalSeconds = days * 86400 + hours * 3600 + minutes * 60 + seconds;
+  await ethers.provider.send("evm_increaseTime", [totalSeconds]);
+  await ethers.provider.send("evm_mine");
+  await updatenow();
+}
+// Voucher helpers to avoid repetition in tests (createVH, buyVH, etc.)
+let createVH, updateVH, buyVH, refundVH, refundByOwnerVH, withdrawVH;
+
+async function createCourseHelper({ uri, withdrawers, redeemer, validUntil }) {
+  const voucher = await createVH.signVoucher({
+    uri,
+    withdrawers,
+    redeemer: redeemer.address,
+    validUntil,
+  });
+
+  const currentCourseCounter = await NewTreasury.courseCounter();
+  const nextCourseId = currentCourseCounter + 1n;
+
+  const expectedStateIfReverted = {
+    courseCounter: currentCourseCounter,
+    uri: "",
+    sellable: false,
+    withdrawers: [],
+  };
+
+  const expectedStateIfSuccessful = {
+    courseCounter: nextCourseId,
+    uri,
+    sellable: true,
+    withdrawers,
+  };
+
+  const tx = await NewTreasury.connect(redeemer).createCourse(voucher);
+
+  return {
+    courseId: nextCourseId,
+    redeemer: redeemer.address,
+    tx,
+    expectedStateIfReverted,
+    expectedStateIfSuccessful,
+  };
+}
+
+async function updateCourseHelper({ courseId, uri, sellable, withdrawers, redeemer, validUntil }) {
+  const voucher = await updateVH.signVoucher({
+    courseId,
+    uri,
+    sellable,
+    withdrawers,
+    redeemer: redeemer.address,
+    validUntil,
+  });
+
+  const courseBefore = await NewTreasury.getCourse(courseId);
+  const existingWithdrawers = await NewTreasury.getAuthorizedWithdrawers(courseId);
+
+  const expectedStateIfReverted = {
+    courseCounter: courseId,
+    uri: courseBefore.uri,
+    sellable: courseBefore.sellable,
+    withdrawers: existingWithdrawers,
+    isAuthorizedArray: existingWithdrawers.map(() => true),
+  };
+
+  const expectedStateIfSuccessful = {
+    courseCounter: courseId,
+    uri,
+    sellable,
+    withdrawers,
+    isAuthorizedArray: withdrawers.map(() => true),
+  };
+
+  const tx = await NewTreasury.connect(redeemer).updateCourse(voucher);
+
+  return {
+    courseId,
+    redeemer: redeemer.address,
+    tx,
+    expectedStateIfReverted,
+    expectedStateIfSuccessful,
+  };
+}
+
+async function expectCourseStateMatches(expected, courseId) {
+  const courseCounter = await NewTreasury.courseCounter();
+  expect(courseCounter).to.equal(expected.courseCounter);
+
+  const course = await NewTreasury.getCourse(courseId);
+  expect(course.uri).to.equal(expected.uri);
+  expect(course.sellable).to.equal(expected.sellable);
+
+  const actualWithdrawers = await NewTreasury.getAuthorizedWithdrawers(courseId);
+  expect(actualWithdrawers).to.deep.equal(expected.withdrawers);
+
+  if (expected.isAuthorizedArray) {
+    for (let i = 0; i < expected.withdrawers.length; i++) {
+      const w = expected.withdrawers[i];
+      const expectedAuth = expected.isAuthorizedArray[i];
+      const isAuth = await NewTreasury.isAuthorizedWithdrawer(w, courseId);
+      expect(isAuth).to.equal(expectedAuth);
+    }
+  }
+}
+
+//// HELPERS ////
 
 describe("NewTreasury Contract Tests", function () {
   // ethers v6 uses `.target` instead of `.address` for deployed contracts
   beforeEach(async function () {
-    // Create Factory for MockERC20 contract and deploy MKT1 and MKT2 tokens
-    const MockERC20Factory = await ethers.getContractFactory("contracts/newTreasury/MockERC20.sol:MockERC20");
-    MKT1 = await MockERC20Factory.connect(backend).deploy("MockToken1", "MKT1", ethers.parseEther("100000"));
-    MKT2 = await MockERC20Factory.connect(backend).deploy("MockToken2", "MKT2", ethers.parseEther("1000000"));
-    await Promise.all([MKT1.waitForDeployment(), MKT2.waitForDeployment()]);
-
-    // Create Factory for NewGovernanceTreasuryDummy contract and deploy it
-    const NewGovernanceDummyFactory = await ethers.getContractFactory(
-      "contracts/newTreasury/NewGovernanceTreasuryDummy.sol:NewGovernanceTreasuryDummy"
-    );
-    NewGovDummy = await NewGovernanceDummyFactory.connect(backend).deploy();
-    await NewGovDummy.waitForDeployment();
-
-    // Create Factory for NewTreasury contract and deploy it
-    const NewTreasuryFactory = await ethers.getContractFactory("contracts/newTreasury/NewTreasury.sol:NewTreasury");
-    NewTreasury = await NewTreasuryFactory.connect(backend).deploy(foundation.address, MKT1.target, NewGovDummy.target);
-    await NewTreasury.waitForDeployment();
-
-    // Expose contract(x) instances to contract(.x) scope and global(.x) scope
-    assignContracts({
-      MKT1,
-      MKT2,
-      NewTreasury,
-      NewGovDummy,
-    });
-
-    // Distribute mock tokens to users and approve them for NewTreasury
-    await batchDistributeTokens({
-      token: MKT1,
-      amount: "1000",
-      spenderAddress: NewTreasury.target,
-      walletList: walletNames,
-    });
-    await batchDistributeTokens({
-      token: MKT2,
-      amount: "1000",
-      spenderAddress: NewTreasury.target,
-      walletList: walletNames,
-    });
-
-    // Project-specific initialization logic
-    await NewTreasury.connect(backend).setRefundWindow(19); // 1 gün
+    // Revert to snapshot and take a new one for next test
+    await network.provider.send("evm_revert", [snapshotId]);
+    snapshotId = await network.provider.send("evm_snapshot");
+    // Repeted setup for every test
+    ({ createVH, updateVH, buyVH, refundVH, refundByOwnerVH, withdrawVH } = getVoucherHelpers());
+    await updatenow();
   });
 
   // Create Course Tests
-  it("should create a course successfully", async function () {
-    const voucherHelper = getVoucherHelpers();
-
-    const latestBlock = await ethers.provider.getBlock("latest");
-    const now = Number(latestBlock.timestamp);
-
-    const uri = "https://example.com/course/1";
-    const withdrawers = [instructor1.address, instructor2.address];
-    const redeemer = instructor1.address;
-    const validUntil = now + 24 * 60 * 60; // 1 days from now
-
-    const voucher = await voucherHelper.create.signVoucher({
-      uri,
-      withdrawers,
-      redeemer,
-      validUntil,
+  it("should create a course successfully yy", async function () {
+    // 1) Create a new course using voucher and save returned data
+    const create_course1 = await createCourseHelper({
+      uri: "https://example.com/course/1",
+      withdrawers: [instructor1.address, instructor2.address],
+      redeemer: instructor1,
+      validUntil: now + 86400,
     });
 
-    //expect(voucher).to.have.property("uri", uri);
-    //expect(voucher.withdrawers).to.deep.equal(withdrawers.map((addr) => ethers.getAddress(addr)));
-    //expect(voucher.redeemer).to.equal(ethers.getAddress(redeemer));
-    //expect(voucher.validUntil).to.be.greaterThan(Math.floor(Date.now() / 1000));
-    //expect(voucher).to.have.property("signature");
+    await expect(create_course1.tx).to.emit(NewTreasury, "CourseCreated").withArgs(create_course1.courseId);
 
-    // Verify the voucher
-    //const verifiedSigner = await voucherHelper.verifyVoucher(voucher, backend.address);
-    //expect(verifiedSigner).to.equal(ethers.getAddress(backend.address));
-
-    const tx = await NewTreasury.connect(instructor1).createCourse(voucher);
-    const receipt = await tx.wait();
-
-    // Check event
-    const courseCreatedEvent = receipt.logs.find((log) => log.fragment.name === "CourseCreated");
-    expect(courseCreatedEvent).to.exist;
-
-    // Check courseCounter
-    const courseCounter = await NewTreasury.courseCounter();
-    expect(courseCounter).to.equal(1);
-
-    // Check URI
-    const course = await NewTreasury.courses(1);
-    expect(course.uri).to.equal(uri);
-
-    // Check authorized withdrawers
-    const auth1 = await NewTreasury.isAuthorizedWithdrawer(instructor1.address, 1);
-    const auth2 = await NewTreasury.isAuthorizedWithdrawer(instructor2.address, 1);
-    expect(auth1).to.equal(true);
-    expect(auth2).to.equal(true);
+    await expectCourseStateMatches(create_course1.expectedStateIfSuccessful, create_course1.courseId);
   });
 
   it("should update a course successfully using a valid voucher", async function () {
-    const { create, update } = getVoucherHelpers();
+    // Step 1: create course
+    const create_course1 = await createCourseHelper({
+      uri: "https://example.com/course/1",
+      withdrawers: [instructor1.address, instructor2.address],
+      redeemer: instructor1,
+      validUntil: now + 86400,
+    });
 
-    const latestBlock = await ethers.provider.getBlock("latest");
-    const now = Number(latestBlock.timestamp);
+    await expect(create_course1.tx).to.emit(NewTreasury, "CourseCreated").withArgs(create_course1.courseId);
+
+    await expectCourseStateMatches(create_course1.expectedStateIfSuccessful, create_course1.courseId);
+
+    // Step 2: update course
+    const update_course1 = await updateCourseHelper({
+      courseId: create_course1.courseId,
+      uri: "https://example.com/course/1New",
+      sellable: false,
+      withdrawers: [instructor1.address, instructor3.address],
+      redeemer: instructor1,
+      validUntil: now + 86400,
+    });
+
+    await expect(update_course1.tx).to.emit(NewTreasury, "CourseUpdated").withArgs(update_course1.courseId);
+
+    await expectCourseStateMatches(update_course1.expectedStateIfSuccessful, update_course1.courseId);
+
+    expect(await NewTreasury.isAuthorizedWithdrawer(instructor2.address, update_course1.courseId)).to.equal(false);
 
     // Step 1: instructor1 creates a course via CreateCourseVoucher
-    const initialVoucher = await create.signVoucher({
+    // Step 2: instructor1 updates course via UpdateCourseVoucher
+  });
+
+  /*
+  it("should create a course successfully xx", async function () {
+    // 1) Create a new course using voucher and save returned data
+    const course1Voucher = await createVH.signVoucher({
       uri: "https://example.com/course/1",
       withdrawers: [instructor1.address, instructor2.address],
       redeemer: instructor1.address,
       validUntil: now + 86400,
     });
 
-    const createTx = await NewTreasury.connect(instructor1).createCourse(initialVoucher);
-    await createTx.wait();
+    expect(await NewTreasury.connect(instructor1).createCourse(course1Voucher))
+      .to.emit(NewTreasury, "CourseCreated")
+      .withArgs(1n);
 
-    // Step 2: instructor1 updates course via UpdateCourseVoucher
-    const updateVoucher = await update.signVoucher({
-      courseId: 1,
-      sellable: true,
-      uri: "https://example.com/course/1New",
-      withdrawers: [instructor1.address, instructor3.address],
-      redeemer: instructor1.address,
+    // 3) Verify state updates after course creation
+    // Verify courseCounter is incremented, should be 1 after first course
+    const courseCounter = await NewTreasury.courseCounter();
+    expect(courseCounter).to.equal(1);
+    // Verify course metadata (uri and sellable flag)
+    const [uri, sellable] = await NewTreasury.getCourse(1);
+    expect(uri).to.equal(course1Voucher.uri);
+    expect(sellable).to.equal(true);
+    // Verify list of authorized withdrawers matches input
+    const authorizedWithdrawers = await NewTreasury.getAuthorizedWithdrawers(1);
+    expect(authorizedWithdrawers).to.deep.equal([instructor1.address, instructor2.address]);
+    // Verify each withdrawer is individually authorized for this course
+    for (const withdrawer of course1Voucher.withdrawers) {
+      const isAuthorized = await NewTreasury.isAuthorizedWithdrawer(withdrawer, 1);
+      expect(isAuthorized).to.equal(true);
+    }
+  }); 
+  */
+
+  /*
+  async function performCreateCourse({ uri, withdrawers, redeemer, validUntil }) {
+  const voucher = await createVH.signVoucher({
+    uri,
+    withdrawers,
+    redeemer: redeemer.address,
+    validUntil,
+  });
+
+  const tx = await NewTreasury.connect(redeemer).createCourse(voucher);
+  const receipt = await tx.wait();
+
+  const courseId = await NewTreasury.courseCounter();
+
+  return {
+    courseId,
+    uri,
+    withdrawers,
+    redeemer: redeemer.address,
+    receipt,
+  };
+}
+
+async function performUpdateCourse({ courseId, sellable, uri, withdrawers, redeemer, validUntil }) {
+  const voucher = await updateVH.signVoucher({
+    courseId,
+    sellable,
+    uri,
+    withdrawers,
+    redeemer: redeemer.address,
+    validUntil,
+  });
+
+  const tx = await NewTreasury.connect(redeemer).updateCourse(voucher);
+  const receipt = await tx.wait();
+
+  return {
+    courseId,
+    uri,
+    withdrawers,
+    redeemer: redeemer.address,
+    receipt,
+  };
+}
+
+function assertEventArgs(receipt, eventName, expected = {}, contract = NewTreasury) {
+  const iface = contract.interface;
+  const eventFragment = iface.getEvent(eventName);
+  const topicHash = eventFragment.topicHash;
+
+  const log = receipt.logs.find((log) => log.topics[0] === topicHash);
+  expect(log, `Event "${eventName}" not found in receipt`).to.exist;
+
+  const decodedArgs = iface.decodeEventLog(eventFragment, log.data, log.topics);
+
+  for (const [key, expectedValue] of Object.entries(expected)) {
+    const actualValue = decodedArgs[key];
+
+    const expectedNormalized = typeof expectedValue === "bigint" ? expectedValue.toString() : expectedValue;
+    const actualNormalized = typeof actualValue === "bigint" ? actualValue.toString() : actualValue;
+
+    expect(actualNormalized, `Event "${eventName}" arg "${key}" mismatch`).to.equal(expectedNormalized);
+  }
+
+  return decodedArgs;
+}
+  
+  it("should create a course successfully new versiyon", async function () {
+    // 1) Create a new course using voucher and save returned data
+    const course1 = await performCreateCourse({
+      uri: "https://example.com/course/1",
+      withdrawers: [instructor1.address, instructor2.address],
+      redeemer: instructor1,
       validUntil: now + 86400,
     });
 
-    const updateTx = await NewTreasury.connect(instructor1).updateCourse(updateVoucher);
-    const receipt = await updateTx.wait();
+    // 2) Verify CourseCreated event was emitted with arguments
+    assertEventArgs(course1.receipt, "CourseCreated", {
+      courseId: 1n,
+    });
 
-    const updateEvent = receipt.logs.find((log) => log.fragment.name === "CourseUpdated");
-    expect(updateEvent).to.exist;
-
-    // Check updated URI
-    const updatedCourse = await NewTreasury.courses(1);
-    expect(updatedCourse.uri).to.equal("https://example.com/course/1New");
-
-    // Check updated withdrawers
-    const auth1 = await NewTreasury.isAuthorizedWithdrawer(instructor1.address, 1);
-    const auth3 = await NewTreasury.isAuthorizedWithdrawer(instructor3.address, 1);
-    const auth2 = await NewTreasury.isAuthorizedWithdrawer(instructor2.address, 1);
-
-    expect(auth1).to.equal(true);
-    expect(auth3).to.equal(true);
-    expect(auth2).to.equal(false); // instructor2 artık yetkili olmamalı
+    // 3) Verify state updates after course creation
+    // Verify courseCounter is incremented, should be 1 after first course
+    const courseCounter = await NewTreasury.courseCounter();
+    expect(courseCounter).to.equal(1);
+    // Verify course metadata (uri and sellable flag)
+    const [uri, sellable] = await NewTreasury.getCourse(1);
+    expect(uri).to.equal(course1.uri);
+    expect(sellable).to.equal(true);
+    // Verify list of authorized withdrawers matches input
+    const authorizedWithdrawers = await NewTreasury.getAuthorizedWithdrawers(1);
+    expect(authorizedWithdrawers).to.deep.equal([instructor1.address, instructor2.address]);
+    // Verify each withdrawer is individually authorized for this course
+    for (const withdrawer of course1.withdrawers) {
+      const isAuthorized = await NewTreasury.isAuthorizedWithdrawer(withdrawer, 1);
+      expect(isAuthorized).to.equal(true);
+    }
   });
+  */
 
   it("should allow a user to buy a course using a valid BuyCourseVoucher", async function () {
-    const { create, buy } = getVoucherHelpers();
-
-    const latestBlock = await ethers.provider.getBlock("latest");
-    const now = Number(latestBlock.timestamp);
+    const { createVH, buyVH } = getVoucherHelpers();
 
     // Step 1: Create course via instructor1
-    const createVoucher = await create.signVoucher({
+    const createVoucher = await createVH.signVoucher({
       uri: "https://example.com/course/1",
       withdrawers: [instructor1.address, instructor2.address],
       redeemer: instructor1.address,
@@ -201,7 +408,7 @@ describe("NewTreasury Contract Tests", function () {
     const courseId = 1;
     const coursePrice = ethers.parseEther("10");
 
-    const buyVoucher = await buy.signVoucher({
+    const buyVoucher = await buyVH.signVoucher({
       courseId,
       tokenAddress: MKT1.target,
       coursePrice,
@@ -241,13 +448,10 @@ describe("NewTreasury Contract Tests", function () {
   });
 
   it("should allow a course to be refunded using a valid RefundCourseVoucher", async function () {
-    const { create, buy, refund } = getVoucherHelpers();
-
-    const latestBlock = await ethers.provider.getBlock("latest");
-    const now = Number(latestBlock.timestamp);
+    const { createVH, buyVH, refundVH } = getVoucherHelpers();
 
     // Step 1: instructor1 creates a course
-    const createVoucher = await create.signVoucher({
+    const createVoucher = await createVH.signVoucher({
       uri: "https://example.com/course/1",
       withdrawers: [instructor1.address, instructor2.address],
       redeemer: instructor1.address,
@@ -260,7 +464,7 @@ describe("NewTreasury Contract Tests", function () {
     const courseId = 1;
     const coursePrice = ethers.parseEther("10");
 
-    const buyVoucher = await buy.signVoucher({
+    const buyVoucher = await buyVH.signVoucher({
       courseId,
       tokenAddress: MKT1.target,
       coursePrice,
@@ -274,7 +478,7 @@ describe("NewTreasury Contract Tests", function () {
     // Step 3: instructor5 initiates refund on behalf of person1
     const paymentId = await NewTreasury.courseOwnerToPayment(person1.address, courseId);
 
-    const refundVoucher = await refund.signVoucher({
+    const refundVoucher = await refundVH.signVoucher({
       paymentId,
       redeemer: instructor5.address, // doesn't matter who redeems as long as voucher is valid
       validUntil: now + 86400,
@@ -306,13 +510,10 @@ describe("NewTreasury Contract Tests", function () {
   });
 
   it("should allow refund using RefundCourseByOwnerAndCourseIdVoucher", async function () {
-    const { create, buy, refundByOwner } = getVoucherHelpers();
-
-    const latestBlock = await ethers.provider.getBlock("latest");
-    const now = Number(latestBlock.timestamp);
+    const { createVH, buyVH, refundByOwnerVH } = getVoucherHelpers();
 
     // Step 1: instructor1 creates a course
-    const createVoucher = await create.signVoucher({
+    const createVoucher = await createVH.signVoucher({
       uri: "https://example.com/course/1",
       withdrawers: [instructor1.address],
       redeemer: instructor1.address,
@@ -325,7 +526,7 @@ describe("NewTreasury Contract Tests", function () {
     const courseId = 1;
     const coursePrice = ethers.parseEther("10");
 
-    const buyVoucher = await buy.signVoucher({
+    const buyVoucher = await buyVH.signVoucher({
       courseId,
       tokenAddress: MKT1.target,
       coursePrice,
@@ -337,7 +538,7 @@ describe("NewTreasury Contract Tests", function () {
     await NewTreasury.connect(buyer1).buyCourse(buyVoucher);
 
     // Step 3: instructor5 initiates refund using courseOwner + courseId
-    const refundVoucher = await refundByOwner.signVoucher({
+    const refundVoucher = await refundByOwnerVH.signVoucher({
       courseOwner: person1.address,
       courseId,
       redeemer: instructor5.address,
@@ -375,10 +576,10 @@ describe("NewTreasury Contract Tests", function () {
     const latestBlock = await ethers.provider.getBlock("latest");
     const now = Number(latestBlock.timestamp);
 
-    const { create, buy, withdraw } = getVoucherHelpers();
+    const { createVH, buyVH, withdrawVH } = getVoucherHelpers();
 
     // 1. instructor1 course oluşturur
-    const createVoucher = await create.signVoucher({
+    const createVoucher = await createVH.signVoucher({
       uri: "https://example.com/withdraw-course/1",
       withdrawers: [instructor1.address],
       redeemer: instructor1.address,
@@ -395,7 +596,7 @@ describe("NewTreasury Contract Tests", function () {
     const receivers = [person1, person2, person3, person4, person5];
 
     for (let i = 0; i < 5; i++) {
-      const buyVoucher = await buy.signVoucher({
+      const buyVoucher = await buyVH.signVoucher({
         courseId,
         tokenAddress: MKT1.target,
         coursePrice: price,
@@ -408,8 +609,7 @@ describe("NewTreasury Contract Tests", function () {
     }
 
     // 2. Zamanı ileri al: refund window sonlansın
-    await ethers.provider.send("evm_increaseTime", [86400 * 25]); // 25 gün ileri
-    await ethers.provider.send("evm_mine");
+    fastForwardTime({ days: 25 }); // 25 gün ileri al
     const withdrawDValidUntil = validUntil + 86400 * 25;
 
     // 3. Balance öncesi
@@ -417,7 +617,7 @@ describe("NewTreasury Contract Tests", function () {
     const contractBalBefore = await MKT1.balanceOf(NewTreasury.target);
 
     // 4. Withdraw işlemi
-    const withdrawVoucher = await withdraw.signVoucher({
+    const withdrawVoucher = await withdrawVH.signVoucher({
       courseId,
       fromIndex: 1,
       toIndex: 3,
@@ -472,10 +672,10 @@ describe("NewTreasury Contract Tests", function () {
     const latestBlock = await ethers.provider.getBlock("latest");
     const now = Number(latestBlock.timestamp);
 
-    const { create, buy, withdraw } = getVoucherHelpers();
+    const { createVH, buyVH, withdrawVH } = getVoucherHelpers();
 
     // 1. instructor1 creates a course
-    const createVoucher = await create.signVoucher({
+    const createVoucher = await createVH.signVoucher({
       uri: "https://example.com/mixed-course/1",
       withdrawers: [instructor1.address],
       redeemer: instructor1.address,
@@ -489,7 +689,7 @@ describe("NewTreasury Contract Tests", function () {
 
     // === Sales ===
     // buyer1 buys for person1 with 10 MKT1
-    const buyVoucher1 = await buy.signVoucher({
+    const buyVoucher1 = await buyVH.signVoucher({
       courseId,
       tokenAddress: MKT1.target,
       coursePrice: ethers.parseEther("10"),
@@ -500,7 +700,7 @@ describe("NewTreasury Contract Tests", function () {
     await NewTreasury.connect(buyer1).buyCourse(buyVoucher1);
 
     // buyer2 buys for person2 with 5 MKT2
-    const buyVoucher2 = await buy.signVoucher({
+    const buyVoucher2 = await buyVH.signVoucher({
       courseId,
       tokenAddress: MKT2.target,
       coursePrice: ethers.parseEther("5"),
@@ -511,7 +711,7 @@ describe("NewTreasury Contract Tests", function () {
     await NewTreasury.connect(buyer2).buyCourse(buyVoucher2);
 
     // buyer3 buys for person3 with 10 ETH
-    const buyVoucher3 = await buy.signVoucher({
+    const buyVoucher3 = await buyVH.signVoucher({
       courseId,
       tokenAddress: ethers.ZeroAddress,
       coursePrice: ethers.parseEther("10"),
@@ -524,7 +724,7 @@ describe("NewTreasury Contract Tests", function () {
     });
 
     // buyer4 buys for person4 with 10 ETH
-    const buyVoucher4 = await buy.signVoucher({
+    const buyVoucher4 = await buyVH.signVoucher({
       courseId,
       tokenAddress: ethers.ZeroAddress,
       coursePrice: ethers.parseEther("10"),
@@ -537,7 +737,7 @@ describe("NewTreasury Contract Tests", function () {
     });
 
     // buyer5 buys for person5 with 10 ETH
-    const buyVoucher5 = await buy.signVoucher({
+    const buyVoucher5 = await buyVH.signVoucher({
       courseId,
       tokenAddress: ethers.ZeroAddress,
       coursePrice: ethers.parseEther("10"),
@@ -550,8 +750,7 @@ describe("NewTreasury Contract Tests", function () {
     });
 
     // 2. Time travel after refund window
-    await ethers.provider.send("evm_increaseTime", [86400 * 25]); // 25 gün
-    await ethers.provider.send("evm_mine");
+    fastForwardTime({ days: 25 }); // 25 gün ileri al
 
     // 3. Balances before
     const MKT1Before = await MKT1.balanceOf(instructor1.address);
@@ -559,7 +758,7 @@ describe("NewTreasury Contract Tests", function () {
     const ethBefore = await ethers.provider.getBalance(instructor1.address);
 
     // 4. Withdraw 1 → 5
-    const withdrawVoucher = await withdraw.signVoucher({
+    const withdrawVoucher = await withdrawVH.signVoucher({
       courseId,
       fromIndex: 1,
       toIndex: 5,
