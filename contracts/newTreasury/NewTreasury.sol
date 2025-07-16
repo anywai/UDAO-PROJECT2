@@ -603,7 +603,7 @@ contract NewTreasury is AccessControl, EIP712, ReentrancyGuard {
         // save the index of the courseId in the ownedCourses mapping
         ownedCourseIndexPlusOne[_courseReceiver][_courseId] =
             ownedCourses[_courseReceiver].length -
-            1;
+            1; // aslında +1 index değil çünkü satın alımda 0 pushlandı.
         // update hasOwnedCourse mapping
         hasOwnedCourse[_courseReceiver][_courseId] = true;
 
@@ -1016,6 +1016,7 @@ contract NewTreasury is AccessControl, EIP712, ReentrancyGuard {
         return ownedCourses[user];
     }
 
+    // bu alttaki 2 getterın gerektiğine inanmıyorum.
     function getCourse(
         uint256 courseId
     ) external view returns (string memory uri, bool sellable) {
@@ -1037,6 +1038,7 @@ contract NewTreasury is AccessControl, EIP712, ReentrancyGuard {
             uint256 instructorShare,
             uint256 foundationShare,
             uint256 governanceShare,
+            uint256 endOfRefundWindow,
             bool isRefunded,
             bool isWithdrawn
         )
@@ -1051,6 +1053,7 @@ contract NewTreasury is AccessControl, EIP712, ReentrancyGuard {
             p.instructorShare,
             p.foundationShare,
             p.governanceShare,
+            p.endOfRefundWindow,
             p.isRefunded,
             p.isWithdrawn
         );
@@ -1071,3 +1074,6 @@ contract NewTreasury is AccessControl, EIP712, ReentrancyGuard {
 // abi.encode(withdrawers)	-->	Hash için doğru
 
 // withdrawers bir address[] olduğu için her zaman abi.encode kullan.
+
+// TODO BATU3 calculate shares best efective yol mu kontrol et
+// TODO BATU4 ownedCourseIndexPlusOne bu array 1 index değil gerçek index. İsimlendirmeyi düzelt
