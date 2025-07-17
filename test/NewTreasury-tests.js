@@ -238,7 +238,7 @@ async function buyCourseHelper({ courseId, tokenAddress, coursePrice, courseRece
 
     courseOwnerToPayment: 0, // yok,
     ownedCoursesArrayOfReceiver: currentOwnedCourses, // değişmedi eski array
-    ownedCourseIndexPlusOne: 0, // yok kurs arraye eklenmedi
+    ownedCourseIndex: 0, // yok kurs arraye eklenmedi
     hasOwnedCourse: currentHasOwnedCourse, // eski durum korunur, satış yok değişim yok
 
     payment: {
@@ -285,7 +285,7 @@ async function buyCourseHelper({ courseId, tokenAddress, coursePrice, courseRece
 
     courseOwnerToPayment: newPaymentId, // yeni paymentId'yi tutuyor
     ownedCoursesArrayOfReceiver: newOwnedCourses, // yeni array, alın++++++++++++++++++++++++++++++++++++an kurs eklendi
-    ownedCourseIndexPlusOne: newOwnedCourses.length - 1, // bir indis değeri atandı
+    ownedCourseIndex: newOwnedCourses.length - 1, // bir indis değeri atandı
     hasOwnedCourse: true, // true, artık bu kursa sahip
 
     payment: {
@@ -341,7 +341,7 @@ async function expectBuy(expected) {
 
     courseOwnerToPayment,
     ownedCoursesArrayOfReceiver,
-    ownedCourseIndexPlusOne,
+    ownedCourseIndex,
     hasOwnedCourse,
 
     payment,
@@ -384,9 +384,9 @@ async function expectBuy(expected) {
   const ownedCourses = await NewTreasury.getOwnedCourses(courseReceiver);
   expect(ownedCourses.map(Number)).to.deep.equal(ownedCoursesArrayOfReceiver.map(Number));
 
-  // 7. ownedCourseIndexPlusOne
-  const indexPlusOne = await NewTreasury.ownedCourseIndexPlusOne(courseReceiver, courseId);
-  expect(indexPlusOne).to.equal(ownedCourseIndexPlusOne);
+  // 7. ownedCourseIndex
+  const indexPlusOne = await NewTreasury.ownedCourseIndex(courseReceiver, courseId);
+  expect(indexPlusOne).to.equal(ownedCourseIndex);
 
   // 8. hasOwnedCourse
   const hasOwned = await NewTreasury.hasOwnedCourse(courseReceiver, courseId);
@@ -440,7 +440,7 @@ async function _refundCoursesCommonHelper({ paymentId, redeemer, tx }) {
 
   const courseOwnerToPaymentBefore = await NewTreasury.courseOwnerToPayment(courseReceiver, courseId);
   const ownedCoursesBefore = await NewTreasury.getOwnedCourses(courseReceiver);
-  const indexPlusOneBefore = await NewTreasury.ownedCourseIndexPlusOne(courseReceiver, courseId);
+  const indexPlusOneBefore = await NewTreasury.ownedCourseIndex(courseReceiver, courseId);
   const hasOwnedBefore = await NewTreasury.hasOwnedCourse(courseReceiver, courseId);
 
   const expectFail = {
@@ -450,7 +450,7 @@ async function _refundCoursesCommonHelper({ paymentId, redeemer, tx }) {
 
     courseOwnerToPayment: courseOwnerToPaymentBefore,
     ownedCoursesArrayOfReceiver: ownedCoursesBefore,
-    ownedCourseIndexPlusOne: indexPlusOneBefore,
+    ownedCourseIndex: indexPlusOneBefore,
     hasOwnedCourse: hasOwnedBefore,
 
     payment: {
@@ -488,7 +488,7 @@ async function _refundCoursesCommonHelper({ paymentId, redeemer, tx }) {
 
     courseOwnerToPayment: 0, // = 0 olmalı
     ownedCoursesArrayOfReceiver: newOwnedCourses,
-    ownedCourseIndexPlusOne: 0, // = 0 olmalı
+    ownedCourseIndex: 0, // = 0 olmalı
     hasOwnedCourse: false, // = false
 
     payment: {
@@ -528,7 +528,7 @@ async function expectRefund(expected) {
 
     courseOwnerToPayment,
     ownedCoursesArrayOfReceiver,
-    ownedCourseIndexPlusOne,
+    ownedCourseIndex,
     hasOwnedCourse,
 
     payment,
@@ -559,9 +559,9 @@ async function expectRefund(expected) {
   const ownedCourses = await NewTreasury.getOwnedCourses(courseReceiver);
   expect(ownedCourses.map(Number)).to.deep.equal(ownedCoursesArrayOfReceiver.map(Number));
 
-  // 7. ownedCourseIndexPlusOne
-  const indexPlusOne = await NewTreasury.ownedCourseIndexPlusOne(courseReceiver, courseId);
-  expect(indexPlusOne).to.equal(ownedCourseIndexPlusOne);
+  // 7. ownedCourseIndex
+  const indexPlusOne = await NewTreasury.ownedCourseIndex(courseReceiver, courseId);
+  expect(indexPlusOne).to.equal(ownedCourseIndex);
 
   // 8. hasOwnedCourse
   const hasOwned = await NewTreasury.hasOwnedCourse(courseReceiver, courseId);
@@ -581,418 +581,453 @@ describe("NewTreasury Contract Tests", function () {
     await updatenow();
   });
 
-  // Create Course Tests
-  it("should create a course successfully yy", async function () {
-    // 1) Create a new course using voucher and save returned data
-    const create_course1 = await createCourseHelper({
-      uri: "https://example.com/course/1",
-      withdrawers: [instructor1.address, instructor2.address],
-      redeemer: instructor1,
-      validUntil: now + 86400,
-    });
+  // 1. Course Management
+  describe("📘 COURSE MANAGEMENT", function () {
+    describe("✅ Success Cases", function () {
+      it("should create a course successfully yy", async function () {
+        // 1) Create a new course using voucher and save returned data
+        const create_course1 = await createCourseHelper({
+          uri: "https://example.com/course/1",
+          withdrawers: [instructor1.address, instructor2.address],
+          redeemer: instructor1,
+          validUntil: now + 86400,
+        });
 
-    await expect(create_course1.tx).to.emit(NewTreasury, "CourseCreated").withArgs(create_course1.courseId);
+        await expect(create_course1.tx).to.emit(NewTreasury, "CourseCreated").withArgs(create_course1.courseId);
 
-    const course1 = await expectCourse(create_course1.expectSuccess);
-  });
-
-  it("should update a course successfully using a valid voucher", async function () {
-    // Step 1: create course
-    const create_course1 = await createCourseHelper({
-      uri: "https://example.com/course/1",
-      withdrawers: [instructor1.address, instructor2.address],
-      redeemer: instructor1,
-      validUntil: now + 86400,
-    });
-
-    await expect(create_course1.tx).to.emit(NewTreasury, "CourseCreated").withArgs(create_course1.courseId);
-
-    const course1 = await expectCourse(create_course1.expectSuccess);
-
-    // Step 2: update course
-    const update_course1 = await updateCourseHelper({
-      courseId: create_course1.courseId,
-      uri: "https://example.com/course/1New",
-      sellable: false,
-      withdrawers: [instructor1.address, instructor3.address],
-      redeemer: instructor1,
-      validUntil: now + 86400,
-    });
-
-    await expect(update_course1.tx).to.emit(NewTreasury, "CourseUpdated").withArgs(update_course1.courseId);
-
-    const course1upd1 = await expectCourse(update_course1.expectSuccess);
-    // Step 1: instructor1 creates a course via CreateCourseVoucher
-    // Step 2: instructor1 updates course via UpdateCourseVoucher
-  });
-
-  it("should allow a user to buy a course using a valid BuyCourseVoucher", async function () {
-    // 1. instructor1 creates a course
-    const create_course1 = await createCourseHelper({
-      uri: "https://example.com/course/1",
-      withdrawers: [instructor1.address, instructor2.address],
-      redeemer: instructor1,
-      validUntil: now + 86400,
-    });
-
-    await expect(create_course1.tx).to.emit(NewTreasury, "CourseCreated").withArgs(create_course1.courseId);
-
-    const course1 = await expectCourse(create_course1.expectSuccess);
-
-    // 2. buyer1 buys the course for person1
-    const buy_course1 = await buyCourseHelper({
-      courseId: course1.courseId,
-      tokenAddress: MKT1.target,
-      coursePrice: ethers.parseEther("10"),
-      courseReceiver: person1.address,
-      redeemer: buyer1,
-      validUntil: now + 86400,
-    });
-
-    await expect(buy_course1.tx)
-      .to.emit(NewTreasury, "ContentPurchased")
-      .withArgs(buy_course1.paymentId, buy_course1.courseId, buy_course1.courseReceiver);
-
-    // 3. validate resulting state
-    await expectBuy(buy_course1.expectSuccess);
-
-    //
-  });
-
-  it("should allow a course to be refunded using a valid RefundCourseVoucher", async function () {
-    // Step 1: instructor1 creates a course
-    const create_course1 = await createCourseHelper({
-      uri: "https://example.com/course/1",
-      withdrawers: [instructor1.address, instructor2.address],
-      redeemer: instructor1,
-      validUntil: now + 86400,
-    });
-
-    await expect(create_course1.tx).to.emit(NewTreasury, "CourseCreated").withArgs(create_course1.courseId);
-
-    await expectCourse(create_course1.expectSuccess);
-
-    // 2. buyer1 buys course for person1
-    const buy_course1 = await buyCourseHelper({
-      courseId: create_course1.courseId,
-      tokenAddress: MKT1.target,
-      coursePrice: ethers.parseEther("10"),
-      courseReceiver: person1.address,
-      redeemer: buyer1,
-      validUntil: now + 86400,
-    });
-
-    await expect(buy_course1.tx)
-      .to.emit(NewTreasury, "ContentPurchased")
-      .withArgs(buy_course1.paymentId, buy_course1.courseId, buy_course1.courseReceiver);
-
-    await expectBuy(buy_course1.expectSuccess);
-
-    // 3. instructor5 refunds the course on behalf of person1
-    const refund_course1 = await refundCourseHelper({
-      paymentId: buy_course1.paymentId,
-      redeemer: instructor5,
-      validUntil: now + 86400,
-    });
-
-    await expect(refund_course1.tx)
-      .to.emit(NewTreasury, "CourseRefunded")
-      .withArgs(
-        refund_course1.paymentId,
-        refund_course1.courseId,
-        refund_course1.courseReceiver,
-        refund_course1.coursePrice,
-        refund_course1.tokenAddress,
-        refund_course1.payer
-      );
-
-    await expectRefund(refund_course1.expectSuccess);
-  });
-
-  it("should allow refund using RefundCourseByOwnerAndCourseIdVoucher", async function () {
-    // 1. instructor1 creates a course
-    const create_course = await createCourseHelper({
-      uri: "https://example.com/course/1",
-      withdrawers: [instructor1.address],
-      redeemer: instructor1,
-      validUntil: now + 86400,
-    });
-
-    await expect(create_course.tx).to.emit(NewTreasury, "CourseCreated").withArgs(create_course.courseId);
-
-    await expectCourse(create_course.expectSuccess);
-
-    // 2. buyer1 buys course for person1
-    const buy_course = await buyCourseHelper({
-      courseId: create_course.courseId,
-      tokenAddress: MKT1.target,
-      coursePrice: ethers.parseEther("10"),
-      courseReceiver: person1.address,
-      redeemer: buyer1,
-      validUntil: now + 86400,
-    });
-
-    await expect(buy_course.tx)
-      .to.emit(NewTreasury, "ContentPurchased")
-      .withArgs(buy_course.paymentId, buy_course.courseId, buy_course.courseReceiver);
-
-    await expectBuy(buy_course.expectSuccess);
-
-    // 3. instructor5 initiates refund using courseOwner + courseId
-    const refund_course = await refundCourseByOwnerHelper({
-      courseOwner: person1.address,
-      courseId: buy_course.courseId,
-      redeemer: instructor5,
-      validUntil: now + 86400,
-    });
-
-    await expect(refund_course.tx)
-      .to.emit(NewTreasury, "CourseRefunded")
-      .withArgs(
-        refund_course.paymentId,
-        refund_course.courseId,
-        refund_course.courseReceiver,
-        refund_course.coursePrice,
-        refund_course.tokenAddress,
-        refund_course.payer
-      );
-
-    await expectRefund(refund_course.expectSuccess);
-  });
-
-  it("should allow instructor1 to withdraw payments for sales 1 to 3", async function () {
-    const latestBlock = await ethers.provider.getBlock("latest");
-    const now = Number(latestBlock.timestamp);
-
-    const { createVH, buyVH, withdrawVH } = getVoucherHelpers();
-
-    // 1. instructor1 course oluşturur
-    const createVoucher = await createVH.signVoucher({
-      uri: "https://example.com/withdraw-course/1",
-      withdrawers: [instructor1.address],
-      redeemer: instructor1.address,
-      validUntil: now + 86400,
-    });
-
-    await NewTreasury.connect(instructor1).createCourse(createVoucher);
-
-    const courseId = 1;
-    const price = ethers.parseEther("10");
-    const validUntil = now + 86400;
-
-    const buyers = [buyer1, buyer2, buyer3, buyer4, buyer5];
-    const receivers = [person1, person2, person3, person4, person5];
-
-    for (let i = 0; i < 5; i++) {
-      const buyVoucher = await buyVH.signVoucher({
-        courseId,
-        tokenAddress: MKT1.target,
-        coursePrice: price,
-        courseReceiver: receivers[i].address,
-        redeemer: buyers[i].address,
-        validUntil,
+        const course1 = await expectCourse(create_course1.expectSuccess);
       });
 
-      await NewTreasury.connect(buyers[i]).buyCourse(buyVoucher);
-    }
+      it("should update a course successfully using a valid voucher", async function () {
+        // Step 1: create course
+        const create_course1 = await createCourseHelper({
+          uri: "https://example.com/course/1",
+          withdrawers: [instructor1.address, instructor2.address],
+          redeemer: instructor1,
+          validUntil: now + 86400,
+        });
 
-    // 2. Zamanı ileri al: refund window sonlansın
-    await fastForwardTime({ days: 25 }); // 25 gün ileri al
-    const withdrawDValidUntil = validUntil + 86400 * 25;
+        await expect(create_course1.tx).to.emit(NewTreasury, "CourseCreated").withArgs(create_course1.courseId);
 
-    // 3. Balance öncesi
-    const instructorBalBefore = await MKT1.balanceOf(instructor1.address);
-    const contractBalBefore = await MKT1.balanceOf(NewTreasury.target);
+        const course1 = await expectCourse(create_course1.expectSuccess);
 
-    // 4. Withdraw işlemi
-    const withdrawVoucher = await withdrawVH.signVoucher({
-      courseId,
-      fromIndex: 1,
-      toIndex: 3,
-      redeemer: instructor1.address,
-      validUntil: withdrawDValidUntil,
+        // Step 2: update course
+        const update_course1 = await updateCourseHelper({
+          courseId: create_course1.courseId,
+          uri: "https://example.com/course/1New",
+          sellable: false,
+          withdrawers: [instructor1.address, instructor3.address],
+          redeemer: instructor1,
+          validUntil: now + 86400,
+        });
+
+        await expect(update_course1.tx).to.emit(NewTreasury, "CourseUpdated").withArgs(update_course1.courseId);
+
+        const course1upd1 = await expectCourse(update_course1.expectSuccess);
+        // Step 1: instructor1 creates a course via CreateCourseVoucher
+        // Step 2: instructor1 updates course via UpdateCourseVoucher
+      });
     });
 
-    const tx = await NewTreasury.connect(instructor1).withdrawCoursePayments(withdrawVoucher);
-    const receipt = await tx.wait();
-
-    // Event kontrolü
-    const iface = NewTreasury.interface;
-    const topic = iface.getEvent("CoursePaymentsWithdrawn").topicHash;
-    const log = receipt.logs.find((l) => l.topics[0] === topic);
-    expect(log).to.exist;
-
-    const decoded = iface.decodeEventLog("CoursePaymentsWithdrawn", log.data, log.topics);
-    expect(decoded.courseId).to.equal(courseId);
-    expect(decoded.fromIndex).to.equal(1n);
-    expect(decoded.toIndex).to.equal(3n);
-    expect(decoded.withdrawer).to.equal(instructor1.address);
-    expect(decoded.withdrawnCompleted).to.equal(3n);
-
-    // 5. Flag kontrolü
-    for (let j = 1; j <= 3; j++) {
-      const paymentId = await NewTreasury.courseSaleRecords(courseId, j);
-      const payment = await NewTreasury.payments(paymentId);
-      expect(payment.isWithdrawn).to.equal(true);
-    }
-
-    // 6. Balance fark kontrolü
-    const instructorBalAfter = await MKT1.balanceOf(instructor1.address);
-    const contractBalAfter = await MKT1.balanceOf(NewTreasury.target);
-
-    const gained = instructorBalAfter - instructorBalBefore;
-    const spent = contractBalBefore - contractBalAfter;
-
-    expect(gained).to.be.gt(0n);
-    expect(spent).to.be.gt(0n);
-    expect(gained).to.be.lt(spent); // çünkü contract → foundation + governance da gönderdi
-
-    // 7. checkWithdrawStatus ile kontrol
-    const [refunded, withdrawn, inWindow, ready] = await NewTreasury.checkWithdrawStatus(courseId, 1, 3);
-
-    expect(withdrawn.map(Number)).to.deep.equal([1, 2, 3]);
-    expect(refunded.length).to.equal(0);
-    expect(inWindow.length).to.equal(0);
-    expect(ready.length).to.equal(0);
+    describe("❌ Failure Cases", function () {
+      //it("should fail to create a course...", async function () {});
+    });
   });
 
-  it("should allow instructor1 to withdraw payments from mixed tokens (MKT1, MKT2, ETH)", async function () {
-    const latestBlock = await ethers.provider.getBlock("latest");
-    const now = Number(latestBlock.timestamp);
+  // 2. Course Purchase
+  describe("💰 COURSE PURCHASE", function () {
+    describe("✅ Success Cases", function () {
+      it("should allow a user to buy a course using a valid BuyCourseVoucher", async function () {
+        // 1. instructor1 creates a course
+        const create_course1 = await createCourseHelper({
+          uri: "https://example.com/course/1",
+          withdrawers: [instructor1.address, instructor2.address],
+          redeemer: instructor1,
+          validUntil: now + 86400,
+        });
 
-    const { createVH, buyVH, withdrawVH } = getVoucherHelpers();
+        await expect(create_course1.tx).to.emit(NewTreasury, "CourseCreated").withArgs(create_course1.courseId);
 
-    // 1. instructor1 creates a course
-    const createVoucher = await createVH.signVoucher({
-      uri: "https://example.com/mixed-course/1",
-      withdrawers: [instructor1.address],
-      redeemer: instructor1.address,
-      validUntil: now + 86400,
+        const course1 = await expectCourse(create_course1.expectSuccess);
+
+        // 2. buyer1 buys the course for person1
+        const buy_course1 = await buyCourseHelper({
+          courseId: course1.courseId,
+          tokenAddress: MKT1.target,
+          coursePrice: ethers.parseEther("10"),
+          courseReceiver: person1.address,
+          redeemer: buyer1,
+          validUntil: now + 86400,
+        });
+
+        await expect(buy_course1.tx)
+          .to.emit(NewTreasury, "ContentPurchased")
+          .withArgs(buy_course1.paymentId, buy_course1.courseId, buy_course1.courseReceiver);
+
+        // 3. validate resulting state
+        await expectBuy(buy_course1.expectSuccess);
+
+        //
+      });
     });
 
-    await NewTreasury.connect(instructor1).createCourse(createVoucher);
-
-    const courseId = 1;
-    const validUntil = now + 86400;
-
-    // === Sales ===
-    // buyer1 buys for person1 with 10 MKT1
-    const buyVoucher1 = await buyVH.signVoucher({
-      courseId,
-      tokenAddress: MKT1.target,
-      coursePrice: ethers.parseEther("10"),
-      courseReceiver: person1.address,
-      redeemer: buyer1.address,
-      validUntil,
+    describe("❌ Failure Cases", function () {
+      //it("should fail to buy...", async function () {});
     });
-    await NewTreasury.connect(buyer1).buyCourse(buyVoucher1);
+  });
 
-    // buyer2 buys for person2 with 5 MKT2
-    const buyVoucher2 = await buyVH.signVoucher({
-      courseId,
-      tokenAddress: MKT2.target,
-      coursePrice: ethers.parseEther("5"),
-      courseReceiver: person2.address,
-      redeemer: buyer2.address,
-      validUntil,
+  // 3. Refunds
+  describe("💸 REFUNDS", function () {
+    describe("✅ Success Cases", function () {
+      it("should allow a course to be refunded using a valid RefundCourseVoucher", async function () {
+        // Step 1: instructor1 creates a course
+        const create_course1 = await createCourseHelper({
+          uri: "https://example.com/course/1",
+          withdrawers: [instructor1.address, instructor2.address],
+          redeemer: instructor1,
+          validUntil: now + 86400,
+        });
+
+        await expect(create_course1.tx).to.emit(NewTreasury, "CourseCreated").withArgs(create_course1.courseId);
+
+        await expectCourse(create_course1.expectSuccess);
+
+        // 2. buyer1 buys course for person1
+        const buy_course1 = await buyCourseHelper({
+          courseId: create_course1.courseId,
+          tokenAddress: MKT1.target,
+          coursePrice: ethers.parseEther("10"),
+          courseReceiver: person1.address,
+          redeemer: buyer1,
+          validUntil: now + 86400,
+        });
+
+        await expect(buy_course1.tx)
+          .to.emit(NewTreasury, "ContentPurchased")
+          .withArgs(buy_course1.paymentId, buy_course1.courseId, buy_course1.courseReceiver);
+
+        await expectBuy(buy_course1.expectSuccess);
+
+        // 3. instructor5 refunds the course on behalf of person1
+        const refund_course1 = await refundCourseHelper({
+          paymentId: buy_course1.paymentId,
+          redeemer: instructor5,
+          validUntil: now + 86400,
+        });
+
+        await expect(refund_course1.tx)
+          .to.emit(NewTreasury, "CourseRefunded")
+          .withArgs(
+            refund_course1.paymentId,
+            refund_course1.courseId,
+            refund_course1.courseReceiver,
+            refund_course1.coursePrice,
+            refund_course1.tokenAddress,
+            refund_course1.payer
+          );
+
+        await expectRefund(refund_course1.expectSuccess);
+      });
+
+      it("should allow refund using RefundCourseByOwnerAndCourseIdVoucher", async function () {
+        // 1. instructor1 creates a course
+        const create_course = await createCourseHelper({
+          uri: "https://example.com/course/1",
+          withdrawers: [instructor1.address],
+          redeemer: instructor1,
+          validUntil: now + 86400,
+        });
+
+        await expect(create_course.tx).to.emit(NewTreasury, "CourseCreated").withArgs(create_course.courseId);
+
+        await expectCourse(create_course.expectSuccess);
+
+        // 2. buyer1 buys course for person1
+        const buy_course = await buyCourseHelper({
+          courseId: create_course.courseId,
+          tokenAddress: MKT1.target,
+          coursePrice: ethers.parseEther("10"),
+          courseReceiver: person1.address,
+          redeemer: buyer1,
+          validUntil: now + 86400,
+        });
+
+        await expect(buy_course.tx)
+          .to.emit(NewTreasury, "ContentPurchased")
+          .withArgs(buy_course.paymentId, buy_course.courseId, buy_course.courseReceiver);
+
+        await expectBuy(buy_course.expectSuccess);
+
+        // 3. instructor5 initiates refund using courseOwner + courseId
+        const refund_course = await refundCourseByOwnerHelper({
+          courseOwner: person1.address,
+          courseId: buy_course.courseId,
+          redeemer: instructor5,
+          validUntil: now + 86400,
+        });
+
+        await expect(refund_course.tx)
+          .to.emit(NewTreasury, "CourseRefunded")
+          .withArgs(
+            refund_course.paymentId,
+            refund_course.courseId,
+            refund_course.courseReceiver,
+            refund_course.coursePrice,
+            refund_course.tokenAddress,
+            refund_course.payer
+          );
+
+        await expectRefund(refund_course.expectSuccess);
+      });
     });
-    await NewTreasury.connect(buyer2).buyCourse(buyVoucher2);
 
-    // buyer3 buys for person3 with 10 ETH
-    const buyVoucher3 = await buyVH.signVoucher({
-      courseId,
-      tokenAddress: ethers.ZeroAddress,
-      coursePrice: ethers.parseEther("10"),
-      courseReceiver: person3.address,
-      redeemer: buyer3.address,
-      validUntil,
+    describe("❌ Failure Cases", function () {
+      //it("should fail to refund...", async function () {});
     });
-    await NewTreasury.connect(buyer3).buyCourse(buyVoucher3, {
-      value: ethers.parseEther("10"),
+  });
+
+  // 4. Withdrawals
+  describe("🏦 WITHDRAWALS", function () {
+    describe("✅ Success Cases", function () {
+      it("should allow instructor1 to withdraw payments for sales 1 to 3", async function () {
+        const latestBlock = await ethers.provider.getBlock("latest");
+        const now = Number(latestBlock.timestamp);
+
+        const { createVH, buyVH, withdrawVH } = getVoucherHelpers();
+
+        // 1. instructor1 course oluşturur
+        const createVoucher = await createVH.signVoucher({
+          uri: "https://example.com/withdraw-course/1",
+          withdrawers: [instructor1.address],
+          redeemer: instructor1.address,
+          validUntil: now + 86400,
+        });
+
+        await NewTreasury.connect(instructor1).createCourse(createVoucher);
+
+        const courseId = 1;
+        const price = ethers.parseEther("10");
+        const validUntil = now + 86400;
+
+        const buyers = [buyer1, buyer2, buyer3, buyer4, buyer5];
+        const receivers = [person1, person2, person3, person4, person5];
+
+        for (let i = 0; i < 5; i++) {
+          const buyVoucher = await buyVH.signVoucher({
+            courseId,
+            tokenAddress: MKT1.target,
+            coursePrice: price,
+            courseReceiver: receivers[i].address,
+            redeemer: buyers[i].address,
+            validUntil,
+          });
+
+          await NewTreasury.connect(buyers[i]).buyCourse(buyVoucher);
+        }
+
+        // 2. Zamanı ileri al: refund window sonlansın
+        await fastForwardTime({ days: 25 }); // 25 gün ileri al
+        const withdrawDValidUntil = validUntil + 86400 * 25;
+
+        // 3. Balance öncesi
+        const instructorBalBefore = await MKT1.balanceOf(instructor1.address);
+        const contractBalBefore = await MKT1.balanceOf(NewTreasury.target);
+
+        // 4. Withdraw işlemi
+        const withdrawVoucher = await withdrawVH.signVoucher({
+          courseId,
+          fromIndex: 1,
+          toIndex: 3,
+          redeemer: instructor1.address,
+          validUntil: withdrawDValidUntil,
+        });
+
+        const tx = await NewTreasury.connect(instructor1).withdrawCoursePayments(withdrawVoucher);
+        const receipt = await tx.wait();
+
+        // Event kontrolü
+        const iface = NewTreasury.interface;
+        const topic = iface.getEvent("CoursePaymentsWithdrawn").topicHash;
+        const log = receipt.logs.find((l) => l.topics[0] === topic);
+        expect(log).to.exist;
+
+        const decoded = iface.decodeEventLog("CoursePaymentsWithdrawn", log.data, log.topics);
+        expect(decoded.courseId).to.equal(courseId);
+        expect(decoded.fromIndex).to.equal(1n);
+        expect(decoded.toIndex).to.equal(3n);
+        expect(decoded.withdrawer).to.equal(instructor1.address);
+        expect(decoded.withdrawnCompleted).to.equal(3n);
+
+        // 5. Flag kontrolü
+        for (let j = 1; j <= 3; j++) {
+          const paymentId = await NewTreasury.courseSaleRecords(courseId, j);
+          const payment = await NewTreasury.payments(paymentId);
+          expect(payment.isWithdrawn).to.equal(true);
+        }
+
+        // 6. Balance fark kontrolü
+        const instructorBalAfter = await MKT1.balanceOf(instructor1.address);
+        const contractBalAfter = await MKT1.balanceOf(NewTreasury.target);
+
+        const gained = instructorBalAfter - instructorBalBefore;
+        const spent = contractBalBefore - contractBalAfter;
+
+        expect(gained).to.be.gt(0n);
+        expect(spent).to.be.gt(0n);
+        expect(gained).to.be.lt(spent); // çünkü contract → foundation + governance da gönderdi
+
+        // 7. checkWithdrawStatus ile kontrol
+        const [refunded, withdrawn, inWindow, ready] = await NewTreasury.checkWithdrawStatus(courseId, 1, 3);
+
+        expect(withdrawn.map(Number)).to.deep.equal([1, 2, 3]);
+        expect(refunded.length).to.equal(0);
+        expect(inWindow.length).to.equal(0);
+        expect(ready.length).to.equal(0);
+      });
+
+      it("should allow instructor1 to withdraw payments from mixed tokens (MKT1, MKT2, ETH)", async function () {
+        const latestBlock = await ethers.provider.getBlock("latest");
+        const now = Number(latestBlock.timestamp);
+
+        const { createVH, buyVH, withdrawVH } = getVoucherHelpers();
+
+        // 1. instructor1 creates a course
+        const createVoucher = await createVH.signVoucher({
+          uri: "https://example.com/mixed-course/1",
+          withdrawers: [instructor1.address],
+          redeemer: instructor1.address,
+          validUntil: now + 86400,
+        });
+
+        await NewTreasury.connect(instructor1).createCourse(createVoucher);
+
+        const courseId = 1;
+        const validUntil = now + 86400;
+
+        // === Sales ===
+        // buyer1 buys for person1 with 10 MKT1
+        const buyVoucher1 = await buyVH.signVoucher({
+          courseId,
+          tokenAddress: MKT1.target,
+          coursePrice: ethers.parseEther("10"),
+          courseReceiver: person1.address,
+          redeemer: buyer1.address,
+          validUntil,
+        });
+        await NewTreasury.connect(buyer1).buyCourse(buyVoucher1);
+
+        // buyer2 buys for person2 with 5 MKT2
+        const buyVoucher2 = await buyVH.signVoucher({
+          courseId,
+          tokenAddress: MKT2.target,
+          coursePrice: ethers.parseEther("5"),
+          courseReceiver: person2.address,
+          redeemer: buyer2.address,
+          validUntil,
+        });
+        await NewTreasury.connect(buyer2).buyCourse(buyVoucher2);
+
+        // buyer3 buys for person3 with 10 ETH
+        const buyVoucher3 = await buyVH.signVoucher({
+          courseId,
+          tokenAddress: ethers.ZeroAddress,
+          coursePrice: ethers.parseEther("10"),
+          courseReceiver: person3.address,
+          redeemer: buyer3.address,
+          validUntil,
+        });
+        await NewTreasury.connect(buyer3).buyCourse(buyVoucher3, {
+          value: ethers.parseEther("10"),
+        });
+
+        // buyer4 buys for person4 with 10 ETH
+        const buyVoucher4 = await buyVH.signVoucher({
+          courseId,
+          tokenAddress: ethers.ZeroAddress,
+          coursePrice: ethers.parseEther("10"),
+          courseReceiver: person4.address,
+          redeemer: buyer4.address,
+          validUntil,
+        });
+        await NewTreasury.connect(buyer4).buyCourse(buyVoucher4, {
+          value: ethers.parseEther("10"),
+        });
+
+        // buyer5 buys for person5 with 10 ETH
+        const buyVoucher5 = await buyVH.signVoucher({
+          courseId,
+          tokenAddress: ethers.ZeroAddress,
+          coursePrice: ethers.parseEther("10"),
+          courseReceiver: person5.address,
+          redeemer: buyer5.address,
+          validUntil,
+        });
+        await NewTreasury.connect(buyer5).buyCourse(buyVoucher5, {
+          value: ethers.parseEther("10"),
+        });
+
+        // 2. Time travel after refund window
+        await fastForwardTime({ days: 25 }); // 25 gün ileri al
+
+        // 3. Balances before
+        const MKT1Before = await MKT1.balanceOf(instructor1.address);
+        const MKT2Before = await MKT2.balanceOf(instructor1.address);
+        const ethBefore = await ethers.provider.getBalance(instructor1.address);
+
+        // 4. Withdraw 1 → 5
+        const withdrawVoucher = await withdrawVH.signVoucher({
+          courseId,
+          fromIndex: 1,
+          toIndex: 5,
+          redeemer: instructor1.address,
+          validUntil: validUntil + 86400 * 25,
+        });
+
+        const tx = await NewTreasury.connect(instructor1).withdrawCoursePayments(withdrawVoucher);
+        const receipt = await tx.wait();
+
+        // 5. Event kontrolü
+        const iface = NewTreasury.interface;
+        const topic = iface.getEvent("CoursePaymentsWithdrawn").topicHash;
+        const log = receipt.logs.find((l) => l.topics[0] === topic);
+        expect(log).to.exist;
+
+        const decoded = iface.decodeEventLog("CoursePaymentsWithdrawn", log.data, log.topics);
+        expect(decoded.courseId).to.equal(courseId);
+        expect(decoded.fromIndex).to.equal(1n);
+        expect(decoded.toIndex).to.equal(5n);
+        expect(decoded.withdrawer).to.equal(instructor1.address);
+        expect(decoded.withdrawnCompleted).to.equal(5n);
+        // governance conract failing.
+
+        // 6. Check flags
+        for (let j = 1; j <= 5; j++) {
+          const paymentId = await NewTreasury.courseSaleRecords(courseId, j);
+          const payment = await NewTreasury.payments(paymentId);
+          expect(payment.isWithdrawn).to.equal(true);
+        }
+
+        // 7. Withdraw status check
+        const [refunded, withdrawn, inWindow, ready] = await NewTreasury.checkWithdrawStatus(courseId, 1, 5);
+        expect(withdrawn.map(Number)).to.deep.equal([1, 2, 3, 4, 5]);
+        expect(refunded.length).to.equal(0);
+        expect(inWindow.length).to.equal(0);
+        expect(ready.length).to.equal(0);
+
+        // 8. Balance check
+        const MKT1After = await MKT1.balanceOf(instructor1.address);
+        const MKT2After = await MKT2.balanceOf(instructor1.address);
+        const ethAfter = await ethers.provider.getBalance(instructor1.address);
+
+        expect(MKT1After).to.be.gt(MKT1Before);
+        expect(MKT2After).to.be.gt(MKT2Before);
+        expect(ethAfter).to.be.gt(ethBefore); // withdraw sonrası eth arttı
+      });
     });
 
-    // buyer4 buys for person4 with 10 ETH
-    const buyVoucher4 = await buyVH.signVoucher({
-      courseId,
-      tokenAddress: ethers.ZeroAddress,
-      coursePrice: ethers.parseEther("10"),
-      courseReceiver: person4.address,
-      redeemer: buyer4.address,
-      validUntil,
+    describe("❌ Failure Cases", function () {
+      //it("should fail to withdraw...", async function () {  });
     });
-    await NewTreasury.connect(buyer4).buyCourse(buyVoucher4, {
-      value: ethers.parseEther("10"),
-    });
-
-    // buyer5 buys for person5 with 10 ETH
-    const buyVoucher5 = await buyVH.signVoucher({
-      courseId,
-      tokenAddress: ethers.ZeroAddress,
-      coursePrice: ethers.parseEther("10"),
-      courseReceiver: person5.address,
-      redeemer: buyer5.address,
-      validUntil,
-    });
-    await NewTreasury.connect(buyer5).buyCourse(buyVoucher5, {
-      value: ethers.parseEther("10"),
-    });
-
-    // 2. Time travel after refund window
-    await fastForwardTime({ days: 25 }); // 25 gün ileri al
-
-    // 3. Balances before
-    const MKT1Before = await MKT1.balanceOf(instructor1.address);
-    const MKT2Before = await MKT2.balanceOf(instructor1.address);
-    const ethBefore = await ethers.provider.getBalance(instructor1.address);
-
-    // 4. Withdraw 1 → 5
-    const withdrawVoucher = await withdrawVH.signVoucher({
-      courseId,
-      fromIndex: 1,
-      toIndex: 5,
-      redeemer: instructor1.address,
-      validUntil: validUntil + 86400 * 25,
-    });
-
-    const tx = await NewTreasury.connect(instructor1).withdrawCoursePayments(withdrawVoucher);
-    const receipt = await tx.wait();
-
-    // 5. Event kontrolü
-    const iface = NewTreasury.interface;
-    const topic = iface.getEvent("CoursePaymentsWithdrawn").topicHash;
-    const log = receipt.logs.find((l) => l.topics[0] === topic);
-    expect(log).to.exist;
-
-    const decoded = iface.decodeEventLog("CoursePaymentsWithdrawn", log.data, log.topics);
-    expect(decoded.courseId).to.equal(courseId);
-    expect(decoded.fromIndex).to.equal(1n);
-    expect(decoded.toIndex).to.equal(5n);
-    expect(decoded.withdrawer).to.equal(instructor1.address);
-    expect(decoded.withdrawnCompleted).to.equal(5n);
-    // governance conract failing.
-
-    // 6. Check flags
-    for (let j = 1; j <= 5; j++) {
-      const paymentId = await NewTreasury.courseSaleRecords(courseId, j);
-      const payment = await NewTreasury.payments(paymentId);
-      expect(payment.isWithdrawn).to.equal(true);
-    }
-
-    // 7. Withdraw status check
-    const [refunded, withdrawn, inWindow, ready] = await NewTreasury.checkWithdrawStatus(courseId, 1, 5);
-    expect(withdrawn.map(Number)).to.deep.equal([1, 2, 3, 4, 5]);
-    expect(refunded.length).to.equal(0);
-    expect(inWindow.length).to.equal(0);
-    expect(ready.length).to.equal(0);
-
-    // 8. Balance check
-    const MKT1After = await MKT1.balanceOf(instructor1.address);
-    const MKT2After = await MKT2.balanceOf(instructor1.address);
-    const ethAfter = await ethers.provider.getBalance(instructor1.address);
-
-    expect(MKT1After).to.be.gt(MKT1Before);
-    expect(MKT2After).to.be.gt(MKT2Before);
-    expect(ethAfter).to.be.gt(ethBefore); // withdraw sonrası eth arttı
   });
 
   // End of tests
@@ -1006,7 +1041,7 @@ describe("NewTreasury Contract Tests", function () {
 
 //courseOwnerToPayment[_courseReceiver][_courseId] // 0
 //ownedCourses[_courseReceiver] //değişmez
-//ownedCourseIndexPlusOne[_courseReceiver][_courseId] // 0
+//ownedCourseIndex[_courseReceiver][_courseId] // 0
 //hasOwnedCourse
 
 //Başarılı satış ve iade:
@@ -1017,7 +1052,7 @@ describe("NewTreasury Contract Tests", function () {
 
 //courseOwnerToPayment[_courseReceiver][_courseId] // paymentId tutuyor --> silindi onlyRefund diğer durumlarda stable değil
 //ownedCourses[_courseReceiver] //courseId array'e eklendi [0,1] olmalı. --> sonuncuyla yerdeğişti silindi
-//ownedCourseIndexPlusOne[_courseReceiver][_courseId] // kaçıncı indiste gerçek değer, --> silindi
+//ownedCourseIndex[_courseReceiver][_courseId] // kaçıncı indiste gerçek değer, --> silindi
 //hasOwnedCourse --> false
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1029,7 +1064,7 @@ describe("NewTreasury Contract Tests", function () {
 
 //courseOwnerToPayment[_courseReceiver][_courseId] // paymentId tutuyor --> silindi onlyRefund diğer durumlarda stable değil
 //ownedCourses[_courseReceiver] //courseId array'e eklendi [0,1] olmalı. --> sonuncuyla yerdeğişti silindi
-//ownedCourseIndexPlusOne[_courseReceiver][_courseId] // kaçıncı indiste gerçek değer, --> silindi
+//ownedCourseIndex[_courseReceiver][_courseId] // kaçıncı indiste gerçek değer, --> silindi
 //hasOwnedCourse --> false
 //payments[newPaymentId] // new payment sctruct --> .refunded
 
@@ -1040,6 +1075,6 @@ describe("NewTreasury Contract Tests", function () {
 
 //courseOwnerToPayment[_courseReceiver][_courseId] // paymentId tutuyor --> değişmez
 //ownedCourses[_courseReceiver] //courseId array'e eklendi [0,1] olmalı. --> değişmez
-//ownedCourseIndexPlusOne[_courseReceiver][_courseId] // kaçıncı indiste gerçek değer, --> değişmez
+//ownedCourseIndex[_courseReceiver][_courseId] // kaçıncı indiste gerçek değer, --> değişmez
 //hasOwnedCourse --> değişmez
 //payments[newPaymentId] // new payment sctruct --> değişmez

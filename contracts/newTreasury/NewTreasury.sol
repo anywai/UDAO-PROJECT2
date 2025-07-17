@@ -21,7 +21,7 @@ contract NewTreasury is AccessControl, EIP712, ReentrancyGuard {
     bytes32 public constant BACKEND_ROLE = keccak256("BACKEND_ROLE");
     bytes32 public constant FOUNDATION_ROLE = keccak256("FOUNDATION_ROLE");
 
-    address public foundationWallet; // address of the foundation wallet
+    address public foundationWallet;
     event FoundationWalletUpdated(
         address indexed newFoundationWallet,
         address indexed previousFoundationWallet
@@ -35,28 +35,22 @@ contract NewTreasury is AccessControl, EIP712, ReentrancyGuard {
         );
 
         foundationWallet = _foundationWallet;
-        _grantRole(FOUNDATION_ROLE, _foundationWallet); // ensure foundation wallet has the role
-        // grant also backend role to the foundation wallet
+        _grantRole(FOUNDATION_ROLE, _foundationWallet);
         _grantRole(BACKEND_ROLE, _foundationWallet);
 
-        // revoke the role from the previous foundation wallet if it was set
-        if (
-            hasRole(FOUNDATION_ROLE, msg.sender) &&
-            msg.sender != _foundationWallet
-        ) {
+        // revoke foundation&backend role from the previous foundation wallet
+        if (msg.sender != _foundationWallet) {
             _revokeRole(FOUNDATION_ROLE, msg.sender);
-        }
-        // revoke backend role from the previous foundation wallet if it was set
-        if (
-            hasRole(BACKEND_ROLE, msg.sender) && msg.sender != _foundationWallet
-        ) {
-            _revokeRole(BACKEND_ROLE, msg.sender);
+            // if still has backend role, revoke it
+            if (hasRole(BACKEND_ROLE, msg.sender)) {
+                _revokeRole(BACKEND_ROLE, msg.sender);
+            }
         }
 
         emit FoundationWalletUpdated(_foundationWallet, msg.sender);
     }
 
-    address public udaoTokenAddress; // address of the udao token, set by the foundation
+    address public udaoTokenAddress;
     event UdaoTokenAddressUpdated(address indexed newUdaoTokenAddress);
 
     function setUdaoTokenAddress(address _udaoTokenAddress) external {
@@ -71,7 +65,7 @@ contract NewTreasury is AccessControl, EIP712, ReentrancyGuard {
         emit UdaoTokenAddressUpdated(_udaoTokenAddress);
     }
 
-    address public governanceContract; // address of the governance treasury
+    address public governanceContract;
     event GovernanceContractUpdated(address indexed newGovernanceContract);
 
     function setGovernanceContract(address _governanceContract) external {
@@ -149,6 +143,7 @@ contract NewTreasury is AccessControl, EIP712, ReentrancyGuard {
     mapping(uint256 => Course) public courses; // courseId => Course struct
     mapping(uint256 => address[]) public authorizedWithdrawers; // courseId => list of authorized withdrawers
     mapping(address => mapping(uint256 => bool)) public isAuthorizedWithdrawer; // withdrawer => courseId => true if the withdrawer is authorized for the course
+    mapping(bytes32 => uint256) public uriToCourseId;
 
     event CourseCreated(uint256 indexed courseId);
     struct CreateCourseVoucher {
@@ -170,12 +165,16 @@ contract NewTreasury is AccessControl, EIP712, ReentrancyGuard {
         address redeemer = voucher.redeemer;
         uint256 validUntil = voucher.validUntil;
 
+        // hash URI
+        bytes32 uriHash = keccak256(bytes(uri));
+        require(uriToCourseId[uriHash] == 0, "URI already used");
+
         // create digest for the voucher
         bytes32 digest = _hashTypedDataV4(
             keccak256(
                 abi.encode(
                     CREATE_COURSE_VOUCHER_TYPEHASH,
-                    keccak256(bytes(uri)),
+                    uriHash,
                     keccak256(abi.encodePacked(withdrawers)),
                     redeemer,
                     validUntil
@@ -196,8 +195,9 @@ contract NewTreasury is AccessControl, EIP712, ReentrancyGuard {
 
         courseCounter++;
         uint256 newCourseId = courseCounter;
-
         courses[newCourseId] = Course({uri: uri, sellable: true});
+        // save uriHash to courseId to eliminate duplicate courses
+        uriToCourseId[uriHash] = newCourseId;
 
         _setAuthorizedWithdrawers(newCourseId, withdrawers);
 
@@ -223,10 +223,12 @@ contract NewTreasury is AccessControl, EIP712, ReentrancyGuard {
         // local copy to optimize calldata reads
         uint256 courseId = voucher.courseId;
         bool sellable = voucher.sellable;
-        string memory uri = voucher.uri;
+        string memory newUri = voucher.uri;
         address[] memory withdrawers = voucher.withdrawers;
         address redeemer = voucher.redeemer;
         uint256 validUntil = voucher.validUntil;
+
+        bytes32 newUriHash = keccak256(bytes(newUri));
 
         // create digest
         bytes32 digest = _hashTypedDataV4(
@@ -235,7 +237,7 @@ contract NewTreasury is AccessControl, EIP712, ReentrancyGuard {
                     UPDATE_COURSE_VOUCHER_TYPEHASH,
                     courseId,
                     sellable,
-                    keccak256(bytes(uri)),
+                    newUriHash,
                     keccak256(abi.encodePacked(withdrawers)),
                     redeemer,
                     validUntil
@@ -252,19 +254,38 @@ contract NewTreasury is AccessControl, EIP712, ReentrancyGuard {
         );
 
         // check withdrawers and redeemer and uri are valid
-        _validateWithdrawersAndRedeemer(withdrawers, uri);
+        _validateWithdrawersAndRedeemer(withdrawers, newUri);
 
         require(courseId > 0 && courseId <= courseCounter, "Invalid courseId");
 
+        // get existing course
+        Course storage courseExisting = courses[courseId];
+
+        // get old URI and compare
+        bytes32 oldUriHash = keccak256(bytes(courseExisting.uri));
+
+        // only if uri is changing
+        if (oldUriHash != newUriHash) {
+            require(uriToCourseId[newUriHash] == 0, "New URI already used");
+
+            delete uriToCourseId[oldUriHash]; // clean up old
+            uriToCourseId[newUriHash] = courseId; // assign new
+
+            courseExisting.uri = newUri;
+        }
+
         // clear previous authorized withdrawers
-        address[] memory previousWithdrawers = authorizedWithdrawers[courseId];
-        for (uint i = 0; i < previousWithdrawers.length; i++) {
+        address[] storage previousWithdrawers = authorizedWithdrawers[courseId]; //storage gas cheper in this case
+
+        uint256 len = previousWithdrawers.length;
+        for (uint256 i = 0; i < len; i++) {
             isAuthorizedWithdrawer[previousWithdrawers[i]][courseId] = false;
         }
-        authorizedWithdrawers[courseId] = new address[](0);
 
-        // update
-        courses[courseId] = Course({uri: uri, sellable: sellable});
+        // update sellable
+        if (courseExisting.sellable != sellable) {
+            courseExisting.sellable = sellable;
+        }
         _setAuthorizedWithdrawers(courseId, withdrawers);
 
         emit CourseUpdated(courseId);
@@ -274,19 +295,18 @@ contract NewTreasury is AccessControl, EIP712, ReentrancyGuard {
         address[] memory _withdrawers,
         string memory _uri
     ) internal view {
-        require(_withdrawers.length > 0, "Withdrawers required");
-        // _withdrawers[0] yerine herhangi biri şeklinde taranabilir belki. Yada 0x0 komple engellenir
-        require(_withdrawers[0] != address(0), "Main withdrawer required");
-        require(
-            _withdrawers.length <= maxWithdrawer,
-            "Max withdrawers exceeded"
-        );
+        uint256 len = _withdrawers.length; //array length
+
+        require(len > 0, "Withdrawers required");
+
+        require(len <= maxWithdrawer, "Max withdrawers exceeded");
 
         bool isRedeemerAuthorized = false;
-        for (uint256 i = 0; i < _withdrawers.length; i++) {
-            if (_withdrawers[i] == msg.sender) {
+        for (uint256 i = 0; i < len; i++) {
+            address w = _withdrawers[i];
+            require(w != address(0), "Withdrawer cannot be zero address");
+            if (w == msg.sender) {
                 isRedeemerAuthorized = true;
-                break;
             }
         }
 
@@ -304,13 +324,12 @@ contract NewTreasury is AccessControl, EIP712, ReentrancyGuard {
         uint256 _courseId,
         address[] memory _withdrawers
     ) internal {
-        // elemanları tek tek arraye pushluyorsub bu doğrumu? eğer authorizedWithdrawers bütün pushlanırsa damı iyi?
-        for (uint256 i = 0; i < _withdrawers.length; i++) {
+        authorizedWithdrawers[_courseId] = _withdrawers;
+
+        uint256 len = _withdrawers.length;
+        for (uint256 i = 0; i < len; i++) {
             address w = _withdrawers[i];
-            if (w != address(0)) {
-                authorizedWithdrawers[_courseId].push(w);
-                isAuthorizedWithdrawer[w][_courseId] = true;
-            }
+            isAuthorizedWithdrawer[w][_courseId] = true;
         }
     }
 
@@ -320,11 +339,7 @@ contract NewTreasury is AccessControl, EIP712, ReentrancyGuard {
     event MaxWithdrawersUpdated(uint256 indexed maxWithdrawer);
 
     function setMaxWithdrawers(uint256 _maxWithdrawer) external {
-        require(
-            hasRole(BACKEND_ROLE, msg.sender) ||
-                hasRole(FOUNDATION_ROLE, msg.sender),
-            "Not authorized"
-        );
+        require(hasRole(BACKEND_ROLE, msg.sender), "Not authorized");
         require(_maxWithdrawer > 0, "Max withdrawers must be greater than 0");
         maxWithdrawer = _maxWithdrawer;
 
@@ -336,11 +351,7 @@ contract NewTreasury is AccessControl, EIP712, ReentrancyGuard {
     event RefundWindowUpdated(uint256 newRefundWindow);
 
     function setRefundWindow(uint256 _refundWindow) external {
-        require(
-            hasRole(BACKEND_ROLE, msg.sender) ||
-                hasRole(FOUNDATION_ROLE, msg.sender),
-            "Not authorized"
-        );
+        require(hasRole(BACKEND_ROLE, msg.sender), "Not authorized");
 
         uint256 oneDay = 24 * 60 * 60; // seconds in a day
 
@@ -365,11 +376,7 @@ contract NewTreasury is AccessControl, EIP712, ReentrancyGuard {
         uint256 _utFoundCut,
         uint256 _utGoverCut
     ) external {
-        require(
-            hasRole(BACKEND_ROLE, msg.sender) ||
-                hasRole(FOUNDATION_ROLE, msg.sender),
-            "Not authorized"
-        );
+        require(hasRole(BACKEND_ROLE, msg.sender), "Not authorized");
 
         uint256 newATotal = _atFoundCut + _atGoverCut;
         require(newATotal < 100000, "Cuts can't exceed 100%");
@@ -436,8 +443,7 @@ contract NewTreasury is AccessControl, EIP712, ReentrancyGuard {
     mapping(uint256 => mapping(uint256 => uint256)) public courseSaleRecords; // courseId => (saleCounterPerCourse => paymentId) start from 1 - 1
 
     mapping(address => uint256[]) public ownedCourses; // aUser => list of courseIds owned by the buyer
-    mapping(address => mapping(uint256 => uint256))
-        public ownedCourseIndexPlusOne; // aUser => courseId => index in the ownedCourses array
+    mapping(address => mapping(uint256 => uint256)) public ownedCourseIndex; // aUser => courseId => index in the ownedCourses array
     mapping(address => mapping(uint256 => bool)) public hasOwnedCourse; // aUser => courseId => true if the buyer has owned the course
     // refund directly to the course receiver - courseID
     mapping(address => mapping(uint256 => uint256)) public courseOwnerToPayment; // aUser => courseId => paymentId
@@ -601,7 +607,7 @@ contract NewTreasury is AccessControl, EIP712, ReentrancyGuard {
         // add the courseId to the ownedCourses mapping
         ownedCourses[_courseReceiver].push(_courseId);
         // save the index of the courseId in the ownedCourses mapping
-        ownedCourseIndexPlusOne[_courseReceiver][_courseId] =
+        ownedCourseIndex[_courseReceiver][_courseId] =
             ownedCourses[_courseReceiver].length -
             1; // aslında +1 index değil çünkü satın alımda 0 pushlandı.
         // update hasOwnedCourse mapping
@@ -736,19 +742,19 @@ contract NewTreasury is AccessControl, EIP712, ReentrancyGuard {
         // update hasOwnedCourse mapping
         hasOwnedCourse[_receiver][_courseId] = false;
         // remove the courseId from the ownedCourses list and update the indexes
-        uint256 courseIndex = ownedCourseIndexPlusOne[_receiver][_courseId];
-        require(courseIndex > 0, "Course not found in receiver's owned list"); // bu gereksiz
+        uint256 courseIndex = ownedCourseIndex[_receiver][_courseId];
+        require(courseIndex > 0, "Course not found in receiver's owned list");
         uint256 lastIndex = ownedCourses[_receiver].length - 1;
         uint256 lastCourseId = ownedCourses[_receiver][lastIndex];
 
         //swap & pop
         if (courseIndex != lastIndex) {
             ownedCourses[_receiver][courseIndex] = lastCourseId; // swap with the last element
-            ownedCourseIndexPlusOne[_receiver][lastCourseId] = courseIndex; // update the index of the last element
+            ownedCourseIndex[_receiver][lastCourseId] = courseIndex; // update the index of the last element
         }
 
         ownedCourses[_receiver].pop(); // remove the last element
-        delete ownedCourseIndexPlusOne[_receiver][_courseId]; // delete the index of the removed courseId
+        delete ownedCourseIndex[_receiver][_courseId]; // delete the index of the removed courseId
         delete courseOwnerToPayment[_receiver][_courseId]; // remove the paymentId for the course owner
 
         // Transfer refund
@@ -774,14 +780,10 @@ contract NewTreasury is AccessControl, EIP712, ReentrancyGuard {
     event MaxWithdrawBatchSizeUpdated(uint256 indexed maxWithdrawBatchSize);
 
     /////### WITHDRAW LOGIC ###/////
-    uint256 public maxWithdrawBatchSize = 100; // max 100 sales can be withdrawn at once
+    uint256 public maxWithdrawBatchSize = 10; // max 10 sales can be withdrawn at once
 
     function setMaxWithdrawRange(uint256 newRange) external {
-        require(
-            hasRole(BACKEND_ROLE, msg.sender) ||
-                hasRole(FOUNDATION_ROLE, msg.sender),
-            "Not authorized"
-        );
+        require(hasRole(BACKEND_ROLE, msg.sender), "Not authorized");
         require(newRange > 0, "Max withdraw range must be greater than 0");
         maxWithdrawBatchSize = newRange;
 
@@ -885,7 +887,6 @@ contract NewTreasury is AccessControl, EIP712, ReentrancyGuard {
             p.isWithdrawn = true;
 
             try this.attemptSingleWithdrawOrRevert(paymentId, msg.sender) {
-                // no rollback gas efficient on here // p.isWithdrawn = true;
                 withdrawnCompleted++;
             } catch {
                 p.isWithdrawn = false; // rollback if transfer failed
@@ -1016,7 +1017,6 @@ contract NewTreasury is AccessControl, EIP712, ReentrancyGuard {
         return ownedCourses[user];
     }
 
-    // bu alttaki 2 getterın gerektiğine inanmıyorum.
     function getCourse(
         uint256 courseId
     ) external view returns (string memory uri, bool sellable) {
@@ -1062,7 +1062,6 @@ contract NewTreasury is AccessControl, EIP712, ReentrancyGuard {
     receive() external payable {}
 }
 
-// TODO BATU1 voucher reuse (Replay Attack) problemi neredeyse yok dilenirse, dilenirse createCourse fonksiyonuna aynı uri'ın kullanımı engellenebilir
 // TODO BATU2 testlerde encodePacked'dan encode'a geç daha sonra.
 // keccak256(abi.encodePacked(withdrawers))     // Hash collision riski vardır, tip ve sınır bilgisi kaybolur
 // keccak256(abi.encode(withdrawers))           // Daha güvenli, Array length + elemanları tam olarak kayıtlı olur.
@@ -1076,4 +1075,7 @@ contract NewTreasury is AccessControl, EIP712, ReentrancyGuard {
 // withdrawers bir address[] olduğu için her zaman abi.encode kullan.
 
 // TODO BATU3 calculate shares best efective yol mu kontrol et
-// TODO BATU4 ownedCourseIndexPlusOne bu array 1 index değil gerçek index. İsimlendirmeyi düzelt
+
+// ?? SafeERC20 kullanımın doğru. Ancak IERC20(_token).totalSupply() > 0 ile token validasyonu biraz zayıf. Fake tokenlar bunu geçebilir.
+// ?? receive() fonksiyonun sadece payable açılmış, ama native token kullanımı kontrol edilmediği yerlerde potansiyel güvenlik riski doğabilir.
+// TODO BATU getCourse ve getPayment getterlarının gereksiz olduğunu düşünüyorum.
