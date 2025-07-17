@@ -361,12 +361,12 @@ contract NewTreasury is AccessControl, EIP712, ReentrancyGuard {
     }
 
     // course sale cuts with any other token else udao
-    uint256 public atFoundCut = 4000; // %4 foundation cut (any token)
+    uint256 public atFoundCut = 6000; // %4 foundation cut (any token)
     uint256 public atGoverCut = 1000; // %1 governance cut (any token)
 
     // course sale cuts with udao token
     uint256 public utFoundCut = 4000; // %4 foundation cut (udao)
-    uint256 public utGoverCut = 1000; // %1 governance cut (udao)
+    uint256 public utGoverCut = 500; // %1 governance cut (udao)
 
     event CourseCutsUpdated();
 
@@ -553,16 +553,8 @@ contract NewTreasury is AccessControl, EIP712, ReentrancyGuard {
                 "Incorrect amount sent for native token payment"
             );
         } else {
-            require(
-                IERC20(_tokenAddress).totalSupply() > 0,
-                "Invalid or empty ERC20 token"
-            );
-
             // payment in erc20 token
-            require(
-                msg.value == 0,
-                "Native token payment not allowed for ERC20 token purchase"
-            );
+            require(msg.value == 0, "Use ERC20, not native token");
             // transfer the erc20 token from redeemer to this contract
             IERC20(_tokenAddress).safeTransferFrom(
                 msg.sender,
@@ -880,16 +872,14 @@ contract NewTreasury is AccessControl, EIP712, ReentrancyGuard {
             if (
                 p.isRefunded ||
                 p.isWithdrawn ||
-                p.endOfRefundWindow >= block.timestamp
+                p.endOfRefundWindow > block.timestamp
             ) continue;
-
-            // mark as withdrawn before attempting (reentrancy protection)
-            p.isWithdrawn = true;
 
             try this.attemptSingleWithdrawOrRevert(paymentId, msg.sender) {
                 withdrawnCompleted++;
             } catch {
-                p.isWithdrawn = false; // rollback if transfer failed
+                // nothing
+                //if needen: emit CourseWithdrawFailed(courseId, paymentId, msg.sender, reason);
             }
         }
 
@@ -908,7 +898,9 @@ contract NewTreasury is AccessControl, EIP712, ReentrancyGuard {
     ) external {
         require(msg.sender == address(this), "Only callable internally");
 
-        Payment memory p = payments[paymentId];
+        Payment storage p = payments[paymentId];
+        // mark as withdrawn before attempting (reentrancy protection)
+        p.isWithdrawn = true; //if reverted, this will not be set
 
         address tokenAddress = p.tokenAddress;
         uint256 iShare = p.instructorShare;
@@ -1059,23 +1051,33 @@ contract NewTreasury is AccessControl, EIP712, ReentrancyGuard {
         );
     }
 
-    receive() external payable {}
+    receive() external payable {
+        revert("Direct ETH not accepted"); // prevent direct ETH transfers
+    }
 }
 
-// TODO BATU2 testlerde encodePacked'dan encode'a geç daha sonra.
-// keccak256(abi.encodePacked(withdrawers))     // Hash collision riski vardır, tip ve sınır bilgisi kaybolur
-// keccak256(abi.encode(withdrawers))           // Daha güvenli, Array length + elemanları tam olarak kayıtlı olur.
-
-// address[] memory a = [0x1234, 0x5678]; ve address[] memory b = [0x12345678];
-// keccak256(abi.encodePacked(a)) == keccak256(abi.encodePacked(b))
-
-// Concatenation için (string vs)	!!--> abi.encodePacked (ama dikkatli)
-// abi.encode(withdrawers)	-->	Hash için doğru
-
-// withdrawers bir address[] olduğu için her zaman abi.encode kullan.
-
-// TODO BATU3 calculate shares best efective yol mu kontrol et
-
-// ?? SafeERC20 kullanımın doğru. Ancak IERC20(_token).totalSupply() > 0 ile token validasyonu biraz zayıf. Fake tokenlar bunu geçebilir.
-// ?? receive() fonksiyonun sadece payable açılmış, ama native token kullanımı kontrol edilmediği yerlerde potansiyel güvenlik riski doğabilir.
 // TODO BATU getCourse ve getPayment getterlarının gereksiz olduğunu düşünüyorum.
+
+/*
+NOTE:
+Eğer ileride farklı token’lar için farklı cut yapısı (örneğin USDC, USDT, DAI özel oranlar) gerekiyorsa, 
+şöyle extensible yapabilirsin:
+
+struct Cut {
+    uint256 foundation;
+    uint256 governance;
+}
+
+mapping(address => Cut) public tokenCuts;
+
+ve
+
+Cut memory cut = tokenCuts[_tokenAddress];
+if (cut.foundation == 0 && cut.governance == 0) {
+    cut = tokenCuts[DEFAULT_TOKEN];
+}
+// ve setCourseCuts fonksiyonunda da bu mapping’i güncelleyebilirsin.
+NOTE:
+require(_tokenAddress.code.length > 0, "Invalid token contract");
+gerekirse böyle bir şey kontrat çağrışlarını engellemek için kullanılabilir.
+*/
