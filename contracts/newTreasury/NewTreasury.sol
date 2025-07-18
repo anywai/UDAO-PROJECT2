@@ -735,7 +735,7 @@ contract NewTreasury is AccessControl, EIP712, ReentrancyGuard {
         hasOwnedCourse[_receiver][_courseId] = false;
         // remove the courseId from the ownedCourses list and update the indexes
         uint256 courseIndex = ownedCourseIndex[_receiver][_courseId];
-        require(courseIndex > 0, "Course not found in receiver's owned list");
+        require(courseIndex > 0, "Course not found in receiver's owned list"); //buraya gelemedim ben
         uint256 lastIndex = ownedCourses[_receiver].length - 1;
         uint256 lastCourseId = ownedCourses[_receiver][lastIndex];
 
