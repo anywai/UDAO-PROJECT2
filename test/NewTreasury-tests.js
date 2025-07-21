@@ -296,93 +296,45 @@ async function buyCourseHelper({
   expectRevertWith,
   expectSuccessWith,
 }) {
-  ///prepare expectations
-  const currentPaymentCounter = await NewTreasury.paymentCounter();
-  const currentSaleCounterPerCourse = await NewTreasury.saleCounterPerCourse(courseId);
-  const currentCourseOwnerToPayment = await NewTreasury.courseOwnerToPayment(courseReceiver, courseId);
-  const currentOwnedCourses = await NewTreasury.getOwnedCourses(courseReceiver);
-  const currentHasOwnedCourse = await NewTreasury.hasOwnedCourse(courseReceiver, courseId);
-  const currentOwnedCourseIndex = await NewTreasury.ownedCourseIndex(courseReceiver, courseId);
-  const newPaymentId = currentPaymentCounter + 1n;
-  const newCourseSpecificSaleId = currentSaleCounterPerCourse + 1n;
-
-  const expectFail = {
-    paymentId: newPaymentId, // yok, olmayan bir paymentId
-    courseId: courseId, // alınmak istenen courseId
-    courseSpecificSaleId: newCourseSpecificSaleId, // yok, satış gerçekleşmedi
-    courseReceiver: courseReceiver, // alınmak istenen courseReceiver
-
-    paymentCounter: currentPaymentCounter, // artmadı çünkü fail
-    saleCounterOfCourse: currentSaleCounterPerCourse, // artmadı çünkü fail
-    courseSaleRecords: 0, // ---> (courseId, saleCounterOfCourse) to paymentId so that 0
-
-    courseOwnerToPayment: currentCourseOwnerToPayment, // yok, 0 amaaaa, adamda ya varsa
-    ownedCoursesArrayOfReceiver: currentOwnedCourses, // değişmedi eski array
-    ownedCourseIndex: currentOwnedCourseIndex, // yok kurs arraye eklenmedi 0 ama adamda ya varsa
-    hasOwnedCourse: currentHasOwnedCourse, // eski durum korunur, satış yok değişim yok
-
-    payment: {
-      courseId: 0n,
-      payer: ethers.ZeroAddress,
-      courseReceiver: ethers.ZeroAddress,
-      tokenAddress: ethers.ZeroAddress,
-      totalAmount: 0n,
-      instructorShare: 0n,
-      foundationShare: 0n,
-      governanceShare: 0n,
-      endOfRefundWindow: 0n,
-      isRefunded: false,
-      isWithdrawn: false,
-    },
+  // Prepare voucher input, current contract state, and desired states
+  const input = {
+    courseId,
+    tokenAddress,
+    coursePrice,
+    courseReceiver,
+    redeemer,
+  };
+  const current = {
+    paymentCounter: await NewTreasury.paymentCounter(),
+    saleCounterPerCourse: await NewTreasury.saleCounterPerCourse(courseId),
+    courseOwnerToPayment: await NewTreasury.courseOwnerToPayment(courseReceiver, courseId),
+    ownedCourses: await NewTreasury.getOwnedCourses(courseReceiver),
+    hasOwnedCourse: await NewTreasury.hasOwnedCourse(courseReceiver, courseId),
+    ownedCourseIndex: await NewTreasury.ownedCourseIndex(courseReceiver, courseId),
+    udaoTokenAddress: await NewTreasury.udaoTokenAddress(),
+    refundWindow: await NewTreasury.refundWindow(),
+    utFoundCut: await NewTreasury.utFoundCut(),
+    utGoverCut: await NewTreasury.utGoverCut(),
+    atFoundCut: await NewTreasury.atFoundCut(),
+    atGoverCut: await NewTreasury.atGoverCut(),
+  };
+  const desired = {
+    paymentId: current.paymentCounter + 1n, // new paymentId
+    courseSpecificSaleId: current.saleCounterPerCourse + 1n, // new saleId
   };
 
-  const newOwnedCourses = currentOwnedCourses.length === 0 ? [0, courseId] : [...currentOwnedCourses, courseId];
-  // 📌 COURSE CUT CALCULATION (same logic as contract)
-  const isUdao = tokenAddress === (await NewTreasury.udaoTokenAddress());
-  let foundCut, goverCut;
-  if (isUdao) {
-    foundCut = await NewTreasury.utFoundCut();
-    goverCut = await NewTreasury.utGoverCut();
-  } else {
-    foundCut = await NewTreasury.atFoundCut();
-    goverCut = await NewTreasury.atGoverCut();
-  }
-  const foundationShare = (coursePrice * foundCut) / 100000n;
-  const governanceShare = (coursePrice * goverCut) / 100000n;
-  const instructorShare = coursePrice - foundationShare - governanceShare;
-  const refundWindow = await NewTreasury.refundWindow();
+  // Get expected contract state after buy operation
+  const waitSuccess =
+    expectSuccessWith && !expectRevertWith
+      ? true
+      : expectRevertWith && !expectSuccessWith
+      ? false
+      : (() => {
+          throw new Error("Exactly one of expectSuccessWith or expectRevertWith must be defined.");
+        })();
+  const expectedOutcome = await _prepareExpectedBuyStates(input, current, desired, waitSuccess);
 
-  const expectSuccess = {
-    paymentId: newPaymentId, // valid, oluşturuldu
-    courseId: courseId, // alınmak istenen courseId
-    courseSpecificSaleId: newCourseSpecificSaleId, // valid, satış gerçekleşti
-    courseReceiver: courseReceiver, // alınmak istenen courseReceiver
-
-    paymentCounter: currentPaymentCounter + 1n, //inc counter ++
-    saleCounterOfCourse: currentSaleCounterPerCourse + 1n, //inc counter ++
-    courseSaleRecords: newPaymentId, // yeni paymentId'yi tutuyor
-
-    courseOwnerToPayment: newPaymentId, // yeni paymentId'yi tutuyor
-    ownedCoursesArrayOfReceiver: newOwnedCourses, // yeni array, alın++++++++++++++++++++++++++++++++++++an kurs eklendi
-    ownedCourseIndex: newOwnedCourses.length - 1, // bir indis değeri atandı
-    hasOwnedCourse: true, // true, artık bu kursa sahip
-
-    payment: {
-      courseId: BigInt(courseId),
-      payer: redeemer.address,
-      courseReceiver: courseReceiver,
-      tokenAddress: tokenAddress,
-      totalAmount: coursePrice,
-      instructorShare: instructorShare,
-      foundationShare: foundationShare,
-      governanceShare: governanceShare,
-      endOfRefundWindow: BigInt(now) + refundWindow,
-      isRefunded: false,
-      isWithdrawn: false,
-    },
-  };
-
-  // get balances before transaction
+  // Get balances before transaction
   const beforeTxBalances = await getBalances({
     payer: redeemer.address,
     courseReceiver: courseReceiver,
@@ -400,31 +352,28 @@ async function buyCourseHelper({
     validUntil: validUntil,
   });
 
-  let tx;
-  let expectedCourseState;
+  let tx = null;
   let gasCost = 0n;
 
-  if (expectRevertWith) {
+  if (!waitSuccess) {
     await expect(
       NewTreasury.connect(redeemer).buyCourse(buyVoucher, {
         value: nativeMsgValue,
       })
     ).to.be.revertedWith(expectRevertWith);
-    expectedCourseState = await expectBuy(expectFail);
     // not possible to catch gas cost on revert
-  } else if (expectSuccessWith) {
+  } else if (waitSuccess) {
     tx = await NewTreasury.connect(redeemer).buyCourse(buyVoucher, {
       value: nativeMsgValue,
     });
-    await expect(tx).to.emit(NewTreasury, expectSuccessWith).withArgs(newPaymentId, courseId, courseReceiver);
-    expectedCourseState = await expectBuy(expectSuccess);
+    await expect(tx).to.emit(NewTreasury, expectSuccessWith).withArgs(desired.paymentId, courseId, courseReceiver);
     // catch gas cost
     const receipt = await tx.wait();
     const effectiveGasPrice = receipt.effectiveGasPrice ?? receipt.gasPrice ?? 0n;
     gasCost = receipt.gasUsed * effectiveGasPrice;
-  } else {
-    throw new Error("What you expect? No success or revert condition provided. --buyCourseHelper--");
   }
+
+  await _expectBuy(input, desired, expectedOutcome);
 
   // check balances after transaction
   await checkBalancesAfter({
@@ -436,33 +385,102 @@ async function buyCourseHelper({
   });
 
   return {
-    paymentId: expectedCourseState.paymentId,
-    courseId: expectedCourseState.courseId,
-    courseReceiver: expectedCourseState.courseReceiver,
-    afterBuyReceiverOwnedCourses: expectedCourseState.ownedCoursesArrayOfReceiver,
-    courseSpecificSaleId: expectedCourseState.courseSpecificSaleId,
+    // desired if success
+    paymentId: desired.paymentId, // new paymentId
+    courseSpecificSaleId: desired.courseSpecificSaleId, // new saleId
+    // alredy know if success
+    courseId: courseId,
+    courseReceiver: courseReceiver,
     buyer: redeemer.address,
-
     tokenAddress: tokenAddress, // alındıysa tokenAddress
     coursePrice: coursePrice, // alındıysa coursePrice
-    instructorShare: instructorShare, // alındıysa instructorShare
-    foundationShare: foundationShare, // alındıysa foundationShare
-    governanceShare: governanceShare, // alındıysa governanceShare
-    endOfRefundWindow: BigInt(now) + refundWindow, // alındıysa endOfRefundWindow
-    isRefunded: false,
-    isWithdrawn: false,
+    // calculated
+    endOfRefundWindow: expectedOutcome.payment.endOfRefundWindow, // alındıysa endOfRefundWindow
+    afterBuyReceiverOwnedCourses: expectedOutcome.ownedCoursesArrayOfReceiver,
+    instructorShare: expectedOutcome.payment.instructorShare, //instructorShare, // alındıysa instructorShare
+    foundationShare: expectedOutcome.payment.foundationShare, // foundationShare, // alındıysa foundationShare
+    governanceShare: expectedOutcome.payment.governanceShare, // alındıysa governanceShare
 
     tx,
   };
 }
 
-async function expectBuy(expected) {
-  const {
-    paymentId,
-    courseId,
-    courseSpecificSaleId,
-    courseReceiver,
+async function _prepareExpectedBuyStates(input, current, desired, isSuccess) {
+  const isUdao = input.tokenAddress === current.udaoTokenAddress;
+  const foundCut = isUdao ? current.utFoundCut : current.atFoundCut;
+  const goverCut = isUdao ? current.utGoverCut : current.atGoverCut;
 
+  const foundationShare = (input.coursePrice * foundCut) / 100000n;
+  const governanceShare = (input.coursePrice * goverCut) / 100000n;
+  const instructorShare = input.coursePrice - foundationShare - governanceShare;
+
+  const endOfRefundWindow = BigInt(now) + current.refundWindow;
+
+  const newOwnedCourses =
+    current.ownedCourses.length === 0 ? [0, input.courseId] : [...current.ownedCourses, input.courseId];
+
+  const expectFail2 = {
+    paymentCounter: current.paymentCounter,
+    saleCounterOfCourse: current.saleCounterPerCourse,
+    courseSaleRecords: 0,
+
+    courseOwnerToPayment: current.courseOwnerToPayment,
+    ownedCoursesArrayOfReceiver: current.ownedCourses,
+    ownedCourseIndex: current.ownedCourseIndex,
+    hasOwnedCourse: current.hasOwnedCourse,
+
+    payment: {
+      courseId: 0n,
+      payer: ethers.ZeroAddress,
+      courseReceiver: ethers.ZeroAddress,
+      tokenAddress: ethers.ZeroAddress,
+      totalAmount: 0n,
+      instructorShare: 0n,
+      foundationShare: 0n,
+      governanceShare: 0n,
+      endOfRefundWindow: 0n,
+      isRefunded: false,
+      isWithdrawn: false,
+    },
+  };
+
+  const expectSuccess2 = {
+    paymentCounter: current.paymentCounter + 1n,
+    saleCounterOfCourse: current.saleCounterPerCourse + 1n,
+    courseSaleRecords: desired.paymentId,
+
+    courseOwnerToPayment: desired.paymentId,
+    ownedCoursesArrayOfReceiver: newOwnedCourses,
+    ownedCourseIndex: newOwnedCourses.length - 1,
+    hasOwnedCourse: true,
+
+    payment: {
+      courseId: BigInt(input.courseId),
+      payer: input.redeemer.address,
+      courseReceiver: input.courseReceiver,
+      tokenAddress: input.tokenAddress,
+      totalAmount: input.coursePrice,
+      instructorShare,
+      foundationShare,
+      governanceShare,
+      endOfRefundWindow,
+      isRefunded: false,
+      isWithdrawn: false,
+    },
+  };
+
+  if (!isSuccess) {
+    return expectFail2;
+  } else if (isSuccess) {
+    return expectSuccess2;
+  }
+}
+
+async function _expectBuy(input, desired, expected) {
+  const { courseId, courseReceiver } = input;
+  const { paymentId, courseSpecificSaleId } = desired;
+
+  const {
     paymentCounter,
     saleCounterOfCourse,
     courseSaleRecords,
@@ -519,25 +537,39 @@ async function expectBuy(expected) {
   // 8. hasOwnedCourse
   const hasOwned = await NewTreasury.hasOwnedCourse(courseReceiver, courseId);
   expect(hasOwned).to.equal(hasOwnedCourse);
-
-  return {
-    paymentId: paymentId,
-    courseId: courseId,
-    courseReceiver: courseReceiver,
-    courseSpecificSaleId: courseSpecificSaleId,
-    payment: actualPayment,
-  };
 }
 
 async function refundCourseHelper({ paymentId, redeemer, validUntil, expectRevertWith, expectSuccessWith }) {
+  // Prepare input, desired refund payment, current contract state,
+  const input = {
+    paymentId,
+    redeemer,
+  };
+  const payment = await NewTreasury.getPayment(paymentId);
+  const current = {
+    courseOwnerToPayment: await NewTreasury.courseOwnerToPayment(payment.courseReceiver, payment.courseId),
+    ownedCourses: await NewTreasury.getOwnedCourses(payment.courseReceiver),
+    ownedCourseIndex: await NewTreasury.ownedCourseIndex(payment.courseReceiver, payment.courseId),
+    hasOwnedCourse: await NewTreasury.hasOwnedCourse(payment.courseReceiver, payment.courseId),
+  };
+  // Get expected contract state after buy operation
+  const waitSuccess =
+    expectSuccessWith && !expectRevertWith
+      ? true
+      : expectRevertWith && !expectSuccessWith
+      ? false
+      : (() => {
+          throw new Error("Exactly one of expectSuccessWith or expectRevertWith must be defined.");
+        })();
   // push paymentId to common helper to get expected values
-  const cH = await _refundCoursesCommonHelper({ paymentId, redeemer });
+  const expectedOutcome = await _prepareExpectedRefundStates(input, payment, current, waitSuccess);
+
   // get balances before transaction
   const beforeTxBalances = await getBalances({
-    payer: cH.payer,
-    courseReceiver: cH.courseReceiver,
+    payer: payment.payer,
+    courseReceiver: payment.courseReceiver,
     contract: NewTreasury.target,
-    tokenAddress: cH.tokenAddress,
+    tokenAddress: payment.tokenAddress,
     refundCaller: redeemer.address, // redeemer is the caller
   });
 
@@ -547,45 +579,50 @@ async function refundCourseHelper({ paymentId, redeemer, validUntil, expectRever
     redeemer: redeemer.address,
     validUntil,
   });
-  //const tx = await NewTreasury.connect(redeemer).refundCourse(refundVoucher);
 
   let tx;
-  let expectedCourseState;
   let gasCost = 0n;
 
-  if (expectRevertWith) {
+  if (!waitSuccess) {
     await expect(NewTreasury.connect(redeemer).refundCourse(refundVoucher)).to.be.revertedWith(expectRevertWith);
-    expectedCourseState = await expectRefund(cH.expectFail);
   } else if (expectSuccessWith) {
     tx = await NewTreasury.connect(redeemer).refundCourse(refundVoucher);
     await expect(tx)
       .to.emit(NewTreasury, expectSuccessWith)
-      .withArgs(cH.paymentId, cH.courseId, cH.courseReceiver, cH.coursePrice, cH.tokenAddress, cH.payer);
-    expectedCourseState = await expectRefund(cH.expectSuccess);
+      .withArgs(
+        paymentId,
+        payment.courseId,
+        payment.courseReceiver,
+        payment.totalAmount,
+        payment.tokenAddress,
+        payment.payer
+      );
 
     const receipt = await tx.wait();
     const effectiveGasPrice = receipt.effectiveGasPrice ?? receipt.gasPrice ?? 0n;
     gasCost = receipt.gasUsed * effectiveGasPrice;
-  } else {
+  } else if (waitSuccess) {
     throw new Error("No expectRevertWith or expectSuccessWith provided --refundCourseHelper--");
   }
+
+  await _expectRefund(input, expectedOutcome);
 
   // check balances after transaction
   await checkBalancesAfter({
     operation: "refund", // if refund use "refund"
     gasCost: gasCost, // 0 if revert, otherwise gas used success
     beforeTxBalances: beforeTxBalances,
-    coursePrice: cH.coursePrice,
-    tokenAddress: cH.tokenAddress,
+    coursePrice: payment.totalAmount,
+    tokenAddress: payment.tokenAddress,
   });
 
   return {
-    paymentId: cH.paymentId,
-    courseId: cH.courseId,
-    courseReceiver: cH.courseReceiver,
-    coursePrice: cH.coursePrice,
-    tokenAddress: cH.tokenAddress,
-    payer: cH.payer,
+    paymentId: paymentId,
+    courseId: payment.courseId,
+    courseReceiver: payment.courseReceiver,
+    coursePrice: payment.totalAmount,
+    tokenAddress: payment.tokenAddress,
+    payer: payment.payer,
     redeemer: redeemer.address,
     tx,
   };
@@ -601,14 +638,36 @@ async function refundCourseByOwnerHelper({
 }) {
   // get paymentId from courseOwner + courseId and push to common helper
   const paymentId = await NewTreasury.courseOwnerToPayment(courseOwner, courseId);
-  const cH = await _refundCoursesCommonHelper({ paymentId, redeemer });
+  // Prepare input, desired refund payment, current contract state,
+  const input = {
+    paymentId,
+    redeemer,
+  };
+  const payment = await NewTreasury.getPayment(paymentId);
+  const current = {
+    courseOwnerToPayment: await NewTreasury.courseOwnerToPayment(payment.courseReceiver, payment.courseId),
+    ownedCourses: await NewTreasury.getOwnedCourses(payment.courseReceiver),
+    ownedCourseIndex: await NewTreasury.ownedCourseIndex(payment.courseReceiver, payment.courseId),
+    hasOwnedCourse: await NewTreasury.hasOwnedCourse(payment.courseReceiver, payment.courseId),
+  };
+  // Get expected contract state after buy operation
+  const waitSuccess =
+    expectSuccessWith && !expectRevertWith
+      ? true
+      : expectRevertWith && !expectSuccessWith
+      ? false
+      : (() => {
+          throw new Error("Exactly one of expectSuccessWith or expectRevertWith must be defined.");
+        })();
+
+  const expectedOutcome = await _prepareExpectedRefundStates(input, payment, current, waitSuccess);
 
   // get balances before transaction
   const beforeTxBalances = await getBalances({
-    payer: cH.payer,
-    courseReceiver: cH.courseReceiver,
+    payer: payment.payer,
+    courseReceiver: payment.courseReceiver,
     contract: NewTreasury.target,
-    tokenAddress: cH.tokenAddress,
+    tokenAddress: payment.tokenAddress,
     refundCaller: redeemer.address, // redeemer is the caller
   });
 
@@ -621,22 +680,25 @@ async function refundCourseByOwnerHelper({
   });
   //const tx = await NewTreasury.connect(redeemer).refundCourseByOwnerAndCourseId(refundVoucher);
   let tx;
-  let expectedCourseState;
   let gasCost = 0n;
 
-  if (expectRevertWith) {
+  if (!waitSuccess) {
     await expect(NewTreasury.connect(redeemer).refundCourseByOwnerAndCourseId(refundVoucher)).to.be.revertedWith(
       expectRevertWith
     );
-    expectedCourseState = await expectRefund(cH.expectFail);
-  } else if (expectSuccessWith) {
+  } else if (waitSuccess) {
     tx = await NewTreasury.connect(redeemer).refundCourseByOwnerAndCourseId(refundVoucher);
 
     await expect(tx)
       .to.emit(NewTreasury, expectSuccessWith)
-      .withArgs(cH.paymentId, cH.courseId, cH.courseReceiver, cH.coursePrice, cH.tokenAddress, cH.payer);
-
-    expectedCourseState = await expectRefund(cH.expectSuccess);
+      .withArgs(
+        paymentId,
+        payment.courseId,
+        payment.courseReceiver,
+        payment.totalAmount,
+        payment.tokenAddress,
+        payment.payer
+      );
 
     const receipt = await tx.wait();
     const effectiveGasPrice = receipt.effectiveGasPrice ?? receipt.gasPrice ?? 0n;
@@ -645,140 +707,91 @@ async function refundCourseByOwnerHelper({
     throw new Error("No expectRevertWith or expectSuccessWith provided --refundCourseByOwnerHelper--");
   }
 
+  await _expectRefund(input, expectedOutcome);
+
   // check balances after transaction
   await checkBalancesAfter({
     operation: "refund",
     gasCost: gasCost,
     beforeTxBalances: beforeTxBalances,
-    coursePrice: cH.coursePrice,
-    tokenAddress: cH.tokenAddress,
+    coursePrice: payment.totalAmount,
+    tokenAddress: payment.tokenAddress,
   });
 
   return {
-    paymentId: cH.paymentId,
-    courseId: cH.courseId,
-    courseReceiver: cH.courseReceiver,
-    coursePrice: cH.coursePrice,
-    tokenAddress: cH.tokenAddress,
-    payer: cH.payer,
+    paymentId: paymentId,
+    courseId: payment.courseId,
+    courseReceiver: payment.courseReceiver,
+    coursePrice: payment.totalAmount,
+    tokenAddress: payment.tokenAddress,
+    payer: payment.payer,
     redeemer: redeemer.address,
     tx,
   };
 }
 
-async function _refundCoursesCommonHelper({ paymentId, redeemer }) {
-  // get current payment struct
-  const paymentStruct = await NewTreasury.getPayment(paymentId);
-  const {
-    courseId,
-    payer,
-    courseReceiver,
-    tokenAddress,
-    totalAmount,
-    instructorShare,
-    foundationShare,
-    governanceShare,
-    endOfRefundWindow,
-    isRefunded,
-    isWithdrawn,
-  } = paymentStruct;
-
-  const courseOwnerToPaymentBefore = await NewTreasury.courseOwnerToPayment(courseReceiver, courseId);
-  const ownedCoursesBefore = await NewTreasury.getOwnedCourses(courseReceiver);
-  const indexPlusOneBefore = await NewTreasury.ownedCourseIndex(courseReceiver, courseId);
-  const hasOwnedBefore = await NewTreasury.hasOwnedCourse(courseReceiver, courseId);
+async function _prepareExpectedRefundStates(input, payment, current, waitSuccess) {
+  const { paymentId, redeemer } = input;
 
   const expectFail = {
-    paymentId: paymentId,
-    courseId: courseId,
-    courseReceiver: courseReceiver,
-
-    courseOwnerToPayment: courseOwnerToPaymentBefore,
-    ownedCoursesArrayOfReceiver: ownedCoursesBefore,
-    ownedCourseIndex: indexPlusOneBefore,
-    hasOwnedCourse: hasOwnedBefore,
+    courseOwnerToPayment: current.courseOwnerToPayment,
+    ownedCoursesArrayOfReceiver: current.ownedCourses,
+    ownedCourseIndex: current.ownedCourseIndex,
+    hasOwnedCourse: current.hasOwnedCourse,
 
     payment: {
-      courseId: courseId,
-      payer: payer,
-      courseReceiver: courseReceiver,
-      tokenAddress: tokenAddress,
-      totalAmount: totalAmount,
-      instructorShare: instructorShare,
-      foundationShare: foundationShare,
-      governanceShare: governanceShare,
-      endOfRefundWindow: endOfRefundWindow,
-      isRefunded: isRefunded,
-      isWithdrawn: isWithdrawn,
+      courseId: payment.courseId,
+      payer: payment.payer,
+      courseReceiver: payment.courseReceiver,
+      tokenAddress: payment.tokenAddress,
+      totalAmount: payment.totalAmount,
+      instructorShare: payment.instructorShare,
+      foundationShare: payment.foundationShare,
+      governanceShare: payment.governanceShare,
+      endOfRefundWindow: payment.endOfRefundWindow,
+      isRefunded: payment.isRefunded,
+      isWithdrawn: payment.isWithdrawn,
     },
   };
 
-  //Başarılı satış ve iade:
-  const newOwnedCourses = [...ownedCoursesBefore];
-  if (indexPlusOneBefore > 0) {
-    const index = Number(indexPlusOneBefore); // 1-based index
+  let newOwnedCourses = [...current.ownedCourses];
+  if (current.ownedCourseIndex > 0) {
+    const index = Number(current.ownedCourseIndex); // 1-based
     const lastIndex = newOwnedCourses.length - 1;
     if (index !== lastIndex) {
-      // swap with last
       newOwnedCourses[index] = newOwnedCourses[lastIndex];
     }
-    // pop last
     newOwnedCourses.pop();
   }
 
   const expectSuccess = {
-    paymentId: paymentId,
-    courseId: courseId,
-    courseReceiver: courseReceiver,
-
-    courseOwnerToPayment: 0, // = 0 olmalı
+    courseOwnerToPayment: 0n,
     ownedCoursesArrayOfReceiver: newOwnedCourses,
-    ownedCourseIndex: 0, // = 0 olmalı
-    hasOwnedCourse: false, // = false
+    ownedCourseIndex: 0,
+    hasOwnedCourse: false,
 
     payment: {
-      courseId: courseId,
-      payer: payer,
-      courseReceiver: courseReceiver,
-      tokenAddress: tokenAddress,
-      totalAmount: totalAmount,
-      instructorShare: instructorShare,
-      foundationShare: foundationShare,
-      governanceShare: governanceShare,
-      endOfRefundWindow: endOfRefundWindow,
+      courseId: payment.courseId,
+      payer: payment.payer,
+      courseReceiver: payment.courseReceiver,
+      tokenAddress: payment.tokenAddress,
+      totalAmount: payment.totalAmount,
+      instructorShare: payment.instructorShare,
+      foundationShare: payment.foundationShare,
+      governanceShare: payment.governanceShare,
+      endOfRefundWindow: payment.endOfRefundWindow,
       isRefunded: true,
-      isWithdrawn: isWithdrawn,
+      isWithdrawn: payment.isWithdrawn,
     },
   };
-  // aa
-  return {
-    paymentId: paymentId,
-    courseId: courseId,
-    courseReceiver: courseReceiver,
-    coursePrice: totalAmount,
-    tokenAddress: tokenAddress,
-    payer: payer,
-    redeemer: redeemer.address,
-    expectFail,
-    expectSuccess,
-  };
+
+  return waitSuccess ? expectSuccess : expectFail;
 }
 
-async function expectRefund(expected) {
-  const {
-    paymentId,
-    courseId,
-    courseReceiver,
+async function _expectRefund(input, expected) {
+  const { paymentId } = input;
+  const { payment, courseOwnerToPayment, ownedCoursesArrayOfReceiver, ownedCourseIndex, hasOwnedCourse } = expected;
 
-    courseOwnerToPayment,
-    ownedCoursesArrayOfReceiver,
-    ownedCourseIndex,
-    hasOwnedCourse,
-
-    payment,
-  } = expected;
-
-  // 2. payments[paymentId]
   const actualPayment = await NewTreasury.getPayment(paymentId);
   expect(actualPayment.courseId).to.equal(payment.courseId);
   expect(actualPayment.payer).to.equal(payment.payer);
@@ -791,29 +804,20 @@ async function expectRefund(expected) {
   expect(actualPayment.isRefunded).to.equal(payment.isRefunded);
   expect(actualPayment.isWithdrawn).to.equal(payment.isWithdrawn);
 
-  // refundWindow dinamik olduğu için ± toleransla kontrol
   const diff = BigInt(actualPayment.endOfRefundWindow) - BigInt(payment.endOfRefundWindow);
   expect(diff >= 0n && diff <= 120n).to.equal(true);
 
-  // 5. courseOwnerToPayment
-  const courseOwnerPayment = await NewTreasury.courseOwnerToPayment(courseReceiver, courseId);
+  const courseOwnerPayment = await NewTreasury.courseOwnerToPayment(payment.courseReceiver, payment.courseId);
   expect(courseOwnerPayment).to.equal(courseOwnerToPayment);
 
-  // 6. ownedCourses[receiver]
-  const ownedCourses = await NewTreasury.getOwnedCourses(courseReceiver);
+  const ownedCourses = await NewTreasury.getOwnedCourses(payment.courseReceiver);
   expect(ownedCourses.map(Number)).to.deep.equal(ownedCoursesArrayOfReceiver.map(Number));
 
-  // 7. ownedCourseIndex
-  const indexPlusOne = await NewTreasury.ownedCourseIndex(courseReceiver, courseId);
+  const indexPlusOne = await NewTreasury.ownedCourseIndex(payment.courseReceiver, payment.courseId);
   expect(indexPlusOne).to.equal(ownedCourseIndex);
 
-  // 8. hasOwnedCourse
-  const hasOwned = await NewTreasury.hasOwnedCourse(courseReceiver, courseId);
+  const hasOwned = await NewTreasury.hasOwnedCourse(payment.courseReceiver, payment.courseId);
   expect(hasOwned).to.equal(hasOwnedCourse);
-
-  return {
-    noReturn: true, // no return value needed
-  };
 }
 
 async function getBalances({ payer, courseReceiver, contract, tokenAddress, refundCaller = ethers.ZeroAddress }) {

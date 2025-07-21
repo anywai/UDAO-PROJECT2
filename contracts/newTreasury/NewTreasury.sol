@@ -1085,4 +1085,11 @@ if (cut.foundation == 0 && cut.governance == 0) {
 NOTE:
 require(_tokenAddress.code.length > 0, "Invalid token contract");
 gerekirse böyle bir şey kontrat çağrışlarını engellemek için kullanılabilir.
+
+2. hasOwnedCourse ≠ ownedCourses Sync Risk
+hasOwnedCourse mapping’i ile ownedCourses dizisinin senkronize olması elzem. refundCourse() içinde hasOwnedCourse update sonrası index manipülasyonu başarılı gözüküyor ama testlerde pop() sonrası doğru elemanın silindiğinden emin olmalısın.
+
+Eğer bir bug çıkacaksa, swap & pop içindeki require(courseIndex > 0) sonrası index=0 durumunda olabilir. Bunun testini yaz.
+
+
 */
