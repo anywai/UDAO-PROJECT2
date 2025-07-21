@@ -879,7 +879,8 @@ contract NewTreasury is AccessControl, EIP712, ReentrancyGuard {
                 withdrawnCompleted++;
             } catch {
                 // nothing
-                //if needen: emit CourseWithdrawFailed(courseId, paymentId, msg.sender, reason);
+                // needed: emit CourseWithdrawFailed(courseId, paymentId, msg.sender, reason);
+                // TODO: çok silent
             }
         }
 
@@ -1059,6 +1060,10 @@ contract NewTreasury is AccessControl, EIP712, ReentrancyGuard {
 // TODO BATU getCourse ve getPayment getterlarının gereksiz olduğunu düşünüyorum.
 
 /*
+fallback() external payable {
+    revert("Direct ETH not accepted");
+}
+
 NOTE:
 Eğer ileride farklı token’lar için farklı cut yapısı (örneğin USDC, USDT, DAI özel oranlar) gerekiyorsa, 
 şöyle extensible yapabilirsin:
