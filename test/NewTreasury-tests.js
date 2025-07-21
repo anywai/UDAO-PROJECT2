@@ -77,10 +77,6 @@ before(async () => {
     walletList: walletNames,
   });
 
-  // give allowance to NewTreasury for MKT1 and MKT2 by backend
-  await MKT1.connect(backend).approve(NewTreasury.target, ethers.MaxUint256);
-  await MKT2.connect(backend).approve(NewTreasury.target, ethers.MaxUint256);
-
   // Project-specific initialization logic
   await NewTreasury.connect(backend).setRefundWindow(19); // 1 gün
   //// ### END OF DEPLOY LOGIC ### ////

@@ -58,6 +58,10 @@ async function batchDistributeTokens({
       await token.connect(user).approve(spenderAddress, parsedAmount);
     }
   }
+  // Optionally approve spender for the sender as well
+  if (spenderAddress && !skip.includes(from.address)) {
+    await token.connect(from).approve(spenderAddress, parsedAmount);
+  }
 }
 
 // Allows a group of users to approve a spender for a given token
