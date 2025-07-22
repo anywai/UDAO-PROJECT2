@@ -100,6 +100,7 @@ async function fastForwardTime({ days = 0, hours = 0, minutes = 0, seconds = 0 }
 // Voucher helpers to avoid repetition in tests (createVH, buyVH, etc.)
 let createVH, updateVH, buyVH, refundVH, refundByOwnerVH, withdrawVH;
 
+/////### TEST HELPERS ###/////
 async function createCourseHelper({ uri, withdrawers, redeemer, validUntil, expectRevertWith, expectSuccessWith }) {
   const input = {
     uri,
@@ -297,7 +298,7 @@ async function updateCourseHelper({
     throw new Error("What you expect? No success or revert condition provided. --updateCourseHelper--");
   }
 
-  await _expectUpdate(input, expectedOutcome, previousWithdrawers);
+  await _expectUpdate(input, current, expectedOutcome, previousWithdrawers);
 
   return {
     courseId: courseId,
@@ -316,35 +317,58 @@ async function _prepareExpectedUpdateState({ input, current, waitSuccess }) {
   const unauthorizedUpdater = !isRedeemerWithdrawer && input.redeemer.address !== backend.address;
   const hasEmptyUri = input.uri.length === 0;
   const hasEmptyWithdrawers = input.withdrawers.length === 0;
+  const isCourseIdValid = input.courseId > 0n && input.courseId <= current.courseCounter;
 
   if (!waitSuccess) {
+    if (isUriAlreadyExists) {
+      // Case 1: URI already exists, cannot update course
+      return {
+        uri: current.course.uri,
+        sellable: current.course.sellable,
+        withdrawers: current.existingWithdrawers,
+        oldUriHashHolds: current.oldUriHashHolds,
+        newUriHashHolds: current.newUriHashHolds,
+      };
+    }
+    // Case 2: Max withdrawers exceeded, zero withdrawer or empty withdrawers, empty URI, or unauthorized updater
+    if (
+      isMaxWithdrawersExceeded ||
+      hasZeroWithdrawer ||
+      hasEmptyWithdrawers ||
+      hasEmptyUri ||
+      unauthorizedUpdater ||
+      !isCourseIdValid
+    ) {
+      return {
+        uri: current.course.uri,
+        sellable: current.course.sellable,
+        withdrawers: current.existingWithdrawers,
+        oldUriHashHolds: current.oldUriHashHolds,
+        newUriHashHolds: "",
+      };
+    }
+    // Case 3: Valid input but update reverted (e.g., missing gas, voucher revert)
     return {
-      courseCounter: current.courseCounter,
       uri: current.course.uri,
       sellable: current.course.sellable,
       withdrawers: current.existingWithdrawers,
-      oldUriHash: current.oldUriHash,
       oldUriHashHolds: current.oldUriHashHolds,
-      newUriHash: input.uriHash,
-      newUriHashHolds: current.newUriHashHolds,
+      newUriHashHolds: "",
     };
   }
 
   return {
-    courseCounter: current.courseCounter,
     uri: input.uri,
     sellable: input.sellable,
     withdrawers: input.withdrawers,
-    oldUriHash: current.oldUriHash,
     oldUriHashHolds: input.uriHash == current.oldUriHash ? input.courseId : 0n, // if same, holds courseId, else 0
-    newUriHash: input.uriHash,
     newUriHashHolds: input.courseId,
   };
 }
 
-async function _expectUpdate(input, expected, previousWithdrawers = []) {
+async function _expectUpdate(input, previous, expected, previousWithdrawers = []) {
   const courseCounter = await NewTreasury.courseCounter();
-  expect(courseCounter).to.equal(expected.courseCounter);
+  expect(courseCounter).to.equal(previous.courseCounter);
 
   const course = await NewTreasury.getCourse(input.courseId);
   expect(course.uri).to.equal(expected.uri);
@@ -355,10 +379,9 @@ async function _expectUpdate(input, expected, previousWithdrawers = []) {
   expect(newHashToId).to.equal(expected.newUriHashHolds);
 
   // Sadece farklıysa eski hash’i kontrol et
-  if (expected.oldUriHash) {
-    const oldHashToId = await NewTreasury.uriToCourseId(expected.oldUriHash);
-    expect(oldHashToId).to.equal(expected.oldUriHashHolds);
-  }
+  const oldHashToId = await NewTreasury.uriToCourseId(previous.oldUriHash);
+  expect(oldHashToId).to.equal(expected.oldUriHashHolds);
+
   // check withdrawers
   const actualWithdrawers = await NewTreasury.getAuthorizedWithdrawers(input.courseId);
   expect(actualWithdrawers).to.deep.equal(expected.withdrawers);
@@ -372,55 +395,6 @@ async function _expectUpdate(input, expected, previousWithdrawers = []) {
     const isStillAuthorized = await NewTreasury.isAuthorizedWithdrawer(oldW, input.courseId);
     expect(isStillAuthorized).to.equal(expected.withdrawers.includes(oldW));
   }
-}
-
-async function expectCourse(expected, previousWithdrawers = []) {
-  const courseCounter = await NewTreasury.courseCounter();
-  expect(courseCounter).to.equal(expected.courseCounter);
-
-  const courseId = expected.courseId;
-
-  const course = await NewTreasury.getCourse(courseId);
-  expect(course.uri).to.equal(expected.uri);
-  expect(course.sellable).to.equal(expected.sellable);
-
-  // check uriToCourseId mapping
-  const newHashToCourseId = await NewTreasury.uriToCourseId(expected.newUriHash);
-  expect(newHashToCourseId).to.equal(expected.newUriHashHolds);
-
-  // Sadece farklıysa eski hash’i kontrol et
-  if (expected.oldUriHash) {
-    const oldHashToCourseId = await NewTreasury.uriToCourseId(expected.oldUriHash);
-    expect(oldHashToCourseId).to.equal(expected.oldUriHashHolds);
-  }
-
-  // check withdrawers
-  const actualWithdrawers = await NewTreasury.getAuthorizedWithdrawers(courseId);
-  expect(actualWithdrawers).to.deep.equal(expected.withdrawers);
-
-  // check expected withdrawers authorization
-  for (const w of expected.withdrawers || []) {
-    const isAuth = await NewTreasury.isAuthorizedWithdrawer(w, courseId);
-    expect(isAuth).to.equal(true);
-  }
-
-  // check also previous withdrawers if removed revoked
-  for (const oldW of previousWithdrawers) {
-    if (!expected.withdrawers.includes(oldW)) {
-      const isStillAuthorized = await NewTreasury.isAuthorizedWithdrawer(oldW, courseId);
-      expect(isStillAuthorized).to.equal(false);
-    } else {
-      const isStillAuthorized = await NewTreasury.isAuthorizedWithdrawer(oldW, courseId);
-      expect(isStillAuthorized).to.equal(true);
-    }
-  }
-
-  return {
-    courseId: courseId,
-    uri: course.uri,
-    sellable: course.sellable,
-    withdrawers: actualWithdrawers,
-  };
 }
 
 async function buyCourseHelper({
@@ -1245,8 +1219,7 @@ async function checkBalancesAfter({ operation, gasCost, beforeTxBalances, course
   }
   // other operations can be added here
 }
-
-//// HELPERS ////
+/////### END OF TEST HELPERS ###/////
 
 describe("NewTreasury Contract Tests", function () {
   // ethers v6 uses `.target` instead of `.address` for deployed contracts
@@ -1730,6 +1703,7 @@ describe("NewTreasury Contract Tests", function () {
         for (let i = 0; i < max + 1; i++) {
           extraWithdrawers.push(ethers.Wallet.createRandom().address);
         }
+        extraWithdrawers.push(instructor1.address); // Ensure redeemer is included
 
         // Step 4: Try to update the course with too many withdrawers
         const update = await updateCourseHelper({
@@ -1776,7 +1750,7 @@ describe("NewTreasury Contract Tests", function () {
         });
 
         // Step 2: Set withdrawers with zero addresses in index 0
-        const invalidWithdrawers = [ethers.ZeroAddress];
+        const invalidWithdrawers = [instructor1.address, ethers.ZeroAddress];
 
         // Step 3: Try to update course
         const update = await updateCourseHelper({
@@ -2171,12 +2145,10 @@ describe("NewTreasury Contract Tests", function () {
         });
         // Expect: all purchases succeed with "ContentPurchased" event
       });
-
       /////###End of Success Cases###/////
     });
 
     describe("❌ Failure Cases", function () {
-      //it("should fail to buy...", async function () {});
       it("should fail to buy a course with invalid signer", async function () {
         // Step 1: Create a course
         const course1 = await createCourseHelper({
@@ -2485,7 +2457,6 @@ describe("NewTreasury Contract Tests", function () {
         });
         // Expect: Reverts with "Use ERC20, not native token"
       });
-
       /////###End of Failure Cases###/////
     });
     /////###End of Course Purchase###/////
@@ -2992,7 +2963,6 @@ describe("NewTreasury Contract Tests", function () {
           expectSuccessWith: "CourseRefunded",
         });
       });
-      //Start of Success Cases
 
       it("should allow a course purchased with native token to be refunded", async function () {
         // Step 1: instructor1 creates a course
@@ -3229,7 +3199,6 @@ describe("NewTreasury Contract Tests", function () {
 
         // Expect: both purchases and refund succeed
       });
-
       /////###End of Success Cases###/////
     });
 
@@ -3472,7 +3441,6 @@ describe("NewTreasury Contract Tests", function () {
           expectRevertWith: "Refund window passed",
         });
       });
-
       /////###End of Failure Cases###/////
     });
     /////###End of Refunds: byOwner and courseId###/////
@@ -3482,44 +3450,35 @@ describe("NewTreasury Contract Tests", function () {
   describe("🏦 WITHDRAWALS", function () {
     describe("✅ Success Cases", function () {
       it("should allow instructor1 to withdraw payments for sales 1 to 3", async function () {
-        const latestBlock = await ethers.provider.getBlock("latest");
-        const now = Number(latestBlock.timestamp);
-
-        const { createVH, buyVH, withdrawVH } = getVoucherHelpers();
-
         // 1. instructor1 course oluşturur
-        const createVoucher = await createVH.signVoucher({
+        const course1 = await createCourseHelper({
           uri: "https://example.com/withdraw-course/1",
           withdrawers: [instructor1.address],
-          redeemer: instructor1.address,
+          redeemer: instructor1,
           validUntil: now + 86400,
+          expectSuccessWith: "CourseCreated",
         });
 
-        await NewTreasury.connect(instructor1).createCourse(createVoucher);
-
-        const courseId = 1;
-        const price = ethers.parseEther("10");
-        const validUntil = now + 86400;
-
+        const price = [10, 10, 10, 10, 10];
         const buyers = [buyer1, buyer2, buyer3, buyer4, buyer5];
         const receivers = [person1, person2, person3, person4, person5];
 
         for (let i = 0; i < 5; i++) {
-          const buyVoucher = await buyVH.signVoucher({
-            courseId,
+          await buyCourseHelper({
+            courseId: course1.courseId,
             tokenAddress: MKT1.target,
-            coursePrice: price,
+            coursePrice: ethers.parseEther(price[i].toString()),
             courseReceiver: receivers[i].address,
-            redeemer: buyers[i].address,
-            validUntil,
+            redeemer: buyers[i],
+            validUntil: now + 86400,
+            nativeMsgValue: 0,
+            expectSuccessWith: "ContentPurchased",
           });
-
-          await NewTreasury.connect(buyers[i]).buyCourse(buyVoucher);
         }
 
         // 2. Zamanı ileri al: refund window sonlansın
         await fastForwardTime({ days: 25 }); // 25 gün ileri al
-        const withdrawDValidUntil = validUntil + 86400 * 25;
+        const withdrawDValidUntil = now + 86400;
 
         // 3. Balance öncesi
         const instructorBalBefore = await MKT1.balanceOf(instructor1.address);
@@ -3527,7 +3486,7 @@ describe("NewTreasury Contract Tests", function () {
 
         // 4. Withdraw işlemi
         const withdrawVoucher = await withdrawVH.signVoucher({
-          courseId,
+          courseId: course1.courseId,
           fromIndex: 1,
           toIndex: 3,
           redeemer: instructor1.address,
@@ -3544,7 +3503,7 @@ describe("NewTreasury Contract Tests", function () {
         expect(log).to.exist;
 
         const decoded = iface.decodeEventLog("CoursePaymentsWithdrawn", log.data, log.topics);
-        expect(decoded.courseId).to.equal(courseId);
+        expect(decoded.courseId).to.equal(course1.courseId);
         expect(decoded.fromIndex).to.equal(1n);
         expect(decoded.toIndex).to.equal(3n);
         expect(decoded.withdrawer).to.equal(instructor1.address);
@@ -3552,7 +3511,7 @@ describe("NewTreasury Contract Tests", function () {
 
         // 5. Flag kontrolü
         for (let j = 1; j <= 3; j++) {
-          const paymentId = await NewTreasury.courseSaleRecords(courseId, j);
+          const paymentId = await NewTreasury.courseSaleRecords(course1.courseId, j);
           const payment = await NewTreasury.payments(paymentId);
           expect(payment.isWithdrawn).to.equal(true);
         }
@@ -3569,7 +3528,7 @@ describe("NewTreasury Contract Tests", function () {
         expect(gained).to.be.lt(spent); // çünkü contract → foundation + governance da gönderdi
 
         // 7. checkWithdrawStatus ile kontrol
-        const [refunded, withdrawn, inWindow, ready] = await NewTreasury.checkWithdrawStatus(courseId, 1, 3);
+        const [refunded, withdrawn, inWindow, ready] = await NewTreasury.checkWithdrawStatus(course1.courseId, 1, 3);
 
         expect(withdrawn.map(Number)).to.deep.equal([1, 2, 3]);
         expect(refunded.length).to.equal(0);
@@ -3715,11 +3674,16 @@ describe("NewTreasury Contract Tests", function () {
         expect(MKT2After).to.be.gt(MKT2Before);
         expect(ethAfter).to.be.gt(ethBefore); // withdraw sonrası eth arttı
       });
+      /////###End of Success Cases###/////
     });
 
     describe("❌ Failure Cases", function () {
-      //it("should fail to withdraw...", async function () {  });
+      it("should fail to withdraw...", async function () {
+        // Test logic for withdrawal failure
+      });
+      /////###End of Failure Cases###/////
     });
+    /////###End of Withdrawals###/////
   });
 
   // End of tests
