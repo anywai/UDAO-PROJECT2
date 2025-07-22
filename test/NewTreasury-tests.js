@@ -1221,6 +1221,288 @@ async function checkBalancesAfter({ operation, gasCost, beforeTxBalances, course
 }
 /////### END OF TEST HELPERS ###/////
 
+const PaymentState = {
+  WI: "WI", // Already Withdrawn, In refund window
+  WE: "WE", // Already Withdrawn, refund window Ended,
+  RI: "RI", // Already Refunded, In refund window,
+  RE: "RE", // Already Refunded, refund window Ended,
+  PI: "PI", // Pending, In refund window,
+  PEF: "PEF", // Pending, refund window Ended, expect Fail
+  PES: "PES", // Pending, refund window Ended, expect Success
+};
+
+const { PES, PEF, PI, WI, WE, RI, RE } = PaymentState;
+
+async function withdrawCoursePaymentsHelper({
+  courseId,
+  fromIndex,
+  toIndex,
+  redeemer,
+  validUntil,
+  expectRevertWith,
+  expectSuccessWith,
+  expectations,
+}) {
+  const input = {
+    courseId,
+    fromIndex,
+    toIndex,
+    redeemer,
+    redeemerInitialNativeBalance: await ethers.provider.getBalance(redeemer.address),
+  };
+
+  const waitSuccess =
+    expectSuccessWith && !expectRevertWith
+      ? true
+      : expectRevertWith && !expectSuccessWith
+      ? false
+      : (() => {
+          throw new Error("Exactly one of expectSuccessWith or expectRevertWith must be defined.");
+        })();
+
+  const tokenStats = await _validateExpectations(input, expectations);
+
+  const voucher = await withdrawVH.signVoucher({
+    courseId,
+    fromIndex,
+    toIndex,
+    redeemer: redeemer.address,
+    validUntil,
+  });
+
+  let tx = null;
+  let gasCost = 0n;
+
+  if (!waitSuccess) {
+    await expect(NewTreasury.connect(redeemer).withdrawCoursePayments(voucher)).to.be.revertedWith(expectRevertWith);
+  } else if (waitSuccess) {
+    tx = await NewTreasury.connect(redeemer).withdrawCoursePayments(voucher);
+    await expect(tx)
+      .to.emit(NewTreasury, expectSuccessWith)
+      .withArgs(courseId, fromIndex, toIndex, redeemer.address, toIndex - fromIndex + 1);
+
+    const receipt = await tx.wait();
+    const effectiveGasPrice = receipt.effectiveGasPrice ?? receipt.gasPrice ?? 0n;
+    gasCost = receipt.gasUsed * effectiveGasPrice;
+  }
+
+  await _expectWithdraw(input, tokenStats, gasCost, expectations, waitSuccess);
+
+  return {
+    tx,
+    courseId,
+    fromIndex,
+    toIndex,
+    redeemer,
+    voucher,
+    gasCost,
+  };
+}
+
+async function _validateExpectations(input, expectations) {
+  const expectedLength = input.toIndex - input.fromIndex + 1;
+  if (expectations.length !== expectedLength) {
+    throw new Error(
+      `expectations.length (${expectations.length}) must equal toIndex - fromIndex + 1 (${expectedLength})`
+    );
+  }
+
+  const tokenStats = new Map(); // tokenAddress -> { price, instructor, foundation, governance }
+  const treasury = NewTreasury.target;
+  const foundation = await NewTreasury.foundationWallet();
+  const governance = await NewTreasury.governanceContract();
+  const instructor = input.redeemer.address;
+
+  // validate my allegations
+  for (let i = input.fromIndex; i <= input.toIndex; i++) {
+    const expected = expectations[i - input.fromIndex]; // match index
+
+    const paymentId = await NewTreasury.courseSaleRecords(input.courseId, i);
+
+    const rawPayment = await NewTreasury.getPayment(paymentId);
+    const payment = {
+      courseId: rawPayment[0],
+      payer: rawPayment[1],
+      courseReceiver: rawPayment[2],
+      tokenAddress: rawPayment[3],
+      coursePrice: rawPayment[4],
+      instructorShare: rawPayment[5],
+      foundationShare: rawPayment[6],
+      governanceShare: rawPayment[7],
+      endOfRefundWindow: rawPayment[8],
+      isRefunded: rawPayment[9],
+      isWithdrawn: rawPayment[10],
+    };
+
+    const { isRefunded, isWithdrawn, endOfRefundWindow } = payment;
+    const isInRefundWindow = endOfRefundWindow > BigInt(now);
+
+    let actualState;
+    if (isWithdrawn) {
+      actualState = isInRefundWindow ? PaymentState.WI : PaymentState.WE;
+    } else if (isRefunded) {
+      actualState = isInRefundWindow ? PaymentState.RI : PaymentState.RE;
+    } else if (isInRefundWindow) {
+      actualState = PaymentState.PI;
+    } else {
+      actualState = expected === PaymentState.PEF ? PaymentState.PEF : PaymentState.PES;
+    }
+
+    //check my allegations
+    expect(actualState).to.equal(
+      expected,
+      `Mismatch at index ${i} (paymentId ${paymentId}) → expected ${expected}, got ${actualState}`
+    );
+
+    if (!tokenStats.has(payment.tokenAddress)) {
+      // İlk kez bu tokenAddress ile karşılaşıyoruz, balance'ları al ve cache'e yaz
+      let initialBalances;
+      if (payment.tokenAddress === ethers.ZeroAddress) {
+        // Native token
+        initialBalances = {
+          instructor: await ethers.provider.getBalance(instructor),
+          foundation: await ethers.provider.getBalance(foundation),
+          governance: await ethers.provider.getBalance(governance),
+          treasury: await ethers.provider.getBalance(treasury),
+        };
+      } else {
+        const tokenContract = await ethers.getContractAt("IERC20", payment.tokenAddress);
+        initialBalances = {
+          instructor: await tokenContract.balanceOf(instructor),
+          foundation: await tokenContract.balanceOf(foundation),
+          governance: await tokenContract.balanceOf(governance),
+          treasury: await tokenContract.balanceOf(treasury),
+        };
+      }
+
+      tokenStats.set(payment.tokenAddress, {
+        totalPrice: 0n,
+        totalInstructor: 0n,
+        totalFoundation: 0n,
+        totalGovernance: 0n,
+        initialBalances,
+      });
+    }
+
+    if (actualState === PaymentState.PES) {
+      const stats = tokenStats.get(payment.tokenAddress);
+      stats.totalPrice += payment.coursePrice;
+      stats.totalInstructor += payment.instructorShare;
+      stats.totalFoundation += payment.foundationShare;
+      stats.totalGovernance += payment.governanceShare;
+    }
+  }
+  return tokenStats;
+}
+
+async function _expectWithdraw(input, tokenStats, gasCost, expectations, waitSuccess) {
+  const treasury = NewTreasury.target;
+  const instructor = input.redeemer.address;
+  const foundation = await NewTreasury.foundationWallet();
+  const governance = await NewTreasury.governanceContract();
+
+  for (const [token, stats] of tokenStats.entries()) {
+    const { totalPrice, totalInstructor, totalFoundation, totalGovernance, initialBalances } = stats;
+
+    if (token === ethers.ZeroAddress) {
+      // Native token
+      const newTreasury = await ethers.provider.getBalance(treasury);
+      const newInstructor = await ethers.provider.getBalance(instructor);
+      const newFoundation = await ethers.provider.getBalance(foundation);
+      const newGovernance = await ethers.provider.getBalance(governance);
+
+      if (waitSuccess) {
+        expect(newTreasury).to.equal(initialBalances.treasury - totalPrice);
+        expect(newInstructor).to.equal(initialBalances.instructor + totalInstructor - gasCost);
+        expect(newFoundation).to.equal(initialBalances.foundation + totalFoundation);
+        expect(newGovernance).to.equal(initialBalances.governance + totalGovernance);
+      } else {
+        expect(newInstructor).to.be.below(initialBalances.instructor);
+        expect(newFoundation).to.equal(initialBalances.foundation);
+        expect(newGovernance).to.equal(initialBalances.governance);
+        expect(newTreasury).to.equal(initialBalances.treasury);
+      }
+    } else {
+      const tokenContract = await ethers.getContractAt("IERC20", token);
+
+      const newTreasury = await tokenContract.balanceOf(treasury);
+      const newInstructor = await tokenContract.balanceOf(instructor);
+      const newFoundation = await tokenContract.balanceOf(foundation);
+      const newGovernance = await tokenContract.balanceOf(governance);
+
+      if (waitSuccess) {
+        expect(newTreasury).to.equal(initialBalances.treasury - totalPrice);
+        expect(newInstructor).to.equal(initialBalances.instructor + totalInstructor);
+        expect(newFoundation).to.equal(initialBalances.foundation + totalFoundation);
+        expect(newGovernance).to.equal(initialBalances.governance + totalGovernance);
+      } else {
+        expect(newInstructor).to.equal(initialBalances.instructor);
+        expect(newFoundation).to.equal(initialBalances.foundation);
+        expect(newGovernance).to.equal(initialBalances.governance);
+        expect(newTreasury).to.equal(initialBalances.treasury);
+      }
+    }
+  }
+
+  // Instructor native balance düşüşü gasCost kadar olmalı
+  if (!tokenStats.has(ethers.ZeroAddress)) {
+    const postNativeBalance = await ethers.provider.getBalance(instructor);
+    if (waitSuccess) {
+      expect(postNativeBalance).to.equal(
+        input.redeemerInitialNativeBalance - gasCost,
+        "Native balance should drop by gasCost even if token used was ERC20"
+      );
+    } else {
+      expect(postNativeBalance).to.be.below(
+        input.redeemerInitialNativeBalance,
+        "Instructor native balance should decrease slightly due to revert gas cost"
+      );
+    }
+  }
+
+  // check contract state changes.
+  for (let i = input.fromIndex; i <= input.toIndex; i++) {
+    const expected = expectations[i - input.fromIndex];
+    const paymentId = await NewTreasury.courseSaleRecords(input.courseId, i);
+    const raw = await NewTreasury.getPayment(paymentId);
+
+    const payment = {
+      endOfRefundWindow: raw[8],
+      isRefunded: raw[9],
+      isWithdrawn: raw[10],
+    };
+
+    const isInRWindow = payment.endOfRefundWindow > BigInt(now);
+
+    const expectedWithdrawn = {
+      [WI]: true,
+      [WE]: true,
+      [RI]: false,
+      [RE]: false,
+      [PI]: false,
+      [PEF]: false,
+      [PES]: waitSuccess, // true if waitSuccess==true, false if waitSuccess==false
+    }[expected];
+
+    const expectedRefunded = [RI, RE].includes(expected);
+    const expectedInRWindow = [WI, RI, PI].includes(expected);
+
+    expect(expectedWithdrawn).to.not.equal(undefined, `Unhandled expected state: ${expected}`);
+    expect(payment.isWithdrawn).to.equal(
+      expectedWithdrawn,
+      `Expected ${expected}: isWithdrawn = ${expectedWithdrawn}, got ${payment.isWithdrawn} at ${paymentId}`
+    );
+    expect(payment.isRefunded).to.equal(
+      expectedRefunded,
+      `Expected ${expected}: isRefunded = ${expectedRefunded}, got ${payment.isRefunded} at ${paymentId}`
+    );
+    expect(isInRWindow).to.equal(
+      expectedInRWindow,
+      `Expected ${expected}: refund window should be ${expectedInRWindow ? "open" : "closed"} at ${paymentId}`
+    );
+  }
+}
+
 describe("NewTreasury Contract Tests", function () {
   // ethers v6 uses `.target` instead of `.address` for deployed contracts
   beforeEach(async function () {
@@ -3459,6 +3741,7 @@ describe("NewTreasury Contract Tests", function () {
           expectSuccessWith: "CourseCreated",
         });
 
+        // 2. 5 adet satış yapar
         const price = [10, 10, 10, 10, 10];
         const buyers = [buyer1, buyer2, buyer3, buyer4, buyer5];
         const receivers = [person1, person2, person3, person4, person5];
@@ -3476,50 +3759,34 @@ describe("NewTreasury Contract Tests", function () {
           });
         }
 
-        // 2. Zamanı ileri al: refund window sonlansın
+        // 3. Zamanı ileri al: refund window sonlansın
         await fastForwardTime({ days: 25 }); // 25 gün ileri al
-        const withdrawDValidUntil = now + 86400;
 
-        // 3. Balance öncesi
+        // 4. Balance öncesi
         const instructorBalBefore = await MKT1.balanceOf(instructor1.address);
         const contractBalBefore = await MKT1.balanceOf(NewTreasury.target);
 
-        // 4. Withdraw işlemi
-        const withdrawVoucher = await withdrawVH.signVoucher({
+        // 5. Withdraw işlemi
+        const withdrawResult = await withdrawCoursePaymentsHelper({
           courseId: course1.courseId,
           fromIndex: 1,
           toIndex: 3,
-          redeemer: instructor1.address,
-          validUntil: withdrawDValidUntil,
+          redeemer: instructor1,
+          validUntil: now + 86400,
+          expectSuccessWith: "CoursePaymentsWithdrawn",
+          expectations: [PES, PES, PES],
         });
 
-        const tx = await NewTreasury.connect(instructor1).withdrawCoursePayments(withdrawVoucher);
-        const receipt = await tx.wait();
-
-        // Event kontrolü
-        const iface = NewTreasury.interface;
-        const topic = iface.getEvent("CoursePaymentsWithdrawn").topicHash;
-        const log = receipt.logs.find((l) => l.topics[0] === topic);
-        expect(log).to.exist;
-
-        const decoded = iface.decodeEventLog("CoursePaymentsWithdrawn", log.data, log.topics);
-        expect(decoded.courseId).to.equal(course1.courseId);
-        expect(decoded.fromIndex).to.equal(1n);
-        expect(decoded.toIndex).to.equal(3n);
-        expect(decoded.withdrawer).to.equal(instructor1.address);
-        expect(decoded.withdrawnCompleted).to.equal(3n);
-
-        // 5. Flag kontrolü
+        // 6. Flag kontrolü
         for (let j = 1; j <= 3; j++) {
           const paymentId = await NewTreasury.courseSaleRecords(course1.courseId, j);
           const payment = await NewTreasury.payments(paymentId);
           expect(payment.isWithdrawn).to.equal(true);
         }
 
-        // 6. Balance fark kontrolü
+        // 7. Balance fark kontrolü
         const instructorBalAfter = await MKT1.balanceOf(instructor1.address);
         const contractBalAfter = await MKT1.balanceOf(NewTreasury.target);
-
         const gained = instructorBalAfter - instructorBalBefore;
         const spent = contractBalBefore - contractBalAfter;
 
@@ -3527,7 +3794,7 @@ describe("NewTreasury Contract Tests", function () {
         expect(spent).to.be.gt(0n);
         expect(gained).to.be.lt(spent); // çünkü contract → foundation + governance da gönderdi
 
-        // 7. checkWithdrawStatus ile kontrol
+        // 8. checkWithdrawStatus ile kontrol
         const [refunded, withdrawn, inWindow, ready] = await NewTreasury.checkWithdrawStatus(course1.courseId, 1, 3);
 
         expect(withdrawn.map(Number)).to.deep.equal([1, 2, 3]);
