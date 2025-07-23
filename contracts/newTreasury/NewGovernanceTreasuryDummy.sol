@@ -4,10 +4,22 @@ pragma solidity ^0.8.20;
 contract NewGovernanceTreasuryDummy {
     mapping(address => uint256) public tokenBalances;
     uint256 public maticBalance;
-
     event GovernanceFundReceived(address indexed token, uint256 amount);
 
+    /// ONLY FOR TESTING PURPOSES ///
+    mapping(address => bool) public bannedTokens;
+    event TokenBanUpdated(address indexed token, bool banned);
+
+    function setTokenBan(address token, bool banned) external {
+        bannedTokens[token] = banned;
+        emit TokenBanUpdated(token, banned);
+    }
+
+    /// END OF ONLY FOR TESTING PURPOSES ///
+
     function addGovernanceFunds(address tokenAddress, uint256 amount) external {
+        require(!bannedTokens[tokenAddress], "Token is banned"); /// ONLY FOR TESTING PURPOSES ///
+
         // Ödemeyi bu kontratın alması gerekiyor
         // Dolayısıyla ödeme token.transfer(governanceContract, amount) ile yapılmış olmalı
         // Bu fonksiyon sadece kaydı tutar
@@ -22,7 +34,11 @@ contract NewGovernanceTreasuryDummy {
 
     // getter olarak optional
     function getBalance(address token) external view returns (uint256) {
-        return tokenBalances[token];
+        if (token == address(0)) {
+            return maticBalance;
+        } else {
+            return tokenBalances[token];
+        }
     }
 
     receive() external payable {}
