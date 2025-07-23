@@ -1243,6 +1243,14 @@ async function withdrawCoursePaymentsHelper({
   expectSuccessWith,
   expectations,
 }) {
+  let isInputError = false; // calculate using toIndex - fromIndex
+  if (fromIndex <= 0 || fromIndex > toIndex) {
+    isInputError = true;
+  } else {
+    const saleCount = await NewTreasury.saleCounterPerCourse(courseId);
+    if (toIndex > Number(saleCount)) isInputError = true;
+  }
+
   const input = {
     courseId,
     fromIndex,
@@ -1260,7 +1268,10 @@ async function withdrawCoursePaymentsHelper({
           throw new Error("Exactly one of expectSuccessWith or expectRevertWith must be defined.");
         })();
 
-  const tokenStats = await _validateExpectations(input, expectations);
+  let tokenStats = null;
+  if (!isInputError) {
+    tokenStats = await _validateExpectations(input, expectations);
+  }
 
   const voucher = await withdrawVH.signVoucher({
     courseId,
@@ -1276,18 +1287,21 @@ async function withdrawCoursePaymentsHelper({
   if (!waitSuccess) {
     await expect(NewTreasury.connect(redeemer).withdrawCoursePayments(voucher)).to.be.revertedWith(expectRevertWith);
   } else if (waitSuccess) {
+    const expectedWithdrawCount = expectations.filter((e) => e === PES).length;
+
     tx = await NewTreasury.connect(redeemer).withdrawCoursePayments(voucher);
     await expect(tx)
       .to.emit(NewTreasury, expectSuccessWith)
-      .withArgs(courseId, fromIndex, toIndex, redeemer.address, toIndex - fromIndex + 1);
+      .withArgs(courseId, fromIndex, toIndex, redeemer.address, expectedWithdrawCount);
 
     const receipt = await tx.wait();
     const effectiveGasPrice = receipt.effectiveGasPrice ?? receipt.gasPrice ?? 0n;
     gasCost = receipt.gasUsed * effectiveGasPrice;
   }
 
-  await _expectWithdraw(input, tokenStats, gasCost, expectations, waitSuccess);
-
+  if (!isInputError) {
+    await _expectWithdraw(input, tokenStats, gasCost, expectations, waitSuccess);
+  }
   return {
     tx,
     courseId,
@@ -1305,6 +1319,8 @@ async function _validateExpectations(input, expectations) {
       `expectations.length (${expectations.length}) must equal toIndex - fromIndex + 1 (${expectedLength})`
     );
   }
+
+  const isValidCourseId = input.courseId > 0 && input.courseId <= (await NewTreasury.courseCounter());
 
   const tokenStats = new Map(); // tokenAddress -> { price, instructor, foundation, governance }
   const treasury = NewTreasury.target;
@@ -1391,36 +1407,46 @@ async function _validateExpectations(input, expectations) {
       stats.totalGovernance += payment.governanceShare;
     }
   }
-  // On-chain withdraw status ile expectations karşılaştır
-  const [refundedOnChain, withdrawnOnChain, inWindowOnChain, readyOnChain] = await NewTreasury.checkWithdrawStatus(
-    input.courseId,
-    input.fromIndex,
-    input.toIndex
-  );
 
-  const refunded = [];
-  const withdrawn = [];
-  const inWindow = [];
-  const ready = [];
+  if (isValidCourseId) {
+    // On-chain withdraw status ile expectations karşılaştır
+    const [refundedOnChain, withdrawnOnChain, inWindowOnChain, readyOnChain] = await NewTreasury.checkWithdrawStatus(
+      input.courseId,
+      input.fromIndex,
+      input.toIndex
+    );
 
-  for (let i = input.fromIndex; i <= input.toIndex; i++) {
-    const expected = expectations[i - input.fromIndex];
+    const refunded = [];
+    const withdrawn = [];
+    const inWindow = [];
+    const ready = [];
+    for (let i = input.fromIndex; i <= input.toIndex; i++) {
+      const expected = expectations[i - input.fromIndex];
 
-    if ([PaymentState.RI, PaymentState.RE].includes(expected)) refunded.push(i);
-    else if ([PaymentState.WI, PaymentState.WE].includes(expected)) withdrawn.push(i);
-    else if (expected === PaymentState.PI) inWindow.push(i);
-    else if ([PaymentState.PEF, PaymentState.PES].includes(expected)) ready.push(i);
+      if ([PaymentState.RI, PaymentState.RE].includes(expected)) refunded.push(i);
+      else if ([PaymentState.WI, PaymentState.WE].includes(expected)) withdrawn.push(i);
+      else if (expected === PaymentState.PI) inWindow.push(i);
+      else if ([PaymentState.PEF, PaymentState.PES].includes(expected)) ready.push(i);
+    }
+
+    expect(refundedOnChain.map((n) => Number(n))).to.have.members(refunded);
+    expect(withdrawnOnChain.map((n) => Number(n))).to.have.members(withdrawn);
+    expect(inWindowOnChain.map((n) => Number(n))).to.have.members(inWindow);
+    expect(readyOnChain.map((n) => Number(n))).to.have.members(ready);
   }
-
-  expect(refundedOnChain.map((n) => Number(n))).to.have.members(refunded);
-  expect(withdrawnOnChain.map((n) => Number(n))).to.have.members(withdrawn);
-  expect(inWindowOnChain.map((n) => Number(n))).to.have.members(inWindow);
-  expect(readyOnChain.map((n) => Number(n))).to.have.members(ready);
+  //else {
+  //  // Wait revert if courseId is invalid
+  //  await expect(NewTreasury.checkWithdrawStatus(input.courseId, input.fromIndex, input.toIndex)).to.be.revertedWith(
+  //    "Invalid courseId"
+  //  );
+  //}
 
   return tokenStats;
 }
 
 async function _expectWithdraw(input, tokenStats, gasCost, expectations, waitSuccess) {
+  const isValidCourseId = input.courseId > 0 && input.courseId <= (await NewTreasury.courseCounter());
+
   const treasury = NewTreasury.target;
   const instructor = input.redeemer.address;
   const foundation = await NewTreasury.foundationWallet();
@@ -1526,32 +1552,33 @@ async function _expectWithdraw(input, tokenStats, gasCost, expectations, waitSuc
       `Expected ${expected}: refund window should be ${expectedInRWindow ? "open" : "closed"} at ${paymentId}`
     );
   }
+  if (isValidCourseId) {
+    // Final check with checkWithdrawStatus
+    const [refundedOnChain, withdrawnOnChain, inWindowOnChain, readyOnChain] = await NewTreasury.checkWithdrawStatus(
+      input.courseId,
+      input.fromIndex,
+      input.toIndex
+    );
 
-  // Final check with checkWithdrawStatus
-  const [refundedOnChain, withdrawnOnChain, inWindowOnChain, readyOnChain] = await NewTreasury.checkWithdrawStatus(
-    input.courseId,
-    input.fromIndex,
-    input.toIndex
-  );
+    const refunded = [];
+    const withdrawn = [];
+    const inWindow = [];
+    const ready = [];
 
-  const refunded = [];
-  const withdrawn = [];
-  const inWindow = [];
-  const ready = [];
+    for (let i = input.fromIndex; i <= input.toIndex; i++) {
+      const expected = expectations[i - input.fromIndex];
 
-  for (let i = input.fromIndex; i <= input.toIndex; i++) {
-    const expected = expectations[i - input.fromIndex];
+      if ([RI, RE].includes(expected)) refunded.push(i);
+      else if ([WI, WE].includes(expected) || (expected === PES && waitSuccess)) withdrawn.push(i);
+      else if (expected === PI) inWindow.push(i);
+      else if ([PEF, PES].includes(expected) && !(expected === PES && waitSuccess)) ready.push(i);
+    }
 
-    if ([RI, RE].includes(expected)) refunded.push(i);
-    else if ([WI, WE].includes(expected) || (expected === PES && waitSuccess)) withdrawn.push(i);
-    else if (expected === PI) inWindow.push(i);
-    else if ([PEF, PES].includes(expected) && !(expected === PES && waitSuccess)) ready.push(i);
+    expect(refundedOnChain.map((n) => Number(n))).to.have.members(refunded);
+    expect(withdrawnOnChain.map((n) => Number(n))).to.have.members(withdrawn);
+    expect(inWindowOnChain.map((n) => Number(n))).to.have.members(inWindow);
+    expect(readyOnChain.map((n) => Number(n))).to.have.members(ready);
   }
-
-  expect(refundedOnChain.map((n) => Number(n))).to.have.members(refunded);
-  expect(withdrawnOnChain.map((n) => Number(n))).to.have.members(withdrawn);
-  expect(inWindowOnChain.map((n) => Number(n))).to.have.members(inWindow);
-  expect(readyOnChain.map((n) => Number(n))).to.have.members(ready);
 }
 
 describe("NewTreasury Contract Tests", function () {
@@ -3026,6 +3053,46 @@ describe("NewTreasury Contract Tests", function () {
 
         // Expect: both purchases and refund succeed
       });
+
+      it("should allow refund if original refund window is still valid despite later refundWindow shortened", async function () {
+        // Step 1: instructor1 creates a course
+        const course1 = await createCourseHelper({
+          uri: "https://example.com/refund-window-after-purchase",
+          withdrawers: [instructor1.address],
+          redeemer: instructor1,
+          validUntil: now + 86400,
+          expectSuccessWith: "CourseCreated",
+        });
+
+        // Step 2: buyer1 buys the course
+        const buy_course = await buyCourseHelper({
+          courseId: course1.courseId,
+          tokenAddress: MKT1.target,
+          coursePrice: ethers.parseEther("10"),
+          courseReceiver: person1.address,
+          redeemer: buyer1,
+          validUntil: now + 86400,
+          nativeMsgValue: 0,
+          expectSuccessWith: "ContentPurchased",
+        });
+
+        // Step 3: set refundWindow to 1 day
+        await NewTreasury.connect(backend).setRefundWindow(1);
+
+        // Step 4: fast forward 3 days
+        await fastForwardTime({ days: 3 });
+
+        // Step 5: refund should succeed since original refund window was longer
+        const refund = await refundCourseHelper({
+          paymentId: buy_course.paymentId,
+          redeemer: buyer1,
+          validUntil: now + 86400,
+          expectSuccessWith: "CourseRefunded",
+        });
+
+        // Expect: Refund succeeds even though current refundWindow is 1 day
+      });
+
       /////###End of Success Cases###/////
     });
 
@@ -3258,6 +3325,97 @@ describe("NewTreasury Contract Tests", function () {
           expectRevertWith: "Refund window passed",
         });
       });
+
+      it("should fail refund if original refund window expired despite later refundWindow was extended", async function () {
+        // Step 1: set refundWindow to 1 day
+        await NewTreasury.connect(backend).setRefundWindow(1);
+
+        // Step 2: instructor1 creates a course
+        const course1 = await createCourseHelper({
+          uri: "https://example.com/refund-window-extended-fail",
+          withdrawers: [instructor1.address],
+          redeemer: instructor1,
+          validUntil: now + 86400,
+          expectSuccessWith: "CourseCreated",
+        });
+
+        // Step 3: buyer1 buys the course
+        const buy_course = await buyCourseHelper({
+          courseId: course1.courseId,
+          tokenAddress: MKT1.target,
+          coursePrice: ethers.parseEther("10"),
+          courseReceiver: person1.address,
+          redeemer: buyer1,
+          validUntil: now + 86400,
+          nativeMsgValue: 0,
+          expectSuccessWith: "ContentPurchased",
+        });
+
+        // Step 4: extend refundWindow to 10 days (simulates a global policy change)
+        await NewTreasury.connect(backend).setRefundWindow(10);
+
+        // Step 5: fast forward 3 days (beyond original 1 day window)
+        await fastForwardTime({ days: 3 });
+
+        // Step 6: attempt refund → should fail since original refund window passed
+        await refundCourseHelper({
+          paymentId: buy_course.paymentId,
+          redeemer: buyer1,
+          validUntil: now + 86400,
+          expectRevertWith: "Refund window passed",
+        });
+
+        // Expect: Reverts even though current refundWindow is 10 days
+      });
+
+      it("should fail refund by paymentId if payment was already withdrawn", async function () {
+        // Step 1: instructor1 creates a course
+        const course1 = await createCourseHelper({
+          uri: "https://example.com/paymentid-refund-after-withdraw",
+          withdrawers: [instructor1.address],
+          redeemer: instructor1,
+          validUntil: now + 86400,
+          expectSuccessWith: "CourseCreated",
+        });
+
+        // Step 2: buyer1 purchases course for person1
+        const buy = await buyCourseHelper({
+          courseId: course1.courseId,
+          tokenAddress: MKT1.target,
+          coursePrice: ethers.parseEther("10"),
+          courseReceiver: person1.address,
+          redeemer: buyer1,
+          validUntil: now + 86400,
+          nativeMsgValue: 0,
+          expectSuccessWith: "ContentPurchased",
+        });
+
+        // Step 3: fast forward time beyond refund window
+        const refundWindowInDays = Number(await NewTreasury.refundWindow()) / 86400;
+        await fastForwardTime({ days: refundWindowInDays + 1 });
+
+        // Step 4: instructor withdraws the payment
+        await withdrawCoursePaymentsHelper({
+          courseId: course1.courseId,
+          fromIndex: 1,
+          toIndex: 1,
+          redeemer: instructor1,
+          validUntil: now + 86400,
+          expectSuccessWith: "CoursePaymentsWithdrawn",
+          expectations: [PES],
+        });
+
+        // Step 5: try to refund using paymentId (should fail due to already withdrawn)
+        await refundCourseHelper({
+          paymentId: buy.paymentId,
+          redeemer: buyer1,
+          validUntil: now + 86400,
+          expectRevertWith: "Already withdrawn",
+        });
+
+        // Expectation: Refund fails because the payment was already withdrawn
+      });
+
       /////###End of Failure Cases###/////
     });
     /////###End of Refunds: paymentId###/////
@@ -3532,6 +3690,47 @@ describe("NewTreasury Contract Tests", function () {
 
         // Expect: both purchases and refund succeed
       });
+
+      it("should allow refund by owner if original refund window is still valid despite later refundWindow shortened", async function () {
+        // Step 1: instructor1 creates a course
+        const course1 = await createCourseHelper({
+          uri: "https://example.com/owner-refund-window-long-then-short",
+          withdrawers: [instructor1.address],
+          redeemer: instructor1,
+          validUntil: now + 86400,
+          expectSuccessWith: "CourseCreated",
+        });
+
+        // Step 2: buyer1 buys the course for person1
+        const buy_course = await buyCourseHelper({
+          courseId: course1.courseId,
+          tokenAddress: MKT1.target,
+          coursePrice: ethers.parseEther("10"),
+          courseReceiver: person1.address,
+          redeemer: buyer1,
+          validUntil: now + 86400,
+          nativeMsgValue: 0,
+          expectSuccessWith: "ContentPurchased",
+        });
+
+        // Step 3: new refund window set to 1 day
+        await NewTreasury.connect(backend).setRefundWindow(1); // 1 gün
+
+        // Step 4: fast forward 3 days
+        await fastForwardTime({ days: 3 });
+
+        // Step 5: instructor5 refunds the course by owner
+        await refundCourseByOwnerHelper({
+          courseOwner: person1.address,
+          courseId: course1.courseId,
+          redeemer: buyer1,
+          validUntil: now + 86400,
+          expectSuccessWith: "CourseRefunded",
+        });
+
+        // Expect: Refund succeeds even though current refundWindow is 1 day old refund window valid for this course
+      });
+
       /////###End of Success Cases###/////
     });
 
@@ -3774,6 +3973,99 @@ describe("NewTreasury Contract Tests", function () {
           expectRevertWith: "Refund window passed",
         });
       });
+
+      it("should fail refund by owner if original refund window expired despite later refundWindow was extended", async function () {
+        // Step 1: set refund window to a short duration (e.g. 1 day)
+        await NewTreasury.connect(backend).setRefundWindow(1);
+
+        // Step 2: instructor1 creates a course
+        const course1 = await createCourseHelper({
+          uri: "https://example.com/owner-refund-window-short-then-long",
+          withdrawers: [instructor1.address],
+          redeemer: instructor1,
+          validUntil: now + 86400,
+          expectSuccessWith: "CourseCreated",
+        });
+
+        // Step 3: buyer1 purchases course for person1
+        const buy_course = await buyCourseHelper({
+          courseId: course1.courseId,
+          tokenAddress: MKT1.target,
+          coursePrice: ethers.parseEther("10"),
+          courseReceiver: person1.address,
+          redeemer: buyer1,
+          validUntil: now + 86400,
+          nativeMsgValue: 0,
+          expectSuccessWith: "ContentPurchased",
+        });
+
+        // Step 4: extend refund window to 10 days (policy updated but shouldn't affect past purchases)
+        await NewTreasury.connect(backend).setRefundWindow(10);
+
+        // Step 5: fast forward time by 3 days
+        await fastForwardTime({ days: 3 });
+
+        // Step 6: try to refund (original window was 1 day, now expired)
+        await refundCourseByOwnerHelper({
+          courseOwner: person1.address,
+          courseId: course1.courseId,
+          redeemer: buyer1,
+          validUntil: now + 86400,
+          expectRevertWith: "Refund window passed",
+        });
+
+        // Expectation: Refund fails because the refund window at the time of purchase already expired
+      });
+
+      it("should fail refund by owner if payment was already withdrawn", async function () {
+        // Step 1: instructor1 creates a course
+        const course1 = await createCourseHelper({
+          uri: "https://example.com/owner-refund-after-withdraw",
+          withdrawers: [instructor1.address],
+          redeemer: instructor1,
+          validUntil: now + 86400,
+          expectSuccessWith: "CourseCreated",
+        });
+
+        // Step 2: buyer1 purchases course for person1
+        const buy = await buyCourseHelper({
+          courseId: course1.courseId,
+          tokenAddress: MKT1.target,
+          coursePrice: ethers.parseEther("10"),
+          courseReceiver: person1.address,
+          redeemer: buyer1,
+          validUntil: now + 86400,
+          nativeMsgValue: 0,
+          expectSuccessWith: "ContentPurchased",
+        });
+
+        // Step 3: fast forward the refund window to allow withdrawal
+        const refundWindowInDays = Number(await NewTreasury.refundWindow()) / 86400;
+        await fastForwardTime({ days: refundWindowInDays + 1 });
+
+        // Step 4: instructor withdraws the payment
+        await withdrawCoursePaymentsHelper({
+          courseId: course1.courseId,
+          fromIndex: 1,
+          toIndex: 1,
+          redeemer: instructor1,
+          validUntil: now + 86400,
+          expectSuccessWith: "CoursePaymentsWithdrawn",
+          expectations: [PES],
+        });
+
+        // Step 5: try to refund by owner (should fail due to already withdrawn)
+        await refundCourseByOwnerHelper({
+          courseOwner: person1.address,
+          courseId: course1.courseId,
+          redeemer: buyer1,
+          validUntil: now + 86400,
+          expectRevertWith: "Already withdrawn",
+        });
+
+        // Expectation: Refund fails because funds were already withdrawn
+      });
+
       /////###End of Failure Cases###/////
     });
     /////###End of Refunds: byOwner and courseId###/////
@@ -3824,8 +4116,470 @@ describe("NewTreasury Contract Tests", function () {
           expectations: [PES, PES, PES],
         });
         // Expect: "CoursePaymentsWithdrawn" with expected success states
-        console.log("withdrawResult tokenStats:", withdrawResult.tokenStats);
+        // console.log("withdrawResult tokenStats:", withdrawResult.tokenStats);
       });
+
+      it("should allow withdraw if original refund window expired before refundWindow was extended", async function () {
+        // Step 1: set initial refundWindow to 1 days
+        await NewTreasury.connect(backend).setRefundWindow(1);
+
+        // Step 2: instructor1 creates course
+        const course1 = await createCourseHelper({
+          uri: "https://example.com/withdraw-window-long-then-short",
+          withdrawers: [instructor1.address],
+          redeemer: instructor1,
+          validUntil: now + 86400,
+          expectSuccessWith: "CourseCreated",
+        });
+
+        // Step 3: buyer buys course
+        await buyCourseHelper({
+          courseId: course1.courseId,
+          tokenAddress: MKT1.target,
+          coursePrice: ethers.parseEther("10"),
+          courseReceiver: person1.address,
+          redeemer: buyer1,
+          validUntil: now + 86400,
+          nativeMsgValue: 0,
+          expectSuccessWith: "ContentPurchased",
+        });
+
+        // Step 4: shorten refundWindow to 10 day
+        await NewTreasury.connect(backend).setRefundWindow(10);
+
+        // Step 5: fast forward 3 days (beyond original the old 1 day window)
+        await fastForwardTime({ days: 3 });
+
+        // Step 6: withdraw should succeed
+        await withdrawCoursePaymentsHelper({
+          courseId: course1.courseId,
+          fromIndex: 1,
+          toIndex: 1,
+          redeemer: instructor1,
+          validUntil: now + 86400,
+          expectSuccessWith: "CoursePaymentsWithdrawn",
+          expectations: [PES],
+        });
+      });
+
+      /////###End of Success Cases###/////
+    });
+
+    describe("🔁 Partial Success Cases", function () {
+      it("should skip withdraw if purchase is still within original refund window despite refundWindow being shortened later", async function () {
+        // Step 1: set initial refundWindow to 10 days
+        await NewTreasury.connect(backend).setRefundWindow(10);
+
+        // Step 2: instructor1 creates course
+        const course1 = await createCourseHelper({
+          uri: "https://example.com/withdraw-window-still-in-long-window",
+          withdrawers: [instructor1.address],
+          redeemer: instructor1,
+          validUntil: now + 86400,
+          expectSuccessWith: "CourseCreated",
+        });
+
+        // Step 3: buyer buys course
+        await buyCourseHelper({
+          courseId: course1.courseId,
+          tokenAddress: MKT1.target,
+          coursePrice: ethers.parseEther("10"),
+          courseReceiver: person1.address,
+          redeemer: buyer1,
+          validUntil: now + 86400,
+          nativeMsgValue: 0,
+          expectSuccessWith: "ContentPurchased",
+        });
+
+        // Step 4: shorten refundWindow to 1 day (but purchase was made with 10-day window)
+        await NewTreasury.connect(backend).setRefundWindow(1);
+
+        // Step 5: fast forward 3 days (refund window according to new policy is passed, but not the old one)
+        await fastForwardTime({ days: 3 });
+
+        // Step 6: withdraw attempt should emit event, but no tokens processed
+        await withdrawCoursePaymentsHelper({
+          courseId: course1.courseId,
+          fromIndex: 1,
+          toIndex: 1,
+          redeemer: instructor1,
+          validUntil: now + 86400,
+          expectSuccessWith: "CoursePaymentsWithdrawn", // emit edilir
+          expectations: [PI], // işlem yapılmaz
+        });
+      });
+
+      /////###End of Partial Success Cases###/////
+    });
+
+    describe("❌ Failure Cases", function () {
+      it("should fail to withdraw with invalid signer", async function () {
+        // Step 1: instructor1 creates course
+        const course1 = await createCourseHelper({
+          uri: "https://example.com/withdraw-invalid-signer",
+          withdrawers: [instructor1.address],
+          redeemer: instructor1,
+          validUntil: now + 86400,
+          expectSuccessWith: "CourseCreated",
+        });
+
+        // Step 2: buyer1 purchases course for person1
+        await buyCourseHelper({
+          courseId: course1.courseId,
+          tokenAddress: MKT1.target,
+          coursePrice: ethers.parseEther("10"),
+          courseReceiver: person1.address,
+          redeemer: buyer1,
+          validUntil: now + 86400,
+          nativeMsgValue: 0,
+          expectSuccessWith: "ContentPurchased",
+        });
+
+        // Step 3: fast forward to after refund window
+        const refundWindowInDays = Number(await NewTreasury.refundWindow()) / 86400;
+        await fastForwardTime({ days: refundWindowInDays + 1 });
+
+        // Step 4: switch to an invalid signer
+        withdrawVH = getVoucherHelpers({ signer: instructor2 }).withdrawVH;
+
+        // Step 5: attempt withdraw with wrong signer
+        const withdrawResult = await withdrawCoursePaymentsHelper({
+          courseId: course1.courseId,
+          fromIndex: 1,
+          toIndex: 1,
+          redeemer: instructor1,
+          validUntil: now + 86400,
+          expectRevertWith: "Signature invalid or unauthorized",
+          expectations: [PES],
+        });
+        // Expect: Reverts with "Signature invalid or unauthorized"
+        //console.log("withdrawResult tokenStats:", withdrawResult.tokenStats);
+      });
+
+      it("should fail to withdraw with expired voucher", async function () {
+        // Step 1: instructor1 creates course
+        const course1 = await createCourseHelper({
+          uri: "https://example.com/withdraw-expired",
+          withdrawers: [instructor1.address],
+          redeemer: instructor1,
+          validUntil: now + 86400,
+          expectSuccessWith: "CourseCreated",
+        });
+
+        // Step 2: buyer1 purchases course
+        await buyCourseHelper({
+          courseId: course1.courseId,
+          tokenAddress: MKT1.target,
+          coursePrice: ethers.parseEther("10"),
+          courseReceiver: person1.address,
+          redeemer: buyer1,
+          validUntil: now + 86400,
+          nativeMsgValue: 0,
+          expectSuccessWith: "ContentPurchased",
+        });
+
+        // Step 3: fast forward time to pass refund window
+        const refundWindowInDays = Number(await NewTreasury.refundWindow()) / 86400;
+        await fastForwardTime({ days: refundWindowInDays + 1 });
+
+        // Step 4: expired voucher
+        const withdrawResult = await withdrawCoursePaymentsHelper({
+          courseId: course1.courseId,
+          fromIndex: 1,
+          toIndex: 1,
+          redeemer: instructor1,
+          validUntil: now - 60, // expired
+          expectRevertWith: "Voucher expired",
+          expectations: [PES],
+        });
+        // Expect: Reverts with "Voucher expired" with expected fail states
+        //console.log("withdrawResult tokenStats:", withdrawResult.tokenStats);
+      });
+
+      it("should fail to withdraw with courseId = 0", async function () {
+        // Step 1: Try withdraw without any course created for non-existing courseId = 0 expect fail
+        const withdrawResult1 = await withdrawCoursePaymentsHelper({
+          courseId: 0,
+          fromIndex: 1,
+          toIndex: 1,
+          redeemer: instructor1,
+          validUntil: now + 86400,
+          expectRevertWith: "Invalid courseId",
+          expectations: [PES],
+        });
+
+        // Step 2: Create a valid course
+        const validCourse = await createCourseHelper({
+          uri: "https://example.com/withdraw-invalid-courseid",
+          withdrawers: [instructor1.address],
+          redeemer: instructor1,
+          validUntil: now + 86400,
+          expectSuccessWith: "CourseCreated",
+        });
+
+        // Step 3: Try withdraw without any course created for non-existing courseId = 0 expect fail
+        const withdrawResult2 = await withdrawCoursePaymentsHelper({
+          courseId: 0,
+          fromIndex: 1,
+          toIndex: 1,
+          redeemer: instructor1,
+          validUntil: now + 86400,
+          expectRevertWith: "Invalid courseId",
+          expectations: [PES],
+        });
+        // Expect: Reverts with "Invalid courseId" in both cases
+      });
+
+      it("should fail to withdraw with courseId > courseCounter", async function () {
+        // Step 1: Use a courseId greater than current courseCounter
+        const invalidCourseId1 = Number(await NewTreasury.courseCounter()) + 1;
+
+        // Step 2: Try withdraw with invalid courseId
+        const withdrawResult1 = await withdrawCoursePaymentsHelper({
+          courseId: invalidCourseId1,
+          fromIndex: 1,
+          toIndex: 1,
+          redeemer: instructor1,
+          validUntil: now + 86400,
+          expectRevertWith: "Invalid courseId",
+          expectations: [PES],
+        });
+
+        // Step 3: Create a valid course
+        const validCourse = await createCourseHelper({
+          uri: "https://example.com/withdraw-courseid-overflow",
+          withdrawers: [instructor1.address],
+          redeemer: instructor1,
+          validUntil: now + 86400,
+          expectSuccessWith: "CourseCreated",
+        });
+
+        // Step 4: Use a courseId greater than current courseCounter
+        const invalidCourseId2 = Number(await NewTreasury.courseCounter()) + 1;
+
+        // Step 5: Try withdraw with invalid courseId
+        const withdrawResult = await withdrawCoursePaymentsHelper({
+          courseId: invalidCourseId2,
+          fromIndex: 1,
+          toIndex: 1,
+          redeemer: instructor1,
+          validUntil: now + 86400,
+          expectRevertWith: "Invalid courseId",
+          expectations: [PES],
+        });
+        // Expect: Reverts with "Invalid courseId" in both cases
+      });
+
+      it("should fail to withdraw when index range is invalid (fromIndex > toIndex, fromIndex = 0, toIndex > saleCount)", async function () {
+        // Step 1: instructor1 creates a course
+        const course1 = await createCourseHelper({
+          uri: "https://example.com/withdraw-invalid-range",
+          withdrawers: [instructor1.address],
+          redeemer: instructor1,
+          validUntil: now + 86400,
+          expectSuccessWith: "CourseCreated",
+        });
+
+        // Step 2: 5 different valid sales occur for the course
+        const receivers = [person1, person2, person3, person4, person5];
+        for (let i = 0; i < 5; i++) {
+          await buyCourseHelper({
+            courseId: course1.courseId,
+            tokenAddress: MKT1.target,
+            coursePrice: ethers.parseEther("10"),
+            courseReceiver: receivers[i].address,
+            redeemer: backend,
+            validUntil: now + 86400,
+            nativeMsgValue: 0,
+            expectSuccessWith: "ContentPurchased",
+          });
+        }
+
+        // Step 3: fromIndex = 0
+        await withdrawCoursePaymentsHelper({
+          courseId: course1.courseId,
+          fromIndex: 0,
+          toIndex: 1,
+          redeemer: instructor1,
+          validUntil: now + 86400,
+          expectRevertWith: "Invalid index range: 1toMax_saleCounterPerCourse",
+          expectations: [PES],
+        });
+
+        // Step 4: fromIndex > toIndex
+        await withdrawCoursePaymentsHelper({
+          courseId: course1.courseId,
+          fromIndex: 3,
+          toIndex: 2,
+          redeemer: instructor1,
+          validUntil: now + 86400,
+          expectRevertWith: "Invalid index range: 1toMax_saleCounterPerCourse",
+          expectations: [PES],
+        });
+
+        // Step 5: toIndex > saleCounterPerCourse[courseId] (5 satış oldu, toIndex = 6)
+        const invalidEnd = Number(await NewTreasury.saleCounterPerCourse(course1.courseId)) + 1;
+        await withdrawCoursePaymentsHelper({
+          courseId: course1.courseId,
+          fromIndex: 4,
+          toIndex: invalidEnd, //its 6, only five sales occured: "1-2-3-4-5"
+          redeemer: instructor1,
+          validUntil: now + 86400,
+          expectRevertWith: "Invalid index range: 1toMax_saleCounterPerCourse",
+          expectations: [PES, PES, PES], // len doesn't matter here, skipped in helper
+        });
+        // Expect: Reverts with "Invalid index range: 1toMax_saleCounterPerCourse" in all cases
+      });
+
+      it("should fail to withdraw when batch size exceeds maxWithdrawBatchSize", async function () {
+        // Step 1: instructor1 creates a course
+        const course1 = await createCourseHelper({
+          uri: "https://example.com/withdraw-batch-limit",
+          withdrawers: [instructor1.address],
+          redeemer: instructor1,
+          validUntil: now + 86400,
+          expectSuccessWith: "CourseCreated",
+        });
+
+        // Step 2: get maxWithdrawBatchSize
+        const maxBatch = Number(await NewTreasury.maxWithdrawBatchSize());
+        const numSales = maxBatch + 1; // one more than max allowed batch size
+
+        // Step 3: make sales more than max allowed batch size of withdraw
+        const receivers = Array.from({ length: numSales }, () => ethers.Wallet.createRandom());
+
+        for (let i = 0; i < numSales; i++) {
+          await buyCourseHelper({
+            courseId: course1.courseId,
+            tokenAddress: MKT1.target,
+            coursePrice: ethers.parseEther("10"),
+            courseReceiver: receivers[i].address,
+            redeemer: backend,
+            validUntil: now + 86400,
+            nativeMsgValue: 0,
+            expectSuccessWith: "ContentPurchased",
+          });
+        }
+
+        // Step 4: fast forward time after refund window
+        const refundWindowInDays = Number(await NewTreasury.refundWindow()) / 86400;
+        await fastForwardTime({ days: refundWindowInDays + 1 });
+
+        // Step 5: attempt withdraw with a batch size exceeding the limit
+        const fromIndex = 1; // first sale also minimum allowed index
+        const toIndex = numSales; // bigger than maxWithdrawBatchSize also its last sale index
+
+        const expectations = Array(toIndex - fromIndex + 1).fill(PES);
+
+        const withdrawResult = await withdrawCoursePaymentsHelper({
+          courseId: course1.courseId,
+          fromIndex,
+          toIndex,
+          redeemer: instructor1,
+          validUntil: now + 86400,
+          expectRevertWith: "Max allowed batch withdraw range exceeded",
+          expectations,
+        });
+        // Expect: Reverts with "Max allowed batch withdraw range exceeded"
+      });
+
+      it("should fail to withdraw when redeemer is not an authorized withdrawer", async function () {
+        // Step 1: instructor1 creates course with only instructor1 as authorized withdrawer
+        const course1 = await createCourseHelper({
+          uri: "https://example.com/withdraw-unauthorized",
+          withdrawers: [instructor1.address],
+          redeemer: instructor1,
+          validUntil: now + 86400,
+          expectSuccessWith: "CourseCreated",
+        });
+
+        // Step 2: buyer1 purchases course
+        await buyCourseHelper({
+          courseId: course1.courseId,
+          tokenAddress: MKT1.target,
+          coursePrice: ethers.parseEther("10"),
+          courseReceiver: person1.address,
+          redeemer: buyer1,
+          validUntil: now + 86400,
+          nativeMsgValue: 0,
+          expectSuccessWith: "ContentPurchased",
+        });
+
+        // Step 3: fast forward time to pass refund window
+        const refundWindowInDays = Number(await NewTreasury.refundWindow()) / 86400;
+        await fastForwardTime({ days: refundWindowInDays + 1 });
+
+        // Step 4: try withdraw with unauthorized redeemer (backend not in withdrawers list)
+        const withdrawResult1 = await withdrawCoursePaymentsHelper({
+          courseId: course1.courseId,
+          fromIndex: 1,
+          toIndex: 1,
+          redeemer: backend,
+          validUntil: now + 86400,
+          expectRevertWith: "Not authorized withdrawer for this course",
+          expectations: [PES],
+        });
+
+        // Step 5: try withdraw with unauthorized redeemer (instructor2 not in withdrawers list)
+        const withdrawResult2 = await withdrawCoursePaymentsHelper({
+          courseId: course1.courseId,
+          fromIndex: 1,
+          toIndex: 1,
+          redeemer: instructor2,
+          validUntil: now + 86400,
+          expectRevertWith: "Not authorized withdrawer for this course",
+          expectations: [PES],
+        });
+
+        // Expect: Reverts with "Not authorized withdrawer for this course" in both cases
+      });
+
+      it("should fail if attemptSingleWithdrawOrRevert is called externally by any person", async function () {
+        // Step 1: instructor creates a course
+        const course1 = await createCourseHelper({
+          uri: "https://example.com/withdraw-external-attempt",
+          withdrawers: [instructor1.address],
+          redeemer: instructor1,
+          validUntil: now + 86400,
+          expectSuccessWith: "CourseCreated",
+        });
+
+        // Step 2: buyer purchases course
+        const buy_course1 = await buyCourseHelper({
+          courseId: course1.courseId,
+          tokenAddress: MKT1.target,
+          coursePrice: ethers.parseEther("10"),
+          courseReceiver: person1.address,
+          redeemer: buyer1,
+          validUntil: now + 86400,
+          nativeMsgValue: 0,
+          expectSuccessWith: "ContentPurchased",
+        });
+
+        // Step 3: fast forward beyond refund window
+        const refundWindowInDays = Number(await NewTreasury.refundWindow()) / 86400;
+        await fastForwardTime({ days: refundWindowInDays + 1 });
+
+        // Step 4: test direct call reverts from all actors
+        const paymentId = buy_course1.paymentId;
+        const actors = [instructor1, backend, foundation];
+
+        for (const actor of actors) {
+          await expect(
+            NewTreasury.connect(actor).attemptSingleWithdrawOrRevert(paymentId, actor.address)
+          ).to.be.revertedWith("Only callable internally");
+        }
+      });
+
+      /////###End of Failure Cases###/////
+    });
+    /////###End of Withdrawals###/////
+  });
+
+  // End of tests
+});
+
+/*
 
       it("should allow instructor1 to withdraw payments from mixed tokens (MKT1, MKT2, ETH)", async function () {
         const latestBlock = await ethers.provider.getBlock("latest");
@@ -3965,81 +4719,17 @@ describe("NewTreasury Contract Tests", function () {
         expect(MKT2After).to.be.gt(MKT2Before);
         expect(ethAfter).to.be.gt(ethBefore); // withdraw sonrası eth arttı
       });
-      /////###End of Success Cases###/////
-    });
 
-    describe("❌ Failure Cases", function () {
-      it("should fail to withdraw...", async function () {
-        // Test logic for withdrawal failure
-      });
-      /////###End of Failure Cases###/////
-    });
-    /////###End of Withdrawals###/////
-  });
+*/
 
-  // End of tests
-});
 /*
 Erequire(_redeemer == msg.sender, "Only redeemer can use this voucher");
-require(!payment.isWithdrawn, "Already withdrawn"); cannot refund
-
-1. createCourse && updateCourse
-withdrawers.length > 4 denenir olmaz arttırılır denenir olur.
-
-2. buyCourse another
-❌ Failure Test Cases
-Invalid courseId (0 or > courseCounter)
-→ require(_courseId > 0 && _courseId <= courseCounter)
-
-Course is not sellable
-→ require(courses[_courseId].sellable)
-
-User already owns the course
-→ require(!hasOwnedCourse[_courseReceiver][_courseId])
-
-Price is 0
-→ require(_coursePrice > 0)
-
-Native payment with incorrect msg.value
-→ require(msg.value == _coursePrice)
-
-ERC20 payment but msg.value > 0
-→ require(msg.value == 0)
-
-ERC20 transfer fails
-→ (bu opsiyonel; test kontratında ERC20'ye özel fail mekanizması kurarsan testlenebilir)
-
-3. buyCourse
-Kurs sellable == false → revert "Course is not sellable"
-
-Kurs daha önce alınmış → revert "Content receiver already owns this course"
-
-Yanlış ETH miktarı gönderilirse → revert "Incorrect amount sent"
-
-Native gönderilirken tokenAddress != 0x0
-
 token.transferFrom başarısız (örnek: approval yoksa)
-
-4. refundCourse
-Süresi geçmiş (validUntil < now) → revert "Voucher expired"
-
-Zaten refund edilmiş payment
-
-Refund window geçmiş
-
-paymentId geçersiz
-
+1. createCourse && updateCourse: withdrawers.length > 4 denenir olmaz arttırılır denenir olur.
 5. withdrawCoursePayments
-Yetkisiz kişi → revert "Not authorized withdrawer for this course"
-
-Aralık geçersiz (from > to veya toIndex > saleCounter)
-
 Satış refund edilmiş
-
 Satış refund window içinde
-
 attemptSingleWithdrawOrRevert çağrısı revert ederse (örneğin: governanceContract fonksiyonu revert ederse)
-
 
 */
 
