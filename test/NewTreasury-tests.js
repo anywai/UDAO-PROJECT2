@@ -1294,8 +1294,7 @@ async function withdrawCoursePaymentsHelper({
     fromIndex,
     toIndex,
     redeemer,
-    voucher,
-    gasCost,
+    tokenStats,
   };
 }
 
@@ -1392,6 +1391,32 @@ async function _validateExpectations(input, expectations) {
       stats.totalGovernance += payment.governanceShare;
     }
   }
+  // On-chain withdraw status ile expectations karşılaştır
+  const [refundedOnChain, withdrawnOnChain, inWindowOnChain, readyOnChain] = await NewTreasury.checkWithdrawStatus(
+    input.courseId,
+    input.fromIndex,
+    input.toIndex
+  );
+
+  const refunded = [];
+  const withdrawn = [];
+  const inWindow = [];
+  const ready = [];
+
+  for (let i = input.fromIndex; i <= input.toIndex; i++) {
+    const expected = expectations[i - input.fromIndex];
+
+    if ([PaymentState.RI, PaymentState.RE].includes(expected)) refunded.push(i);
+    else if ([PaymentState.WI, PaymentState.WE].includes(expected)) withdrawn.push(i);
+    else if (expected === PaymentState.PI) inWindow.push(i);
+    else if ([PaymentState.PEF, PaymentState.PES].includes(expected)) ready.push(i);
+  }
+
+  expect(refundedOnChain.map((n) => Number(n))).to.have.members(refunded);
+  expect(withdrawnOnChain.map((n) => Number(n))).to.have.members(withdrawn);
+  expect(inWindowOnChain.map((n) => Number(n))).to.have.members(inWindow);
+  expect(readyOnChain.map((n) => Number(n))).to.have.members(ready);
+
   return tokenStats;
 }
 
@@ -1501,6 +1526,32 @@ async function _expectWithdraw(input, tokenStats, gasCost, expectations, waitSuc
       `Expected ${expected}: refund window should be ${expectedInRWindow ? "open" : "closed"} at ${paymentId}`
     );
   }
+
+  // Final check with checkWithdrawStatus
+  const [refundedOnChain, withdrawnOnChain, inWindowOnChain, readyOnChain] = await NewTreasury.checkWithdrawStatus(
+    input.courseId,
+    input.fromIndex,
+    input.toIndex
+  );
+
+  const refunded = [];
+  const withdrawn = [];
+  const inWindow = [];
+  const ready = [];
+
+  for (let i = input.fromIndex; i <= input.toIndex; i++) {
+    const expected = expectations[i - input.fromIndex];
+
+    if ([RI, RE].includes(expected)) refunded.push(i);
+    else if ([WI, WE].includes(expected) || (expected === PES && waitSuccess)) withdrawn.push(i);
+    else if (expected === PI) inWindow.push(i);
+    else if ([PEF, PES].includes(expected) && !(expected === PES && waitSuccess)) ready.push(i);
+  }
+
+  expect(refundedOnChain.map((n) => Number(n))).to.have.members(refunded);
+  expect(withdrawnOnChain.map((n) => Number(n))).to.have.members(withdrawn);
+  expect(inWindowOnChain.map((n) => Number(n))).to.have.members(inWindow);
+  expect(readyOnChain.map((n) => Number(n))).to.have.members(ready);
 }
 
 describe("NewTreasury Contract Tests", function () {
@@ -3732,7 +3783,7 @@ describe("NewTreasury Contract Tests", function () {
   describe("🏦 WITHDRAWALS", function () {
     describe("✅ Success Cases", function () {
       it("should allow instructor1 to withdraw payments for sales 1 to 3", async function () {
-        // 1. instructor1 course oluşturur
+        // Step 1: instructor1 creates a course
         const course1 = await createCourseHelper({
           uri: "https://example.com/withdraw-course/1",
           withdrawers: [instructor1.address],
@@ -3741,8 +3792,8 @@ describe("NewTreasury Contract Tests", function () {
           expectSuccessWith: "CourseCreated",
         });
 
-        // 2. 5 adet satış yapar
-        const price = [10, 10, 10, 10, 10];
+        // Step 2: 5 different sale occur for the course
+        const price = [5, 10, 15, 20, 25];
         const buyers = [buyer1, buyer2, buyer3, buyer4, buyer5];
         const receivers = [person1, person2, person3, person4, person5];
 
@@ -3759,14 +3810,10 @@ describe("NewTreasury Contract Tests", function () {
           });
         }
 
-        // 3. Zamanı ileri al: refund window sonlansın
-        await fastForwardTime({ days: 25 }); // 25 gün ileri al
+        // Step 3: Fast forward time after refund window, 25 days
+        await fastForwardTime({ days: 25 });
 
-        // 4. Balance öncesi
-        const instructorBalBefore = await MKT1.balanceOf(instructor1.address);
-        const contractBalBefore = await MKT1.balanceOf(NewTreasury.target);
-
-        // 5. Withdraw işlemi
+        // Step 4: Withdraw payments from sales 1 to 3
         const withdrawResult = await withdrawCoursePaymentsHelper({
           courseId: course1.courseId,
           fromIndex: 1,
@@ -3776,31 +3823,8 @@ describe("NewTreasury Contract Tests", function () {
           expectSuccessWith: "CoursePaymentsWithdrawn",
           expectations: [PES, PES, PES],
         });
-
-        // 6. Flag kontrolü
-        for (let j = 1; j <= 3; j++) {
-          const paymentId = await NewTreasury.courseSaleRecords(course1.courseId, j);
-          const payment = await NewTreasury.payments(paymentId);
-          expect(payment.isWithdrawn).to.equal(true);
-        }
-
-        // 7. Balance fark kontrolü
-        const instructorBalAfter = await MKT1.balanceOf(instructor1.address);
-        const contractBalAfter = await MKT1.balanceOf(NewTreasury.target);
-        const gained = instructorBalAfter - instructorBalBefore;
-        const spent = contractBalBefore - contractBalAfter;
-
-        expect(gained).to.be.gt(0n);
-        expect(spent).to.be.gt(0n);
-        expect(gained).to.be.lt(spent); // çünkü contract → foundation + governance da gönderdi
-
-        // 8. checkWithdrawStatus ile kontrol
-        const [refunded, withdrawn, inWindow, ready] = await NewTreasury.checkWithdrawStatus(course1.courseId, 1, 3);
-
-        expect(withdrawn.map(Number)).to.deep.equal([1, 2, 3]);
-        expect(refunded.length).to.equal(0);
-        expect(inWindow.length).to.equal(0);
-        expect(ready.length).to.equal(0);
+        // Expect: "CoursePaymentsWithdrawn" with expected success states
+        console.log("withdrawResult tokenStats:", withdrawResult.tokenStats);
       });
 
       it("should allow instructor1 to withdraw payments from mixed tokens (MKT1, MKT2, ETH)", async function () {
