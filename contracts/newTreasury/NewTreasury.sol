@@ -33,18 +33,17 @@ contract NewTreasury is AccessControl, EIP712, ReentrancyGuard {
             _foundationWallet != address(0),
             "Foundation wallet address cannot be zero"
         );
+        require(
+            _foundationWallet != foundationWallet,
+            "Foundation wallet address already set"
+        );
 
         foundationWallet = _foundationWallet;
         _grantRole(FOUNDATION_ROLE, _foundationWallet);
         _grantRole(BACKEND_ROLE, _foundationWallet);
-
-        // revoke foundation&backend role from the previous foundation wallet
-        if (msg.sender != _foundationWallet) {
-            _revokeRole(FOUNDATION_ROLE, msg.sender);
-            // if still has backend role, revoke it
-            if (hasRole(BACKEND_ROLE, msg.sender)) {
-                _revokeRole(BACKEND_ROLE, msg.sender);
-            }
+        _revokeRole(FOUNDATION_ROLE, msg.sender);
+        if (hasRole(BACKEND_ROLE, msg.sender)) {
+            _revokeRole(BACKEND_ROLE, msg.sender);
         }
 
         emit FoundationWalletUpdated(_foundationWallet, msg.sender);
@@ -58,6 +57,10 @@ contract NewTreasury is AccessControl, EIP712, ReentrancyGuard {
         require(
             _udaoTokenAddress != address(0),
             "Udao token address cannot be zero"
+        );
+        require(
+            _udaoTokenAddress != udaoTokenAddress,
+            "Udao token address already set"
         );
 
         udaoTokenAddress = _udaoTokenAddress;
@@ -74,11 +77,17 @@ contract NewTreasury is AccessControl, EIP712, ReentrancyGuard {
             _governanceContract != address(0),
             "Governance contract address cannot be zero"
         );
+        require(
+            _governanceContract != governanceContract,
+            "Governance contract address already set"
+        );
 
         governanceContract = _governanceContract;
 
         emit GovernanceContractUpdated(_governanceContract);
     }
+
+    event BackendRoleGranted(address indexed backendAddress);
 
     function grantBackendRole(address _backendAddress) external {
         require(
@@ -89,9 +98,16 @@ contract NewTreasury is AccessControl, EIP712, ReentrancyGuard {
             _backendAddress != address(0),
             "Backend address cannot be zero"
         );
+        require(
+            !hasRole(BACKEND_ROLE, _backendAddress),
+            "Backend address already has backend role"
+        );
 
         _grantRole(BACKEND_ROLE, _backendAddress);
+        emit BackendRoleGranted(_backendAddress);
     }
+
+    event BackendRoleRevoked(address indexed backendAddress);
 
     function revokeBackendRole(address _backendAddress) external {
         require(
@@ -102,8 +118,13 @@ contract NewTreasury is AccessControl, EIP712, ReentrancyGuard {
             _backendAddress != address(0),
             "Backend address cannot be zero"
         );
+        require(
+            hasRole(BACKEND_ROLE, _backendAddress),
+            "Backend address does not have backend role"
+        );
 
         _revokeRole(BACKEND_ROLE, _backendAddress);
+        emit BackendRoleRevoked(_backendAddress);
     }
 
     constructor(
@@ -769,10 +790,9 @@ contract NewTreasury is AccessControl, EIP712, ReentrancyGuard {
         );
     }
 
-    event MaxWithdrawBatchSizeUpdated(uint256 indexed maxWithdrawBatchSize);
-
     /////### WITHDRAW LOGIC ###/////
     uint256 public maxWithdrawBatchSize = 10; // max 10 sales can be withdrawn at once
+    event MaxWithdrawBatchSizeUpdated(uint256 indexed maxWithdrawBatchSize);
 
     function setMaxWithdrawRange(uint256 newRange) external {
         require(hasRole(BACKEND_ROLE, msg.sender), "Not authorized");
