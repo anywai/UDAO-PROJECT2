@@ -808,14 +808,17 @@ contract NewTreasury is AccessControl, EIP712, ReentrancyGuard {
         uint256 validUntil = voucher.validUntil;
 
         require(courseId > 0 && courseId <= courseCounter, "Invalid courseId");
-        require(fromIndex <= toIndex, "Invalid index range");
+
+        require(
+            fromIndex > 0 &&
+                fromIndex <= toIndex &&
+                toIndex <= saleCounterPerCourse[courseId],
+            "Invalid index range: 1toMax_saleCounterPerCourse"
+        );
+
         require(
             toIndex - fromIndex + 1 <= maxWithdrawBatchSize,
-            "Max withdraw range exceeded"
-        );
-        require(
-            fromIndex > 0 && toIndex <= saleCounterPerCourse[courseId],
-            "Invalid index range"
+            "Max allowed batch withdraw range exceeded"
         );
 
         // create digest for the voucher
@@ -949,10 +952,12 @@ contract NewTreasury is AccessControl, EIP712, ReentrancyGuard {
         )
     {
         require(courseId > 0 && courseId <= courseCounter, "Invalid courseId");
-        require(fromIndex <= toIndex, "Invalid index range");
+
         require(
-            fromIndex > 0 && toIndex <= saleCounterPerCourse[courseId],
-            "Index out of bounds"
+            fromIndex > 0 &&
+                fromIndex <= toIndex &&
+                toIndex <= saleCounterPerCourse[courseId],
+            "Invalid index range: 1toSaleCountOfCourse"
         );
 
         // max length = toIndex - fromIndex + 1
