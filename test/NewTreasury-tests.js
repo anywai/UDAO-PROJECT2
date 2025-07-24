@@ -78,7 +78,7 @@ before(async () => {
   });
 
   // Project-specific initialization logic
-  await NewTreasury.connect(backend).setRefundWindow(19); // 1 gün
+  await NewTreasury.connect(backend).setRefundWindow(19 * 86400); // 1 gün
   //// ### END OF DEPLOY LOGIC ### ////
   // Take a snapshot of the current state
   snapshotId = await ethers.provider.send("evm_snapshot");
@@ -164,7 +164,7 @@ async function createCourseHelper({ uri, withdrawers, redeemer, validUntil, expe
 
 async function _prepareExpectedCreateState({ input, current, desired, waitSuccess }) {
   const isUriAlreadyExists = current.existingUriToId > 0n;
-  const isMaxWithdrawersExceeded = input.withdrawers.length > (await NewTreasury.maxWithdrawer());
+  const isMaxWithdrawersExceeded = input.withdrawers.length > (await NewTreasury.maxAllowedWithdrawers());
   const hasZeroWithdrawer = input.withdrawers.includes(ethers.ZeroAddress);
   const isRedeemerWithdrawer = input.withdrawers.includes(input.redeemer.address);
   const unauthorizedCreator = !isRedeemerWithdrawer && input.redeemer.address !== backend.address;
@@ -311,7 +311,7 @@ async function updateCourseHelper({
 
 async function _prepareExpectedUpdateState({ input, current, waitSuccess }) {
   const isUriAlreadyExists = current.newUriHashHolds > 0n && current.newUriHashHolds !== input.courseId;
-  const isMaxWithdrawersExceeded = input.withdrawers.length > (await NewTreasury.maxWithdrawer());
+  const isMaxWithdrawersExceeded = input.withdrawers.length > (await NewTreasury.maxAllowedWithdrawers());
   const hasZeroWithdrawer = input.withdrawers.includes(ethers.ZeroAddress);
   const isRedeemerWithdrawer = input.withdrawers.includes(input.redeemer.address);
   const unauthorizedUpdater = !isRedeemerWithdrawer && input.redeemer.address !== backend.address;
@@ -1324,8 +1324,8 @@ async function _validateExpectations(input, expectations) {
 
   const tokenStats = new Map(); // tokenAddress -> { price, instructor, foundation, governance }
   const treasury = NewTreasury.target;
-  const foundation = await NewTreasury.foundationWallet();
-  const governance = await NewTreasury.governanceContract();
+  const foundation = await NewTreasury.foundationAddress();
+  const governance = await NewTreasury.governanceAddress();
   const instructor = input.redeemer.address;
 
   // validate my allegations
@@ -1449,8 +1449,8 @@ async function _expectWithdraw(input, tokenStats, gasCost, expectations, waitSuc
 
   const treasury = NewTreasury.target;
   const instructor = input.redeemer.address;
-  const foundation = await NewTreasury.foundationWallet();
-  const governance = await NewTreasury.governanceContract();
+  const foundation = await NewTreasury.foundationAddress();
+  const governance = await NewTreasury.governanceAddress();
 
   for (const [token, stats] of tokenStats.entries()) {
     const { totalPrice, totalInstructor, totalFoundation, totalGovernance, initialBalances } = stats;
@@ -2025,8 +2025,8 @@ describe("NewTreasury Contract Tests", function () {
       });
 
       it("should fail to create a course with more than 4 withdrawers", async function () {
-        // Step 1: Read maxWithdrawer from contract and convert to Number
-        const max = Number(await NewTreasury.maxWithdrawer());
+        // Step 1: Read maxAllowedWithdrawers from contract and convert to Number
+        const max = Number(await NewTreasury.maxAllowedWithdrawers());
 
         // Step 2: Generate (max + 1) random addresses
         const extraWithdrawers = [];
@@ -2055,8 +2055,8 @@ describe("NewTreasury Contract Tests", function () {
           expectSuccessWith: "CourseCreated",
         });
 
-        // Step 2: Read maxWithdrawer from contract and convert to Number
-        const max = Number(await NewTreasury.maxWithdrawer());
+        // Step 2: Read maxAllowedWithdrawers from contract and convert to Number
+        const max = Number(await NewTreasury.maxAllowedWithdrawers());
 
         // Step 3: Generate (max + 1) random addresses
         const extraWithdrawers = [];
@@ -3077,7 +3077,7 @@ describe("NewTreasury Contract Tests", function () {
         });
 
         // Step 3: set refundWindow to 1 day
-        await NewTreasury.connect(backend).setRefundWindow(1);
+        await NewTreasury.connect(backend).setRefundWindow(1 * 86400);
 
         // Step 4: fast forward 3 days
         await fastForwardTime({ days: 3 });
@@ -3352,7 +3352,7 @@ describe("NewTreasury Contract Tests", function () {
         });
 
         // Step 4: extend refundWindow to 10 days (simulates a global policy change)
-        await NewTreasury.connect(backend).setRefundWindow(10);
+        await NewTreasury.connect(backend).setRefundWindow(10 * 86400);
 
         // Step 5: fast forward 3 days (beyond original 1 day window)
         await fastForwardTime({ days: 3 });
@@ -3714,7 +3714,7 @@ describe("NewTreasury Contract Tests", function () {
         });
 
         // Step 3: new refund window set to 1 day
-        await NewTreasury.connect(backend).setRefundWindow(1); // 1 gün
+        await NewTreasury.connect(backend).setRefundWindow(1 * 86400); // 1 gün
 
         // Step 4: fast forward 3 days
         await fastForwardTime({ days: 3 });
@@ -4000,7 +4000,7 @@ describe("NewTreasury Contract Tests", function () {
         });
 
         // Step 4: extend refund window to 10 days (policy updated but shouldn't affect past purchases)
-        await NewTreasury.connect(backend).setRefundWindow(10);
+        await NewTreasury.connect(backend).setRefundWindow(10 * 86400);
 
         // Step 5: fast forward time by 3 days
         await fastForwardTime({ days: 3 });
@@ -4121,7 +4121,7 @@ describe("NewTreasury Contract Tests", function () {
 
       it("should allow withdraw if original refund window expired before refundWindow was extended", async function () {
         // Step 1: set initial refundWindow to 1 days
-        await NewTreasury.connect(backend).setRefundWindow(1);
+        await NewTreasury.connect(backend).setRefundWindow(1 * 86400);
 
         // Step 2: instructor1 creates course
         const course1 = await createCourseHelper({
@@ -4145,7 +4145,7 @@ describe("NewTreasury Contract Tests", function () {
         });
 
         // Step 4: shorten refundWindow to 10 day
-        await NewTreasury.connect(backend).setRefundWindow(10);
+        await NewTreasury.connect(backend).setRefundWindow(10 * 86400);
 
         // Step 5: fast forward 3 days (beyond original the old 1 day window)
         await fastForwardTime({ days: 3 });
@@ -4168,7 +4168,7 @@ describe("NewTreasury Contract Tests", function () {
     describe("🔁 Partial Success Cases", function () {
       it("should skip withdraw if purchase is still within original refund window despite refundWindow being shortened later", async function () {
         // Step 1: set initial refundWindow to 10 days
-        await NewTreasury.connect(backend).setRefundWindow(10);
+        await NewTreasury.connect(backend).setRefundWindow(10 * 86400);
 
         // Step 2: instructor1 creates course
         const course1 = await createCourseHelper({
@@ -4192,7 +4192,7 @@ describe("NewTreasury Contract Tests", function () {
         });
 
         // Step 4: shorten refundWindow to 1 day (but purchase was made with 10-day window)
-        await NewTreasury.connect(backend).setRefundWindow(1);
+        await NewTreasury.connect(backend).setRefundWindow(1 * 86400);
 
         // Step 5: fast forward 3 days (refund window according to new policy is passed, but not the old one)
         await fastForwardTime({ days: 3 });
@@ -4431,7 +4431,7 @@ describe("NewTreasury Contract Tests", function () {
         // Expect: Reverts with "Invalid index range: 1toMax_saleCounterPerCourse" in all cases
       });
 
-      it("should fail to withdraw when batch size exceeds maxWithdrawBatchSize", async function () {
+      it("should fail to withdraw when batch size exceeds maxBatchWithdrawSize", async function () {
         // Step 1: instructor1 creates a course
         const course1 = await createCourseHelper({
           uri: "https://example.com/withdraw-batch-limit",
@@ -4441,8 +4441,8 @@ describe("NewTreasury Contract Tests", function () {
           expectSuccessWith: "CourseCreated",
         });
 
-        // Step 2: get maxWithdrawBatchSize
-        const maxBatch = Number(await NewTreasury.maxWithdrawBatchSize());
+        // Step 2: get maxBatchWithdrawSize
+        const maxBatch = Number(await NewTreasury.maxBatchWithdrawSize());
         const numSales = maxBatch + 1; // one more than max allowed batch size
 
         // Step 3: make sales more than max allowed batch size of withdraw
@@ -4467,7 +4467,7 @@ describe("NewTreasury Contract Tests", function () {
 
         // Step 5: attempt withdraw with a batch size exceeding the limit
         const fromIndex = 1; // first sale also minimum allowed index
-        const toIndex = numSales; // bigger than maxWithdrawBatchSize also its last sale index
+        const toIndex = numSales; // bigger than maxBatchWithdrawSize also its last sale index
 
         const expectations = Array(toIndex - fromIndex + 1).fill(PES);
 
