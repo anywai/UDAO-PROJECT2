@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "@openzeppelin/contracts/access/AccessControl.sol";
+//import "@openzeppelin/contracts/access/AccessControl.sol"; //is AccessControl
 import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
@@ -13,7 +13,10 @@ interface IGovernanceTreasury {
     function addGovernanceFunds(address tokenAddress, uint256 amount) external;
 }
 
-contract NewTreasury is AccessControl, EIP712, ReentrancyGuard {
+contract NewTreasury is EIP712, ReentrancyGuard {
+    string private constant SIGNING_DOMAIN = "NewTreasuryVouchers";
+    string private constant SIGNATURE_VERSION = "1";
+
     error ZeroAddressBackend();
     error ZeroAddressFoundation();
     error ZeroAddressUdaoToken();
@@ -22,132 +25,88 @@ contract NewTreasury is AccessControl, EIP712, ReentrancyGuard {
 
     error onlyBackendAuthorized();
     error onlyFoundationAuthorized();
-
     error alreadyHasBackendRole();
     error alreadyHasNotBackendRole();
 
     error NoChange();
-
-    string private constant SIGNING_DOMAIN = "NewTreasuryVouchers";
-    string private constant SIGNATURE_VERSION = "1";
+    error ZeroValueNotAccepted();
+    error NonUdaoCutsCantExceed100Percent();
+    error UdaoCutsCantExceed100Percent();
 
     /////### ROLES AND AFFILIATIONS ###/////
     mapping(address => bool) public hasBackendRole;
+    address public foundationAddress;
+    address public udaoTokenAddress;
+    address public governanceAddress;
 
     event BackendRoleGranted(address indexed backendAddress);
+    event BackendRoleRevoked(address indexed backendAddress);
+
+    event FoundationAddressUpdated(
+        address indexed newFoundationAddress,
+        address indexed previousFoundationAddress
+    );
+    event UdaoTokenAddressUpdated(
+        address indexed newUdaoTokenAddress,
+        address indexed previousUdaoTokenAddress
+    );
+    event GovernanceAddressUpdated(
+        address indexed newGovernanceAddress,
+        address indexed previousGovernanceAddress
+    );
 
     function grantBackendRole(address _backendAddress) external {
-        require(msg.sender == foundationAddress, "Not authorized-Foundation");
-        require(
-            _backendAddress != address(0),
-            "Backend address cannot be zero"
-        );
-        require(
-            !hasBackendRole[_backendAddress],
-            "Backend address already has backend role"
-        );
+        if (msg.sender != foundationAddress) revert onlyFoundationAuthorized();
+        if (_backendAddress == address(0)) revert ZeroAddressBackend();
+        if (hasBackendRole[_backendAddress]) revert alreadyHasBackendRole();
 
         hasBackendRole[_backendAddress] = true;
         emit BackendRoleGranted(_backendAddress);
     }
 
-    event BackendRoleRevoked(address indexed backendAddress);
-
     function revokeBackendRole(address _backendAddress) external {
-        require(msg.sender == foundationAddress, "Not authorized-Foundation");
-
-        require(
-            _backendAddress != address(0),
-            "Backend address cannot be zero"
-        );
-        require(
-            hasBackendRole[_backendAddress],
-            "Backend address does not have backend role"
-        );
+        if (msg.sender != foundationAddress) revert onlyFoundationAuthorized();
+        if (_backendAddress == address(0)) revert ZeroAddressBackend();
+        if (!hasBackendRole[_backendAddress]) revert alreadyHasNotBackendRole();
 
         hasBackendRole[_backendAddress] = false;
         emit BackendRoleRevoked(_backendAddress);
     }
 
-    address public foundationAddress;
-    event FoundationAddressUpdated(
-        address indexed newFoundationAddress,
-        address indexed previousFoundationAddress
-    );
-
     function setFoundationAddress(address newFoundationAddress) external {
-        address currentFoundationAddress = foundationAddress;
-        require(
-            msg.sender == currentFoundationAddress,
-            "Not authorized-Foundation"
-        );
-        require(
-            newFoundationAddress != address(0),
-            "Foundation address cannot be zero"
-        );
-        require(
-            newFoundationAddress != currentFoundationAddress,
-            "Foundation address already same"
-        );
+        address currentFoundation = foundationAddress;
+        if (msg.sender != currentFoundation) revert onlyFoundationAuthorized();
+        if (newFoundationAddress == address(0)) revert ZeroAddressFoundation();
+        if (newFoundationAddress == currentFoundation) revert NoChange();
 
         foundationAddress = newFoundationAddress;
         hasBackendRole[newFoundationAddress] = true; // ensure new foundation wallet has the backend role
-
-        if (hasBackendRole[currentFoundationAddress]) {
-            hasBackendRole[currentFoundationAddress] = false; // revoke backend role from old foundation address
+        if (hasBackendRole[currentFoundation]) {
+            hasBackendRole[currentFoundation] = false; // revoke backend role from old foundation address
         }
-
-        emit FoundationAddressUpdated(
-            newFoundationAddress,
-            currentFoundationAddress
-        );
+        emit FoundationAddressUpdated(newFoundationAddress, currentFoundation);
     }
 
-    address public udaoTokenAddress;
-    event UdaoTokenAddressUpdated(
-        address indexed newUdaoTokenAddress,
-        address indexed previousUdaoTokenAddress
-    );
-
     function setUdaoTokenAddress(address newUdaoTokenAddress) external {
-        require(hasBackendRole[msg.sender], "Not authorized");
-        require(
-            newUdaoTokenAddress != address(0),
-            "Udao token address cannot be zero"
-        );
+        if (!hasBackendRole[msg.sender]) revert onlyBackendAuthorized();
+        if (newUdaoTokenAddress == address(0)) revert ZeroAddressUdaoToken();
         address currentUdaoTokenAddress = udaoTokenAddress;
-        require(
-            newUdaoTokenAddress != currentUdaoTokenAddress,
-            "Udao token address already same"
-        );
-        udaoTokenAddress = newUdaoTokenAddress;
+        if (newUdaoTokenAddress == currentUdaoTokenAddress) revert NoChange();
 
+        udaoTokenAddress = newUdaoTokenAddress;
         emit UdaoTokenAddressUpdated(
             newUdaoTokenAddress,
             currentUdaoTokenAddress
         );
     }
 
-    address public governanceAddress;
-    event GovernanceAddressUpdated(
-        address indexed newGovernanceAddress,
-        address indexed previousGovernanceAddress
-    );
-
     function setGovernanceAddress(address newGovernanceAddress) external {
-        require(hasBackendRole[msg.sender], "Not authorized");
-        require(
-            newGovernanceAddress != address(0),
-            "Governance address cannot be zero"
-        );
+        if (!hasBackendRole[msg.sender]) revert onlyBackendAuthorized();
+        if (newGovernanceAddress == address(0)) revert ZeroAddressGovernance();
         address currentGovernanceAddress = governanceAddress;
-        require(
-            newGovernanceAddress != currentGovernanceAddress,
-            "Governance address already same"
-        );
+        if (newGovernanceAddress == currentGovernanceAddress) revert NoChange();
 
         governanceAddress = newGovernanceAddress;
-
         emit GovernanceAddressUpdated(
             newGovernanceAddress,
             currentGovernanceAddress
@@ -159,18 +118,9 @@ contract NewTreasury is AccessControl, EIP712, ReentrancyGuard {
         address _udaoTokenAddress,
         address _governanceContract
     ) EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION) {
-        require(
-            _foundationAddress != address(0),
-            "Foundation address cannot be zero"
-        );
-        require(
-            _udaoTokenAddress != address(0),
-            "Udao token address cannot be zero"
-        );
-        require(
-            _governanceContract != address(0),
-            "Governance contract address cannot be zero"
-        );
+        if (_foundationAddress == address(0)) revert ZeroAddressFoundation();
+        if (_udaoTokenAddress == address(0)) revert ZeroAddressUdaoToken();
+        if (_governanceContract == address(0)) revert ZeroAddressGovernance();
 
         foundationAddress = _foundationAddress; // set foundation wallet address
         governanceAddress = _governanceContract; // set governance contract address
@@ -382,62 +332,56 @@ contract NewTreasury is AccessControl, EIP712, ReentrancyGuard {
 
     /////### BASE PAYMENT SETTINGS & LOGIC ###/////
     uint256 public maxAllowedWithdrawers = 4; // max 4 withdrawers allowed
+    uint256 public maxBatchWithdrawSize = 10; // max 10 sales can be withdrawn at once
+    uint256 public refundWindow = 20 days;
+
+    uint256 public atFoundCut = 6000; // %4 foundation cut (any token)
+    uint256 public atGoverCut = 1000; // %1 governance cut (any token)
+    uint256 public utFoundCut = 4000; // %4 foundation cut (udao)
+    uint256 public utGoverCut = 500; // %1 governance cut (udao)
 
     event MaxAllowedWithdrawersUpdated(
         uint256 indexed newMaxAllowedWithdrawers,
         uint256 indexed previousMaxAllowedWithdrawers
     );
-
-    function setMaxAllowedWithdrawers(uint256 newMax) external {
-        require(hasBackendRole[msg.sender], "Not authorized");
-        require(newMax > 0, "Max withdrawers cannot be 0");
-        uint256 currentMax = maxAllowedWithdrawers; // store current value for event
-        require(newMax != currentMax, "Max withdrawers is same");
-        maxAllowedWithdrawers = newMax;
-
-        emit MaxAllowedWithdrawersUpdated(newMax, currentMax);
-    }
-
-    uint256 public maxBatchWithdrawSize = 10; // max 10 sales can be withdrawn at once
     event MaxBatchWithdrawSizeUpdated(
         uint256 indexed newMaxBatchWithdrawSize,
         uint256 indexed previousMaxBatchWithdrawSize
     );
-
-    function setMaxBatchWithdrawSize(uint256 newMaxBatch) external {
-        require(hasBackendRole[msg.sender], "Not authorized");
-        require(newMaxBatch > 0, "Max batch size cannot be 0");
-        uint256 currentMaxBatch = maxBatchWithdrawSize; // store current value for event
-
-        require(newMaxBatch != currentMaxBatch, "Max batch size is same");
-        maxBatchWithdrawSize = newMaxBatch;
-
-        emit MaxBatchWithdrawSizeUpdated(newMaxBatch, currentMaxBatch);
-    }
-
-    uint256 public refundWindow = 20 days;
     event RefundWindowUpdated(
         uint256 newRefundWindow,
         uint256 previousRefundWindow
     );
+    event CourseCutsUpdated();
+
+    function setMaxAllowedWithdrawers(uint256 newMax) external {
+        if (!hasBackendRole[msg.sender]) revert onlyBackendAuthorized();
+        if (newMax == 0) revert ZeroValueNotAccepted();
+        uint256 currentMax = maxAllowedWithdrawers;
+        if (newMax == currentMax) revert NoChange();
+
+        maxAllowedWithdrawers = newMax;
+        emit MaxAllowedWithdrawersUpdated(newMax, currentMax);
+    }
+
+    function setMaxBatchWithdrawSize(uint256 newMaxBatch) external {
+        if (!hasBackendRole[msg.sender]) revert onlyBackendAuthorized();
+        if (newMaxBatch == 0) revert ZeroValueNotAccepted();
+        uint256 currentMaxBatch = maxBatchWithdrawSize;
+        if (newMaxBatch == currentMaxBatch) revert NoChange();
+
+        maxBatchWithdrawSize = newMaxBatch;
+        emit MaxBatchWithdrawSizeUpdated(newMaxBatch, currentMaxBatch);
+    }
 
     function setRefundWindow(uint256 newWindow) external {
-        require(hasBackendRole[msg.sender], "Not authorized");
-        uint256 currentWindow = refundWindow; // store current value for event
-        require(newWindow != currentWindow, "Refund window is same");
+        if (!hasBackendRole[msg.sender]) revert onlyBackendAuthorized();
+        uint256 currentWindow = refundWindow;
+        if (newWindow == currentWindow) revert NoChange();
+
         refundWindow = newWindow; // convert days to seconds
         emit RefundWindowUpdated(newWindow, currentWindow);
     }
-
-    // course sale cuts with any other token else udao
-    uint256 public atFoundCut = 6000; // %4 foundation cut (any token)
-    uint256 public atGoverCut = 1000; // %1 governance cut (any token)
-
-    // course sale cuts with udao token
-    uint256 public utFoundCut = 4000; // %4 foundation cut (udao)
-    uint256 public utGoverCut = 500; // %1 governance cut (udao)
-
-    event CourseCutsUpdated();
 
     function setCourseCuts(
         uint256 _atFoundCut,
@@ -445,24 +389,17 @@ contract NewTreasury is AccessControl, EIP712, ReentrancyGuard {
         uint256 _utFoundCut,
         uint256 _utGoverCut
     ) external {
-        require(hasBackendRole[msg.sender], "Not authorized");
-
-        require(
-            _atFoundCut + _atGoverCut < 100_000,
-            "NonUDAO cuts can't exceed 100%"
-        );
-        require(
-            _utFoundCut + _utGoverCut < 100_000,
-            "UDAO cuts can't exceed 100%"
-        );
-
-        require(
-            _atFoundCut != atFoundCut &&
-                _atGoverCut != atGoverCut &&
-                _utFoundCut != utFoundCut &&
-                _utGoverCut != utGoverCut,
-            "Cuts are the same, no change"
-        );
+        if (!hasBackendRole[msg.sender]) revert onlyBackendAuthorized();
+        if (_atFoundCut + _atGoverCut >= 100_000)
+            revert NonUdaoCutsCantExceed100Percent();
+        if (_utFoundCut + _utGoverCut >= 100_000)
+            revert UdaoCutsCantExceed100Percent();
+        if (
+            _atFoundCut == atFoundCut &&
+            _atGoverCut == atGoverCut &&
+            _utFoundCut == utFoundCut &&
+            _utGoverCut == utGoverCut
+        ) revert NoChange();
 
         atFoundCut = _atFoundCut;
         atGoverCut = _atGoverCut;
@@ -1124,6 +1061,7 @@ contract NewTreasury is AccessControl, EIP712, ReentrancyGuard {
     }
 }
 
+// TODO BATU eğer governanceAddress kontrat değilse try catch'i kapat
 // TODO BATU getCourse ve getPayment getterlarının gereksiz olduğunu düşünüyorum.
 
 /*
