@@ -100,6 +100,7 @@ async function fastForwardTime({ days = 0, hours = 0, minutes = 0, seconds = 0 }
 }
 // Voucher helpers to avoid repetition in tests (createVH, buyVH, etc.)
 let createVH, updateVH, buyVH, refundVH, refundByOwnerVH, withdrawVH;
+let falseRedeemer;
 
 /////### TEST HELPERS ###/////
 async function createCourseHelper({ uri, withdrawers, redeemer, validUntil, expectRevertWith, expectSuccessWith }) {
@@ -137,7 +138,7 @@ async function createCourseHelper({ uri, withdrawers, redeemer, validUntil, expe
   const voucher = await createVH.signVoucher({
     uri,
     withdrawers,
-    redeemer: redeemer.address,
+    redeemer: falseRedeemer == null ? redeemer.address : falseRedeemer,
     validUntil,
   });
 
@@ -284,7 +285,7 @@ async function updateCourseHelper({
     uri,
     sellable,
     withdrawers,
-    redeemer: redeemer.address,
+    redeemer: falseRedeemer == null ? redeemer.address : falseRedeemer,
     validUntil,
   });
 
@@ -463,7 +464,7 @@ async function buyCourseHelper({
     tokenAddress: tokenAddress,
     coursePrice: coursePrice,
     courseReceiver: courseReceiver,
-    redeemer: redeemer.address,
+    redeemer: falseRedeemer == null ? redeemer.address : falseRedeemer,
     validUntil: validUntil,
   });
 
@@ -745,7 +746,7 @@ async function refundCourseHelper({ paymentId, redeemer, validUntil, expectRever
   //tx create and use voucher
   const refundVoucher = await refundVH.signVoucher({
     paymentId,
-    redeemer: redeemer.address,
+    redeemer: falseRedeemer == null ? redeemer.address : falseRedeemer,
     validUntil,
   });
 
@@ -844,7 +845,7 @@ async function refundCourseByOwnerHelper({
   const refundVoucher = await refundByOwnerVH.signVoucher({
     courseOwner,
     courseId,
-    redeemer: redeemer.address,
+    redeemer: falseRedeemer == null ? redeemer.address : falseRedeemer,
     validUntil,
   });
   //const tx = await NewTreasury.connect(redeemer).refundCourseByOwnerAndCourseId(refundVoucher);
@@ -1146,7 +1147,7 @@ async function checkBalancesAfter({ operation, gasCost, beforeTxBalances, course
         expect(nativeDeltaRC).to.equal(gasCost);
         // payer native ↑ (by coursePrice)
         const nativeDelta = afterTx.payer.nativeBalance - beforeTx.payer.nativeBalance;
-        expect(nativeDelta).to.equal(coursePrice - gasCost);
+        expect(nativeDelta).to.equal(coursePrice);
         // contract native ↓ by coursePrice
         const contractNativeDelta = beforeTx.contract.nativeBalance - afterTx.contract.nativeBalance;
         expect(contractNativeDelta).to.equal(coursePrice);
@@ -1223,7 +1224,7 @@ async function checkBalancesAfter({ operation, gasCost, beforeTxBalances, course
 /////### END OF TEST HELPERS ###/////
 
 const PaymentState = {
-  WI: "WI", // Already Withdrawn, In refund window
+  WI: "WI", // Already Withdrawn, In refund window // TODO: IMPOSIBLE STATE
   WE: "WE", // Already Withdrawn, refund window Ended,
   RI: "RI", // Already Refunded, In refund window,
   RE: "RE", // Already Refunded, refund window Ended,
@@ -1278,7 +1279,7 @@ async function withdrawCoursePaymentsHelper({
     courseId,
     fromIndex,
     toIndex,
-    redeemer: redeemer.address,
+    redeemer: falseRedeemer == null ? redeemer.address : falseRedeemer,
     validUntil,
   });
 
@@ -1589,6 +1590,7 @@ describe("NewTreasury Contract Tests", function () {
     await network.provider.send("evm_revert", [snapshotId]);
     snapshotId = await network.provider.send("evm_snapshot");
     // Repeted setup for every test
+    falseRedeemer = null;
     ({ createVH, updateVH, buyVH, refundVH, refundByOwnerVH, withdrawVH } = getVoucherHelpers());
     await updatenow();
   });
@@ -1949,6 +1951,51 @@ describe("NewTreasury Contract Tests", function () {
         });
 
         // Expect: Reverts with "Voucher expired"
+      });
+
+      it("should fail to create a course if msg.sender !== redeemer (Only redeemer can use this voucher)", async function () {
+        // Step 1: Set falseRedeemer to ethers.ZeroAddress (redeemer !== msg.sender)
+        falseRedeemer = ethers.ZeroAddress;
+
+        // Step 2: Try to create course with mismatched msg.sender and voucher.redeemer
+        await createCourseHelper({
+          uri: "https://example.com/fail-redeemer-check",
+          withdrawers: [instructor1.address],
+          redeemer: instructor1,
+          falseRedeemer, // this gets injected into voucher as .address
+          validUntil: now + 86400,
+          expectRevertWith: "Only redeemer can use this voucher",
+        });
+
+        // Expect: reverts with "Only redeemer can use this voucher"
+      });
+
+      it("should fail to update a course if msg.sender !== redeemer (Only redeemer can use this voucher)", async function () {
+        // Step 1: instructor1 creates a course normally
+        const course1 = await createCourseHelper({
+          uri: "https://example.com/update-redeemer-mismatch/original",
+          withdrawers: [instructor1.address],
+          redeemer: instructor1,
+          validUntil: now + 86400,
+          expectSuccessWith: "CourseCreated",
+        });
+
+        // Step 2: prepare mismatched redeemer (voucher will carry different redeemer)
+        falseRedeemer = ethers.ZeroAddress;
+
+        // Step 3: attempt update with mismatched msg.sender and voucher.redeemer
+        await updateCourseHelper({
+          courseId: course1.courseId,
+          uri: "https://example.com/update-redeemer-mismatch/attempt",
+          sellable: true,
+          withdrawers: course1.withdrawers,
+          redeemer: instructor1, // msg.sender
+          validUntil: now + 86400,
+          expectRevertWith: "Only redeemer can use this voucher",
+          previousWithdrawers: course1.withdrawers,
+        });
+
+        // Expect: Reverts with "Only redeemer can use this voucher"
       });
 
       it("should fail to create a course with duplicate URI", async function () {
@@ -2563,6 +2610,34 @@ describe("NewTreasury Contract Tests", function () {
         // Expect: Reverts with "Voucher expired"
       });
 
+      it("should fail to buy a course if msg.sender !== redeemer (Only redeemer can use this voucher)", async function () {
+        // Step 1: Create a course
+        const course1 = await createCourseHelper({
+          uri: "https://example.com/course/redeemer-check-buy",
+          withdrawers: [instructor1.address],
+          redeemer: instructor1,
+          validUntil: now + 86400,
+          expectSuccessWith: "CourseCreated",
+        });
+
+        // Step 2: Use mismatched redeemer
+        falseRedeemer = ethers.ZeroAddress;
+
+        // Step 3: Attempt to buy with voucher.redeemer !== msg.sender
+        await buyCourseHelper({
+          courseId: course1.courseId,
+          tokenAddress: MKT1.target,
+          coursePrice: ethers.parseEther("10"),
+          courseReceiver: person1.address,
+          redeemer: buyer1, // actual sender
+          validUntil: now + 86400,
+          nativeMsgValue: 0,
+          expectRevertWith: "Only redeemer can use this voucher",
+        });
+
+        // Expect: Reverts with "Only redeemer can use this voucher"
+      });
+
       it("should fail if the same course is purchased twice for the same receiver", async function () {
         // Step 1: instructor1 creates a course
         const course1 = await createCourseHelper({
@@ -3162,6 +3237,41 @@ describe("NewTreasury Contract Tests", function () {
         });
       });
 
+      it("should fail to refund if msg.sender !== redeemer (Only redeemer can use this voucher)", async function () {
+        // Step 1: instructor1 creates a course
+        const course1 = await createCourseHelper({
+          uri: "https://example.com/refund-wrong-redeemer",
+          withdrawers: [instructor1.address],
+          redeemer: instructor1,
+          validUntil: now + 86400,
+          expectSuccessWith: "CourseCreated",
+        });
+
+        // Step 2: buyer1 buys course for person1
+        const buy_course = await buyCourseHelper({
+          courseId: course1.courseId,
+          tokenAddress: MKT1.target,
+          coursePrice: ethers.parseEther("10"),
+          courseReceiver: person1.address,
+          redeemer: buyer1,
+          validUntil: now + 86400,
+          nativeMsgValue: 0,
+          expectSuccessWith: "ContentPurchased",
+        });
+
+        // Step 3: attempt refund where voucher.redeemer !== msg.sender
+        falseRedeemer = ethers.ZeroAddress;
+
+        await refundCourseHelper({
+          paymentId: buy_course.paymentId,
+          redeemer: buyer1, // actual msg.sender
+          validUntil: now + 86400,
+          expectRevertWith: "Only redeemer can use this voucher",
+        });
+
+        // Expect: Reverts with "Only redeemer can use this voucher"
+      });
+
       it("should fail to refund twice for the same course", async function () {
         // Step 1: instructor1 creates a course
         const course1 = await createCourseHelper({
@@ -3453,6 +3563,7 @@ describe("NewTreasury Contract Tests", function () {
           validUntil: now + 86400,
           expectSuccessWith: "CourseRefunded",
         });
+        // Expect: "CourseRefunded" event with expected success states
       });
 
       it("should allow a course purchased with native token to be refunded", async function () {
@@ -3802,6 +3913,42 @@ describe("NewTreasury Contract Tests", function () {
         });
       });
 
+      it("should fail to refund by owner if msg.sender !== redeemer (Only redeemer can use this voucher)", async function () {
+        // Step 1: instructor1 creates a course
+        const course1 = await createCourseHelper({
+          uri: "https://example.com/refundByOwner-wrong-redeemer",
+          withdrawers: [instructor1.address],
+          redeemer: instructor1,
+          validUntil: now + 86400,
+          expectSuccessWith: "CourseCreated",
+        });
+
+        // Step 2: buyer1 buys course for person1
+        const buy_course = await buyCourseHelper({
+          courseId: course1.courseId,
+          tokenAddress: MKT1.target,
+          coursePrice: ethers.parseEther("10"),
+          courseReceiver: person1.address,
+          redeemer: buyer1,
+          validUntil: now + 86400,
+          nativeMsgValue: 0,
+          expectSuccessWith: "ContentPurchased",
+        });
+
+        // Step 3: attempt refundByOwner with mismatched msg.sender and voucher.redeemer
+        falseRedeemer = ethers.ZeroAddress;
+
+        await refundCourseByOwnerHelper({
+          courseOwner: person1.address,
+          courseId: buy_course.courseId,
+          redeemer: buyer1, // actual caller
+          validUntil: now + 86400,
+          expectRevertWith: "Only redeemer can use this voucher",
+        });
+
+        // Expect: Reverts with "Only redeemer can use this voucher"
+      });
+
       it("should fail to refund twice for the same course", async function () {
         // Step 1: instructor1 creates a course
         const course1 = await createCourseHelper({
@@ -4119,6 +4266,51 @@ describe("NewTreasury Contract Tests", function () {
         // console.log("withdrawResult tokenStats:", withdrawResult.tokenStats);
       });
 
+      it("should allow instructor1 to withdraw 6 mixed-token sales (MTK1, MTK2, native)", async function () {
+        // Step 1: instructor1 creates a course
+        const course1 = await createCourseHelper({
+          uri: "https://example.com/withdraw-mixed/1",
+          withdrawers: [instructor1.address],
+          redeemer: instructor1,
+          validUntil: now + 86400,
+          expectSuccessWith: "CourseCreated",
+        });
+
+        // Step 2: make 6 sales, 2 with MTK1, 2 with MTK2, 2 with native
+        const tokenTypes = [MKT1.target, MKT1.target, MKT2.target, MKT2.target, ethers.ZeroAddress, ethers.ZeroAddress];
+        const prices = ["5", "10", "15", "20", "25", "30"];
+        const buyers = [buyer1, buyer2, buyer3, buyer4, buyer5, buyer1];
+        const receivers = [person1, person2, person3, person4, person5, buyer1];
+
+        for (let i = 0; i < 6; i++) {
+          await buyCourseHelper({
+            courseId: course1.courseId,
+            tokenAddress: tokenTypes[i],
+            coursePrice: ethers.parseEther(prices[i]),
+            courseReceiver: receivers[i].address,
+            redeemer: buyers[i],
+            validUntil: now + 86400,
+            nativeMsgValue: tokenTypes[i] === ethers.ZeroAddress ? ethers.parseEther(prices[i]) : 0,
+            expectSuccessWith: "ContentPurchased",
+          });
+        }
+
+        // Step 3: Fast forward time after refund window
+        await fastForwardTime({ days: 25 });
+
+        // Step 4: Withdraw payments for all 6 sales
+        await withdrawCoursePaymentsHelper({
+          courseId: course1.courseId,
+          fromIndex: 1,
+          toIndex: 6,
+          redeemer: instructor1,
+          validUntil: now + 86400,
+          expectSuccessWith: "CoursePaymentsWithdrawn",
+          expectations: [PES, PES, PES, PES, PES, PES],
+        });
+        // Expect: "CoursePaymentsWithdrawn" with expected success states
+      });
+
       it("should allow withdraw if original refund window expired before refundWindow was extended", async function () {
         // Step 1: set initial refundWindow to 1 days
         await NewTreasury.connect(backend).setRefundWindow(1 * 86400);
@@ -4209,6 +4401,116 @@ describe("NewTreasury Contract Tests", function () {
         });
       });
 
+      it("should handle multi-withdrawer, mixed-token sales, refunds and post-refund withdrawals correctly", async function () {
+        // Step 1: increase max batch size to 12
+        await NewTreasury.connect(backend).setMaxBatchWithdrawSize(12);
+        // Step 2: instructor1 & instructor2 authorized
+        const course1 = await createCourseHelper({
+          uri: "https://example.com/withdraw-complex-case",
+          withdrawers: [instructor1.address, instructor2.address],
+          redeemer: instructor1,
+          validUntil: now + 86400,
+          expectSuccessWith: "CourseCreated",
+        });
+
+        // Step 3: make 9 mixed-token sales
+        const tokenTypes = [
+          MKT1.target,
+          ethers.ZeroAddress,
+          MKT2.target, // 1-2-3
+          MKT1.target,
+          ethers.ZeroAddress,
+          MKT2.target, // 4-5-6
+          MKT1.target,
+          ethers.ZeroAddress,
+          MKT2.target, // 7-8-9
+        ];
+        const prices = ["5", "6", "7", "8", "9", "10", "11", "12", "13"];
+        const buyers = [buyer1, buyer2, buyer3, buyer4, buyer5, buyer1, buyer2, buyer3, buyer4];
+        const receivers = [person1, person2, person3, person4, person5, buyer1, buyer2, buyer3, buyer4];
+
+        const paymentIds = [];
+
+        for (let i = 0; i < 9; i++) {
+          const result = await buyCourseHelper({
+            courseId: course1.courseId,
+            tokenAddress: tokenTypes[i],
+            coursePrice: ethers.parseEther(prices[i]),
+            courseReceiver: receivers[i].address,
+            redeemer: buyers[i],
+            validUntil: now + 86400,
+            nativeMsgValue: tokenTypes[i] === ethers.ZeroAddress ? ethers.parseEther(prices[i]) : 0,
+            expectSuccessWith: "ContentPurchased",
+          });
+          paymentIds.push(result.paymentId);
+        }
+
+        // Step 4: refund sales 2, 5, 8
+        const refundTargets = [6, 7, 8]; // zero-based index
+        for (const i of refundTargets) {
+          await refundCourseHelper({
+            paymentId: paymentIds[i],
+            redeemer: backend,
+            validUntil: now + 86400,
+            expectSuccessWith: "CourseRefunded",
+          });
+        }
+
+        // Step 5: fast forward past refund window
+        const refundWindowDays = Number(await NewTreasury.refundWindow()) / 86400;
+        await fastForwardTime({ days: refundWindowDays + 1 });
+
+        // Step 6: instructor1 withdraws sales 1, 2, 3 (index 1 to 3) — sale 2 was refunded, so skipped
+        await withdrawCoursePaymentsHelper({
+          courseId: course1.courseId,
+          fromIndex: 1,
+          toIndex: 3,
+          redeemer: instructor1,
+          validUntil: now + 86400,
+          expectSuccessWith: "CoursePaymentsWithdrawn",
+          expectations: [PES, PES, PES],
+        });
+
+        // Step 7: add 3 more sales (10–12)
+        const tokenTypesNew = [MKT1.target, ethers.ZeroAddress, MKT2.target];
+        const pricesNew = ["20", "21", "22"];
+        const buyersNew = [buyer3, buyer4, buyer5];
+        const receiversNew = [buyer3, buyer4, buyer5];
+
+        for (let i = 0; i < 3; i++) {
+          const result = await buyCourseHelper({
+            courseId: course1.courseId,
+            tokenAddress: tokenTypesNew[i],
+            coursePrice: ethers.parseEther(pricesNew[i]),
+            courseReceiver: receiversNew[i].address,
+            redeemer: buyersNew[i],
+            validUntil: now + 86400,
+            nativeMsgValue: tokenTypesNew[i] === ethers.ZeroAddress ? ethers.parseEther(pricesNew[i]) : 0,
+            expectSuccessWith: "ContentPurchased",
+          });
+          paymentIds.push(result.paymentId); // store paymentId[9], [10], [11]
+        }
+
+        // Step 8: refund paymentId[10] (sale 12)
+        await refundCourseHelper({
+          paymentId: paymentIds[10], //zero-based index
+          redeemer: backend,
+          validUntil: now + 86400,
+          expectSuccessWith: "CourseRefunded",
+        });
+
+        // Step 9: instructor2 withdraws all 1–12
+        await withdrawCoursePaymentsHelper({
+          courseId: course1.courseId,
+          fromIndex: 1,
+          toIndex: 12,
+          redeemer: instructor2,
+          validUntil: now + 86400,
+          expectSuccessWith: "CoursePaymentsWithdrawn",
+          expectations: [WE, WE, WE, PES, PES, PES, RE, RE, RE, PI, RI, PI],
+        });
+      });
+
       /////###End of Partial Success Cases###/////
     });
 
@@ -4294,6 +4596,49 @@ describe("NewTreasury Contract Tests", function () {
         });
         // Expect: Reverts with "Voucher expired" with expected fail states
         //console.log("withdrawResult tokenStats:", withdrawResult.tokenStats);
+      });
+
+      it("should fail to withdraw if msg.sender !== redeemer (Only redeemer can use this voucher)", async function () {
+        // Step 1: instructor1 creates course
+        const course1 = await createCourseHelper({
+          uri: "https://example.com/withdraw-wrong-redeemer",
+          withdrawers: [instructor1.address],
+          redeemer: instructor1,
+          validUntil: now + 86400,
+          expectSuccessWith: "CourseCreated",
+        });
+
+        // Step 2: buyer1 purchases course
+        await buyCourseHelper({
+          courseId: course1.courseId,
+          tokenAddress: MKT1.target,
+          coursePrice: ethers.parseEther("10"),
+          courseReceiver: person1.address,
+          redeemer: buyer1,
+          validUntil: now + 86400,
+          nativeMsgValue: 0,
+          expectSuccessWith: "ContentPurchased",
+        });
+
+        // Step 3: fast forward to after refund window
+        const refundWindowInDays = Number(await NewTreasury.refundWindow()) / 86400;
+        await fastForwardTime({ days: refundWindowInDays + 1 });
+
+        // Step 4: set up voucher with mismatched redeemer
+        falseRedeemer = ethers.ZeroAddress;
+
+        // Step 5: try to withdraw with wrong redeemer inside voucher
+        await withdrawCoursePaymentsHelper({
+          courseId: course1.courseId,
+          fromIndex: 1,
+          toIndex: 1,
+          redeemer: instructor1, // actual msg.sender
+          validUntil: now + 86400,
+          expectRevertWith: "Only redeemer can use this voucher",
+          expectations: [PES],
+        });
+
+        // Expect: reverts with "Only redeemer can use this voucher"
       });
 
       it("should fail to withdraw with courseId = 0", async function () {
@@ -4580,9 +4925,6 @@ describe("NewTreasury Contract Tests", function () {
   describe("⚙️ SETTINGS", function () {
     describe("✅ Success Cases", function () {
       it("should allow grant backend role to a valid address when called by foundation", async () => {
-        console.log("Foundation address:", foundation.address);
-        console.log("Backend address:", backend.address);
-
         // Step 1: Grant backend role to person1 by foundation
         await expect(await NewTreasury.connect(foundation).grantBackendRole(person1.address))
           .to.emit(NewTreasury, "BackendRoleGranted")
@@ -4619,6 +4961,23 @@ describe("NewTreasury Contract Tests", function () {
         expect(await NewTreasury.hasBackendRole(person1.address)).to.be.true;
 
         // Expect: old foundation (original) no longer has backend role
+        expect(await NewTreasury.hasBackendRole(foundation.address)).to.be.false;
+      });
+
+      it("should allow foundation to call setFoundationAddress even after revoking its own backend role", async () => {
+        // Step 1: foundation revokes its own backend role
+        await expect(NewTreasury.connect(foundation).revokeBackendRole(foundation.address))
+          .to.emit(NewTreasury, "BackendRoleRevoked")
+          .withArgs(foundation.address);
+
+        // Step 2: foundation calls setFoundationAddress to assign new foundation
+        await expect(NewTreasury.connect(foundation).setFoundationAddress(person1.address))
+          .to.emit(NewTreasury, "FoundationAddressUpdated")
+          .withArgs(person1.address, foundation.address);
+
+        // Step 3: Confirm new foundation and backend role transfer
+        expect(await NewTreasury.foundationAddress()).to.equal(person1.address);
+        expect(await NewTreasury.hasBackendRole(person1.address)).to.be.true;
         expect(await NewTreasury.hasBackendRole(foundation.address)).to.be.false;
       });
 

@@ -746,7 +746,7 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         hasOwnedCourse[_receiver][_courseId] = false;
         // remove the courseId from the ownedCourses list and update the indexes
         uint256 courseIndex = ownedCourseIndex[_receiver][_courseId];
-        require(courseIndex > 0, "Course not found in receiver's owned list"); //buraya gelemedim ben
+        require(courseIndex > 0, "Course not found in receiver's owned list"); //TODO: BATU buraya gelemedim ben
         uint256 lastIndex = ownedCourses[_receiver].length - 1;
         uint256 lastCourseId = ownedCourses[_receiver][lastIndex];
 
@@ -867,7 +867,7 @@ contract NewTreasury is EIP712, ReentrancyGuard {
 
         for (uint256 j = fromIndex; j <= toIndex; j++) {
             uint256 paymentId = courseSaleRecords[courseId][j];
-            if (paymentId == 0) continue;
+            if (paymentId == 0) continue; // TODO: BATU buraya gelemedim ben
 
             Payment storage p = payments[paymentId];
 
