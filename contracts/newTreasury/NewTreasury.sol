@@ -974,7 +974,7 @@ contract NewTreasury is EIP712, ReentrancyGuard {
 
         for (uint256 j = fromIndex; j <= toIndex; j++) {
             uint256 paymentId = courseSaleRecords[courseId][j];
-            if (paymentId == 0) continue;
+            if (paymentId == 0) continue; //TODO: BATU buraya gelemedim ben
 
             Payment memory p = payments[paymentId];
 

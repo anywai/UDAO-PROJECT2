@@ -4916,6 +4916,59 @@ describe("NewTreasury Contract Tests", function () {
         }
       });
 
+      it("should revert checkWithdrawStatus with invalid courseId and index ranges", async () => {
+        // Step 1: instructor1 creates a course
+        const course1 = await createCourseHelper({
+          uri: "https://example.com/check-invalids",
+          withdrawers: [instructor1.address],
+          redeemer: instructor1,
+          validUntil: now + 86400,
+          expectSuccessWith: "CourseCreated",
+        });
+
+        // Step 2: make 3 sales
+        const receivers = [person1, person2, person3];
+        for (let i = 0; i < 3; i++) {
+          await buyCourseHelper({
+            courseId: course1.courseId,
+            tokenAddress: MKT1.target,
+            coursePrice: ethers.parseEther("10"),
+            courseReceiver: receivers[i].address,
+            redeemer: buyer1,
+            validUntil: now + 86400,
+            nativeMsgValue: 0,
+            expectSuccessWith: "ContentPurchased",
+          });
+        }
+
+        // Step 3: invalid courseId = 0
+        await expect(NewTreasury.connect(instructor1).checkWithdrawStatus(0, 1, 1)).to.be.revertedWith(
+          "Invalid courseId"
+        );
+
+        // Step 4: invalid courseId = courseCounter + 1
+        const invalidId = Number(await NewTreasury.courseCounter()) + 1;
+        await expect(NewTreasury.connect(instructor1).checkWithdrawStatus(invalidId, 1, 1)).to.be.revertedWith(
+          "Invalid courseId"
+        );
+
+        // Step 5: invalid fromIndex = 0
+        await expect(NewTreasury.connect(instructor1).checkWithdrawStatus(course1.courseId, 0, 1)).to.be.revertedWith(
+          "Invalid index range: 1toSaleCountOfCourse"
+        );
+
+        // Step 6: fromIndex > toIndex
+        await expect(NewTreasury.connect(instructor1).checkWithdrawStatus(course1.courseId, 3, 2)).to.be.revertedWith(
+          "Invalid index range: 1toSaleCountOfCourse"
+        );
+
+        // Step 7: toIndex > saleCounter
+        const saleCount = await NewTreasury.saleCounterPerCourse(course1.courseId);
+        await expect(
+          NewTreasury.connect(instructor1).checkWithdrawStatus(course1.courseId, 1, Number(saleCount) + 1)
+        ).to.be.revertedWith("Invalid index range: 1toSaleCountOfCourse");
+      });
+
       /////###End of Failure Cases###/////
     });
     /////###End of Withdrawals###/////
