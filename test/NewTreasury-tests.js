@@ -4263,7 +4263,6 @@ describe("NewTreasury Contract Tests", function () {
           expectations: [PES, PES, PES],
         });
         // Expect: "CoursePaymentsWithdrawn" with expected success states
-        // console.log("withdrawResult tokenStats:", withdrawResult.tokenStats);
       });
 
       it("should allow instructor1 to withdraw 6 mixed-token sales (MTK1, MTK2, native)", async function () {
@@ -4511,6 +4510,106 @@ describe("NewTreasury Contract Tests", function () {
         });
       });
 
+      // Real fails
+
+      it("should revert withdrawal if native transfer to foundation fails", async () => {
+        // Dep 1. Failing receiver'ı deploy et ve foundation olarak ayarla
+        const FailNativeReceiverFactory = await ethers.getContractFactory(
+          "contracts/newTreasury/FailNativeReceiver.sol:FailNativeReceiver"
+        );
+        const failNativeWallet = await FailNativeReceiverFactory.connect(backend).deploy();
+        await failNativeWallet.waitForDeployment();
+        // Dep 2. Deploy FailTransfer MockERC20
+        const FailMKTFactory = await ethers.getContractFactory("contracts/newTreasury/FailMockERC20.sol:FailMockERC20");
+        const failMKT = await FailMKTFactory.connect(backend).deploy(
+          "FailMockToken",
+          "FailMKT",
+          ethers.parseEther("100000")
+        );
+        await failMKT.waitForDeployment();
+
+        // Dep 3. Distribute tokens to wallets
+        await batchDistributeTokens({
+          token: failMKT,
+          amount: "1000",
+          spenderAddress: NewTreasury.target,
+          walletList: walletNames,
+        });
+
+        // Step 1: Create a course with multiple withdrawers including the failing receiver
+        const uri = "native-revert-test";
+        const validUntil = now + 3600;
+        const course1 = await createCourseHelper({
+          uri,
+          withdrawers: [instructor1.address, failNativeWallet.target],
+          redeemer: instructor1,
+          validUntil,
+          expectSuccessWith: "CourseCreated",
+        });
+
+        // Step 2: make 9 mixed-token sales
+        const tokenTypes = [MKT1.target, ethers.ZeroAddress, failMKT.target];
+        const prices = ["10", "20", "30"];
+        const receivers = [person1, person2, person3];
+        expectSuccessWith = "ContentPurchased";
+        const expectations = [PES, PES, PEF];
+
+        const paymentIds = []; // zero-based index
+        for (let i = 0; i < 3; i++) {
+          const result = await buyCourseHelper({
+            courseId: course1.courseId,
+            tokenAddress: tokenTypes[i],
+            coursePrice: ethers.parseEther(prices[i]),
+            courseReceiver: receivers[i].address,
+            redeemer: backend,
+            validUntil: now + 86400,
+            nativeMsgValue: tokenTypes[i] === ethers.ZeroAddress ? ethers.parseEther(prices[i]) : 0,
+            expectSuccessWith: expectSuccessWith,
+          });
+          paymentIds.push(result.paymentId);
+        }
+
+        // Step 3: fast forward past refund window
+        const refundWindowDays = Number(await NewTreasury.refundWindow()) / 86400;
+        await fastForwardTime({ days: refundWindowDays + 1 });
+
+        // Step 4: block failMTK transfer of instructor1
+        await failMKT.connect(backend).blockAddress(instructor1.address, true);
+
+        // Step 5: Get token stats before withdrawal
+        const input = {
+          courseId: course1.courseId,
+          fromIndex: 1,
+          toIndex: 3,
+          redeemer: instructor1,
+          redeemerInitialNativeBalance: await ethers.provider.getBalance(instructor1.address),
+        };
+        const beforeTokenStats = await _validateExpectations(input, expectations);
+        // console.log("beforeTokenStats:", beforeTokenStats);
+
+        // Step 6: Create a voucher for instructor1 to withdraw payments from sales 1 to 3
+        const voucher = await withdrawVH.signVoucher({
+          courseId: course1.courseId,
+          fromIndex: 1,
+          toIndex: 3,
+          redeemer: instructor1.address,
+          validUntil: now + 86400,
+        });
+
+        // Step 7: Attempt to withdraw payments from sales 1 to 3
+        tx = await NewTreasury.connect(instructor1).withdrawCoursePayments(voucher);
+        await expect(tx)
+          .to.emit(NewTreasury, "CoursePaymentsWithdrawn")
+          .withArgs(input.courseId, input.fromIndex, input.toIndex, input.redeemer, 2);
+
+        const receipt = await tx.wait();
+        const effectiveGasPrice = receipt.effectiveGasPrice ?? receipt.gasPrice ?? 0n;
+        const gasCost = receipt.gasUsed * effectiveGasPrice;
+
+        // Step 8: Validate token stats after withdrawal
+        _expectWithdraw(input, beforeTokenStats, gasCost, expectations, true);
+      });
+
       /////###End of Partial Success Cases###/////
     });
 
@@ -4555,7 +4654,6 @@ describe("NewTreasury Contract Tests", function () {
           expectations: [PES],
         });
         // Expect: Reverts with "Signature invalid or unauthorized"
-        //console.log("withdrawResult tokenStats:", withdrawResult.tokenStats);
       });
 
       it("should fail to withdraw with expired voucher", async function () {
@@ -4595,7 +4693,6 @@ describe("NewTreasury Contract Tests", function () {
           expectations: [PES],
         });
         // Expect: Reverts with "Voucher expired" with expected fail states
-        //console.log("withdrawResult tokenStats:", withdrawResult.tokenStats);
       });
 
       it("should fail to withdraw if msg.sender !== redeemer (Only redeemer can use this voucher)", async function () {
