@@ -4513,13 +4513,13 @@ describe("NewTreasury Contract Tests", function () {
       // Real fails
 
       it("should handle partial withdrawal when ERC20 transfer to instructor fails", async () => {
-        // Dep 1: Deploy failing receiver
+        // Dep 1: Deploy native failing receiver contract
         const FailNativeReceiverFactory = await ethers.getContractFactory(
           "contracts/newTreasury/FailNativeReceiver.sol:FailNativeReceiver"
         );
         const failNativeWallet = await FailNativeReceiverFactory.connect(backend).deploy();
         await failNativeWallet.waitForDeployment();
-        // Dep 2: Deploy FailTransfer MockERC20
+        // Dep 2: Deploy FailTransfer MockERC20 token contract
         const FailMKTFactory = await ethers.getContractFactory("contracts/newTreasury/FailMockERC20.sol:FailMockERC20");
         const failMKT = await FailMKTFactory.connect(backend).deploy(
           "FailMockToken",
@@ -4527,7 +4527,7 @@ describe("NewTreasury Contract Tests", function () {
           ethers.parseEther("100000")
         );
         await failMKT.waitForDeployment();
-        // Dep 3: Distribute tokens to wallets
+        // Dep 3: Distribute failMKT tokens to users
         await batchDistributeTokens({
           token: failMKT,
           amount: "1000",
@@ -4536,25 +4536,23 @@ describe("NewTreasury Contract Tests", function () {
         });
 
         // Step 1: Create a course with multiple withdrawers including the failing receiver
-        const uri = "native-revert-test";
-        const validUntil = now + 3600;
         const course1 = await createCourseHelper({
-          uri,
+          uri: "native-ERC20-revert-test",
           withdrawers: [instructor1.address, failNativeWallet.target],
           redeemer: instructor1,
-          validUntil,
+          validUntil: now + 86400,
           expectSuccessWith: "CourseCreated",
         });
 
-        // Step 2: make 3 mixed-token sales
-        const tokenTypes = [MKT1.target, ethers.ZeroAddress, failMKT.target];
-        const prices = ["10", "20", "30"];
-        const receivers = [person1, person2, person3];
-        expectSuccessWith = "ContentPurchased";
-        const expectations = [PES, PES, PEF];
+        // Step 2: make 4 mixed-token sales, MTK1, native, failMKT, MTK2
+        const tokenTypes = [MKT1.target, ethers.ZeroAddress, failMKT.target, MKT2.target];
+        const prices = ["10", "20", "30", "40"];
+        const receivers = [person1, person2, person3, person4];
+        const expectSuccessWith = "ContentPurchased";
+        const expectations = [PES, PES, PEF, PES];
 
-        for (let i = 0; i < 3; i++) {
-          const result = await buyCourseHelper({
+        for (let i = 0; i < 4; i++) {
+          await buyCourseHelper({
             courseId: course1.courseId,
             tokenAddress: tokenTypes[i],
             coursePrice: ethers.parseEther(prices[i]),
@@ -4577,7 +4575,7 @@ describe("NewTreasury Contract Tests", function () {
         const input = {
           courseId: course1.courseId,
           fromIndex: 1,
-          toIndex: 3,
+          toIndex: 4,
           redeemer: instructor1,
           redeemerInitialNativeBalance: await ethers.provider.getBalance(instructor1.address),
         };
@@ -4588,7 +4586,7 @@ describe("NewTreasury Contract Tests", function () {
         const voucher = await withdrawVH.signVoucher({
           courseId: course1.courseId,
           fromIndex: 1,
-          toIndex: 3,
+          toIndex: 4,
           redeemer: instructor1.address,
           validUntil: now + 86400,
         });
@@ -4597,7 +4595,7 @@ describe("NewTreasury Contract Tests", function () {
         tx = await NewTreasury.connect(instructor1).withdrawCoursePayments(voucher);
         await expect(tx)
           .to.emit(NewTreasury, "CoursePaymentsWithdrawn")
-          .withArgs(input.courseId, input.fromIndex, input.toIndex, input.redeemer, 2);
+          .withArgs(input.courseId, input.fromIndex, input.toIndex, input.redeemer, 3);
 
         const receipt = await tx.wait();
         const effectiveGasPrice = receipt.effectiveGasPrice ?? receipt.gasPrice ?? 0n;
@@ -4608,13 +4606,13 @@ describe("NewTreasury Contract Tests", function () {
       });
 
       it("should handle partial withdrawal when native transfer to instructor fails", async () => {
-        // Dep 1: Deploy failing receiver
+        // Dep 1: Deploy native failing receiver contract
         const FailNativeReceiverFactory = await ethers.getContractFactory(
           "contracts/newTreasury/FailNativeReceiver.sol:FailNativeReceiver"
         );
         const failNativeWallet = await FailNativeReceiverFactory.connect(backend).deploy();
         await failNativeWallet.waitForDeployment();
-        // Dep 2: Deploy FailTransfer MockERC20
+        // Dep 2: Deploy FailTransfer MockERC20 token contract
         const FailMKTFactory = await ethers.getContractFactory("contracts/newTreasury/FailMockERC20.sol:FailMockERC20");
         const failMKT = await FailMKTFactory.connect(backend).deploy(
           "FailMockToken",
@@ -4622,7 +4620,7 @@ describe("NewTreasury Contract Tests", function () {
           ethers.parseEther("100000")
         );
         await failMKT.waitForDeployment();
-        // Dep 3: Distribute tokens to wallets
+        // Dep 3: Distribute failMKT tokens to users
         await batchDistributeTokens({
           token: failMKT,
           amount: "1000",
@@ -4630,24 +4628,24 @@ describe("NewTreasury Contract Tests", function () {
           walletList: walletNames,
         });
 
-        // Step 1: Create a course with as default withdrawer the failing receiver
+        // Step 1: Create a course with multiple withdrawers including the failing receiver
         const course1 = await createCourseHelper({
-          uri: "https://example.com/native-instructor-fails",
+          uri: "native-ERC20-revert-test",
           withdrawers: [instructor1.address, failNativeWallet.target],
-          redeemer: backend,
+          redeemer: instructor1,
           validUntil: now + 86400,
           expectSuccessWith: "CourseCreated",
         });
 
-        // Step 2: Make 3 mixed-token sales
-        const tokenTypes = [MKT1.target, ethers.ZeroAddress, failMKT.target];
-        const prices = ["10", "20", "30"];
-        const receivers = [person1, person2, person3];
-        expectSuccessWith = "ContentPurchased";
-        const expectations = [PES, PEF, PES];
+        // Step 2: make 4 mixed-token sales, MTK1, native, failMKT, MTK2
+        const tokenTypes = [MKT1.target, ethers.ZeroAddress, failMKT.target, MKT2.target];
+        const prices = ["10", "20", "30", "40"];
+        const receivers = [person1, person2, person3, person4];
+        const expectSuccessWith = "ContentPurchased";
+        const expectations = [PES, PEF, PES, PES];
 
-        for (let i = 0; i < 3; i++) {
-          const result = await buyCourseHelper({
+        for (let i = 0; i < 4; i++) {
+          await buyCourseHelper({
             courseId: course1.courseId,
             tokenAddress: tokenTypes[i],
             coursePrice: ethers.parseEther(prices[i]),
@@ -4670,7 +4668,7 @@ describe("NewTreasury Contract Tests", function () {
         const input = {
           courseId: course1.courseId,
           fromIndex: 1,
-          toIndex: 3,
+          toIndex: 4,
           redeemer: { address: failNativeWallet.target },
           redeemerInitialNativeBalance: await ethers.provider.getBalance(failNativeWallet.target),
         };
@@ -4691,7 +4689,7 @@ describe("NewTreasury Contract Tests", function () {
         // Step 8: expect emit
         await expect(tx)
           .to.emit(NewTreasury, "CoursePaymentsWithdrawn")
-          .withArgs(input.courseId, input.fromIndex, input.toIndex, failNativeWallet.target, 2);
+          .withArgs(input.courseId, input.fromIndex, input.toIndex, failNativeWallet.target, 3);
 
         // Step 9: compute gas cost
         const receipt = await tx.wait();
@@ -4705,14 +4703,13 @@ describe("NewTreasury Contract Tests", function () {
       });
 
       it("should handle partial withdrawal when ERC20 transfer to foundation fails", async () => {
-        // Dep 1: Deploy failing native receiver
+        // Dep 1: Deploy native failing receiver contract
         const FailNativeReceiverFactory = await ethers.getContractFactory(
           "contracts/newTreasury/FailNativeReceiver.sol:FailNativeReceiver"
         );
         const failNativeWallet = await FailNativeReceiverFactory.connect(backend).deploy();
         await failNativeWallet.waitForDeployment();
-
-        // Dep 2: Deploy FailTransfer MockERC20
+        // Dep 2: Deploy FailTransfer MockERC20 token contract
         const FailMKTFactory = await ethers.getContractFactory("contracts/newTreasury/FailMockERC20.sol:FailMockERC20");
         const failMKT = await FailMKTFactory.connect(backend).deploy(
           "FailMockToken",
@@ -4720,7 +4717,6 @@ describe("NewTreasury Contract Tests", function () {
           ethers.parseEther("100000")
         );
         await failMKT.waitForDeployment();
-
         // Dep 3: Distribute failMKT tokens to users
         await batchDistributeTokens({
           token: failMKT,
@@ -4729,23 +4725,23 @@ describe("NewTreasury Contract Tests", function () {
           walletList: walletNames,
         });
 
-        // Step 1: instructor1 creates a course
+        // Step 1: Create a course with multiple withdrawers including the failing receiver
         const course1 = await createCourseHelper({
-          uri: "https://example.com/foundation-erc20-fails",
+          uri: "native-ERC20-revert-test",
           withdrawers: [instructor1.address, failNativeWallet.target],
           redeemer: instructor1,
           validUntil: now + 86400,
           expectSuccessWith: "CourseCreated",
         });
 
-        // Step 2: make 3 sales (including failMKT)
-        const tokenTypes = [MKT1.target, ethers.ZeroAddress, failMKT.target];
-        const prices = ["10", "20", "30"];
-        const receivers = [person1, person2, person3];
-        const expectations = [PES, PES, PEF];
+        // Step 2: make 4 mixed-token sales, MTK1, native, failMKT, MTK2
+        const tokenTypes = [MKT1.target, ethers.ZeroAddress, failMKT.target, MKT2.target];
+        const prices = ["10", "20", "30", "40"];
+        const receivers = [person1, person2, person3, person4];
         const expectSuccessWith = "ContentPurchased";
+        const expectations = [PES, PES, PEF, PES];
 
-        for (let i = 0; i < 3; i++) {
+        for (let i = 0; i < 4; i++) {
           await buyCourseHelper({
             courseId: course1.courseId,
             tokenAddress: tokenTypes[i],
@@ -4754,7 +4750,7 @@ describe("NewTreasury Contract Tests", function () {
             redeemer: backend,
             validUntil: now + 86400,
             nativeMsgValue: tokenTypes[i] === ethers.ZeroAddress ? ethers.parseEther(prices[i]) : 0,
-            expectSuccessWith,
+            expectSuccessWith: expectSuccessWith,
           });
         }
 
@@ -4769,7 +4765,7 @@ describe("NewTreasury Contract Tests", function () {
         const input = {
           courseId: course1.courseId,
           fromIndex: 1,
-          toIndex: 3,
+          toIndex: 4,
           redeemer: instructor1,
           redeemerInitialNativeBalance: await ethers.provider.getBalance(instructor1.address),
         };
@@ -4790,7 +4786,7 @@ describe("NewTreasury Contract Tests", function () {
         // Step 8: expect CoursePaymentsWithdrawn with skipped = 1
         await expect(tx)
           .to.emit(NewTreasury, "CoursePaymentsWithdrawn")
-          .withArgs(input.courseId, input.fromIndex, input.toIndex, input.redeemer, 2);
+          .withArgs(input.courseId, input.fromIndex, input.toIndex, input.redeemer, 3);
 
         // Step 9: validate state after withdraw
         const receipt = await tx.wait();
@@ -4800,19 +4796,20 @@ describe("NewTreasury Contract Tests", function () {
       });
 
       it("should handle partial withdrawal when native transfer to foundation fails", async () => {
-        // Dep 1: Deploy failing receiver
+        // Dep 1: Deploy native failing receiver contract
         const FailNativeReceiverFactory = await ethers.getContractFactory(
           "contracts/newTreasury/FailNativeReceiver.sol:FailNativeReceiver"
         );
         const failNativeWallet = await FailNativeReceiverFactory.connect(backend).deploy();
         await failNativeWallet.waitForDeployment();
-        // Dep 2: Deploy FailTransfer MockERC20
+        // Dep 2: Deploy FailTransfer MockERC20 token contract
         const FailMKTFactory = await ethers.getContractFactory("contracts/newTreasury/FailMockERC20.sol:FailMockERC20");
         const failMKT = await FailMKTFactory.connect(backend).deploy(
           "FailMockToken",
           "FailMKT",
           ethers.parseEther("100000")
         );
+        await failMKT.waitForDeployment();
         // Dep 3: Distribute failMKT tokens to users
         await batchDistributeTokens({
           token: failMKT,
@@ -4821,26 +4818,23 @@ describe("NewTreasury Contract Tests", function () {
           walletList: walletNames,
         });
 
-        // Step 1: Set failNativeWallet as foundation
-        await NewTreasury.connect(foundation).setFoundationAddress(failNativeWallet.target);
-
-        // Step 2: instructor1 creates a course
+        // Step 1: Create a course with multiple withdrawers including the failing receiver
         const course1 = await createCourseHelper({
-          uri: "https://example.com/foundation-native-fails",
+          uri: "native-ERC20-revert-test",
           withdrawers: [instructor1.address, failNativeWallet.target],
           redeemer: instructor1,
           validUntil: now + 86400,
           expectSuccessWith: "CourseCreated",
         });
 
-        // Step 3: make 3 sales (including native)
-        const tokenTypes = [MKT1.target, ethers.ZeroAddress, MKT2.target];
-        const prices = ["10", "20", "30"];
-        const receivers = [person1, person2, person3];
-        const expectations = [PES, PEF, PES];
+        // Step 2: make 4 mixed-token sales, MTK1, native, failMKT, MTK2
+        const tokenTypes = [MKT1.target, ethers.ZeroAddress, failMKT.target, MKT2.target];
+        const prices = ["10", "20", "30", "40"];
+        const receivers = [person1, person2, person3, person4];
         const expectSuccessWith = "ContentPurchased";
+        const expectations = [PES, PEF, PES, PES];
 
-        for (let i = 0; i < 3; i++) {
+        for (let i = 0; i < 4; i++) {
           await buyCourseHelper({
             courseId: course1.courseId,
             tokenAddress: tokenTypes[i],
@@ -4849,13 +4843,16 @@ describe("NewTreasury Contract Tests", function () {
             redeemer: backend,
             validUntil: now + 86400,
             nativeMsgValue: tokenTypes[i] === ethers.ZeroAddress ? ethers.parseEther(prices[i]) : 0,
-            expectSuccessWith,
+            expectSuccessWith: expectSuccessWith,
           });
         }
 
-        // Step 4: fast forward past refund window
+        // Step 3: fast forward past refund window
         const refundWindowDays = Number(await NewTreasury.refundWindow()) / 86400;
         await fastForwardTime({ days: refundWindowDays + 1 });
+
+        // Step 1: Set failNativeWallet as foundation
+        await NewTreasury.connect(foundation).setFoundationAddress(failNativeWallet.target);
 
         // Step 5: block native receive on foundation (failNativeWallet)
         await failNativeWallet.connect(backend).setRejectPayments(true);
@@ -4864,7 +4861,7 @@ describe("NewTreasury Contract Tests", function () {
         const input = {
           courseId: course1.courseId,
           fromIndex: 1,
-          toIndex: 3,
+          toIndex: 4,
           redeemer: instructor1,
           redeemerInitialNativeBalance: await ethers.provider.getBalance(instructor1.address),
         };
@@ -4885,7 +4882,7 @@ describe("NewTreasury Contract Tests", function () {
         // Step 9: expect CoursePaymentsWithdrawn with skipped = 1
         await expect(tx)
           .to.emit(NewTreasury, "CoursePaymentsWithdrawn")
-          .withArgs(input.courseId, input.fromIndex, input.toIndex, input.redeemer, 2);
+          .withArgs(input.courseId, input.fromIndex, input.toIndex, input.redeemer, 3);
 
         // Step 10: validate state after withdraw
         const receipt = await tx.wait();
@@ -4895,14 +4892,13 @@ describe("NewTreasury Contract Tests", function () {
       });
 
       it("should handle partial withdrawal when ERC20 transfer to governance fails", async () => {
-        // Dep 1: Deploy failing native receiver
+        // Dep 1: Deploy native failing receiver contract
         const FailNativeReceiverFactory = await ethers.getContractFactory(
           "contracts/newTreasury/FailNativeReceiver.sol:FailNativeReceiver"
         );
         const failNativeWallet = await FailNativeReceiverFactory.connect(backend).deploy();
         await failNativeWallet.waitForDeployment();
-
-        // Dep 2: Deploy FailTransfer MockERC20
+        // Dep 2: Deploy FailTransfer MockERC20 token contract
         const FailMKTFactory = await ethers.getContractFactory("contracts/newTreasury/FailMockERC20.sol:FailMockERC20");
         const failMKT = await FailMKTFactory.connect(backend).deploy(
           "FailMockToken",
@@ -4910,7 +4906,6 @@ describe("NewTreasury Contract Tests", function () {
           ethers.parseEther("100000")
         );
         await failMKT.waitForDeployment();
-
         // Dep 3: Distribute failMKT tokens to users
         await batchDistributeTokens({
           token: failMKT,
@@ -4919,23 +4914,23 @@ describe("NewTreasury Contract Tests", function () {
           walletList: walletNames,
         });
 
-        // Step 1: instructor1 creates a course
+        // Step 1: Create a course with multiple withdrawers including the failing receiver
         const course1 = await createCourseHelper({
-          uri: "governance-fail-erc20",
+          uri: "native-ERC20-revert-test",
           withdrawers: [instructor1.address, failNativeWallet.target],
           redeemer: instructor1,
           validUntil: now + 86400,
           expectSuccessWith: "CourseCreated",
         });
 
-        // Step 2: make 3 sales (including failMKT)
-        const tokenTypes = [MKT1.target, ethers.ZeroAddress, failMKT.target];
-        const prices = ["10", "20", "30"];
-        const receivers = [person1, person2, person3];
-        const expectations = [PES, PES, PEF];
+        // Step 2: make 4 mixed-token sales, MTK1, native, failMKT, MTK2
+        const tokenTypes = [MKT1.target, ethers.ZeroAddress, failMKT.target, MKT2.target];
+        const prices = ["10", "20", "30", "40"];
+        const receivers = [person1, person2, person3, person4];
         const expectSuccessWith = "ContentPurchased";
+        const expectations = [PES, PES, PEF, PES];
 
-        for (let i = 0; i < 3; i++) {
+        for (let i = 0; i < 4; i++) {
           await buyCourseHelper({
             courseId: course1.courseId,
             tokenAddress: tokenTypes[i],
@@ -4944,7 +4939,7 @@ describe("NewTreasury Contract Tests", function () {
             redeemer: backend,
             validUntil: now + 86400,
             nativeMsgValue: tokenTypes[i] === ethers.ZeroAddress ? ethers.parseEther(prices[i]) : 0,
-            expectSuccessWith,
+            expectSuccessWith: expectSuccessWith,
           });
         }
 
@@ -4959,7 +4954,7 @@ describe("NewTreasury Contract Tests", function () {
         const input = {
           courseId: course1.courseId,
           fromIndex: 1,
-          toIndex: 3,
+          toIndex: 4,
           redeemer: instructor1,
           redeemerInitialNativeBalance: await ethers.provider.getBalance(instructor1.address),
         };
@@ -4980,7 +4975,7 @@ describe("NewTreasury Contract Tests", function () {
         // Step 8: expect CoursePaymentsWithdrawn with skipped = 1
         await expect(tx)
           .to.emit(NewTreasury, "CoursePaymentsWithdrawn")
-          .withArgs(input.courseId, input.fromIndex, input.toIndex, input.redeemer, 2);
+          .withArgs(input.courseId, input.fromIndex, input.toIndex, input.redeemer, 3);
 
         // Step 9: validate state after withdraw
         const receipt = await tx.wait();
