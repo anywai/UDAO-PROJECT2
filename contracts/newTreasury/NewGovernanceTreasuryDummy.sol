@@ -47,11 +47,8 @@ contract NewGovernanceTreasuryDummy {
 }
 /*
 checkWithdrawStatus: if (paymentId == 0) continue; //TODO: BATU buraya gelemedim ben
-withdrawCoursePayments, _withdrawCoursePayments: Iif (paymentId == 0) continue; // TODO: BATU buraya gelemedim ben
+_withdrawCoursePayments: Iif (paymentId == 0) continue; // TODO: BATU buraya gelemedim ben
 _refundCourse : require(courseIndex > 0, "Course not found in receiver's owned list"); //TODO: BATU buraya gelemedim ben
-
-refund: Erequire(sent, "Native refund failed");
-withdraw: Eif (governanceAddress.code.length > 0) {
 
 
     function _withdrawCoursePayments(

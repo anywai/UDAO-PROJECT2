@@ -409,6 +409,7 @@ async function buyCourseHelper({
   nativeMsgValue,
   expectRevertWith,
   expectSuccessWith,
+  viaContract = null,
 }) {
   // Prepare voucher input, current contract state, and desired states
   const input = {
@@ -419,6 +420,7 @@ async function buyCourseHelper({
     redeemer,
     validUntil,
     nativeMsgValue,
+    viaContract,
   };
   const current = {
     paymentCounter: await NewTreasury.paymentCounter(),
@@ -630,7 +632,7 @@ async function _prepareExpectedBuyStates(input, current, desired, waitSuccess) {
 
     payment: {
       courseId: BigInt(input.courseId),
-      payer: input.redeemer.address,
+      payer: input.viaContract ? input.viaContract : input.redeemer.address,
       courseReceiver: input.courseReceiver,
       tokenAddress: input.tokenAddress,
       totalAmount: input.coursePrice,
@@ -2914,6 +2916,36 @@ describe("NewTreasury Contract Tests", function () {
         });
         // Expect: Reverts with "Use ERC20, not native token"
       });
+
+      it("should fail to buy a course when ERC20 token transfer to treasury fails", async function () {
+        // Step 0: Deploy failTransfer contract and distribute tokens
+        const { failNativeWallet, failMKT } = await deployFailTransferContracts();
+
+        // Step 1: Create a course
+        const course1 = await createCourseHelper({
+          uri: "https://example.com/course/invalid-signer-buy",
+          withdrawers: [instructor1.address],
+          redeemer: instructor1,
+          validUntil: now + 86400,
+          expectSuccessWith: "CourseCreated",
+        });
+
+        // Step 4: block failMTK transfer of treasury address
+        await failMKT.connect(backend).blockAddress(NewTreasury.target, true);
+
+        // Step 3: Try to buy with buyer1 using failMKT
+        const buy_course1 = await buyCourseHelper({
+          courseId: course1.courseId,
+          tokenAddress: failMKT.target,
+          coursePrice: ethers.parseEther("10"),
+          courseReceiver: person1.address,
+          redeemer: buyer1,
+          validUntil: now + 86400,
+          nativeMsgValue: 0,
+          expectRevertWith: "Recipient blocked (from)",
+        });
+        // Expect: Reverts with "Signature invalid or unauthorized"
+      });
       /////###End of Failure Cases###/////
     });
     /////###End of Course Purchase###/////
@@ -3548,6 +3580,133 @@ describe("NewTreasury Contract Tests", function () {
         // Expectation: Refund fails because the payment was already withdrawn
       });
 
+      it("should fail to refund when ERC20 token transfer to refunder fails", async function () {
+        // Step 0: Deploy failTransfer contract and distribute tokens
+        const { failNativeWallet, failMKT } = await deployFailTransferContracts();
+
+        // Step 1: instructor1 creates a course
+        const course1 = await createCourseHelper({
+          uri: "https://example.com/refund-invalid-signer",
+          withdrawers: [instructor1.address],
+          redeemer: instructor1,
+          validUntil: now + 86400,
+          expectSuccessWith: "CourseCreated",
+        });
+
+        // Step 2: buyer1 buys course for person1
+        const buy_course = await buyCourseHelper({
+          courseId: course1.courseId,
+          tokenAddress: failMKT.target,
+          coursePrice: ethers.parseEther("10"),
+          courseReceiver: person1.address,
+          redeemer: buyer1,
+          validUntil: now + 86400,
+          nativeMsgValue: 0,
+          expectSuccessWith: "ContentPurchased",
+        });
+
+        // Step 4: block failMTK transfer of treasury address
+        await failMKT.connect(backend).blockAddress(buyer1.address, true);
+
+        // Step 4: Attempt refund with invalid signer
+        const refund_course = await refundCourseHelper({
+          paymentId: buy_course.paymentId,
+          redeemer: buyer3,
+          validUntil: now + 86400,
+          expectRevertWith: "Recipient blocked",
+        });
+      });
+
+      it("should fail to refund when native token transfer to refunder fails", async function () {
+        // Step 0: Deploy failTransfer contract and distribute tokens
+        const { failNativeWallet, failMKT } = await deployFailTransferContracts();
+
+        // Step 1: instructor1 creates a course
+        const course1 = await createCourseHelper({
+          uri: "https://example.com/refund-invalid-signer",
+          withdrawers: [instructor1.address],
+          redeemer: instructor1,
+          validUntil: now + 86400,
+          expectSuccessWith: "CourseCreated",
+        });
+
+        // Step 2: backend triggers failNativeWallets buyTrigger to buy a course with contract
+        const input = {
+          courseId: course1.courseId,
+          tokenAddress: ethers.ZeroAddress, // native token
+          coursePrice: ethers.parseEther("10"),
+          courseReceiver: person1.address,
+          redeemer: failNativeWallet.target, ///.target, ekstra
+          validUntil: now + 86400,
+          nativeMsgValue: ethers.parseEther("10"),
+          viaContract: failNativeWallet.target,
+        };
+        const current = {
+          paymentCounter: await NewTreasury.paymentCounter(),
+          saleCounterPerCourse: await NewTreasury.saleCounterPerCourse(input.courseId),
+          courseOwnerToPayment: await NewTreasury.courseOwnerToPayment(input.courseReceiver, input.courseId),
+          ownedCourses: await NewTreasury.getOwnedCourses(input.courseReceiver),
+          hasOwnedCourse: await NewTreasury.hasOwnedCourse(input.courseReceiver, input.courseId),
+          ownedCourseIndex: await NewTreasury.ownedCourseIndex(input.courseReceiver, input.courseId),
+          udaoTokenAddress: await NewTreasury.udaoTokenAddress(),
+          refundWindow: await NewTreasury.refundWindow(),
+          utFoundCut: await NewTreasury.utFoundCut(),
+          utGoverCut: await NewTreasury.utGoverCut(),
+          atFoundCut: await NewTreasury.atFoundCut(),
+          atGoverCut: await NewTreasury.atGoverCut(),
+        };
+        const desired = {
+          paymentCounter: current.paymentCounter + 1n,
+          saleCounterPerCourse: current.saleCounterPerCourse + 1n,
+          paymentId: current.paymentCounter + 1n,
+          courseSpecificSaleId: current.saleCounterPerCourse + 1n,
+        };
+        const expectedOutcome = await _prepareExpectedBuyStates(input, current, desired, true);
+        const buyVoucher = await buyVH.signVoucher({
+          courseId: input.courseId,
+          tokenAddress: input.tokenAddress,
+          coursePrice: input.coursePrice,
+          courseReceiver: input.courseReceiver,
+          redeemer: input.redeemer,
+          validUntil: input.validUntil,
+        });
+        const beforeTxBalances = await getBalances({
+          payer: backend.address,
+          courseReceiver: input.courseReceiver,
+          contract: NewTreasury.target,
+          tokenAddress: input.tokenAddress,
+        });
+
+        // Step 3: trigger buy inside failNativeWallet
+        const tx = await failNativeWallet
+          .connect(backend)
+          .triggerBuy(NewTreasury.target, buyVoucher, { value: input.nativeMsgValue });
+        await expect(tx)
+          .to.emit(NewTreasury, "ContentPurchased")
+          .withArgs(Number(desired.paymentId), input.courseId, input.courseReceiver);
+        const receipt = await tx.wait();
+        const effectiveGasPrice = receipt.effectiveGasPrice ?? receipt.gasPrice ?? 0n;
+        const gasCost = receipt.gasUsed * effectiveGasPrice;
+        // Step 4: check balances and expected states after buy
+        await _expectBuy(input, desired, expectedOutcome);
+        await checkBalancesAfter({
+          operation: "buy", // if refund use "refund"
+          gasCost: gasCost, // 0 if revert, otherwise gas used success
+          beforeTxBalances: beforeTxBalances,
+          coursePrice: input.coursePrice,
+          tokenAddress: input.tokenAddress,
+        });
+
+        // Step 5: block native token receive of failNativeWallet
+        await failNativeWallet.connect(backend).setRejectPayments(true);
+        // Step 6: Try to refund the course expect fail
+        const refund_course = await refundCourseHelper({
+          paymentId: Number(desired.paymentId),
+          redeemer: buyer3,
+          validUntil: now + 86400,
+          expectRevertWith: "Native refund failed",
+        });
+      });
       /////###End of Failure Cases###/////
     });
     /////###End of Refunds: paymentId###/////
@@ -4235,6 +4394,135 @@ describe("NewTreasury Contract Tests", function () {
         // Expectation: Refund fails because funds were already withdrawn
       });
 
+      it("should fail refund by owner when ERC20 token transfer to refunder fails", async function () {
+        // Step 0: Deploy failTransfer contract and distribute tokens
+        const { failNativeWallet, failMKT } = await deployFailTransferContracts();
+
+        // Step 1: instructor1 creates a course
+        const course1 = await createCourseHelper({
+          uri: "https://example.com/refund-invalid-signer",
+          withdrawers: [instructor1.address],
+          redeemer: instructor1,
+          validUntil: now + 86400,
+          expectSuccessWith: "CourseCreated",
+        });
+
+        // Step 2: buyer1 buys course for person1
+        const buy_course = await buyCourseHelper({
+          courseId: course1.courseId,
+          tokenAddress: failMKT.target,
+          coursePrice: ethers.parseEther("10"),
+          courseReceiver: person1.address,
+          redeemer: buyer1,
+          validUntil: now + 86400,
+          nativeMsgValue: 0,
+          expectSuccessWith: "ContentPurchased",
+        });
+
+        // Step 4: block failMTK transfer of treasury address
+        await failMKT.connect(backend).blockAddress(buyer1.address, true);
+
+        // Step 4: Attempt refund with invalid signer
+        const refund_course = await refundCourseByOwnerHelper({
+          courseOwner: buy_course.courseReceiver,
+          courseId: buy_course.courseId,
+          redeemer: buyer3,
+          validUntil: now + 86400,
+          expectRevertWith: "Recipient blocked",
+        });
+      });
+
+      it("should fail refund by owner when native token transfer to refunder fails", async function () {
+        // Step 0: Deploy failTransfer contract and distribute tokens
+        const { failNativeWallet, failMKT } = await deployFailTransferContracts();
+
+        // Step 1: instructor1 creates a course
+        const course1 = await createCourseHelper({
+          uri: "https://example.com/refund-invalid-signer",
+          withdrawers: [instructor1.address],
+          redeemer: instructor1,
+          validUntil: now + 86400,
+          expectSuccessWith: "CourseCreated",
+        });
+
+        // Step 2: backend triggers failNativeWallets buyTrigger to buy a course with contract
+        const input = {
+          courseId: course1.courseId,
+          tokenAddress: ethers.ZeroAddress, // native token
+          coursePrice: ethers.parseEther("10"),
+          courseReceiver: person1.address,
+          redeemer: failNativeWallet.target, ///.target, ekstra
+          validUntil: now + 86400,
+          nativeMsgValue: ethers.parseEther("10"),
+          viaContract: failNativeWallet.target,
+        };
+        const current = {
+          paymentCounter: await NewTreasury.paymentCounter(),
+          saleCounterPerCourse: await NewTreasury.saleCounterPerCourse(input.courseId),
+          courseOwnerToPayment: await NewTreasury.courseOwnerToPayment(input.courseReceiver, input.courseId),
+          ownedCourses: await NewTreasury.getOwnedCourses(input.courseReceiver),
+          hasOwnedCourse: await NewTreasury.hasOwnedCourse(input.courseReceiver, input.courseId),
+          ownedCourseIndex: await NewTreasury.ownedCourseIndex(input.courseReceiver, input.courseId),
+          udaoTokenAddress: await NewTreasury.udaoTokenAddress(),
+          refundWindow: await NewTreasury.refundWindow(),
+          utFoundCut: await NewTreasury.utFoundCut(),
+          utGoverCut: await NewTreasury.utGoverCut(),
+          atFoundCut: await NewTreasury.atFoundCut(),
+          atGoverCut: await NewTreasury.atGoverCut(),
+        };
+        const desired = {
+          paymentCounter: current.paymentCounter + 1n,
+          saleCounterPerCourse: current.saleCounterPerCourse + 1n,
+          paymentId: current.paymentCounter + 1n,
+          courseSpecificSaleId: current.saleCounterPerCourse + 1n,
+        };
+        const expectedOutcome = await _prepareExpectedBuyStates(input, current, desired, true);
+        const buyVoucher = await buyVH.signVoucher({
+          courseId: input.courseId,
+          tokenAddress: input.tokenAddress,
+          coursePrice: input.coursePrice,
+          courseReceiver: input.courseReceiver,
+          redeemer: input.redeemer,
+          validUntil: input.validUntil,
+        });
+        const beforeTxBalances = await getBalances({
+          payer: backend.address,
+          courseReceiver: input.courseReceiver,
+          contract: NewTreasury.target,
+          tokenAddress: input.tokenAddress,
+        });
+
+        // Step 3: trigger buy inside failNativeWallet
+        const tx = await failNativeWallet
+          .connect(backend)
+          .triggerBuy(NewTreasury.target, buyVoucher, { value: input.nativeMsgValue });
+        await expect(tx)
+          .to.emit(NewTreasury, "ContentPurchased")
+          .withArgs(Number(desired.paymentId), input.courseId, input.courseReceiver);
+        const receipt = await tx.wait();
+        const effectiveGasPrice = receipt.effectiveGasPrice ?? receipt.gasPrice ?? 0n;
+        const gasCost = receipt.gasUsed * effectiveGasPrice;
+        // Step 4: check balances and expected states after buy
+        await _expectBuy(input, desired, expectedOutcome);
+        await checkBalancesAfter({
+          operation: "buy", // if refund use "refund"
+          gasCost: gasCost, // 0 if revert, otherwise gas used success
+          beforeTxBalances: beforeTxBalances,
+          coursePrice: input.coursePrice,
+          tokenAddress: input.tokenAddress,
+        });
+
+        // Step 5: block native token receive of failNativeWallet
+        await failNativeWallet.connect(backend).setRejectPayments(true);
+        // Step 6: Try to refund the course expect fail
+        const refund_course = await refundCourseByOwnerHelper({
+          courseOwner: input.courseReceiver,
+          courseId: input.courseId,
+          redeemer: buyer3,
+          validUntil: now + 86400,
+          expectRevertWith: "Native refund failed",
+        });
+      });
       /////###End of Failure Cases###/////
     });
     /////###End of Refunds: byOwner and courseId###/////
