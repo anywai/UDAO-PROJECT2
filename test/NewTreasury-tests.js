@@ -4243,7 +4243,7 @@ describe("NewTreasury Contract Tests", function () {
   // 5. Withdrawals
   describe("🏦 WITHDRAWALS", function () {
     describe("✅ Success Cases", function () {
-      it("should allow instructor1 to withdraw payments for sales 1 to 3", async function () {
+      it("should allow instructor to withdraw payments for a subset of sales", async function () {
         // Step 1: instructor1 creates a course
         const course1 = await createCourseHelper({
           uri: "https://example.com/withdraw-course/1",
@@ -4288,7 +4288,7 @@ describe("NewTreasury Contract Tests", function () {
         // Expect: "CoursePaymentsWithdrawn" with expected success states
       });
 
-      it("should allow instructor1 to withdraw 6 mixed-token sales (MTK1, MTK2, native)", async function () {
+      it("should allow instructor to withdraw from mixed-token sales (ERC20 and native)", async function () {
         // Step 1: instructor1 creates a course
         const course1 = await createCourseHelper({
           uri: "https://example.com/withdraw-mixed/1",
@@ -4334,7 +4334,7 @@ describe("NewTreasury Contract Tests", function () {
         // Expect: "CoursePaymentsWithdrawn" with expected success states
       });
 
-      it("should allow withdraw if original refund window expired before refundWindow was extended", async function () {
+      it("should allow instructor to withdraw if pre-sale refund window expired even post-sale refund window extended", async function () {
         // Step 1: set initial refundWindow to 1 days
         await NewTreasury.connect(backend).setRefundWindow(1 * 86400);
 
@@ -4377,7 +4377,7 @@ describe("NewTreasury Contract Tests", function () {
         });
       });
 
-      it("should allow withdraw if governance contract replaced with a wallet", async function () {
+      it("should allow instructor to withdraw after governance contract is replaced with wallet", async function () {
         // Step 1: instructor1 creates a course
         const course1 = await createCourseHelper({
           uri: "https://example.com/withdraw-mixed/1",
@@ -4425,12 +4425,11 @@ describe("NewTreasury Contract Tests", function () {
         });
         // Expect: "CoursePaymentsWithdrawn" with expected success states
       });
-
       /////###End of Success Cases###/////
     });
 
     describe("🔁 Partial Success Cases", function () {
-      it("should skip withdraw if purchase is still within original refund window despite refundWindow being shortened later", async function () {
+      it("should skip withdraw when purchase is within pre-sale refund window despite post-sale refundWindow shortened", async function () {
         // Step 1: set initial refundWindow to 10 days
         await NewTreasury.connect(backend).setRefundWindow(10 * 86400);
 
@@ -4473,7 +4472,7 @@ describe("NewTreasury Contract Tests", function () {
         });
       });
 
-      it("should handle multi-withdrawer, mixed-token sales, refunds and post-refund withdrawals correctly", async function () {
+      it("should skip withdraw for refunded-withdrawed sales in complex multi-withdrawer, mixed-token, refund, and re-withdraw scenario", async function () {
         // Step 1: increase max batch size to 12
         await NewTreasury.connect(backend).setMaxBatchWithdrawSize(12);
         // Step 2: instructor1 & instructor2 authorized
@@ -4583,9 +4582,7 @@ describe("NewTreasury Contract Tests", function () {
         });
       });
 
-      // Real fails
-
-      it("should handle partial withdrawal when ERC20 transfer to instructor fails", async () => {
+      it("should skip withdraw when ERC20 transfer to instructor fails", async () => {
         // Step 0: Deploy failTransfer contract and distribute tokens
         const { failNativeWallet, failMKT } = await deployFailTransferContracts();
 
@@ -4659,7 +4656,7 @@ describe("NewTreasury Contract Tests", function () {
         await _expectWithdraw(input, beforeTokenStats, gasCost, expectations, true);
       });
 
-      it("should handle partial withdrawal when native transfer to instructor fails", async () => {
+      it("should skip withdraw when native transfer to instructor fails", async () => {
         // Step 0: Deploy failTransfer contract and distribute tokens
         const { failNativeWallet, failMKT } = await deployFailTransferContracts();
 
@@ -4737,7 +4734,7 @@ describe("NewTreasury Contract Tests", function () {
         expect(postTxNativeBalanceOfBackend).to.equal(preTxNativeBalanceOfBackend - gasCost);
       });
 
-      it("should handle partial withdrawal when ERC20 transfer to foundation fails", async () => {
+      it("should skip withdraw when ERC20 transfer to foundation fails", async () => {
         // Step 0: Deploy failTransfer contract and distribute tokens
         const { failNativeWallet, failMKT } = await deployFailTransferContracts();
 
@@ -4811,7 +4808,7 @@ describe("NewTreasury Contract Tests", function () {
         await _expectWithdraw(input, beforeTokenStats, gasCost, expectations, true);
       });
 
-      it("should handle partial withdrawal when native transfer to foundation fails", async () => {
+      it("should skip withdraw when native transfer to foundation fails", async () => {
         // Step 0: Deploy failTransfer contract and distribute tokens
         const { failNativeWallet, failMKT } = await deployFailTransferContracts();
 
@@ -4888,7 +4885,7 @@ describe("NewTreasury Contract Tests", function () {
         await _expectWithdraw(input, beforeTokenStats, gasCost, expectations, true);
       });
 
-      it("should handle partial withdrawal when ERC20 transfer to governance fails", async () => {
+      it("should skip withdraw when ERC20 transfer to governance contract fails", async () => {
         // Step 0: Deploy failTransfer contract and distribute tokens
         const { failNativeWallet, failMKT } = await deployFailTransferContracts();
 
@@ -4962,7 +4959,7 @@ describe("NewTreasury Contract Tests", function () {
         await _expectWithdraw(input, beforeTokenStats, gasCost, expectations, true);
       });
 
-      it("should handle partial withdrawal when ERC20 transfer to if governance replaced with wallet that fails during erc20", async () => {
+      it("should skip withdraw when governance is replaced with wallet that fails ERC20 transfers", async () => {
         // Step 0: Deploy failTransfer contract and distribute tokens
         const { failNativeWallet, failMKT } = await deployFailTransferContracts();
 
@@ -5037,7 +5034,7 @@ describe("NewTreasury Contract Tests", function () {
         await _expectWithdraw(input, beforeTokenStats, gasCost, expectations, true);
       });
 
-      it("should handle partial withdrawal when native transfer when governance contract rejects receive native token", async () => {
+      it("should skip withdraw when governance contract rejects receive native token", async () => {
         // Step 0: Deploy failTransfer contract and distribute tokens
         const { failNativeWallet, failMKT } = await deployFailTransferContracts();
 
@@ -5111,7 +5108,7 @@ describe("NewTreasury Contract Tests", function () {
         await _expectWithdraw(input, beforeTokenStats, gasCost, expectations, true);
       });
 
-      it("should handle partial withdrawal when ERC20 transfer when governance contract rejects to record that ERC20", async () => {
+      it("should skip withdraw when governance contract refuses to record ERC20", async () => {
         // Step 0: Deploy failTransfer contract and distribute tokens
         const { failNativeWallet, failMKT } = await deployFailTransferContracts();
 
@@ -5185,7 +5182,7 @@ describe("NewTreasury Contract Tests", function () {
         await _expectWithdraw(input, beforeTokenStats, gasCost, expectations, true);
       });
 
-      it("should fail withdraw if governance contract replaced with an other wallet doesnt have addGovernanceFunds function", async function () {
+      it("should skip withdraw when governance contract lacks addGovernanceFunds function", async function () {
         // Step 0: Deploy failTransfer contract and distribute tokens
         const { failNativeWallet, failMKT } = await deployFailTransferContracts();
 
@@ -5258,7 +5255,6 @@ describe("NewTreasury Contract Tests", function () {
         const gasCost = receipt.gasUsed * effectiveGasPrice;
         await _expectWithdraw(input, beforeTokenStats, gasCost, expectations, true);
       });
-
       /////###End of Partial Success Cases###/////
     });
 
@@ -5344,7 +5340,7 @@ describe("NewTreasury Contract Tests", function () {
         // Expect: Reverts with "Voucher expired" with expected fail states
       });
 
-      it("should fail to withdraw if msg.sender !== redeemer (Only redeemer can use this voucher)", async function () {
+      it("should fail to withdraw when msg.sender is not redeemer", async function () {
         // Step 1: instructor1 creates course
         const course1 = await createCourseHelper({
           uri: "https://example.com/withdraw-wrong-redeemer",
@@ -5387,7 +5383,7 @@ describe("NewTreasury Contract Tests", function () {
         // Expect: reverts with "Only redeemer can use this voucher"
       });
 
-      it("should fail to withdraw with courseId = 0", async function () {
+      it("should fail to withdraw with invalid courseId that is zero", async function () {
         // Step 1: Try withdraw without any course created for non-existing courseId = 0 expect fail
         const withdrawResult1 = await withdrawCoursePaymentsHelper({
           courseId: 0,
@@ -5421,7 +5417,7 @@ describe("NewTreasury Contract Tests", function () {
         // Expect: Reverts with "Invalid courseId" in both cases
       });
 
-      it("should fail to withdraw with courseId > courseCounter", async function () {
+      it("should fail to withdraw with invalid courseId that is greater than courseCounter", async function () {
         // Step 1: Use a courseId greater than current courseCounter
         const invalidCourseId1 = Number(await NewTreasury.courseCounter()) + 1;
 
@@ -5461,7 +5457,7 @@ describe("NewTreasury Contract Tests", function () {
         // Expect: Reverts with "Invalid courseId" in both cases
       });
 
-      it("should fail to withdraw when index range is invalid (fromIndex > toIndex, fromIndex = 0, toIndex > saleCount)", async function () {
+      it("should fail to withdraw when invalid index range (0, from > to, to > saleCount)", async function () {
         // Step 1: instructor1 creates a course
         const course1 = await createCourseHelper({
           uri: "https://example.com/withdraw-invalid-range",
@@ -5625,7 +5621,7 @@ describe("NewTreasury Contract Tests", function () {
         // Expect: Reverts with "Not authorized withdrawer for this course" in both cases
       });
 
-      it("should fail if attemptSingleWithdrawOrRevert is called externally by any person", async function () {
+      it("should fail to call attemptSingleWithdrawOrRevert externally by anyone except treasury contract", async function () {
         // Step 1: instructor creates a course
         const course1 = await createCourseHelper({
           uri: "https://example.com/withdraw-external-attempt",
@@ -5662,7 +5658,7 @@ describe("NewTreasury Contract Tests", function () {
         }
       });
 
-      it("should revert checkWithdrawStatus with invalid courseId and index ranges", async () => {
+      it("should fail to call checkWithdrawStatus with invalid courseId or index range", async () => {
         // Step 1: instructor1 creates a course
         const course1 = await createCourseHelper({
           uri: "https://example.com/check-invalids",
@@ -5714,7 +5710,6 @@ describe("NewTreasury Contract Tests", function () {
           NewTreasury.connect(instructor1).checkWithdrawStatus(course1.courseId, 1, Number(saleCount) + 1)
         ).to.be.revertedWith("Invalid index range: 1toSaleCountOfCourse");
       });
-
       /////###End of Failure Cases###/////
     });
     /////###End of Withdrawals###/////
