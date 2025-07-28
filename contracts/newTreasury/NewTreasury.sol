@@ -880,6 +880,7 @@ contract NewTreasury is EIP712, ReentrancyGuard {
             try this.attemptSingleWithdrawOrRevert(paymentId, msg.sender) {
                 withdrawnCompleted++;
             } catch {
+                //p.isWithdrawn = false; //if reverted, this will not be set
                 // nothing
                 // needed: emit CourseWithdrawFailed(courseId, paymentId, msg.sender, reason);
                 // TODO: çok silent
@@ -926,13 +927,12 @@ contract NewTreasury is EIP712, ReentrancyGuard {
             IERC20(tokenAddress).safeTransfer(foundationAddress, fShare);
             IERC20(tokenAddress).safeTransfer(governanceAddress, gShare);
         }
-        try
+        if (governanceAddress.code.length > 0) {
+            // governanceAddress is a contract
             IGovernanceTreasury(governanceAddress).addGovernanceFunds(
                 tokenAddress,
                 gShare
-            )
-        {} catch {
-            revert("Governance fund record failed");
+            );
         }
     }
 
