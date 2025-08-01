@@ -433,6 +433,22 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         instructorShare = _totalAmount - foundShare - goverShare;
     }
 
+    uint256 public maxBatchBuySize = 10; // max 10 courses can be bought at once
+    event MaxBatchBuySizeUpdated(
+        uint256 indexed newMaxBatchBuySize,
+        uint256 indexed previousMaxBatchBuySize
+    );
+
+    function setMaxBatchBuySize(uint256 newMaxBatch) external {
+        if (!hasBackendRole[msg.sender]) revert onlyBackendAuthorized();
+        if (newMaxBatch == 0) revert ZeroValueNotAccepted();
+        uint256 currentMaxBatch = maxBatchBuySize;
+        if (newMaxBatch == currentMaxBatch) revert NoChange();
+
+        maxBatchBuySize = newMaxBatch;
+        emit MaxBatchBuySizeUpdated(newMaxBatch, currentMaxBatch);
+    }
+
     /////### VOUCHER LOGIC ###/////
     function _verifyVoucherSignerAndValidity(
         bytes32 _digest,
@@ -617,6 +633,144 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         hasOwnedCourse[_courseReceiver][_courseId] = true;
 
         emit ContentPurchased(newPaymentId, _courseId, _courseReceiver);
+    }
+
+    function buyCourseBatch(
+        BuyCourseVoucher[] calldata vouchers
+    ) external payable nonReentrant {
+        uint256 len = vouchers.length;
+        // TODO BATU open comment during tests, also check setters event and variable
+        //require(
+        //    vouchers.length <= maxBatchBuySize,
+        //    "Max allowed batch buy size exceeded"
+        //);
+        uint256 totalNativeRequired = 0;
+
+        for (uint256 i = 0; i < len; i++) {
+            BuyCourseVoucher calldata voucher = vouchers[i];
+            // encode the voucher fields to reduce gas cost
+            uint256 courseId = voucher.courseId;
+            address tokenAddress = voucher.tokenAddress;
+            uint256 coursePrice = voucher.coursePrice;
+            address courseReceiver = voucher.courseReceiver;
+            address redeemer = voucher.redeemer;
+            uint256 validUntil = voucher.validUntil;
+
+            // create digest for the voucher
+            bytes32 digest = _hashTypedDataV4(
+                keccak256(
+                    abi.encode(
+                        BUY_COURSE_VOUCHER_TYPEHASH,
+                        courseId,
+                        tokenAddress,
+                        coursePrice,
+                        courseReceiver,
+                        redeemer,
+                        validUntil
+                    )
+                )
+            );
+
+            // verify voucher, signer and validity
+            _verifyVoucherSignerAndValidity(
+                digest,
+                voucher.signature,
+                redeemer,
+                validUntil
+            );
+
+            require(
+                courseId > 0 && courseId <= courseCounter,
+                "Invalid courseId"
+            );
+            require(courses[courseId].sellable, "Course is not sellable");
+            //content receiver has to be dont have the course already
+            require(
+                !hasOwnedCourse[courseReceiver][courseId],
+                "Content receiver already owns this course"
+            );
+            //course price must be greater than 0
+            require(coursePrice > 0, "Course price must be greater than 0");
+
+            // check if the payment is made in native token or erc20 token
+            if (tokenAddress == address(0)) {
+                totalNativeRequired += coursePrice;
+            } else {
+                // transfer the erc20 token from redeemer to this contract
+                IERC20(tokenAddress).safeTransferFrom(
+                    msg.sender,
+                    address(this),
+                    coursePrice
+                );
+            }
+
+            hasOwnedCourse[courseReceiver][courseId] = true;
+        }
+
+        require(
+            msg.value == totalNativeRequired,
+            "Incorrect total native value sent"
+        );
+
+        for (uint256 i = 0; i < len; i++) {
+            BuyCourseVoucher calldata voucher = vouchers[i];
+            // encode the voucher fields to reduce gas cost
+            uint256 courseId = voucher.courseId;
+            address tokenAddress = voucher.tokenAddress;
+            uint256 coursePrice = voucher.coursePrice;
+            address courseReceiver = voucher.courseReceiver;
+
+            // calculate shares
+            bool isUdao = tokenAddress == udaoTokenAddress;
+            uint256 foundCut = isUdao ? utFoundCut : atFoundCut;
+            uint256 goverCut = isUdao ? utGoverCut : atGoverCut;
+            uint256 foundShare = (coursePrice * foundCut) / 100_000;
+            uint256 goverShare = (coursePrice * goverCut) / 100_000;
+            uint256 instructorShare = coursePrice - foundShare - goverShare;
+
+            // save the payment details
+            paymentCounter++;
+
+            uint256 newPaymentId = paymentCounter;
+            payments[newPaymentId] = Payment({
+                courseId: courseId,
+                payer: msg.sender,
+                courseReceiver: courseReceiver,
+                tokenAddress: tokenAddress,
+                totalAmount: coursePrice,
+                instructorShare: instructorShare,
+                foundationShare: foundShare,
+                governanceShare: goverShare,
+                endOfRefundWindow: block.timestamp + refundWindow,
+                isRefunded: false,
+                isWithdrawn: false
+            });
+
+            // increase saleCounterPerCourse for this course
+            saleCounterPerCourse[courseId]++;
+            // save paymentId to courseSaleRecords mapping according to CourseSaleCounter for this course
+            courseSaleRecords[courseId][
+                saleCounterPerCourse[courseId]
+            ] = newPaymentId;
+
+            // pair paymentId with courseReceiver and courseId
+            courseOwnerToPayment[courseReceiver][courseId] = newPaymentId;
+
+            if (ownedCourses[courseReceiver].length == 0) {
+                // if the course receiver does not have any courses yet, initialize the mapping
+                ownedCourses[courseReceiver].push(0); // zero index always holds 0
+            }
+
+            // add the courseId to the ownedCourses mapping
+            ownedCourses[courseReceiver].push(courseId);
+            // save the index of the courseId in the ownedCourses mapping
+            ownedCourseIndex[courseReceiver][courseId] =
+                ownedCourses[courseReceiver].length -
+                1;
+            // update hasOwnedCourse mapping, Reöoved because saved in first loop //hasOwnedCourse[_courseReceiver][_courseId] = true;
+
+            emit ContentPurchased(newPaymentId, courseId, courseReceiver);
+        }
     }
 
     /////### COURSE REFUND LOGIC ###/////
@@ -1096,5 +1250,33 @@ hasOwnedCourse mapping’i ile ownedCourses dizisinin senkronize olması elzem. 
 
 Eğer bir bug çıkacaksa, swap & pop içindeki require(courseIndex > 0) sonrası index=0 durumunda olabilir. Bunun testini yaz.
 
+Adım 5: hasOwnedCourse flag’ini mapping yerine bit-packing ile array’de tutmak
+
+    unchecked { i++; } verimli! 3 gaz sadece ama.
+
+isRefunded isWithdrawn ve course struct daha verimli eğer tamamını okuyacaksan. bölersen SLoad artar
+
+
+✅ Neden Güvende:
+Hiçbir Ether transferi yok.
+
+Hiçbir low-level external call (call, send, transfer) yok.
+
+safeTransfer veya transferFrom gibi token çekme/gönderme işlemi de yok.
+
+external call sadece _verifyVoucherSignerAndValidity ve _validateWithdrawersAndRedeemer gibi internal fonksiyonlar, ve bunların kendisi de reentrant değil (senin kontrolünde).
+
+courseCounter ve uriToCourseId gibi state değişiklikleri external çağrılardan sonra değil, sonra geliyorlar.
+
+🔐 Ne Zaman Gerekebilirdi?
+Eğer fonksiyon:
+
+payable olsaydı,
+
+ya da içinden Ether/token gönderseydi (örneğin _setAuthorizedWithdrawers içinde call varsa dikkat gerekirdi),
+
+ya da başka kontratlar seni tekrar çağırabilseydi,
+
+O zaman reentrancy riskine karşı nonReentrant gerekirdi.
 
 */
