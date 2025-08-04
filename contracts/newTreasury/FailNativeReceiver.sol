@@ -24,7 +24,9 @@ interface INewTreasury {
         bytes signature; // signature of the voucher
     }
 
-    function buyCourse(BuyCourseVoucher calldata voucher) external payable;
+    function buyCourseBatch(
+        BuyCourseVoucher[] calldata vouchers
+    ) external payable;
 }
 
 /// @dev Receive fonksiyonu koşula bağlı olarak revert atar.
@@ -50,11 +52,11 @@ contract FailNativeReceiver {
         INewTreasury(treasury).withdrawCoursePayments(voucher);
     }
 
-    /// Call buyCourse on NewTreasury
+    /// Call buyCourseBatch on NewTreasury
     function triggerBuy(
         address treasury,
-        INewTreasury.BuyCourseVoucher calldata voucher
+        INewTreasury.BuyCourseVoucher[] calldata vouchers
     ) external payable {
-        INewTreasury(treasury).buyCourse{value: msg.value}(voucher);
+        INewTreasury(treasury).buyCourseBatch{value: msg.value}(vouchers);
     }
 }

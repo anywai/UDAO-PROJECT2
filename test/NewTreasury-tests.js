@@ -447,9 +447,7 @@ async function buyCourseBatchHelper({
     vouchers.push(buyVoucher);
   }
   // predict expected outcomes of buy before tx
-  const expectedOutcome = await _prepareExpectedBuyBatchStates(vouchers, buyBatchTxCaller, waitSuccess);
-  //console.log("Expected Outcome:", expectedOutcome);
-  //console.log("------------------------SEPARATOR------------------------");
+  const expectedOutcome = await _prepareExpectedBuyBatchStates(vouchers, buyBatchTxCaller.address, waitSuccess);
 
   const currentPaymentCounter = await NewTreasury.paymentCounter();
   let tx = null;
@@ -498,12 +496,12 @@ async function buyCourseBatchHelper({
     }
 
     // Expected outcomes should be satisfied
-    await _expectBuyBatch(vouchers, nativeMsgValue, expectedOutcome, gasCost, buyBatchTxCaller, waitSuccess);
+    await _expectBuyBatch(nativeMsgValue, expectedOutcome, gasCost, buyBatchTxCaller.address, waitSuccess);
   }
-  return expectedOutcome; // return expected outcome for further assertions if needed
+  //return
 }
 
-async function _prepareExpectedBuyBatchStates(vouchers, buyBatchTxCaller, waitSuccess, viaContractCaller = null) {
+async function _prepareExpectedBuyBatchStates(vouchers, buyBatchTxCaller, waitSuccess, executor = null) {
   // 0) Normalize + indeksleme tek geçiş
   const normVouchers = [];
   const courseSet = new Set();
@@ -511,7 +509,7 @@ async function _prepareExpectedBuyBatchStates(vouchers, buyBatchTxCaller, waitSu
   const pairSet = new Set();
   const tokenSet = new Set([ethers.ZeroAddress.toLowerCase()]);
   const tokenTotals = new Map(); // token(lower) -> BigInt
-  const occByCourse = new Map(); // courseId(BigInt) -> count
+  //const occByCourse = new Map(); // courseId(BigInt) -> count
 
   for (const v of vouchers) {
     const nv = {
@@ -530,7 +528,7 @@ async function _prepareExpectedBuyBatchStates(vouchers, buyBatchTxCaller, waitSu
     tokenSet.add(tKey);
     tokenTotals.set(tKey, (tokenTotals.get(tKey) ?? 0n) + (waitSuccess ? nv.coursePrice : 0n));
 
-    occByCourse.set(nv.courseId, (occByCourse.get(nv.courseId) ?? 0) + 1);
+    //occByCourse.set(nv.courseId, (occByCourse.get(nv.courseId) ?? 0) + 1);
   }
 
   const uniqueCourseIds = [...courseSet];
@@ -573,7 +571,7 @@ async function _prepareExpectedBuyBatchStates(vouchers, buyBatchTxCaller, waitSu
   );
 
   // 2) Ortak yardımcılar
-  const payer = typeof buyBatchTxCaller === "string" ? buyBatchTxCaller : buyBatchTxCaller.address; // Payment.payer HER ZAMAN bu
+  const payer = buyBatchTxCaller;
   const endOfRefundWindow = BigInt(now) + refundWindow;
   const udaoLower = udaoTokenAddress.toLowerCase();
 
@@ -701,13 +699,7 @@ async function _prepareExpectedBuyBatchStates(vouchers, buyBatchTxCaller, waitSu
 
   // 6) beforeTxBalances (+ expectedTokenTransferAmount) — tek yerde
   const treasury = NewTreasury.target;
-  const viaAddr = viaContractCaller
-    ? typeof viaContractCaller === "string"
-      ? viaContractCaller
-      : viaContractCaller.address
-    : null;
 
-  const ZERO = ethers.ZeroAddress.toLowerCase();
   const erc20Cache = new Map();
   const getErc20 = async (addr) => {
     if (!erc20Cache.has(addr)) erc20Cache.set(addr, await ethers.getContractAt("IERC20", addr));
@@ -715,7 +707,7 @@ async function _prepareExpectedBuyBatchStates(vouchers, buyBatchTxCaller, waitSu
   };
   const getTokenBalance = async (tokenLower, addr) => {
     if (!addr) return null;
-    if (tokenLower === ZERO) return ethers.provider.getBalance(addr);
+    if (tokenLower === ethers.ZeroAddress.toLowerCase()) return ethers.provider.getBalance(addr);
     const c = await getErc20(tokenLower);
     return c.balanceOf(addr);
   };
@@ -723,19 +715,19 @@ async function _prepareExpectedBuyBatchStates(vouchers, buyBatchTxCaller, waitSu
   const beforeTxBalances = [];
   for (const tokenLower of tokenSet) {
     // tokenSet zaten lower-case & 0x0 içerir
-    const [callerBal, contractBal, viaBal] = await Promise.all([
+    const [callerBal, contractBal, executorBal] = await Promise.all([
       getTokenBalance(tokenLower, payer),
       getTokenBalance(tokenLower, treasury),
-      getTokenBalance(tokenLower, viaAddr),
+      getTokenBalance(tokenLower, executor),
     ]);
 
     const rec = {
-      tokenAddress: tokenLower === ZERO ? ethers.ZeroAddress : tokenLower,
+      tokenAddress: tokenLower === ethers.ZeroAddress.toLowerCase() ? ethers.ZeroAddress : tokenLower,
       callerBalance: callerBal,
       contractBalance: contractBal,
       expectedTokenTransferAmount: tokenTotals.get(tokenLower) ?? 0n,
     };
-    if (viaBal !== null) rec.viaContractBalance = viaBal; // sadece viaContractCaller verilmişse eklenir
+    if (executorBal !== null) rec.executorBalance = executorBal; // sadece executor verilmişse eklenir
 
     beforeTxBalances.push(rec);
   }
@@ -754,13 +746,12 @@ async function _prepareExpectedBuyBatchStates(vouchers, buyBatchTxCaller, waitSu
 }
 
 async function _expectBuyBatch(
-  vouchers,
   nativeMsgValue,
   expectedOutcome, // _prepareExpectedBuyBatchStates(...) çıktısı
   gasCost, // only in success path (revert'te 0n geçirilebilir ya da çağrılmaz)
   buyBatchTxCaller,
   waitSuccess,
-  viaContractCaller = null
+  executor = null
 ) {
   // 1) paymentCounter
   const actualPaymentCounter = await NewTreasury.paymentCounter();
@@ -826,13 +817,7 @@ async function _expectBuyBatch(
 
   // 9) Bakiye kontrolleri (yalnızca success yolunda anlamlı; revert'te zaten tx yok)
 
-  const payer = typeof buyBatchTxCaller === "string" ? buyBatchTxCaller : buyBatchTxCaller.address;
-  const exec = viaContractCaller
-    ? typeof viaContractCaller === "string"
-      ? viaContractCaller
-      : viaContractCaller.address
-    : null; // varsa gas'ı bu adres öder; yoksa payer öder
-
+  const payer = buyBatchTxCaller;
   const treasury = NewTreasury.target;
 
   for (const b of expectedOutcome.beforeTxBalances) {
@@ -840,11 +825,11 @@ async function _expectBuyBatch(
 
     if (token === ethers.ZeroAddress.toLowerCase()) {
       // --- NATIVE ---
-      // Öncesi: b.callerBalance (payer), b.contractBalance (treasury), b.viaContractBalance? (executor)
+      // Öncesi: b.callerBalance (payer), b.contractBalance (treasury), b.executorBalance? (executor)
       const [afterPayer, afterTreasury, afterExec] = await Promise.all([
         ethers.provider.getBalance(payer),
         ethers.provider.getBalance(treasury),
-        b.viaContractBalance != null && exec ? ethers.provider.getBalance(exec) : Promise.resolve(null),
+        b.executorBalance != null && executor ? ethers.provider.getBalance(executor) : Promise.resolve(null),
       ]);
 
       const transfer = b.expectedTokenTransferAmount ?? 0n;
@@ -852,14 +837,15 @@ async function _expectBuyBatch(
       if (waitSuccess) {
         // Treasury her zaman transfer kadar artmalı
         expect(afterTreasury - b.contractBalance).to.equal(transfer);
+        // ayrıca nativeMsgValue transfer amount'a eşit olmalı
+        expect(nativeMsgValue).to.equal(transfer);
 
         if (afterExec !== null) {
-          // Gazı executor öder, transferi payer yapar
-          const payerDelta = b.callerBalance - afterPayer; // ↓
-          const execDelta = b.viaContractBalance - afterExec; // ↓
+          // Gazı executor öder, transferi de executor yapar
+          const execDelta = b.executorBalance - afterExec; // ↓
 
-          expect(payerDelta).to.equal(transfer);
-          expect(execDelta).to.equal(gasCost ?? 0n);
+          expect(b.callerBalance).to.equal(afterPayer);
+          expect(execDelta).to.equal(transfer + (gasCost ?? 0n));
         } else {
           // Executor yok: hem transfer hem gas payer’dan düşer
           const callerDelta = b.callerBalance - afterPayer; // ↓
@@ -872,7 +858,7 @@ async function _expectBuyBatch(
         if (afterExec !== null) {
           // Gazı executor öder; payer değişmemeli
           expect(afterPayer).to.equal(b.callerBalance);
-          const execDelta = b.viaContractBalance - afterExec; // ↓
+          const execDelta = b.executorBalance - afterExec; // ↓
           expect(execDelta > 0n).to.equal(true); // tam miktar node'a göre değişebilir
         } else {
           // Executor yok: gazı payer öder
@@ -885,7 +871,7 @@ async function _expectBuyBatch(
       const [afterPayer, afterTreasury, afterExec] = await Promise.all([
         erc20.balanceOf(payer),
         erc20.balanceOf(treasury),
-        b.viaContractBalance != null && exec ? erc20.balanceOf(exec) : Promise.resolve(null),
+        b.executorBalance != null && executor ? erc20.balanceOf(executor) : Promise.resolve(null),
       ]);
 
       const transfer = b.expectedTokenTransferAmount ?? 0n;
@@ -897,13 +883,13 @@ async function _expectBuyBatch(
         expect(payerDelta).to.equal(transfer);
         expect(treasuryDelta).to.equal(transfer);
 
-        // viaContractCaller varsa ERC20 bakiyesi değişmemeli
-        if (afterExec !== null) expect(afterExec).to.equal(b.viaContractBalance);
+        // executor varsa ERC20 bakiyesi değişmemeli
+        if (afterExec !== null) expect(afterExec).to.equal(b.executorBalance);
       } else {
         // REVERT: ERC20 değişmez (hem payer hem treasury hem varsa executor)
         expect(afterPayer).to.equal(b.callerBalance);
         expect(afterTreasury).to.equal(b.contractBalance);
-        if (afterExec !== null) expect(afterExec).to.equal(b.viaContractBalance);
+        if (afterExec !== null) expect(afterExec).to.equal(b.executorBalance);
       }
     }
   }
@@ -2977,8 +2963,6 @@ describe("NewTreasury Contract Tests", function () {
           expectSuccessWith: "ContentPurchased",
         });
         // Step 3: Expect "ContentPurchased" event with expected success states
-
-        console.log("success:", s);
       });
 
       it("should allow a user to buy a course for themselves", async function () {
@@ -3322,8 +3306,6 @@ describe("NewTreasury Contract Tests", function () {
           buyBatchTxCaller: buyer1, // tx gönderen signer
           expectRevertWith: "Course is not sellable",
         });
-
-        console.log("F: ", F);
         // Expect: Reverts with "Course is not sellable"
       });
 
@@ -4156,77 +4138,47 @@ describe("NewTreasury Contract Tests", function () {
         });
 
         // Step 2: backend triggers failNativeWallets buyTrigger to buy a course with contract
-        const input = {
+        const nativePrice = ethers.parseEther("10");
+        const voucher = await buyVH.signVoucher({
           courseId: course1.courseId,
           tokenAddress: ethers.ZeroAddress, // native token
-          coursePrice: ethers.parseEther("10"),
+          coursePrice: nativePrice,
           courseReceiver: person1.address,
-          redeemer: failNativeWallet.target, ///.target, ekstra
+          redeemer: failNativeWallet.target, // payer (msg.sender NewTreasury'ye bu kontrat olacak)
           validUntil: now + 86400,
-          nativeMsgValue: ethers.parseEther("10"),
-          viaContract: failNativeWallet.target,
-        };
-        const current = {
-          paymentCounter: await NewTreasury.paymentCounter(),
-          saleCounterPerCourse: await NewTreasury.saleCounterPerCourse(input.courseId),
-          courseOwnerToPayment: await NewTreasury.courseOwnerToPayment(input.courseReceiver, input.courseId),
-          ownedCourses: await NewTreasury.getOwnedCourses(input.courseReceiver),
-          hasOwnedCourse: await NewTreasury.hasOwnedCourse(input.courseReceiver, input.courseId),
-          ownedCourseIndex: await NewTreasury.ownedCourseIndex(input.courseReceiver, input.courseId),
-          udaoTokenAddress: await NewTreasury.udaoTokenAddress(),
-          refundWindow: await NewTreasury.refundWindow(),
-          utFoundCut: await NewTreasury.utFoundCut(),
-          utGoverCut: await NewTreasury.utGoverCut(),
-          atFoundCut: await NewTreasury.atFoundCut(),
-          atGoverCut: await NewTreasury.atGoverCut(),
-        };
-        const desired = {
-          paymentCounter: current.paymentCounter + 1n,
-          saleCounterPerCourse: current.saleCounterPerCourse + 1n,
-          paymentId: current.paymentCounter + 1n,
-          courseSpecificSaleId: current.saleCounterPerCourse + 1n,
-        };
-        const expectedOutcome = await _prepareExpectedBuyStates(input, current, desired, true);
-        const buyVoucher = await buyVH.signVoucher({
-          courseId: input.courseId,
-          tokenAddress: input.tokenAddress,
-          coursePrice: input.coursePrice,
-          courseReceiver: input.courseReceiver,
-          redeemer: input.redeemer,
-          validUntil: input.validUntil,
         });
-        const beforeTxBalances = await getBalances({
-          payer: backend.address,
-          courseReceiver: input.courseReceiver,
-          contract: NewTreasury.target,
-          tokenAddress: input.tokenAddress,
-        });
+        const vouchers = [voucher]; // tek voucher'ı batch gibi kullan
+
+        const expectedOutcome = await _prepareExpectedBuyBatchStates(
+          vouchers,
+          failNativeWallet.target, // buyBatchTxCaller
+          true, // waitSuccess
+          backend.address // executer
+        );
+
+        const currentPaymentCounter = await NewTreasury.paymentCounter();
+        const expPaymentId = Number(currentPaymentCounter) + 1; // paymentId'yi hesapla
 
         // Step 3: trigger buy inside failNativeWallet
         const tx = await failNativeWallet
           .connect(backend)
-          .triggerBuy(NewTreasury.target, buyVoucher, { value: input.nativeMsgValue });
+          .triggerBuy(NewTreasury.target, vouchers, { value: nativePrice });
+
         await expect(tx)
           .to.emit(NewTreasury, "ContentPurchased")
-          .withArgs(Number(desired.paymentId), input.courseId, input.courseReceiver);
+          .withArgs(expPaymentId, voucher.courseId, voucher.courseReceiver);
+
         const receipt = await tx.wait();
         const effectiveGasPrice = receipt.effectiveGasPrice ?? receipt.gasPrice ?? 0n;
         const gasCost = receipt.gasUsed * effectiveGasPrice;
         // Step 4: check balances and expected states after buy
-        await _expectBuy(input, desired, expectedOutcome);
-        await checkBalancesAfter({
-          operation: "buy", // if refund use "refund"
-          gasCost: gasCost, // 0 if revert, otherwise gas used success
-          beforeTxBalances: beforeTxBalances,
-          coursePrice: input.coursePrice,
-          tokenAddress: input.tokenAddress,
-        });
+        await _expectBuyBatch(nativePrice, expectedOutcome, gasCost, failNativeWallet.target, true, backend.address);
 
         // Step 5: block native token receive of failNativeWallet
         await failNativeWallet.connect(backend).setRejectPayments(true);
         // Step 6: Try to refund the course expect fail
         const refund_course = await refundCourseHelper({
-          paymentId: Number(desired.paymentId),
+          paymentId: expPaymentId,
           redeemer: buyer3,
           validUntil: now + 86400,
           expectRevertWith: "Native refund failed",
@@ -4971,78 +4923,48 @@ describe("NewTreasury Contract Tests", function () {
         });
 
         // Step 2: backend triggers failNativeWallets buyTrigger to buy a course with contract
-        const input = {
+        const nativePrice = ethers.parseEther("10");
+        const voucher = await buyVH.signVoucher({
           courseId: course1.courseId,
           tokenAddress: ethers.ZeroAddress, // native token
-          coursePrice: ethers.parseEther("10"),
+          coursePrice: nativePrice,
           courseReceiver: person1.address,
-          redeemer: failNativeWallet.target, ///.target, ekstra
+          redeemer: failNativeWallet.target, // payer (msg.sender NewTreasury'ye bu kontrat olacak)
           validUntil: now + 86400,
-          nativeMsgValue: ethers.parseEther("10"),
-          viaContract: failNativeWallet.target,
-        };
-        const current = {
-          paymentCounter: await NewTreasury.paymentCounter(),
-          saleCounterPerCourse: await NewTreasury.saleCounterPerCourse(input.courseId),
-          courseOwnerToPayment: await NewTreasury.courseOwnerToPayment(input.courseReceiver, input.courseId),
-          ownedCourses: await NewTreasury.getOwnedCourses(input.courseReceiver),
-          hasOwnedCourse: await NewTreasury.hasOwnedCourse(input.courseReceiver, input.courseId),
-          ownedCourseIndex: await NewTreasury.ownedCourseIndex(input.courseReceiver, input.courseId),
-          udaoTokenAddress: await NewTreasury.udaoTokenAddress(),
-          refundWindow: await NewTreasury.refundWindow(),
-          utFoundCut: await NewTreasury.utFoundCut(),
-          utGoverCut: await NewTreasury.utGoverCut(),
-          atFoundCut: await NewTreasury.atFoundCut(),
-          atGoverCut: await NewTreasury.atGoverCut(),
-        };
-        const desired = {
-          paymentCounter: current.paymentCounter + 1n,
-          saleCounterPerCourse: current.saleCounterPerCourse + 1n,
-          paymentId: current.paymentCounter + 1n,
-          courseSpecificSaleId: current.saleCounterPerCourse + 1n,
-        };
-        const expectedOutcome = await _prepareExpectedBuyStates(input, current, desired, true);
-        const buyVoucher = await buyVH.signVoucher({
-          courseId: input.courseId,
-          tokenAddress: input.tokenAddress,
-          coursePrice: input.coursePrice,
-          courseReceiver: input.courseReceiver,
-          redeemer: input.redeemer,
-          validUntil: input.validUntil,
         });
-        const beforeTxBalances = await getBalances({
-          payer: backend.address,
-          courseReceiver: input.courseReceiver,
-          contract: NewTreasury.target,
-          tokenAddress: input.tokenAddress,
-        });
+        const vouchers = [voucher]; // tek voucher'ı batch gibi kullan
+        const expectedOutcome = await _prepareExpectedBuyBatchStates(
+          vouchers,
+          failNativeWallet.target, // buyBatchTxCaller
+          true, // waitSuccess
+          backend.address // executer
+        );
+
+        const currentPaymentCounter = await NewTreasury.paymentCounter();
+        const expPaymentId = Number(currentPaymentCounter) + 1; // paymentId'yi hesapla
 
         // Step 3: trigger buy inside failNativeWallet
         const tx = await failNativeWallet
           .connect(backend)
-          .triggerBuy(NewTreasury.target, buyVoucher, { value: input.nativeMsgValue });
+          .triggerBuy(NewTreasury.target, vouchers, { value: nativePrice });
+
         await expect(tx)
           .to.emit(NewTreasury, "ContentPurchased")
-          .withArgs(Number(desired.paymentId), input.courseId, input.courseReceiver);
+          .withArgs(expPaymentId, voucher.courseId, voucher.courseReceiver);
+
         const receipt = await tx.wait();
         const effectiveGasPrice = receipt.effectiveGasPrice ?? receipt.gasPrice ?? 0n;
         const gasCost = receipt.gasUsed * effectiveGasPrice;
+
         // Step 4: check balances and expected states after buy
-        await _expectBuy(input, desired, expectedOutcome);
-        await checkBalancesAfter({
-          operation: "buy", // if refund use "refund"
-          gasCost: gasCost, // 0 if revert, otherwise gas used success
-          beforeTxBalances: beforeTxBalances,
-          coursePrice: input.coursePrice,
-          tokenAddress: input.tokenAddress,
-        });
+        await _expectBuyBatch(nativePrice, expectedOutcome, gasCost, failNativeWallet.target, true, backend.address);
 
         // Step 5: block native token receive of failNativeWallet
         await failNativeWallet.connect(backend).setRejectPayments(true);
         // Step 6: Try to refund the course expect fail
         const refund_course = await refundCourseByOwnerHelper({
-          courseOwner: input.courseReceiver,
-          courseId: input.courseId,
+          courseOwner: voucher.courseReceiver,
+          courseId: voucher.courseId,
           redeemer: buyer3,
           validUntil: now + 86400,
           expectRevertWith: "Native refund failed",
