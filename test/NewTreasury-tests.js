@@ -424,8 +424,7 @@ async function buyCourseBatchHelper({
     throw new Error("Array parametrelerinin uzunlukları eşit olmalı.");
   }
 
-  // const input current desired states
-  // Get expected contract state after buy operation
+  // is success or revert expected?
   const waitSuccess =
     expectSuccessWith && !expectRevertWith
       ? true
@@ -434,17 +433,6 @@ async function buyCourseBatchHelper({
       : (() => {
           throw new Error("Exactly one of expectSuccessWith or expectRevertWith must be defined.");
         })();
-  //const expectedOutcome = await _prepareExpectedBuyStates(input, current, desired, waitSuccess);
-  /*
-  // Get balances before transaction
-  const beforeTxBalances = await getBalances({
-    payer: redeemer.address,
-    courseReceiver: courseReceiver,
-    contract: NewTreasury.target,
-    tokenAddress: tokenAddress,
-  });
-*/
-  const currentPaymentCounter = await NewTreasury.paymentCounter();
 
   // 1) Voucher'ları imzala
   const vouchers = [];
@@ -459,16 +447,11 @@ async function buyCourseBatchHelper({
     });
     vouchers.push(buyVoucher);
   }
-
-  const expectedOutcome = await _prepareExpectedBuyBatchStates(
-    vouchers,
-    nativeMsgValue,
-    buyBatchTxCaller,
-    viaContract,
-    waitSuccess
-  );
+  // predict expected outcomes of buy before tx
+  const expectedOutcome = await _prepareExpectedBuyBatchStates(vouchers, buyBatchTxCaller, viaContract, waitSuccess);
   console.log("Expected Outcome:", expectedOutcome);
 
+  const currentPaymentCounter = await NewTreasury.paymentCounter();
   let tx = null;
   let gasCost = 0n;
   if (!waitSuccess) {
@@ -512,6 +495,370 @@ async function buyCourseBatchHelper({
       // c) gaz maliyetini hesapla
       const effectiveGasPrice = receipt.effectiveGasPrice ?? receipt.gasPrice ?? 0n;
       gasCost = receipt.gasUsed * effectiveGasPrice;
+    }
+
+    // Expected outcomes should be satisfied
+    await _expectBuyBatch(
+      vouchers,
+      nativeMsgValue,
+      expectedOutcome,
+      gasCost,
+      buyBatchTxCaller,
+      viaContract,
+      waitSuccess
+    );
+  }
+}
+
+async function _prepareExpectedBuyBatchStates(vouchers, buyBatchTxCaller, viaContract, waitSuccess) {
+  // 0) Normalize + indeksleme tek geçiş
+  const normVouchers = [];
+  const courseSet = new Set();
+  const recvSet = new Set();
+  const pairSet = new Set();
+  const tokenSet = new Set([ethers.ZeroAddress.toLowerCase()]);
+  const tokenTotals = new Map(); // token(lower) -> BigInt
+  const occByCourse = new Map(); // courseId(BigInt) -> count
+
+  for (const v of vouchers) {
+    const nv = {
+      courseId: BigInt(v.courseId),
+      tokenAddress: v.tokenAddress ?? ethers.ZeroAddress,
+      coursePrice: BigInt(v.coursePrice),
+      courseReceiver: v.courseReceiver.toLowerCase(),
+    };
+    normVouchers.push(nv);
+
+    courseSet.add(nv.courseId);
+    recvSet.add(nv.courseReceiver);
+    pairSet.add(`${nv.courseReceiver}::${nv.courseId}`);
+
+    const tKey = nv.tokenAddress.toLowerCase();
+    tokenSet.add(tKey);
+    tokenTotals.set(tKey, (tokenTotals.get(tKey) ?? 0n) + (waitSuccess ? nv.coursePrice : 0n));
+
+    occByCourse.set(nv.courseId, (occByCourse.get(nv.courseId) ?? 0) + 1);
+  }
+
+  const uniqueCourseIds = [...courseSet];
+  const uniqueReceivers = [...recvSet];
+  const uniquePairs = [...pairSet];
+
+  // 1) Before-state toplu
+  const [paymentCounter, udaoTokenAddress, refundWindow, utFoundCut, utGoverCut, atFoundCut, atGoverCut] =
+    await Promise.all([
+      NewTreasury.paymentCounter(),
+      NewTreasury.udaoTokenAddress(),
+      NewTreasury.refundWindow(),
+      NewTreasury.utFoundCut(),
+      NewTreasury.utGoverCut(),
+      NewTreasury.atFoundCut(),
+      NewTreasury.atGoverCut(),
+    ]);
+
+  const beforeSaleCounterByCourse = new Map(
+    await Promise.all(uniqueCourseIds.map(async (cid) => [cid, await NewTreasury.saleCounterPerCourse(cid)]))
+  );
+
+  const beforeOwnedCoursesByReceiver = new Map(
+    await Promise.all(uniqueReceivers.map(async (r) => [r, [...(await NewTreasury.getOwnedCourses(r))]]))
+  );
+
+  const pairBefore = new Map(
+    await Promise.all(
+      uniquePairs.map(async (key) => {
+        const [recv, cidStr] = key.split("::");
+        const cid = BigInt(cidStr);
+        const [has, pid, idx] = await Promise.all([
+          NewTreasury.hasOwnedCourse(recv, cid),
+          NewTreasury.courseOwnerToPayment(recv, cid),
+          NewTreasury.ownedCourseIndex(recv, cid),
+        ]);
+        return [key, { hasOwned: Boolean(has), existingPid: pid, existingIdx: idx }];
+      })
+    )
+  );
+
+  // 2) Ortak yardımcılar
+  const payerAddress = viaContract ?? buyBatchTxCaller.address;
+  const endOfRefundWindow = BigInt(now) + refundWindow;
+  const udaoLower = udaoTokenAddress.toLowerCase();
+
+  // 3) Çıktılar + sayaçlar
+  const expectedPaymentCounter = waitSuccess ? paymentCounter + BigInt(normVouchers.length) : paymentCounter;
+
+  const expectedHasOwnedPairs = [];
+  const expectedCourseSaleRecords = [];
+  const expectedCourseOwnerToPayment = [];
+  const expectedPaymentsById = [];
+  const expectedOwnedCourseIndexPairs = [];
+  const expectedOwnedCoursesByReceiver = new Map(
+    uniqueReceivers.map((r) => [r, [...(beforeOwnedCoursesByReceiver.get(r) ?? [])]])
+  );
+
+  const nextSaleIndexByCourse = new Map(uniqueCourseIds.map((cid) => [cid, beforeSaleCounterByCourse.get(cid) ?? 0n]));
+  let nextPaymentId = paymentCounter + 1n;
+
+  // 4) Tek geçiş: tüm beklentiler
+  for (const v of normVouchers) {
+    const key = `${v.courseReceiver}::${v.courseId}`;
+    const beforePair = pairBefore.get(key) ?? { hasOwned: false, existingPid: 0n, existingIdx: 0n };
+
+    // hasOwned
+    expectedHasOwnedPairs.push({
+      courseId: v.courseId,
+      courseReceiver: v.courseReceiver,
+      expected: waitSuccess ? true : beforePair.hasOwned,
+    });
+
+    // courseSaleRecords
+    const nextIdx = (nextSaleIndexByCourse.get(v.courseId) ?? 0n) + 1n;
+    nextSaleIndexByCourse.set(v.courseId, nextIdx);
+    expectedCourseSaleRecords.push({
+      courseId: v.courseId,
+      saleIndex: nextIdx,
+      expectedPaymentId: waitSuccess ? nextPaymentId : 0n,
+    });
+
+    // courseOwnerToPayment
+    const expectedPid = waitSuccess ? nextPaymentId : beforePair.hasOwned ? beforePair.existingPid : 0n;
+    expectedCourseOwnerToPayment.push({
+      courseReceiver: v.courseReceiver,
+      courseId: v.courseId,
+      expectedPaymentId: expectedPid,
+    });
+
+    // ownedCourses & ownedCourseIndex
+    if (!waitSuccess) {
+      expectedOwnedCourseIndexPairs.push({
+        courseReceiver: v.courseReceiver,
+        courseId: v.courseId,
+        expectedIndex: beforePair.hasOwned ? beforePair.existingIdx : 0n,
+      });
+    } else {
+      const arr = expectedOwnedCoursesByReceiver.get(v.courseReceiver) ?? [];
+      if (arr.length === 0) arr.push(0n); // kontrat davranışı
+      let idx = arr.indexOf(v.courseId);
+      if (idx === -1) {
+        idx = arr.length;
+        arr.push(v.courseId);
+        expectedOwnedCoursesByReceiver.set(v.courseReceiver, arr);
+      }
+      expectedOwnedCourseIndexPairs.push({
+        courseReceiver: v.courseReceiver,
+        courseId: v.courseId,
+        expectedIndex: BigInt(idx),
+      });
+    }
+
+    // payments
+    if (!waitSuccess) {
+      expectedPaymentsById.push({
+        paymentId: nextPaymentId,
+        payment: {
+          courseId: 0n,
+          payer: ethers.ZeroAddress,
+          courseReceiver: ethers.ZeroAddress,
+          tokenAddress: ethers.ZeroAddress,
+          totalAmount: 0n,
+          instructorShare: 0n,
+          foundationShare: 0n,
+          governanceShare: 0n,
+          endOfRefundWindow: 0n,
+          isRefunded: false,
+          isWithdrawn: false,
+        },
+      });
+    } else {
+      const isUdao = v.tokenAddress !== ethers.ZeroAddress && v.tokenAddress.toLowerCase() === udaoLower;
+      const foundCut = isUdao ? utFoundCut : atFoundCut;
+      const goverCut = isUdao ? utGoverCut : atGoverCut;
+      const foundationShare = (v.coursePrice * foundCut) / 100000n;
+      const governanceShare = (v.coursePrice * goverCut) / 100000n;
+      const instructorShare = v.coursePrice - foundationShare - governanceShare;
+
+      expectedPaymentsById.push({
+        paymentId: nextPaymentId,
+        payment: {
+          courseId: v.courseId,
+          payer: payerAddress,
+          courseReceiver: v.courseReceiver,
+          tokenAddress: v.tokenAddress,
+          totalAmount: v.coursePrice,
+          instructorShare,
+          foundationShare,
+          governanceShare,
+          endOfRefundWindow,
+          isRefunded: false,
+          isWithdrawn: false,
+        },
+      });
+    }
+
+    if (waitSuccess) nextPaymentId += 1n;
+  }
+
+  // 5) saleCounter finalize
+  const expectedSaleCounterByCourse = new Map();
+  for (const cid of uniqueCourseIds) {
+    expectedSaleCounterByCourse.set(
+      cid,
+      waitSuccess ? nextSaleIndexByCourse.get(cid) ?? 0n : beforeSaleCounterByCourse.get(cid) ?? 0n
+    );
+  }
+
+  // 6) beforeTxBalances (+ expectedTokenTransferAmount) — tek yerde
+  const caller = typeof buyBatchTxCaller === "string" ? buyBatchTxCaller : buyBatchTxCaller.address;
+  const treasury = NewTreasury.target;
+  console.log("A1233", treasury);
+  console.log("A1234", caller);
+
+  const beforeTxBalances = [];
+  // native
+  {
+    const [callerNative, treasuryNative] = await Promise.all([
+      ethers.provider.getBalance(caller),
+      ethers.provider.getBalance(treasury),
+    ]);
+    console.log("A1244");
+
+    beforeTxBalances.push({
+      tokenAddress: ethers.ZeroAddress,
+      callerBalance: callerNative,
+      contractBalance: treasuryNative,
+      expectedTokenTransferAmount: tokenTotals.get(ethers.ZeroAddress.toLowerCase()) ?? 0n,
+    });
+  }
+  // erc20
+  for (const token of tokenSet) {
+    if (token === ethers.ZeroAddress.toLowerCase()) continue;
+    const erc20 = await ethers.getContractAt("IERC20", token);
+    const [callerBal, contractBal] = await Promise.all([erc20.balanceOf(caller), erc20.balanceOf(treasury)]);
+    beforeTxBalances.push({
+      tokenAddress: token, // lowercased
+      callerBalance: callerBal,
+      contractBalance: contractBal,
+      expectedTokenTransferAmount: tokenTotals.get(token) ?? 0n,
+    });
+  }
+
+  return {
+    expectedPaymentCounter,
+    expectedHasOwnedPairs,
+    expectedSaleCounterByCourse,
+    expectedCourseSaleRecords,
+    expectedCourseOwnerToPayment,
+    expectedOwnedCoursesByReceiver,
+    expectedOwnedCourseIndexPairs,
+    expectedPaymentsById,
+    beforeTxBalances, // (expectedTokenTransferAmount içerir)
+  };
+}
+
+async function _expectBuyBatch(
+  vouchers,
+  nativeMsgValue,
+  expected, // _prepareExpectedBuyBatchStates(...) çıktısı
+  gasCost, // only in success path (revert'te 0n geçirilebilir ya da çağrılmaz)
+  buyBatchTxCaller,
+  viaContract,
+  waitSuccess
+) {
+  // 1) paymentCounter
+  const actualPaymentCounter = await NewTreasury.paymentCounter();
+  expect(actualPaymentCounter).to.equal(expected.expectedPaymentCounter);
+
+  // 2) payments[paymentId]
+  for (const { paymentId, payment } of expected.expectedPaymentsById) {
+    const p = await NewTreasury.getPayment(paymentId);
+
+    expect(p.courseId).to.equal(payment.courseId);
+    expect(p.payer).to.equal(payment.payer);
+    expect(p.courseReceiver.toLowerCase()).to.equal(payment.courseReceiver.toLowerCase());
+    expect(p.tokenAddress.toLowerCase()).to.equal(payment.tokenAddress.toLowerCase());
+    expect(p.totalAmount).to.equal(payment.totalAmount);
+    expect(p.instructorShare).to.equal(payment.instructorShare);
+    expect(p.foundationShare).to.equal(payment.foundationShare);
+    expect(p.governanceShare).to.equal(payment.governanceShare);
+    expect(p.isRefunded).to.equal(payment.isRefunded);
+    expect(p.isWithdrawn).to.equal(payment.isWithdrawn);
+
+    // endOfRefundWindow toleransı (±120 sn)
+    const diff = BigInt(p.endOfRefundWindow) - BigInt(payment.endOfRefundWindow);
+    const adiff = diff < 0n ? -diff : diff;
+    expect(adiff <= 120n).to.equal(true);
+  }
+
+  // 3) saleCounterPerCourse
+  for (const [cid, exp] of expected.expectedSaleCounterByCourse.entries()) {
+    const actual = await NewTreasury.saleCounterPerCourse(cid);
+    expect(actual).to.equal(exp);
+  }
+
+  // 4) courseSaleRecords(cid, saleIndex) -> paymentId
+  for (const rec of expected.expectedCourseSaleRecords) {
+    const got = await NewTreasury.courseSaleRecords(rec.courseId, rec.saleIndex);
+    expect(got).to.equal(rec.expectedPaymentId);
+  }
+
+  // 5) courseOwnerToPayment(receiver, courseId)
+  for (const it of expected.expectedCourseOwnerToPayment) {
+    const got = await NewTreasury.courseOwnerToPayment(it.courseReceiver, it.courseId);
+    expect(got).to.equal(it.expectedPaymentId);
+  }
+
+  // 6) ownedCourses[receiver]
+  for (const [recv, expArr] of expected.expectedOwnedCoursesByReceiver.entries()) {
+    const actualArr = await NewTreasury.getOwnedCourses(recv);
+    // BigInt[] karşılaştırma (sayısal olarak)
+    expect(actualArr.map(Number)).to.deep.equal(expArr.map(Number));
+  }
+
+  // 7) ownedCourseIndex[receiver][courseId]
+  for (const it of expected.expectedOwnedCourseIndexPairs) {
+    const idx = await NewTreasury.ownedCourseIndex(it.courseReceiver, it.courseId);
+    expect(idx).to.equal(it.expectedIndex);
+  }
+
+  // 8) hasOwnedCourse(receiver, courseId)
+  for (const it of expected.expectedHasOwnedPairs) {
+    const has = await NewTreasury.hasOwnedCourse(it.courseReceiver, it.courseId);
+    expect(Boolean(has)).to.equal(Boolean(it.expected));
+  }
+
+  // 9) Bakiye kontrolleri (yalnızca success yolunda anlamlı; revert'te zaten tx yok)
+  if (waitSuccess) {
+    const caller = typeof buyBatchTxCaller === "string" ? buyBatchTxCaller : buyBatchTxCaller.address;
+    const treasury = NewTreasury.target;
+
+    for (const b of expected.beforeTxBalances) {
+      const token = b.tokenAddress.toLowerCase();
+
+      if (token === ethers.ZeroAddress.toLowerCase()) {
+        // native
+        const [afterCaller, afterTreasury] = await Promise.all([
+          ethers.provider.getBalance(caller),
+          ethers.provider.getBalance(treasury),
+        ]);
+
+        const callerDelta = b.callerBalance - afterCaller; // azalış (+gas)
+        const treasuryDelta = afterTreasury - b.contractBalance; // artış
+
+        // caller native düşüşü: transfer + gas
+        expect(callerDelta).to.equal((b.expectedTokenTransferAmount ?? 0n) + (gasCost ?? 0n));
+        // contract native artışı: transfer kadar
+        expect(treasuryDelta).to.equal(b.expectedTokenTransferAmount ?? 0n);
+      } else {
+        // ERC20
+        const erc20 = await ethers.getContractAt("IERC20", token);
+        const [afterCaller, afterTreasury] = await Promise.all([erc20.balanceOf(caller), erc20.balanceOf(treasury)]);
+
+        const callerDelta = b.callerBalance - afterCaller; // azalış
+        const treasuryDelta = afterTreasury - b.contractBalance; // artış
+
+        expect(callerDelta).to.equal(b.expectedTokenTransferAmount ?? 0n);
+        expect(treasuryDelta).to.equal(b.expectedTokenTransferAmount ?? 0n);
+      }
     }
   }
 }
@@ -761,358 +1108,6 @@ async function _prepareExpectedBuyStates(input, current, desired, waitSuccess) {
       isRefunded: false,
       isWithdrawn: false,
     },
-  };
-}
-
-async function _prepareExpectedBuyBatchStates(vouchers, nativeMsgValue, buyBatchTxCaller, viaContract, waitSuccess) {
-  const paymentCounter = await NewTreasury.paymentCounter();
-  const udaoTokenAddress = await NewTreasury.udaoTokenAddress();
-  const refundWindow = await NewTreasury.refundWindow();
-  const utFoundCut = await NewTreasury.utFoundCut();
-  const utGoverCut = await NewTreasury.utGoverCut();
-  const atFoundCut = await NewTreasury.atFoundCut();
-  const atGoverCut = await NewTreasury.atGoverCut();
-
-  // hasOwnedCourse beklentisi (voucher sırasına göre)
-  const expectedHasOwnedPairs = [];
-  for (const v of vouchers) {
-    const currentHas = await NewTreasury.hasOwnedCourse(v.courseReceiver, v.courseId);
-    expectedHasOwnedPairs.push({
-      courseId: v.courseId,
-      courseReceiver: v.courseReceiver,
-      expected: waitSuccess ? true : Boolean(currentHas),
-    });
-  }
-
-  // --- saleCounterPerCourse & courseSaleRecords beklentileri ---
-
-  // 1) Kurs bazında mevcut saleCounter'ları çek
-  const uniqueCourseIds = [...new Set(vouchers.map((v) => BigInt(v.courseId)))];
-  const beforeSaleCounterByCourse = new Map(); // cid -> BigInt
-  for (const cid of uniqueCourseIds) {
-    const cur = await NewTreasury.saleCounterPerCourse(cid);
-    beforeSaleCounterByCourse.set(cid, cur);
-  }
-
-  // 2) Hedef saleCounter değerleri
-  // waitSuccess==true ise: batch içinde kursa rastlanma sayısı kadar artacak
-  // waitSuccess==false ise: hiç değişmeyecek
-  const occurrencesByCourse = new Map(); // cid -> count in this batch
-  for (const v of vouchers) {
-    const cid = BigInt(v.courseId);
-    occurrencesByCourse.set(cid, (occurrencesByCourse.get(cid) ?? 0) + 1);
-  }
-
-  const expectedSaleCounterByCourse = new Map(); // cid -> BigInt
-  for (const cid of uniqueCourseIds) {
-    const before = beforeSaleCounterByCourse.get(cid);
-    if (waitSuccess) {
-      expectedSaleCounterByCourse.set(cid, before + BigInt(occurrencesByCourse.get(cid) ?? 0));
-    } else {
-      expectedSaleCounterByCourse.set(cid, before);
-    }
-  }
-
-  // 3) courseSaleRecords için beklenen (cid, saleIndex) -> expectedPaymentId
-  //   - success: kayıtlar sırasıyla paymentCounter+1, +2, ... atanır
-  //   - revert: yeni indekslerde 0 beklenir
-  const expectedCourseSaleRecords = [];
-  // eleman yapısı: { courseId: BigInt, saleIndex: BigInt, expectedPaymentId: BigInt }
-
-  let nextPaymentId = paymentCounter + 1n;
-  // kurs bazında bir "sonraki saleIndex" sayaç kopyası
-  const nextSaleIndexByCourse = new Map(uniqueCourseIds.map((cid) => [cid, beforeSaleCounterByCourse.get(cid)]));
-
-  for (let i = 0; i < vouchers.length; i++) {
-    const cid = BigInt(vouchers[i].courseId);
-    const nextIdx = (nextSaleIndexByCourse.get(cid) ?? 0n) + 1n;
-    nextSaleIndexByCourse.set(cid, nextIdx);
-
-    if (waitSuccess) {
-      expectedCourseSaleRecords.push({
-        courseId: cid,
-        saleIndex: nextIdx,
-        expectedPaymentId: nextPaymentId,
-      });
-      nextPaymentId += 1n;
-    } else {
-      // revert senaryosu: yazılmamış kabul; 0 beklenir
-      expectedCourseSaleRecords.push({
-        courseId: cid,
-        saleIndex: nextIdx,
-        expectedPaymentId: 0n,
-      });
-    }
-  }
-
-  // --- courseOwnerToPayment beklentileri ---
-  const expectedCourseOwnerToPayment = [];
-  let nextPaymentIdForPairs = paymentCounter + 1n;
-
-  for (const v of vouchers) {
-    const cid = BigInt(v.courseId);
-    const recv = v.courseReceiver;
-
-    // kontrattaki mevcut durumlar
-    const already = await NewTreasury.hasOwnedCourse(recv, cid);
-    const existingPid = await NewTreasury.courseOwnerToPayment(recv, cid);
-
-    let expectedPid;
-    if (!waitSuccess) {
-      // revert: sadece önceden var olan mapping korunur, yoksa 0
-      expectedPid = already ? existingPid : 0n;
-    } else {
-      // success: her voucher'a yeni paymentId atanır (kontratta overwrite ediliyor ama
-      // zaten require(!hasOwnedCourse) olduğu için "already" true olamaz)
-      expectedPid = nextPaymentIdForPairs;
-      nextPaymentIdForPairs += 1n;
-    }
-
-    expectedCourseOwnerToPayment.push({
-      courseReceiver: recv,
-      courseId: cid,
-      expectedPaymentId: expectedPid,
-    });
-  }
-
-  // 4) Zaten hesapladığın expectedPaymentCounter:
-  const expectedPaymentCounter = waitSuccess ? paymentCounter + BigInt(vouchers.length) : paymentCounter;
-
-  // --- ownedCourses & ownedCourseIndex beklentileri ---
-
-  // 1) Batch'teki benzersiz receiver’ları topla
-  const uniqueReceivers = [...new Set(vouchers.map((v) => v.courseReceiver.toLowerCase()))];
-
-  // 2) Tx öncesi ownedCourses’ları çek ve map’e koy
-  const beforeOwnedCoursesByReceiver = new Map(); // key: receiver(lowercase) -> BigInt[] (array)
-  for (const r of uniqueReceivers) {
-    const arr = await NewTreasury.getOwnedCourses(r);
-    // ethers v6 BigInt[] döner; kopyasını alıyoruz
-    beforeOwnedCoursesByReceiver.set(r, [...arr]);
-  }
-
-  // 3) Beklenen ownedCourses ve ownedCourseIndex sonuçları
-  const expectedOwnedCoursesByReceiver = new Map(); // key: receiver -> BigInt[] (beklenen dizi)
-  const expectedOwnedCourseIndexPairs = []; // { courseReceiver, courseId, expectedIndex: BigInt }
-
-  if (!waitSuccess) {
-    // REVERT: hiçbir şey değişmez
-    for (const r of uniqueReceivers) {
-      const beforeArr = beforeOwnedCoursesByReceiver.get(r) ?? [];
-      expectedOwnedCoursesByReceiver.set(r, [...beforeArr]);
-    }
-
-    // index beklentileri: sahip değilse 0, sahipse mevcut index
-    for (const v of vouchers) {
-      const recv = v.courseReceiver.toLowerCase();
-      const cid = BigInt(v.courseId);
-      const already = await NewTreasury.hasOwnedCourse(recv, cid);
-      const existingIdx = await NewTreasury.ownedCourseIndex(recv, cid); // BigInt
-
-      expectedOwnedCourseIndexPairs.push({
-        courseReceiver: recv,
-        courseId: cid,
-        expectedIndex: already ? existingIdx : 0n,
-      });
-    }
-  } else {
-    // SUCCESS: simülasyon yaparak push’ları uygula
-    // Önce "beklenen" diziyi başlangıçta "before" ile doldur
-    for (const r of uniqueReceivers) {
-      const beforeArr = beforeOwnedCoursesByReceiver.get(r) ?? [];
-      expectedOwnedCoursesByReceiver.set(r, [...beforeArr]);
-    }
-
-    // VOUCHER SIRASIYLA push et ve index’i hesapla
-    for (const v of vouchers) {
-      const recv = v.courseReceiver.toLowerCase();
-      const cid = BigInt(v.courseId);
-
-      // Bu receiver’ın şimdiki beklenen dizisini al
-      const arr = expectedOwnedCoursesByReceiver.get(recv) ?? [];
-
-      // Eğer tamamen boşsa, kontratın yaptığı gibi önce 0 ekle
-      if (arr.length === 0) {
-        arr.push(0n);
-      }
-
-      // Bu kurs daha önce sahip olunamaz (require(!hasOwnedCourse)), ama emniyet için kontrol
-      // (Batch’te dupe yoksa bu her zaman false olur)
-      const alreadyNow = arr.includes(cid);
-      if (!alreadyNow) {
-        const expectedIndex = BigInt(arr.length); // push’tan önceki son index = yeni elemanın index’i
-        arr.push(cid);
-        expectedOwnedCoursesByReceiver.set(recv, arr);
-
-        expectedOwnedCourseIndexPairs.push({
-          courseReceiver: recv,
-          courseId: cid,
-          expectedIndex, // BigInt
-        });
-      } else {
-        // Teoride düşmemeli; yine de index’i bulup ekleyelim
-        const idx = BigInt(arr.indexOf(cid));
-        expectedOwnedCourseIndexPairs.push({
-          courseReceiver: recv,
-          courseId: cid,
-          expectedIndex: idx,
-        });
-      }
-    }
-  }
-
-  // --- payments mapping (paymentId => Payment) beklenenler ---
-
-  const emptyPayment = {
-    courseId: 0n,
-    payer: ethers.ZeroAddress,
-    courseReceiver: ethers.ZeroAddress,
-    tokenAddress: ethers.ZeroAddress,
-    totalAmount: 0n,
-    instructorShare: 0n,
-    foundationShare: 0n,
-    governanceShare: 0n,
-    endOfRefundWindow: 0n,
-    isRefunded: false,
-    isWithdrawn: false,
-  };
-
-  // pay hesapları için yardımcılar
-  const isUdaoAddr = async (addr) => addr?.toLowerCase?.() === (await NewTreasury.udaoTokenAddress()).toLowerCase();
-
-  const payerAddress = viaContract ?? buyBatchTxCaller.address;
-  const endOfRefundWindow = BigInt(now) + refundWindow;
-
-  // paymentId sırası: paymentCounter + 1 .. + vouchers.length
-  let nextPid = paymentCounter + 1n;
-
-  const expectedPaymentsById = []; // { paymentId: BigInt, payment: {..Payment..} }
-
-  if (!waitSuccess) {
-    // Revert senaryosu: yeni id aralığı boş (emptyPayment) beklenir
-    for (let i = 0; i < vouchers.length; i++) {
-      expectedPaymentsById.push({
-        paymentId: nextPid,
-        payment: { ...emptyPayment },
-      });
-      nextPid += 1n;
-    }
-  } else {
-    // Success senaryosu: her voucher için Payment hesapla
-    for (const v of vouchers) {
-      const cid = BigInt(v.courseId);
-      const price = BigInt(v.coursePrice);
-      const tkn = v.tokenAddress;
-
-      // kesintiler
-      const udao = tkn && tkn !== ethers.ZeroAddress ? tkn.toLowerCase() === udaoTokenAddress.toLowerCase() : false;
-      const foundCut = udao ? utFoundCut : atFoundCut; // (ppm ölçeğinde: 100_000)
-      const goverCut = udao ? utGoverCut : atGoverCut;
-
-      const foundationShare = (price * foundCut) / 100000n;
-      const governanceShare = (price * goverCut) / 100000n;
-      const instructorShare = price - foundationShare - governanceShare;
-
-      const payment = {
-        courseId: cid,
-        payer: payerAddress,
-        courseReceiver: v.courseReceiver,
-        tokenAddress: tkn,
-        totalAmount: price,
-        instructorShare,
-        foundationShare,
-        governanceShare,
-        endOfRefundWindow,
-        isRefunded: false,
-        isWithdrawn: false,
-      };
-
-      expectedPaymentsById.push({
-        paymentId: nextPid,
-        payment,
-      });
-      nextPid += 1n;
-    }
-  }
-
-  // --- token bazında toplam tutarlar (tokenAddress => toplam coursePrice) ---
-  // address normalizasyonu için lower-case kullanıyoruz
-  const expectedTokenTotalsMap = new Map(); // key: lowercased token, val: BigInt toplam
-
-  for (const v of vouchers) {
-    const token = (v.tokenAddress ?? ethers.ZeroAddress).toLowerCase();
-    // map'te yoksa başlat
-    if (!expectedTokenTotalsMap.has(token)) {
-      expectedTokenTotalsMap.set(token, 0n);
-    }
-    if (waitSuccess) {
-      // başarı durumunda toplamı arttır
-      const prev = expectedTokenTotalsMap.get(token);
-      expectedTokenTotalsMap.set(token, prev + BigInt(v.coursePrice));
-    } else {
-      // revert durumunda karşılaşılan tüm tokenlar 0n olmalı (zaten 0n'a set edilmiş durumda)
-      // yine de anahtarın varlığını garanti etmiş oluyoruz
-      expectedTokenTotalsMap.set(token, 0n);
-    }
-  }
-
-  // Testlerde deterministik karşılaştırma için diziye dökelim
-  const expectedTokenTotals = Array.from(expectedTokenTotalsMap.entries()).map(([tokenAddress, total]) => ({
-    tokenAddress,
-    total,
-  }));
-
-  // --- beforeTxBalances: batch öncesi bakiyeleri yakala ---
-  const callerAddress = typeof buyBatchTxCaller === "string" ? buyBatchTxCaller : buyBatchTxCaller.address;
-  const treasuryAddr = NewTreasury.target;
-
-  // Batch’teki benzersiz tokenlar (native’i 0x0 ile dahil et)
-  const tokenSet = new Set([ethers.ZeroAddress.toLowerCase()]);
-  for (const v of vouchers) {
-    const t = (v.tokenAddress ?? ethers.ZeroAddress).toLowerCase();
-    tokenSet.add(t);
-  }
-
-  const beforeTxBalances = [];
-
-  // 1) Native bakiyeler (ilk sırada)
-  {
-    const [callerNative, treasuryNative] = await Promise.all([
-      ethers.provider.getBalance(callerAddress),
-      ethers.provider.getBalance(treasuryAddr),
-    ]);
-    beforeTxBalances.push({
-      tokenAddress: ethers.ZeroAddress, // native için 0x0
-      callerBalance: callerNative,
-      contractBalance: treasuryNative,
-    });
-  }
-
-  // 2) ERC20 bakiyeleri
-  for (const token of tokenSet) {
-    if (token === ethers.ZeroAddress.toLowerCase()) continue; // native'i atla
-    const erc20 = await ethers.getContractAt("IERC20", token);
-    const [callerBal, contractBal] = await Promise.all([erc20.balanceOf(callerAddress), erc20.balanceOf(treasuryAddr)]);
-
-    beforeTxBalances.push({
-      tokenAddress: token, // lowercased string
-      callerBalance: callerBal, // BigInt
-      contractBalance: contractBal, // BigInt
-    });
-  }
-
-  // ... mevcut return nesnene ekle:
-  return {
-    expectedPaymentCounter,
-    expectedHasOwnedPairs,
-    expectedSaleCounterByCourse,
-    expectedCourseSaleRecords,
-    expectedCourseOwnerToPayment,
-    expectedOwnedCoursesByReceiver, // Map(receiver -> BigInt[] beklenen dizi)
-    expectedOwnedCourseIndexPairs, // Array({receiver, courseId, expectedIndex})
-    expectedPaymentsById,
-    expectedTokenTotals,
-    beforeTxBalances,
   };
 }
 
