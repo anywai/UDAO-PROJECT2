@@ -410,7 +410,6 @@ async function buyCourseBatchHelper({
   buyBatchTxCaller,
   expectRevertWith,
   expectSuccessWith,
-  viaContract = null,
 }) {
   // 0) Basit doğrulamalar
   const n = courseIds.length;
@@ -448,8 +447,9 @@ async function buyCourseBatchHelper({
     vouchers.push(buyVoucher);
   }
   // predict expected outcomes of buy before tx
-  const expectedOutcome = await _prepareExpectedBuyBatchStates(vouchers, buyBatchTxCaller, viaContract, waitSuccess);
-  console.log("Expected Outcome:", expectedOutcome);
+  const expectedOutcome = await _prepareExpectedBuyBatchStates(vouchers, buyBatchTxCaller, waitSuccess);
+  //console.log("Expected Outcome:", expectedOutcome);
+  //console.log("------------------------SEPARATOR------------------------");
 
   const currentPaymentCounter = await NewTreasury.paymentCounter();
   let tx = null;
@@ -498,19 +498,12 @@ async function buyCourseBatchHelper({
     }
 
     // Expected outcomes should be satisfied
-    await _expectBuyBatch(
-      vouchers,
-      nativeMsgValue,
-      expectedOutcome,
-      gasCost,
-      buyBatchTxCaller,
-      viaContract,
-      waitSuccess
-    );
+    await _expectBuyBatch(vouchers, nativeMsgValue, expectedOutcome, gasCost, buyBatchTxCaller, waitSuccess);
   }
+  return expectedOutcome; // return expected outcome for further assertions if needed
 }
 
-async function _prepareExpectedBuyBatchStates(vouchers, buyBatchTxCaller, viaContract, waitSuccess) {
+async function _prepareExpectedBuyBatchStates(vouchers, buyBatchTxCaller, waitSuccess, viaContractCaller = null) {
   // 0) Normalize + indeksleme tek geçiş
   const normVouchers = [];
   const courseSet = new Set();
@@ -580,13 +573,12 @@ async function _prepareExpectedBuyBatchStates(vouchers, buyBatchTxCaller, viaCon
   );
 
   // 2) Ortak yardımcılar
-  const payerAddress = viaContract ?? buyBatchTxCaller.address;
+  const payer = typeof buyBatchTxCaller === "string" ? buyBatchTxCaller : buyBatchTxCaller.address; // Payment.payer HER ZAMAN bu
   const endOfRefundWindow = BigInt(now) + refundWindow;
   const udaoLower = udaoTokenAddress.toLowerCase();
 
   // 3) Çıktılar + sayaçlar
   const expectedPaymentCounter = waitSuccess ? paymentCounter + BigInt(normVouchers.length) : paymentCounter;
-
   const expectedHasOwnedPairs = [];
   const expectedCourseSaleRecords = [];
   const expectedCourseOwnerToPayment = [];
@@ -681,7 +673,7 @@ async function _prepareExpectedBuyBatchStates(vouchers, buyBatchTxCaller, viaCon
         paymentId: nextPaymentId,
         payment: {
           courseId: v.courseId,
-          payer: payerAddress,
+          payer: payer,
           courseReceiver: v.courseReceiver,
           tokenAddress: v.tokenAddress,
           totalAmount: v.coursePrice,
@@ -708,38 +700,44 @@ async function _prepareExpectedBuyBatchStates(vouchers, buyBatchTxCaller, viaCon
   }
 
   // 6) beforeTxBalances (+ expectedTokenTransferAmount) — tek yerde
-  const caller = typeof buyBatchTxCaller === "string" ? buyBatchTxCaller : buyBatchTxCaller.address;
   const treasury = NewTreasury.target;
-  console.log("A1233", treasury);
-  console.log("A1234", caller);
+  const viaAddr = viaContractCaller
+    ? typeof viaContractCaller === "string"
+      ? viaContractCaller
+      : viaContractCaller.address
+    : null;
+
+  const ZERO = ethers.ZeroAddress.toLowerCase();
+  const erc20Cache = new Map();
+  const getErc20 = async (addr) => {
+    if (!erc20Cache.has(addr)) erc20Cache.set(addr, await ethers.getContractAt("IERC20", addr));
+    return erc20Cache.get(addr);
+  };
+  const getTokenBalance = async (tokenLower, addr) => {
+    if (!addr) return null;
+    if (tokenLower === ZERO) return ethers.provider.getBalance(addr);
+    const c = await getErc20(tokenLower);
+    return c.balanceOf(addr);
+  };
 
   const beforeTxBalances = [];
-  // native
-  {
-    const [callerNative, treasuryNative] = await Promise.all([
-      ethers.provider.getBalance(caller),
-      ethers.provider.getBalance(treasury),
+  for (const tokenLower of tokenSet) {
+    // tokenSet zaten lower-case & 0x0 içerir
+    const [callerBal, contractBal, viaBal] = await Promise.all([
+      getTokenBalance(tokenLower, payer),
+      getTokenBalance(tokenLower, treasury),
+      getTokenBalance(tokenLower, viaAddr),
     ]);
-    console.log("A1244");
 
-    beforeTxBalances.push({
-      tokenAddress: ethers.ZeroAddress,
-      callerBalance: callerNative,
-      contractBalance: treasuryNative,
-      expectedTokenTransferAmount: tokenTotals.get(ethers.ZeroAddress.toLowerCase()) ?? 0n,
-    });
-  }
-  // erc20
-  for (const token of tokenSet) {
-    if (token === ethers.ZeroAddress.toLowerCase()) continue;
-    const erc20 = await ethers.getContractAt("IERC20", token);
-    const [callerBal, contractBal] = await Promise.all([erc20.balanceOf(caller), erc20.balanceOf(treasury)]);
-    beforeTxBalances.push({
-      tokenAddress: token, // lowercased
+    const rec = {
+      tokenAddress: tokenLower === ZERO ? ethers.ZeroAddress : tokenLower,
       callerBalance: callerBal,
       contractBalance: contractBal,
-      expectedTokenTransferAmount: tokenTotals.get(token) ?? 0n,
-    });
+      expectedTokenTransferAmount: tokenTotals.get(tokenLower) ?? 0n,
+    };
+    if (viaBal !== null) rec.viaContractBalance = viaBal; // sadece viaContractCaller verilmişse eklenir
+
+    beforeTxBalances.push(rec);
   }
 
   return {
@@ -758,18 +756,18 @@ async function _prepareExpectedBuyBatchStates(vouchers, buyBatchTxCaller, viaCon
 async function _expectBuyBatch(
   vouchers,
   nativeMsgValue,
-  expected, // _prepareExpectedBuyBatchStates(...) çıktısı
+  expectedOutcome, // _prepareExpectedBuyBatchStates(...) çıktısı
   gasCost, // only in success path (revert'te 0n geçirilebilir ya da çağrılmaz)
   buyBatchTxCaller,
-  viaContract,
-  waitSuccess
+  waitSuccess,
+  viaContractCaller = null
 ) {
   // 1) paymentCounter
   const actualPaymentCounter = await NewTreasury.paymentCounter();
-  expect(actualPaymentCounter).to.equal(expected.expectedPaymentCounter);
+  expect(actualPaymentCounter).to.equal(expectedOutcome.expectedPaymentCounter);
 
   // 2) payments[paymentId]
-  for (const { paymentId, payment } of expected.expectedPaymentsById) {
+  for (const { paymentId, payment } of expectedOutcome.expectedPaymentsById) {
     const p = await NewTreasury.getPayment(paymentId);
 
     expect(p.courseId).to.equal(payment.courseId);
@@ -790,74 +788,122 @@ async function _expectBuyBatch(
   }
 
   // 3) saleCounterPerCourse
-  for (const [cid, exp] of expected.expectedSaleCounterByCourse.entries()) {
+  for (const [cid, exp] of expectedOutcome.expectedSaleCounterByCourse.entries()) {
     const actual = await NewTreasury.saleCounterPerCourse(cid);
     expect(actual).to.equal(exp);
   }
 
   // 4) courseSaleRecords(cid, saleIndex) -> paymentId
-  for (const rec of expected.expectedCourseSaleRecords) {
+  for (const rec of expectedOutcome.expectedCourseSaleRecords) {
     const got = await NewTreasury.courseSaleRecords(rec.courseId, rec.saleIndex);
     expect(got).to.equal(rec.expectedPaymentId);
   }
 
   // 5) courseOwnerToPayment(receiver, courseId)
-  for (const it of expected.expectedCourseOwnerToPayment) {
+  for (const it of expectedOutcome.expectedCourseOwnerToPayment) {
     const got = await NewTreasury.courseOwnerToPayment(it.courseReceiver, it.courseId);
     expect(got).to.equal(it.expectedPaymentId);
   }
 
   // 6) ownedCourses[receiver]
-  for (const [recv, expArr] of expected.expectedOwnedCoursesByReceiver.entries()) {
+  for (const [recv, expArr] of expectedOutcome.expectedOwnedCoursesByReceiver.entries()) {
     const actualArr = await NewTreasury.getOwnedCourses(recv);
     // BigInt[] karşılaştırma (sayısal olarak)
     expect(actualArr.map(Number)).to.deep.equal(expArr.map(Number));
   }
 
   // 7) ownedCourseIndex[receiver][courseId]
-  for (const it of expected.expectedOwnedCourseIndexPairs) {
+  for (const it of expectedOutcome.expectedOwnedCourseIndexPairs) {
     const idx = await NewTreasury.ownedCourseIndex(it.courseReceiver, it.courseId);
     expect(idx).to.equal(it.expectedIndex);
   }
 
   // 8) hasOwnedCourse(receiver, courseId)
-  for (const it of expected.expectedHasOwnedPairs) {
+  for (const it of expectedOutcome.expectedHasOwnedPairs) {
     const has = await NewTreasury.hasOwnedCourse(it.courseReceiver, it.courseId);
     expect(Boolean(has)).to.equal(Boolean(it.expected));
   }
 
   // 9) Bakiye kontrolleri (yalnızca success yolunda anlamlı; revert'te zaten tx yok)
-  if (waitSuccess) {
-    const caller = typeof buyBatchTxCaller === "string" ? buyBatchTxCaller : buyBatchTxCaller.address;
-    const treasury = NewTreasury.target;
 
-    for (const b of expected.beforeTxBalances) {
-      const token = b.tokenAddress.toLowerCase();
+  const payer = typeof buyBatchTxCaller === "string" ? buyBatchTxCaller : buyBatchTxCaller.address;
+  const exec = viaContractCaller
+    ? typeof viaContractCaller === "string"
+      ? viaContractCaller
+      : viaContractCaller.address
+    : null; // varsa gas'ı bu adres öder; yoksa payer öder
 
-      if (token === ethers.ZeroAddress.toLowerCase()) {
-        // native
-        const [afterCaller, afterTreasury] = await Promise.all([
-          ethers.provider.getBalance(caller),
-          ethers.provider.getBalance(treasury),
-        ]);
+  const treasury = NewTreasury.target;
 
-        const callerDelta = b.callerBalance - afterCaller; // azalış (+gas)
-        const treasuryDelta = afterTreasury - b.contractBalance; // artış
+  for (const b of expectedOutcome.beforeTxBalances) {
+    const token = b.tokenAddress.toLowerCase();
 
-        // caller native düşüşü: transfer + gas
-        expect(callerDelta).to.equal((b.expectedTokenTransferAmount ?? 0n) + (gasCost ?? 0n));
-        // contract native artışı: transfer kadar
-        expect(treasuryDelta).to.equal(b.expectedTokenTransferAmount ?? 0n);
+    if (token === ethers.ZeroAddress.toLowerCase()) {
+      // --- NATIVE ---
+      // Öncesi: b.callerBalance (payer), b.contractBalance (treasury), b.viaContractBalance? (executor)
+      const [afterPayer, afterTreasury, afterExec] = await Promise.all([
+        ethers.provider.getBalance(payer),
+        ethers.provider.getBalance(treasury),
+        b.viaContractBalance != null && exec ? ethers.provider.getBalance(exec) : Promise.resolve(null),
+      ]);
+
+      const transfer = b.expectedTokenTransferAmount ?? 0n;
+
+      if (waitSuccess) {
+        // Treasury her zaman transfer kadar artmalı
+        expect(afterTreasury - b.contractBalance).to.equal(transfer);
+
+        if (afterExec !== null) {
+          // Gazı executor öder, transferi payer yapar
+          const payerDelta = b.callerBalance - afterPayer; // ↓
+          const execDelta = b.viaContractBalance - afterExec; // ↓
+
+          expect(payerDelta).to.equal(transfer);
+          expect(execDelta).to.equal(gasCost ?? 0n);
+        } else {
+          // Executor yok: hem transfer hem gas payer’dan düşer
+          const callerDelta = b.callerBalance - afterPayer; // ↓
+          expect(callerDelta).to.equal(transfer + (gasCost ?? 0n));
+        }
       } else {
-        // ERC20
-        const erc20 = await ethers.getContractAt("IERC20", token);
-        const [afterCaller, afterTreasury] = await Promise.all([erc20.balanceOf(caller), erc20.balanceOf(treasury)]);
+        // REVERT: transfer yok
+        expect(afterTreasury).to.equal(b.contractBalance);
 
-        const callerDelta = b.callerBalance - afterCaller; // azalış
-        const treasuryDelta = afterTreasury - b.contractBalance; // artış
+        if (afterExec !== null) {
+          // Gazı executor öder; payer değişmemeli
+          expect(afterPayer).to.equal(b.callerBalance);
+          const execDelta = b.viaContractBalance - afterExec; // ↓
+          expect(execDelta > 0n).to.equal(true); // tam miktar node'a göre değişebilir
+        } else {
+          // Executor yok: gazı payer öder
+          expect(afterPayer < b.callerBalance).to.equal(true);
+        }
+      }
+    } else {
+      // --- ERC20 ---
+      const erc20 = await ethers.getContractAt("IERC20", token);
+      const [afterPayer, afterTreasury, afterExec] = await Promise.all([
+        erc20.balanceOf(payer),
+        erc20.balanceOf(treasury),
+        b.viaContractBalance != null && exec ? erc20.balanceOf(exec) : Promise.resolve(null),
+      ]);
 
-        expect(callerDelta).to.equal(b.expectedTokenTransferAmount ?? 0n);
-        expect(treasuryDelta).to.equal(b.expectedTokenTransferAmount ?? 0n);
+      const transfer = b.expectedTokenTransferAmount ?? 0n;
+
+      if (waitSuccess) {
+        // ERC20'de gas native'ten olur; burada sadece transfer kontrolü
+        const payerDelta = b.callerBalance - afterPayer; // ↓
+        const treasuryDelta = afterTreasury - b.contractBalance; // ↑
+        expect(payerDelta).to.equal(transfer);
+        expect(treasuryDelta).to.equal(transfer);
+
+        // viaContractCaller varsa ERC20 bakiyesi değişmemeli
+        if (afterExec !== null) expect(afterExec).to.equal(b.viaContractBalance);
+      } else {
+        // REVERT: ERC20 değişmez (hem payer hem treasury hem varsa executor)
+        expect(afterPayer).to.equal(b.callerBalance);
+        expect(afterTreasury).to.equal(b.contractBalance);
+        if (afterExec !== null) expect(afterExec).to.equal(b.viaContractBalance);
       }
     }
   }
@@ -2847,29 +2893,6 @@ describe("NewTreasury Contract Tests", function () {
           validUntil: now + 86400,
           expectSuccessWith: "CourseCreated",
         });
-        // Step 2: buyer1 buys course for person1
-        const buy_course1 = await buyCourseHelper({
-          courseId: course1.courseId,
-          tokenAddress: MKT1.target,
-          coursePrice: ethers.parseEther("10"),
-          courseReceiver: person1.address,
-          redeemer: buyer1,
-          validUntil: now + 86400,
-          nativeMsgValue: 0,
-          expectSuccessWith: "ContentPurchased",
-        });
-        // Step 3: Expect "ContentPurchased" event with expected success states
-      });
-
-      it("should allow a user to buy a course using an ERC20 token via batch and a valid voucher", async function () {
-        // Step 1: instructor1 creates a course
-        const course1 = await createCourseHelper({
-          uri: "https://example.com/course/1",
-          withdrawers: [instructor1.address, instructor2.address],
-          redeemer: instructor1,
-          validUntil: now + 86400,
-          expectSuccessWith: "CourseCreated",
-        });
 
         // Step 2: buyer1 buys course for person1 via BATCH (ERC20, msg.value = 0)
         await buyCourseBatchHelper({
@@ -2897,14 +2920,15 @@ describe("NewTreasury Contract Tests", function () {
           expectSuccessWith: "CourseCreated",
         });
         // Step 2: buyer1 buys course for person1 with native token
-        const buy_course1 = await buyCourseHelper({
-          courseId: course1.courseId,
-          tokenAddress: ethers.ZeroAddress, // native token
-          coursePrice: ethers.parseEther("10"),
-          courseReceiver: person1.address,
-          redeemer: buyer1,
-          validUntil: now + 86400,
-          nativeMsgValue: ethers.parseEther("10"),
+        await buyCourseBatchHelper({
+          courseIds: [course1.courseId],
+          tokenAddresses: [ethers.ZeroAddress], // native token
+          coursePrices: [ethers.parseEther("10")],
+          courseReceivers: [person1.address],
+          redeemers: [buyer1], // genelde hepsi aynı: tx'i buyer1 atıyor
+          validUntils: [now + 86400],
+          nativeMsgValue: ethers.parseEther("10"), // native token için msg.value
+          buyBatchTxCaller: buyer1, // tx gönderen signer
           expectSuccessWith: "ContentPurchased",
         });
         // Step 3: Expect "ContentPurchased" event with expected success states
@@ -2937,39 +2961,24 @@ describe("NewTreasury Contract Tests", function () {
         });
 
         // Step 2: buyers buys all 3 courses for person1
-        const buy1 = await buyCourseHelper({
-          courseId: course1.courseId,
-          tokenAddress: MKT1.target,
-          coursePrice: ethers.parseEther("10"),
-          courseReceiver: person1.address,
-          redeemer: buyer1,
-          validUntil: now + 86400,
-          nativeMsgValue: 0,
+        const s = await buyCourseBatchHelper({
+          courseIds: [course1.courseId, course2.courseId, course3.courseId],
+          tokenAddresses: [MKT1.target, ethers.ZeroAddress, MKT2.target],
+          coursePrices: [
+            ethers.parseEther("10"), // course1 price in MKT1
+            ethers.parseEther("5"), // course2 price in native token
+            ethers.parseEther("15"), // course3 price in MKT2
+          ],
+          courseReceivers: [person1.address, person1.address, person1.address],
+          redeemers: [buyer1, buyer1, buyer1], // farklı redeemerlar
+          validUntils: [now + 86400, now + 86400, now + 86400],
+          nativeMsgValue: ethers.parseEther("5"), // sadece course2 için native msg.value
+          buyBatchTxCaller: buyer1, // tx gönderen signer
           expectSuccessWith: "ContentPurchased",
         });
+        // Step 3: Expect "ContentPurchased" event with expected success states
 
-        const buy2 = await buyCourseHelper({
-          courseId: course2.courseId,
-          tokenAddress: ethers.ZeroAddress,
-          coursePrice: ethers.parseEther("5"),
-          courseReceiver: person1.address,
-          redeemer: buyer1,
-          validUntil: now + 86400,
-          nativeMsgValue: ethers.parseEther("5"),
-          expectSuccessWith: "ContentPurchased",
-        });
-
-        const buy3 = await buyCourseHelper({
-          courseId: course3.courseId,
-          tokenAddress: MKT2.target,
-          coursePrice: ethers.parseEther("15"),
-          courseReceiver: person1.address,
-          redeemer: buyer2,
-          validUntil: now + 86400,
-          nativeMsgValue: 0,
-          expectSuccessWith: "ContentPurchased",
-        });
-        // Expect: all purchases succeed with "ContentPurchased" event
+        console.log("success:", s);
       });
 
       it("should allow a user to buy a course for themselves", async function () {
@@ -2983,17 +2992,18 @@ describe("NewTreasury Contract Tests", function () {
         });
 
         // Step 2: buyer1 buys course for themselves
-        const buy_course1 = await buyCourseHelper({
-          courseId: course.courseId,
-          tokenAddress: MKT1.target,
-          coursePrice: ethers.parseEther("10"),
-          courseReceiver: buyer1.address, // self-buy
-          redeemer: buyer1,
-          validUntil: now + 86400,
-          nativeMsgValue: 0,
+        await buyCourseBatchHelper({
+          courseIds: [course.courseId],
+          tokenAddresses: [MKT1.target],
+          coursePrices: [ethers.parseEther("10")],
+          courseReceivers: [buyer1.address], // self-buy
+          redeemers: [buyer1], // genelde hepsi aynı: tx'i buyer1 atıyor
+          validUntils: [now + 86400],
+          nativeMsgValue: 0, // sadece ERC20 olduğundan 0
+          buyBatchTxCaller: buyer1, // tx gönderen signer
           expectSuccessWith: "ContentPurchased",
         });
-        // Expect: "ContentPurchased" event with expected success states
+        // Step 3: Expect "ContentPurchased" event with expected success states
       });
 
       it("should allow a course to be sold to multiple receivers using different tokens and prices", async function () {
@@ -3007,62 +3017,67 @@ describe("NewTreasury Contract Tests", function () {
         });
 
         // Step 2: person1 buys for 10 mtk1
-        const buy1_course1 = await buyCourseHelper({
-          courseId: course1.courseId,
-          tokenAddress: MKT1.target,
-          coursePrice: ethers.parseEther("10"),
-          courseReceiver: person1.address,
-          redeemer: backend,
-          validUntil: now + 86400,
+        await buyCourseBatchHelper({
+          courseIds: [course1.courseId],
+          tokenAddresses: [MKT1.target],
+          coursePrices: [ethers.parseEther("10")],
+          courseReceivers: [person1.address],
+          redeemers: [backend],
+          validUntils: [now + 86400],
           nativeMsgValue: 0,
+          buyBatchTxCaller: backend,
           expectSuccessWith: "ContentPurchased",
         });
 
         // Step 3: person2 buys for 5 mtk1
-        const buy2_course1 = await buyCourseHelper({
-          courseId: course1.courseId,
-          tokenAddress: MKT1.target,
-          coursePrice: ethers.parseEther("5"),
-          courseReceiver: person2.address,
-          redeemer: buyer1,
-          validUntil: now + 86400,
+        await buyCourseBatchHelper({
+          courseIds: [course1.courseId],
+          tokenAddresses: [MKT1.target],
+          coursePrices: [ethers.parseEther("5")],
+          courseReceivers: [person2.address],
+          redeemers: [backend],
+          validUntils: [now + 86400],
           nativeMsgValue: 0,
+          buyBatchTxCaller: backend,
           expectSuccessWith: "ContentPurchased",
         });
 
         // Step 4: person3 buys for 15 mtk2
-        const buy3_course1 = await buyCourseHelper({
-          courseId: course1.courseId,
-          tokenAddress: MKT2.target,
-          coursePrice: ethers.parseEther("15"),
-          courseReceiver: person3.address,
-          redeemer: buyer1,
-          validUntil: now + 86400,
+        await buyCourseBatchHelper({
+          courseIds: [course1.courseId],
+          tokenAddresses: [MKT2.target],
+          coursePrices: [ethers.parseEther("15")],
+          courseReceivers: [person3.address],
+          redeemers: [buyer1],
+          validUntils: [now + 86400],
           nativeMsgValue: 0,
+          buyBatchTxCaller: buyer1,
           expectSuccessWith: "ContentPurchased",
         });
 
-        // Step 5: person4 buys for 20 eth (native)
-        const buy4_course1 = await buyCourseHelper({
-          courseId: course1.courseId,
-          tokenAddress: ethers.ZeroAddress,
-          coursePrice: ethers.parseEther("20"),
-          courseReceiver: person4.address,
-          redeemer: buyer1,
-          validUntil: now + 86400,
+        // Step 5: person4 buys for 20 eth (native),
+        await buyCourseBatchHelper({
+          courseIds: [course1.courseId],
+          tokenAddresses: [ethers.ZeroAddress], // native token
+          coursePrices: [ethers.parseEther("20")],
+          courseReceivers: [person4.address],
+          redeemers: [buyer1],
+          validUntils: [now + 86400],
           nativeMsgValue: ethers.parseEther("20"),
+          buyBatchTxCaller: buyer1,
           expectSuccessWith: "ContentPurchased",
         });
 
         // Step 6: person5 buys for 25 eth (native)
-        const buy5_course1 = await buyCourseHelper({
-          courseId: course1.courseId,
-          tokenAddress: ethers.ZeroAddress,
-          coursePrice: ethers.parseEther("25"),
-          courseReceiver: person5.address,
-          redeemer: buyer1,
-          validUntil: now + 86400,
+        await buyCourseBatchHelper({
+          courseIds: [course1.courseId],
+          tokenAddresses: [ethers.ZeroAddress], // native token
+          coursePrices: [ethers.parseEther("25")],
+          courseReceivers: [person5.address],
+          redeemers: [buyer1],
+          validUntils: [now + 86400],
           nativeMsgValue: ethers.parseEther("25"),
+          buyBatchTxCaller: buyer1,
           expectSuccessWith: "ContentPurchased",
         });
         // Expect: all purchases succeed with "ContentPurchased" event
@@ -3085,14 +3100,15 @@ describe("NewTreasury Contract Tests", function () {
         buyVH = getVoucherHelpers({ signer: instructor3 }).buyVH;
 
         // Step 3: Try to buy with invalid voucher signer
-        const buy_course1 = await buyCourseHelper({
-          courseId: course1.courseId,
-          tokenAddress: MKT1.target,
-          coursePrice: ethers.parseEther("10"),
-          courseReceiver: person1.address,
-          redeemer: buyer1,
-          validUntil: now + 86400,
-          nativeMsgValue: 0,
+        await buyCourseBatchHelper({
+          courseIds: [course1.courseId],
+          tokenAddresses: [MKT1.target],
+          coursePrices: [ethers.parseEther("10")],
+          courseReceivers: [person1.address],
+          redeemers: [buyer1], // genelde hepsi aynı: tx'i buyer1 atıyor
+          validUntils: [now + 86400],
+          nativeMsgValue: 0, // sadece ERC20 olduğundan 0
+          buyBatchTxCaller: buyer1, // tx gönderen signer
           expectRevertWith: "Signature invalid or unauthorized",
         });
         // Expect: Reverts with "Signature invalid or unauthorized"
@@ -3112,14 +3128,15 @@ describe("NewTreasury Contract Tests", function () {
         const expired = now - 60;
 
         // Step 3: Try to buy with expired voucher
-        const buy_course1 = await buyCourseHelper({
-          courseId: course1.courseId,
-          tokenAddress: MKT1.target,
-          coursePrice: ethers.parseEther("10"),
-          courseReceiver: person1.address,
-          redeemer: buyer1,
-          validUntil: expired,
-          nativeMsgValue: 0,
+        await buyCourseBatchHelper({
+          courseIds: [course1.courseId],
+          tokenAddresses: [MKT1.target],
+          coursePrices: [ethers.parseEther("10")],
+          courseReceivers: [person1.address],
+          redeemers: [buyer1], // genelde hepsi aynı: tx'i buyer1 atıyor
+          validUntils: [expired],
+          nativeMsgValue: 0, // sadece ERC20 olduğundan 0
+          buyBatchTxCaller: buyer1, // tx gönderen signer
           expectRevertWith: "Voucher expired",
         });
         // Expect: Reverts with "Voucher expired"
@@ -3139,17 +3156,17 @@ describe("NewTreasury Contract Tests", function () {
         falseRedeemer = ethers.ZeroAddress;
 
         // Step 3: Attempt to buy with voucher.redeemer !== msg.sender
-        await buyCourseHelper({
-          courseId: course1.courseId,
-          tokenAddress: MKT1.target,
-          coursePrice: ethers.parseEther("10"),
-          courseReceiver: person1.address,
-          redeemer: buyer1, // actual sender
-          validUntil: now + 86400,
-          nativeMsgValue: 0,
+        await buyCourseBatchHelper({
+          courseIds: [course1.courseId],
+          tokenAddresses: [MKT1.target],
+          coursePrices: [ethers.parseEther("10")],
+          courseReceivers: [person1.address],
+          redeemers: [buyer1], // genelde hepsi aynı: tx'i buyer1 atıyor
+          validUntils: [now + 86400],
+          nativeMsgValue: 0, // sadece ERC20 olduğundan 0
+          buyBatchTxCaller: buyer1, // tx gönderen signer
           expectRevertWith: "Only redeemer can use this voucher",
         });
-
         // Expect: Reverts with "Only redeemer can use this voucher"
       });
 
@@ -3164,26 +3181,28 @@ describe("NewTreasury Contract Tests", function () {
         });
 
         // Step 2: buyer1 buys the course for person1
-        const buy1_course1 = await buyCourseHelper({
-          courseId: course1.courseId,
-          tokenAddress: MKT1.target,
-          coursePrice: ethers.parseEther("10"),
-          courseReceiver: person1.address,
-          redeemer: buyer1,
-          validUntil: now + 86400,
-          nativeMsgValue: 0,
+        const f1 = await buyCourseBatchHelper({
+          courseIds: [course1.courseId],
+          tokenAddresses: [MKT1.target],
+          coursePrices: [ethers.parseEther("10")],
+          courseReceivers: [person1.address],
+          redeemers: [buyer1], // genelde hepsi aynı: tx'i buyer1 atıyor
+          validUntils: [now + 86400],
+          nativeMsgValue: 0, // sadece ERC20 olduğundan 0
+          buyBatchTxCaller: buyer1, // tx gönderen signer
           expectSuccessWith: "ContentPurchased",
         });
 
         // Step 3: Try to buy the same course again for the same person → should revert
-        const buy2_course1 = await buyCourseHelper({
-          courseId: course1.courseId,
-          tokenAddress: MKT1.target,
-          coursePrice: ethers.parseEther("10"),
-          courseReceiver: person1.address,
-          redeemer: buyer2,
-          validUntil: now + 86400,
-          nativeMsgValue: 0,
+        const f2 = await buyCourseBatchHelper({
+          courseIds: [course1.courseId],
+          tokenAddresses: [MKT1.target],
+          coursePrices: [ethers.parseEther("10")],
+          courseReceivers: [person1.address],
+          redeemers: [buyer2], // genelde hepsi aynı: tx'i buyer1 atıyor
+          validUntils: [now + 86400],
+          nativeMsgValue: 0, // sadece ERC20 olduğundan 0
+          buyBatchTxCaller: buyer2, // tx gönderen signer
           expectRevertWith: "Content receiver already owns this course",
         });
         // Expect: Reverts with "Content receiver already owns this course"
@@ -3191,16 +3210,19 @@ describe("NewTreasury Contract Tests", function () {
 
       it("should fail to buy a course with courseId zero", async function () {
         // Step 1: Try to buy a course with courseId = 0
-        const buy_course1 = await buyCourseHelper({
-          courseId: 0,
-          tokenAddress: MKT1.target,
-          coursePrice: ethers.parseEther("10"),
-          courseReceiver: person1.address,
-          redeemer: buyer1,
-          validUntil: now + 86400,
-          nativeMsgValue: 0,
+        await buyCourseBatchHelper({
+          courseIds: [0],
+          tokenAddresses: [MKT1.target],
+          coursePrices: [ethers.parseEther("10")],
+          courseReceivers: [person1.address],
+          redeemers: [buyer1], // genelde hepsi aynı: tx'i buyer1 atıyor
+          validUntils: [now + 86400],
+          nativeMsgValue: 0, // sadece ERC20 olduğundan 0
+          buyBatchTxCaller: buyer1, // tx gönderen signer
           expectRevertWith: "Invalid courseId",
         });
+        // Expect: Reverts with "Invalid courseId"
+
         // Step 2: Create a valid course (unrelated, just to init counter)
         const course1 = await createCourseHelper({
           uri: "https://example.com/course/valid",
@@ -3211,14 +3233,15 @@ describe("NewTreasury Contract Tests", function () {
         });
 
         // Step 3: Try to buy with courseId = 0
-        const buy_course2 = await buyCourseHelper({
-          courseId: 0,
-          tokenAddress: MKT1.target,
-          coursePrice: ethers.parseEther("10"),
-          courseReceiver: person1.address,
-          redeemer: buyer1,
-          validUntil: now + 86400,
-          nativeMsgValue: 0,
+        await buyCourseBatchHelper({
+          courseIds: [0],
+          tokenAddresses: [MKT1.target],
+          coursePrices: [ethers.parseEther("10")],
+          courseReceivers: [person1.address],
+          redeemers: [buyer1], // genelde hepsi aynı: tx'i buyer1 atıyor
+          validUntils: [now + 86400],
+          nativeMsgValue: 0, // sadece ERC20 olduğundan 0
+          buyBatchTxCaller: buyer1, // tx gönderen signer
           expectRevertWith: "Invalid courseId",
         });
         // Expect: Reverts with "Invalid courseId"
@@ -3228,16 +3251,18 @@ describe("NewTreasury Contract Tests", function () {
         // Step 1: Get courseCounter from contract and increment by 1
         const invalidCourseId1 = (await NewTreasury.courseCounter()) + 1n;
         // Step 2: Try to buy a course with courseId = 0
-        const buy1_course1 = await buyCourseHelper({
-          courseId: invalidCourseId1,
-          tokenAddress: MKT1.target,
-          coursePrice: ethers.parseEther("10"),
-          courseReceiver: person1.address,
-          redeemer: buyer1,
-          validUntil: now + 86400,
-          nativeMsgValue: 0,
+        await buyCourseBatchHelper({
+          courseIds: [invalidCourseId1],
+          tokenAddresses: [MKT1.target],
+          coursePrices: [ethers.parseEther("10")],
+          courseReceivers: [person1.address],
+          redeemers: [buyer1], // genelde hepsi aynı: tx'i buyer1 atıyor
+          validUntils: [now + 86400],
+          nativeMsgValue: 0, // sadece ERC20 olduğundan 0
+          buyBatchTxCaller: buyer1, // tx gönderen signer
           expectRevertWith: "Invalid courseId",
         });
+        // Expect: Reverts with "Invalid courseId"
         // Step 3: Create a valid course (unrelated, just to init counter)
         const course1 = await createCourseHelper({
           uri: "https://example.com/course/valid",
@@ -3246,19 +3271,18 @@ describe("NewTreasury Contract Tests", function () {
           validUntil: now + 86400,
           expectSuccessWith: "CourseCreated",
         });
-
         // Step 4: Get again courseCounter from contract and increment by 1
         const invalidCourseId2 = (await NewTreasury.courseCounter()) + 1n;
-
         // Step 5: Try to buy with non-existent courseId
-        const buy2_course1 = await buyCourseHelper({
-          courseId: invalidCourseId2,
-          tokenAddress: MKT1.target,
-          coursePrice: ethers.parseEther("10"),
-          courseReceiver: person1.address,
-          redeemer: buyer1,
-          validUntil: now + 86400,
-          nativeMsgValue: 0,
+        await buyCourseBatchHelper({
+          courseIds: [invalidCourseId2],
+          tokenAddresses: [MKT1.target],
+          coursePrices: [ethers.parseEther("10")],
+          courseReceivers: [person1.address],
+          redeemers: [buyer1], // genelde hepsi aynı: tx'i buyer1 atıyor
+          validUntils: [now + 86400],
+          nativeMsgValue: 0, // sadece ERC20 olduğundan 0
+          buyBatchTxCaller: buyer1, // tx gönderen signer
           expectRevertWith: "Invalid courseId",
         });
         // Expect: Reverts with "Invalid courseId"
@@ -3287,16 +3311,19 @@ describe("NewTreasury Contract Tests", function () {
         });
 
         // Step 3: buyer1 tries to buy the course
-        const buy_course1 = await buyCourseHelper({
-          courseId: course1.courseId,
-          tokenAddress: MKT1.target,
-          coursePrice: ethers.parseEther("10"),
-          courseReceiver: person1.address,
-          redeemer: buyer1,
-          validUntil: now + 86400,
-          nativeMsgValue: 0,
+        const F = await buyCourseBatchHelper({
+          courseIds: [course1.courseId],
+          tokenAddresses: [MKT1.target],
+          coursePrices: [ethers.parseEther("10")],
+          courseReceivers: [person1.address],
+          redeemers: [buyer1], // genelde hepsi aynı: tx'i buyer1 atıyor
+          validUntils: [now + 86400],
+          nativeMsgValue: 0, // sadece ERC20 olduğundan 0
+          buyBatchTxCaller: buyer1, // tx gönderen signer
           expectRevertWith: "Course is not sellable",
         });
+
+        console.log("F: ", F);
         // Expect: Reverts with "Course is not sellable"
       });
 
@@ -3311,14 +3338,15 @@ describe("NewTreasury Contract Tests", function () {
         });
 
         // Step 2: buyer1 tries to buy with zero price
-        const buy_course1 = await buyCourseHelper({
-          courseId: course1.courseId,
-          tokenAddress: MKT1.target,
-          coursePrice: 0n,
-          courseReceiver: person1.address,
-          redeemer: buyer1,
-          validUntil: now + 86400,
-          nativeMsgValue: 0,
+        await buyCourseBatchHelper({
+          courseIds: [course1.courseId],
+          tokenAddresses: [MKT1.target],
+          coursePrices: [0n], // zero price
+          courseReceivers: [person1.address],
+          redeemers: [buyer1], // genelde hepsi aynı: tx'i buyer1 atıyor
+          validUntils: [now + 86400],
+          nativeMsgValue: 0, // sadece ERC20 olduğundan 0
+          buyBatchTxCaller: buyer1, // tx gönderen signer
           expectRevertWith: "Course price must be greater than 0",
         });
         // Expect: Reverts with "Course price must be greater than 0"
@@ -3335,14 +3363,15 @@ describe("NewTreasury Contract Tests", function () {
         });
 
         // Step 2: buyer1 tries to buy with zero price and native token
-        const buy_course1 = await buyCourseHelper({
-          courseId: course1.courseId,
-          tokenAddress: ethers.ZeroAddress, // native token
-          coursePrice: 0n,
-          courseReceiver: person1.address,
-          redeemer: buyer1,
-          validUntil: now + 86400,
-          nativeMsgValue: 0,
+        await buyCourseBatchHelper({
+          courseIds: [course1.courseId],
+          tokenAddresses: [ethers.ZeroAddress], // native token
+          coursePrices: [0n], // zero price
+          courseReceivers: [person1.address],
+          redeemers: [buyer1], // genelde hepsi aynı: tx'i buyer1 atıyor
+          validUntils: [now + 86400],
+          nativeMsgValue: 0, // native token için msg.value
+          buyBatchTxCaller: buyer1, // tx gönderen signer
           expectRevertWith: "Course price must be greater than 0",
         });
         // Expect: Reverts with "Course price must be greater than 0"
@@ -3359,29 +3388,32 @@ describe("NewTreasury Contract Tests", function () {
         });
 
         // Step 2: buyer1 tries to pay less than coursePrice in native token
-        const buy_course1 = await buyCourseHelper({
-          courseId: course1.courseId,
-          tokenAddress: ethers.ZeroAddress,
-          coursePrice: ethers.parseEther("10"),
-          courseReceiver: person1.address,
-          redeemer: buyer1,
-          validUntil: now + 86400,
+        await buyCourseBatchHelper({
+          courseIds: [course1.courseId],
+          tokenAddresses: [ethers.ZeroAddress], // native token
+          coursePrices: [ethers.parseEther("10")],
+          courseReceivers: [person1.address],
+          redeemers: [buyer1], // genelde hepsi aynı: tx'i buyer1 atıyor
+          validUntils: [now + 86400],
           nativeMsgValue: ethers.parseEther("5"), // less than price
-          expectRevertWith: "Incorrect amount sent for native token payment",
+          buyBatchTxCaller: buyer1, // tx gönderen signer
+          expectRevertWith: "Incorrect total native value sent",
         });
+        // Expect: Reverts with "Incorrect total native value sent"
 
         // Step 3: buyer1 tries to pay more than coursePrice in native token
-        const buy_course2 = await buyCourseHelper({
-          courseId: course1.courseId,
-          tokenAddress: ethers.ZeroAddress,
-          coursePrice: ethers.parseEther("10"),
-          courseReceiver: person1.address,
-          redeemer: buyer1,
-          validUntil: now + 86400,
+        await buyCourseBatchHelper({
+          courseIds: [course1.courseId],
+          tokenAddresses: [ethers.ZeroAddress], // native token
+          coursePrices: [ethers.parseEther("10")],
+          courseReceivers: [person1.address],
+          redeemers: [buyer1], // genelde hepsi aynı: tx'i buyer1 atıyor
+          validUntils: [now + 86400],
           nativeMsgValue: ethers.parseEther("15"), // more than price
-          expectRevertWith: "Incorrect amount sent for native token payment",
+          buyBatchTxCaller: buyer1, // tx gönderen signer
+          expectRevertWith: "Incorrect total native value sent",
         });
-        // Expect: Incorrect amount sent in native payment
+        // Expect: Reverts with "Incorrect total native value sent"
       });
 
       it("should fail to buy a course with ERC20 token if any native token value is sent", async function () {
@@ -3395,17 +3427,18 @@ describe("NewTreasury Contract Tests", function () {
         });
 
         // Step 2: buyer1 tries to buy the course with ERC20 but sends native token value
-        const buy_course1 = await buyCourseHelper({
-          courseId: course1.courseId,
-          tokenAddress: MKT1.target, // ERC20 token
-          coursePrice: ethers.parseEther("10"),
-          courseReceiver: person1.address,
-          redeemer: buyer1,
-          validUntil: now + 86400,
+        await buyCourseBatchHelper({
+          courseIds: [course1.courseId],
+          tokenAddresses: [MKT1.target], // ERC20 token
+          coursePrices: [ethers.parseEther("10")],
+          courseReceivers: [person1.address],
+          redeemers: [buyer1], // genelde hepsi aynı: tx'i buyer1 atıyor
+          validUntils: [now + 86400],
           nativeMsgValue: ethers.parseEther("1"), // should be 0
-          expectRevertWith: "Use ERC20, not native token",
+          buyBatchTxCaller: buyer1, // tx gönderen signer
+          expectRevertWith: "Incorrect total native value sent",
         });
-        // Expect: Reverts with "Use ERC20, not native token"
+        // Expect: Reverts with "Incorrect total native value sent"
       });
 
       it("should fail to buy a course when ERC20 token transfer to treasury fails", async function () {
@@ -3425,17 +3458,18 @@ describe("NewTreasury Contract Tests", function () {
         await failMKT.connect(backend).blockAddress(NewTreasury.target, true);
 
         // Step 3: Try to buy with buyer1 using failMKT
-        const buy_course1 = await buyCourseHelper({
-          courseId: course1.courseId,
-          tokenAddress: failMKT.target,
-          coursePrice: ethers.parseEther("10"),
-          courseReceiver: person1.address,
-          redeemer: buyer1,
-          validUntil: now + 86400,
-          nativeMsgValue: 0,
+        await buyCourseBatchHelper({
+          courseIds: [course1.courseId],
+          tokenAddresses: [failMKT.target], // failMKT token
+          coursePrices: [ethers.parseEther("10")],
+          courseReceivers: [person1.address],
+          redeemers: [buyer1], // genelde hepsi aynı: tx'i buyer1 atıyor
+          validUntils: [now + 86400],
+          nativeMsgValue: 0, // sadece ERC20 olduğundan 0
+          buyBatchTxCaller: buyer1, // tx gönderen signer
           expectRevertWith: "Recipient blocked (from)",
         });
-        // Expect: Reverts with "Signature invalid or unauthorized"
+        // Expect: Reverts with "Recipient blocked (from)"
       });
       /////###End of Failure Cases###/////
     });
@@ -5410,7 +5444,6 @@ describe("NewTreasury Contract Tests", function () {
           redeemerInitialNativeBalance: await ethers.provider.getBalance(instructor1.address),
         };
         const beforeTokenStats = await _validateExpectations(input, expectations);
-        // console.log("beforeTokenStats:", beforeTokenStats);
 
         // Step 6: Create a voucher for instructor1 to withdraw payments from sales 1 to 3
         const voucher = await withdrawVH.signVoucher({
