@@ -2947,7 +2947,7 @@ describe("NewTreasury Contract Tests", function () {
         });
 
         // Step 2: buyers buys all 3 courses for person1
-        const s = await buyCourseBatchHelper({
+        await buyCourseBatchHelper({
           courseIds: [course1.courseId, course2.courseId, course3.courseId],
           tokenAddresses: [MKT1.target, ethers.ZeroAddress, MKT2.target],
           coursePrices: [
@@ -3165,7 +3165,7 @@ describe("NewTreasury Contract Tests", function () {
         });
 
         // Step 2: buyer1 buys the course for person1
-        const f1 = await buyCourseBatchHelper({
+        await buyCourseBatchHelper({
           courseIds: [course1.courseId],
           tokenAddresses: [MKT1.target],
           coursePrices: [ethers.parseEther("10")],
@@ -3178,7 +3178,7 @@ describe("NewTreasury Contract Tests", function () {
         });
 
         // Step 3: Try to buy the same course again for the same person → should revert
-        const f2 = await buyCourseBatchHelper({
+        await buyCourseBatchHelper({
           courseIds: [course1.courseId],
           tokenAddresses: [MKT1.target],
           coursePrices: [ethers.parseEther("10")],
@@ -3295,7 +3295,7 @@ describe("NewTreasury Contract Tests", function () {
         });
 
         // Step 3: buyer1 tries to buy the course
-        const F = await buyCourseBatchHelper({
+        await buyCourseBatchHelper({
           courseIds: [course1.courseId],
           tokenAddresses: [MKT1.target],
           coursePrices: [ethers.parseEther("10")],
