@@ -1,6 +1,7 @@
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
 require("dotenv").config();
+const util = require("util");
 
 const {
   initTestEnv,
@@ -103,6 +104,161 @@ let createVH, updateVH, buyVH, refundVH, refundByOwnerVH, withdrawVH;
 let falseRedeemer;
 
 /////### TEST HELPERS ###/////
+async function createCourseBatchHelper({
+  uries,
+  withdrawersArrays,
+  redeemers,
+  validUntils,
+  createBatchTxCaller,
+  expectRevertWith,
+  expectSuccessWith,
+}) {
+  const n = uries.length;
+  // 0) Parametre uzunluklarını doğrula
+  if (withdrawersArrays.length !== n || redeemers.length !== n || validUntils.length !== n) {
+    throw new Error("Input arrays must have the same length");
+  }
+  // 1) Success/revert toggle
+  const waitSuccess =
+    expectSuccessWith && !expectRevertWith
+      ? true
+      : expectRevertWith && !expectSuccessWith
+      ? false
+      : (() => {
+          throw new Error("Exactly one of expectSuccessWith or expectRevertWith must be defined.");
+        })();
+
+  // 2) Vouchers'ları imzala
+  const vouchers = [];
+  for (let i = 0; i < n; i++) {
+    const createVoucher = await createVH.signVoucher({
+      uri: uries[i],
+      withdrawers: withdrawersArrays[i],
+      redeemer: falseRedeemer == null ? redeemers[i] : falseRedeemer, // falseRedeemer ?? redeemers[i], same
+      validUntil: validUntils[i],
+    });
+    vouchers.push(createVoucher);
+  }
+
+  // predict expected outcomes of create before tx
+  const currentCourseCounter = await NewTreasury.courseCounter();
+  const expectedOutcome = await _prepareExpectedCreateBatchStates(vouchers, waitSuccess);
+
+  // 4) Tx gönderimi ve kontrol
+  let tx = null;
+  if (!waitSuccess) {
+    await expect(NewTreasury.connect(createBatchTxCaller).createCourseBatch(vouchers)).to.be.revertedWith(
+      expectRevertWith
+    );
+  } else if (waitSuccess) {
+    tx = await NewTreasury.connect(createBatchTxCaller).createCourseBatch(vouchers);
+    const receipt = await tx.wait();
+
+    // 5) Event parsing ve doğrulama
+    const parsedEvents = receipt.logs
+      .map((log) => {
+        try {
+          return NewTreasury.interface.parseLog(log);
+        } catch {
+          return null;
+        }
+      })
+      .filter((parsed) => parsed && parsed.name === "CourseCreated");
+
+    // a) tam sayıda event basılmış mı?
+    expect(parsedEvents.length, "CourseCreated event sayısı beklenenle eşleşmiyor").to.equal(n);
+    // b) sırayla decode edip courseId & uri karşılaştır
+    for (let i = 0; i < n; i++) {
+      expect(parsedEvents[i].args.courseId).to.equal(currentCourseCounter + BigInt(i + 1));
+      //expect(parsedEvents[i].args.uri).to.equal(vouchers[i].uri);
+    }
+  }
+
+  // Expected outcomes should be satisfied
+  await _expectCreateBatch(expectedOutcome);
+
+  // return course id
+  return {
+    courseIds: waitSuccess ? Array.from({ length: n }, (_, i) => currentCourseCounter + BigInt(i + 1)) : [],
+    expectedOutcome,
+  };
+}
+
+async function _prepareExpectedCreateBatchStates(vouchers, waitSuccess) {
+  const currentCourseCounter = await NewTreasury.courseCounter();
+
+  const expected = {
+    expectedCourseCounter: waitSuccess ? currentCourseCounter + BigInt(vouchers.length) : currentCourseCounter,
+    expectedCourses: [], // { courseId, uri, sellable }
+    expectedUriToCourseId: [], // { uriHash, courseId }
+    expectedAuthorizedWithdrawers: [], // { courseId, withdrawers: address[] }
+    expectedIsAuthorizedWithdrawer: [], // { courseId, isWithdrawer: { address: true/false } }
+  };
+
+  // hold next courseId for iteration
+  for (let i = 0; i < vouchers.length; i++) {
+    const { uri, withdrawers } = vouchers[i];
+    const uriHash = ethers.keccak256(ethers.toUtf8Bytes(uri));
+    const courseId = currentCourseCounter + BigInt(i + 1);
+
+    // isWithdrawer mapping: true for each if waitSuccess=true, otherwise false
+    const isWithdrawer = Object.fromEntries(withdrawers.map((w) => [w, waitSuccess]));
+    // expected course object
+    expected.expectedCourses.push({
+      courseId,
+      uri: waitSuccess ? uri : "",
+      sellable: waitSuccess,
+    });
+    // expected uri to courseId mapping
+    const existingCourseId = waitSuccess ? null : await NewTreasury.uriToCourseId(uriHash); // if not exists, returns 0n
+    expected.expectedUriToCourseId.push({
+      uri,
+      uriHash,
+      courseId: waitSuccess ? courseId : existingCourseId,
+    });
+    // expected authorized withdrawers
+    expected.expectedAuthorizedWithdrawers.push({ courseId, withdrawers: waitSuccess ? withdrawers : [] });
+    // expected isAuthorizedWithdrawer mapping
+    expected.expectedIsAuthorizedWithdrawer.push({ courseId, isWithdrawer });
+  }
+  return expected;
+}
+
+async function _expectCreateBatch(expected) {
+  // 1) courseCounter kontrolü
+  const actualCounter = await NewTreasury.courseCounter();
+  expect(actualCounter).to.equal(expected.expectedCourseCounter);
+
+  // 2) Courses: uri & sellable
+  for (const { courseId, uri, sellable } of expected.expectedCourses) {
+    const course = await NewTreasury.courses(courseId);
+    expect(course.uri).to.equal(uri);
+    expect(course.sellable).to.equal(sellable);
+  }
+
+  // 3) uriToCourseId eşleşmesi
+  for (const { uri, uriHash, courseId } of expected.expectedUriToCourseId) {
+    const calculatedUriHash = ethers.keccak256(ethers.toUtf8Bytes(uri));
+    expect(calculatedUriHash).to.equal(uriHash);
+    const actual = await NewTreasury.uriToCourseId(calculatedUriHash);
+    expect(actual).to.equal(courseId);
+  }
+
+  // 4) authorizedWithdrawers listesi
+  for (const { courseId, withdrawers } of expected.expectedAuthorizedWithdrawers) {
+    const actual = await NewTreasury.getAuthorizedWithdrawers(courseId);
+    expect(actual).to.deep.equal(withdrawers);
+  }
+
+  // 5) isAuthorizedWithdrawer doğrulaması
+  for (const { courseId, isWithdrawer } of expected.expectedIsAuthorizedWithdrawer) {
+    for (const [addr, expectedBool] of Object.entries(isWithdrawer)) {
+      const actual = await NewTreasury.isAuthorizedWithdrawer(addr, courseId);
+      expect(actual).to.equal(expectedBool);
+    }
+  }
+}
+
 async function createCourseHelper({ uri, withdrawers, redeemer, validUntil, expectRevertWith, expectSuccessWith }) {
   const input = {
     uri,
@@ -1812,753 +1968,800 @@ describe("NewTreasury Contract Tests", function () {
 
   // 1. Course Management
   describe("📘 COURSE MANAGEMENT", function () {
-    describe("✅ Success Cases", function () {
-      it("should create a course with valid voucher", async function () {
-        // Step 1: instructor1 creates a course via CreateCourseVoucher
-        const course1 = await createCourseHelper({
-          uri: "https://example.com/course/1",
-          withdrawers: [instructor1.address, instructor2.address],
-          redeemer: instructor1,
-          validUntil: now + 86400,
-          expectSuccessWith: "CourseCreated",
+    describe("🟢 CREATE COURSE", function () {
+      describe("✅ Success Cases", function () {
+        it("should create a course with valid voucher", async function () {
+          // Step 1: instructor1 creates a course via CreateCourseVoucher
+          const course1 = await createCourseHelper({
+            uri: "https://example.com/course/1",
+            withdrawers: [instructor1.address, instructor2.address],
+            redeemer: instructor1,
+            validUntil: now + 86400,
+            expectSuccessWith: "CourseCreated",
+          });
+          // Expect: "CourseCreated" with expected success states
         });
-        // Expect: "CourseCreated" with expected success states
+
+        it("should create a course with valid voucherX", async function () {
+          // Step 1: instructor1 creates a course via CreateCourseVoucher
+          const course1 = await createCourseBatchHelper({
+            uries: ["https://example.com/course/1", "https://example.com/course/2"],
+            withdrawersArrays: [
+              [instructor1.address, instructor2.address],
+              [instructor1.address, instructor3.address],
+            ],
+            redeemers: [instructor1.address, instructor1.address],
+            validUntils: [now + 86400, now + 86400],
+            createBatchTxCaller: instructor1,
+            expectSuccessWith: "CourseCreated",
+          });
+          // Expect: "CourseCreated" with expected success states
+          //console.log("Expected:\n" + util.inspect(course1.expectedOutcome, { depth: null, colors: true }));
+        });
+
+        it("should allow course creation if redeemer is backend and not in withdrawers", async function () {
+          // Step 1: backend creates a course for other withdrawers
+          const course1 = await createCourseHelper({
+            uri: "https://example.com/backend-not-in-withdrawers",
+            withdrawers: [instructor2.address, instructor3.address],
+            redeemer: backend,
+            validUntil: now + 86400,
+            expectSuccessWith: "CourseCreated",
+          });
+          // Expect: "CourseCreated" with expected success states
+        });
+
+        it("should allow creating a course with duplicate withdrawers", async function () {
+          // Step 1: instructor1 creates a course with duplicate withdrawers
+          const course = await createCourseHelper({
+            uri: "https://example.com/duplicate-withdrawers",
+            withdrawers: [instructor1.address, instructor1.address, instructor1.address],
+            redeemer: instructor1,
+            validUntil: now + 86400,
+            expectSuccessWith: "CourseCreated",
+          });
+          // Expect: "CourseCreated" with expected success states
+        });
+
+        it("should allow multiple course creations with unique URIs", async function () {
+          // Step 1: Create course 1
+          const course1 = await createCourseHelper({
+            uri: "https://example.com/multi/1",
+            withdrawers: [instructor1.address, instructor2.address],
+            redeemer: instructor1,
+            validUntil: now + 86400,
+            expectSuccessWith: "CourseCreated",
+          });
+
+          // Step 2: Create course 2
+          const course2 = await createCourseHelper({
+            uri: "https://example.com/multi/2",
+            withdrawers: [instructor2.address, instructor1.address],
+            redeemer: instructor2,
+            validUntil: now + 86400,
+            expectSuccessWith: "CourseCreated",
+          });
+
+          // Step 3: Create course 3
+          const course3 = await createCourseHelper({
+            uri: "https://example.com/multi/3",
+            withdrawers: [instructor1.address, instructor3.address, instructor2.address],
+            redeemer: instructor2,
+            validUntil: now + 86400,
+            expectSuccessWith: "CourseCreated",
+          });
+          // Expect: all 3 courses created successfully with unique URIs
+        });
+        /////### End of CREATE Course Success Cases###/////
       });
 
-      it("should update an existing course with valid voucher", async function () {
-        // Step 1: instructor1 creates a course via CreateCourseVoucher
-        const course1 = await createCourseHelper({
-          uri: "https://example.com/course/1",
-          withdrawers: [instructor1.address, instructor2.address],
-          redeemer: instructor1,
-          validUntil: now + 86400,
-          expectSuccessWith: "CourseCreated",
+      describe("❌ Failure Cases", function () {
+        it("should fail to create a course with invalid signer", async function () {
+          // Step 1: Override default createVH and get a new voucher with invalid signer
+          createVH = getVoucherHelpers({ signer: instructor3 }).createVH;
+          // Step 2: Try to create a course with invalid signer
+          const course1 = await createCourseHelper({
+            uri: "https://example.com/course/1",
+            withdrawers: [instructor1.address, instructor2.address],
+            redeemer: instructor1,
+            validUntil: now + 86400,
+            expectRevertWith: "Signature invalid or unauthorized",
+          });
+          // Expect: Reverts with "Signature invalid or unauthorized"
         });
-        // Step 2: instructor1 updates course via UpdateCourseVoucher
-        const update_course1 = await updateCourseHelper({
-          courseId: course1.courseId,
-          uri: "https://example.com/course/1New",
-          sellable: false,
-          withdrawers: [instructor1.address, instructor3.address],
-          redeemer: instructor1,
-          validUntil: now + 86400,
-          expectSuccessWith: "CourseUpdated",
-          previousWithdrawers: course1.withdrawers,
+
+        it("should fail to create a course with invalid signerX", async function () {
+          // Step 1: Override default createVH and get a new voucher with invalid signer
+          createVH = getVoucherHelpers({ signer: instructor3 }).createVH;
+          // Step 2: Try to create a course with invalid signer
+          const course1 = await createCourseBatchHelper({
+            uries: ["https://example.com/course/1", "https://example.com/course/2"],
+            withdrawersArrays: [
+              [instructor1.address, instructor2.address],
+              [instructor1.address, instructor2.address],
+            ],
+            redeemers: [instructor1.address, instructor1.address],
+            validUntils: [now + 86400, now + 86400],
+            createBatchTxCaller: instructor1,
+            expectRevertWith: "Signature invalid or unauthorized",
+          });
+          // Expect: Reverts with "Signature invalid or unauthorized"
+          //console.log("Expected:\n" + util.inspect(course1.expectedOutcome, { depth: null, colors: true }));
         });
-        // Expect: "CourseUpdated" with expected success states
+
+        it("should fail to create a course with expired voucher", async function () {
+          // Step 1: set up an expired timestamp for the voucher validUntil
+          const expiredTimestamp = now - 60; // 1 dakika önce
+
+          // Step 2: Try to create a course with an expired voucher
+          const course1 = await createCourseHelper({
+            uri: "https://example.com/expired-voucher",
+            withdrawers: [instructor1.address],
+            redeemer: instructor1,
+            validUntil: expiredTimestamp,
+            expectRevertWith: "Voucher expired",
+          });
+
+          // Expect: Reverts with "Voucher expired"
+        });
+
+        it("should fail to create a course if msg.sender !== redeemer (Only redeemer can use this voucher)", async function () {
+          // Step 1: Set falseRedeemer to ethers.ZeroAddress (redeemer !== msg.sender)
+          falseRedeemer = ethers.ZeroAddress;
+
+          // Step 2: Try to create course with mismatched msg.sender and voucher.redeemer
+          await createCourseHelper({
+            uri: "https://example.com/fail-redeemer-check",
+            withdrawers: [instructor1.address],
+            redeemer: instructor1,
+            falseRedeemer, // this gets injected into voucher as .address
+            validUntil: now + 86400,
+            expectRevertWith: "Only redeemer can use this voucher",
+          });
+
+          // Expect: reverts with "Only redeemer can use this voucher"
+        });
+
+        it("should fail to create a course with duplicate URI", async function () {
+          // Step 1: instructor1 creates a course via CreateCourseVoucher
+          const course1 = await createCourseHelper({
+            uri: "https://example.com/course/duplicate",
+            withdrawers: [instructor1.address],
+            redeemer: instructor1,
+            validUntil: now + 86400,
+            expectSuccessWith: "CourseCreated",
+          });
+          // Step 2: Try to create another course with the same URI and same voucher
+          const course2 = await createCourseHelper({
+            uri: "https://example.com/course/duplicate",
+            withdrawers: [instructor1.address],
+            redeemer: instructor1,
+            validUntil: now + 86400,
+            expectRevertWith: "URI already used",
+          });
+          // Expect: Reverts with "URI already used", with failure states
+        });
+
+        it("should fail to create a course with same URI but different withdrawers", async function () {
+          // Step 1: instructor1 creates first course with URI
+          await createCourseHelper({
+            uri: "https://example.com/same-uri-different-withdrawers",
+            withdrawers: [instructor1.address],
+            redeemer: instructor1,
+            validUntil: now + 86400,
+            expectSuccessWith: "CourseCreated",
+          });
+
+          // Step 2: Try to create another course with same URI but different withdrawers
+          await createCourseHelper({
+            uri: "https://example.com/same-uri-different-withdrawers",
+            withdrawers: [instructor2.address],
+            redeemer: instructor2,
+            validUntil: now + 86400,
+            expectRevertWith: "URI already used",
+          });
+        });
+
+        it("should fail to create a course with more than 4 withdrawers", async function () {
+          // Step 1: Read maxAllowedWithdrawers from contract and convert to Number
+          const max = Number(await NewTreasury.maxAllowedWithdrawers());
+
+          // Step 2: Generate (max + 1) random addresses
+          const extraWithdrawers = [];
+          for (let i = 0; i < max + 1; i++) {
+            extraWithdrawers.push(ethers.Wallet.createRandom().address);
+          }
+
+          // Step 3: Try to create a course with too many withdrawers
+          const course = await createCourseHelper({
+            uri: "https://example.com/exceed-withdrawers",
+            withdrawers: extraWithdrawers,
+            redeemer: instructor1,
+            validUntil: now + 86400,
+            expectRevertWith: "Max withdrawers exceeded",
+          });
+          // Expect: Reverts with "Max withdrawers exceeded"
+        });
+
+        it("should fail to create a course if any withdrawer is address(0)", async function () {
+          // Step 1: Construct withdrawers array where 3rd, and 4th are zero address
+          const invalidWithdrawers = [
+            instructor3.address, // index 0 → valid
+            instructor1.address, // index 1 → valid
+            ethers.ZeroAddress, // index 2 → invalid
+            ethers.ZeroAddress, // index 3 → invalid
+          ];
+
+          // Step 2: Try to create course
+          const course = await createCourseHelper({
+            uri: "https://example.com/zero-address-withdrawer",
+            withdrawers: invalidWithdrawers,
+            redeemer: instructor1,
+            validUntil: now + 86400,
+            expectRevertWith: "Withdrawer cannot be zero address",
+          });
+          // Expect: Reverts with "Zero address not allowed"
+        });
+
+        it("should fail to create a course with empty withdrawers array", async function () {
+          // Step 1: Try to create course with empty withdrawers
+          const course = await createCourseHelper({
+            uri: "https://example.com/empty-withdrawer",
+            withdrawers: [],
+            redeemer: instructor1,
+            validUntil: now + 86400,
+            expectRevertWith: "Withdrawers required",
+          });
+          // Expect: Reverts with "Withdrawers required"
+        });
+
+        it("should fail to create a course if redeemer is not in withdrawers and not backend", async function () {
+          // Step 1: Try to create a course where redeemer is not in withdrawers and not backend
+          const course1 = await createCourseHelper({
+            uri: "https://example.com/redeemer-not-in-withdrawers",
+            withdrawers: [instructor2.address, instructor3.address], // instructor1 yok
+            redeemer: instructor1,
+            validUntil: now + 86400,
+            expectRevertWith: "Redeemer must be backend role if not any withdrawer",
+          });
+          // Expect: Reverts due to invalid role
+        });
+
+        it("should fail to create a course with empty URI", async function () {
+          // Step 1: Try to create a course with empty URI
+          const course1 = await createCourseHelper({
+            uri: "", // boş string
+            withdrawers: [instructor1.address],
+            redeemer: instructor1,
+            validUntil: now + 86400,
+            expectRevertWith: "Course URI empty",
+          });
+          // Expect: Reverts with "Course URI empty"
+        });
+        /////### End of CREATE Course Failure Cases###/////
       });
-
-      it("should allow reusing a URI after course updates it to a new URI", async function () {
-        // Step 1: instructor1 creates a course with URI_A
-        const createA = await createCourseHelper({
-          uri: "https://example.com/uri-a",
-          withdrawers: [instructor1.address],
-          redeemer: instructor1,
-          validUntil: now + 86400,
-          expectSuccessWith: "CourseCreated",
-        });
-
-        // Step 2: instructor1 updates that course to URI_B
-        const updateToB = await updateCourseHelper({
-          courseId: createA.courseId,
-          uri: "https://example.com/uri-b",
-          sellable: createA.sellable,
-          withdrawers: createA.withdrawers,
-          redeemer: instructor1,
-          validUntil: now + 86400,
-          expectSuccessWith: "CourseUpdated",
-          previousWithdrawers: createA.withdrawers,
-        });
-
-        // Step 3: instructor1 creates a new course again using URI_A
-        const createAgainA = await createCourseHelper({
-          uri: "https://example.com/uri-a",
-          withdrawers: [instructor1.address],
-          redeemer: instructor1,
-          validUntil: now + 86400,
-          expectSuccessWith: "CourseCreated",
-        });
-        // Expect: all 3 steps succeed, and URI_A is used again for the second course
-      });
-
-      it("should allow course creation if redeemer is backend and not in withdrawers", async function () {
-        // Step 1: backend creates a course for other withdrawers
-        const course1 = await createCourseHelper({
-          uri: "https://example.com/backend-not-in-withdrawers",
-          withdrawers: [instructor2.address, instructor3.address],
-          redeemer: backend,
-          validUntil: now + 86400,
-          expectSuccessWith: "CourseCreated",
-        });
-        // Expect: "CourseCreated" with expected success states
-      });
-
-      it("should allow course update if redeemer is backend and not in withdrawers", async function () {
-        // Step 1: instructor1 creates a valid course
-        const course1 = await createCourseHelper({
-          uri: "https://example.com/backend-update-course",
-          withdrawers: [instructor1.address],
-          redeemer: instructor1,
-          validUntil: now + 86400,
-          expectSuccessWith: "CourseCreated",
-        });
-
-        // Step 2: backend updates the course (not in withdrawers)
-        const update_course1 = await updateCourseHelper({
-          courseId: course1.courseId,
-          uri: "https://example.com/backend-updated-uri",
-          sellable: true,
-          withdrawers: [instructor2.address, instructor3.address], // yeni withdrawer set
-          redeemer: backend, // backend yetkili
-          validUntil: now + 86400,
-          expectSuccessWith: "CourseUpdated",
-          previousWithdrawers: course1.withdrawers,
-        });
-        // Expect: update succeeds via backend signer
-      });
-
-      it("should allow creating a course with duplicate withdrawers", async function () {
-        // Step 1: instructor1 creates a course with duplicate withdrawers
-        const course = await createCourseHelper({
-          uri: "https://example.com/duplicate-withdrawers",
-          withdrawers: [instructor1.address, instructor1.address, instructor1.address],
-          redeemer: instructor1,
-          validUntil: now + 86400,
-          expectSuccessWith: "CourseCreated",
-        });
-        // Expect: "CourseCreated" with expected success states
-      });
-
-      it("should allow multiple course creations with unique URIs", async function () {
-        // Step 1: Create course 1
-        const course1 = await createCourseHelper({
-          uri: "https://example.com/multi/1",
-          withdrawers: [instructor1.address, instructor2.address],
-          redeemer: instructor1,
-          validUntil: now + 86400,
-          expectSuccessWith: "CourseCreated",
-        });
-
-        // Step 2: Create course 2
-        const course2 = await createCourseHelper({
-          uri: "https://example.com/multi/2",
-          withdrawers: [instructor2.address, instructor1.address],
-          redeemer: instructor2,
-          validUntil: now + 86400,
-          expectSuccessWith: "CourseCreated",
-        });
-
-        // Step 3: Create course 3
-        const course3 = await createCourseHelper({
-          uri: "https://example.com/multi/3",
-          withdrawers: [instructor1.address, instructor3.address, instructor2.address],
-          redeemer: instructor2,
-          validUntil: now + 86400,
-          expectSuccessWith: "CourseCreated",
-        });
-        // Expect: all 3 courses created successfully with unique URIs
-      });
-
-      it("should allow isolated and combined updates of sellable, withdrawers, and URI", async function () {
-        // Step 1: create course
-        const course1 = await createCourseHelper({
-          uri: "https://example.com/isolate/initial",
-          withdrawers: [instructor1.address],
-          redeemer: instructor1,
-          validUntil: now + 86400,
-          expectSuccessWith: "CourseCreated",
-        });
-
-        // Step 2: update only sellable toggle
-        const update1 = await updateCourseHelper({
-          courseId: course1.courseId,
-          uri: course1.uri,
-          sellable: false,
-          withdrawers: course1.withdrawers,
-          redeemer: instructor1,
-          validUntil: now + 86400,
-          expectSuccessWith: "CourseUpdated",
-          previousWithdrawers: course1.withdrawers,
-        });
-
-        // Step 3: update only withdrawers
-        const update2 = await updateCourseHelper({
-          courseId: course1.courseId,
-          uri: update1.uri,
-          sellable: update1.sellable,
-          withdrawers: [instructor2.address],
-          redeemer: instructor2,
-          validUntil: now + 86400,
-          expectSuccessWith: "CourseUpdated",
-          previousWithdrawers: update1.withdrawers,
-        });
-
-        // Step 4: update only URI
-        const update3 = await updateCourseHelper({
-          courseId: course1.courseId,
-          uri: "https://example.com/isolate/only-uri",
-          sellable: update2.sellable,
-          withdrawers: update2.withdrawers,
-          redeemer: instructor2,
-          validUntil: now + 86400,
-          expectSuccessWith: "CourseUpdated",
-          previousWithdrawers: update2.withdrawers,
-        });
-
-        // Step 5: update all fields at once
-        const update4 = await updateCourseHelper({
-          courseId: course1.courseId,
-          uri: "https://example.com/isolate/all-updated",
-          sellable: true,
-          withdrawers: [instructor2.address, instructor3.address],
-          redeemer: instructor2,
-          validUntil: now + 86400,
-          expectSuccessWith: "CourseUpdated",
-          previousWithdrawers: update3.withdrawers,
-        });
-        // Expect: all updates succeed, each isolated and combined update works as expected
-      });
-
-      it("should allow redundant updates with partial or full parameter repetition", async function () {
-        // Step 1: create course
-        const course1 = await createCourseHelper({
-          uri: "https://example.com/redundant/start",
-          withdrawers: [instructor1.address],
-          redeemer: instructor1,
-          validUntil: now + 86400,
-          expectSuccessWith: "CourseCreated",
-        });
-
-        // Step 2: sellable same (true), URI and withdrawers change
-        const update1 = await updateCourseHelper({
-          courseId: course1.courseId,
-          uri: "https://example.com/redundant/uri1",
-          sellable: true,
-          withdrawers: [instructor2.address],
-          redeemer: instructor2,
-          validUntil: now + 86400,
-          expectSuccessWith: "CourseUpdated",
-          previousWithdrawers: course1.withdrawers,
-        });
-
-        // Step 3: withdrawers same as step2, sellable and URI change
-        const update2 = await updateCourseHelper({
-          courseId: course1.courseId,
-          uri: "https://example.com/redundant/uri2-3",
-          sellable: false,
-          withdrawers: update1.withdrawers,
-          redeemer: instructor2,
-          validUntil: now + 86400,
-          expectSuccessWith: "CourseUpdated",
-          previousWithdrawers: update1.withdrawers,
-        });
-
-        // Step 4: URI same as step3, sellable and withdrawers change
-        const update3 = await updateCourseHelper({
-          courseId: course1.courseId,
-          uri: update2.uri,
-          sellable: true,
-          withdrawers: [instructor3.address],
-          redeemer: instructor3,
-          validUntil: now + 86400,
-          expectSuccessWith: "CourseUpdated",
-          previousWithdrawers: update2.withdrawers,
-        });
-
-        // Step 5: all params same as step3
-        const update4 = await updateCourseHelper({
-          courseId: course1.courseId,
-          uri: update3.uri,
-          sellable: update3.sellable,
-          withdrawers: update3.withdrawers,
-          redeemer: instructor3,
-          validUntil: now + 86400,
-          expectSuccessWith: "CourseUpdated",
-          previousWithdrawers: update3.withdrawers,
-        });
-        // Expect: all updates succeed, selective redundancy is handled gracefully
-      });
-      /////### End of Success Cases###/////
+      /////### End of Course Manegement: CREATE Course###/////
     });
 
-    describe("❌ Failure Cases", function () {
-      it("should fail to create a course with invalid signer", async function () {
-        // Step 1: Override default createVH and get a new voucher with invalid signer
-        createVH = getVoucherHelpers({ signer: instructor3 }).createVH;
-        // Step 2: Try to create a course with invalid signer
-        const course1 = await createCourseHelper({
-          uri: "https://example.com/course/1",
-          withdrawers: [instructor1.address, instructor2.address],
-          redeemer: instructor1,
-          validUntil: now + 86400,
-          expectRevertWith: "Signature invalid or unauthorized",
+    describe("🟠 UPDATE COURSE", function () {
+      describe("✅ Success Cases", function () {
+        it("should update an existing course with valid voucher", async function () {
+          // Step 1: instructor1 creates a course via CreateCourseVoucher
+          const course1 = await createCourseHelper({
+            uri: "https://example.com/course/1",
+            withdrawers: [instructor1.address, instructor2.address],
+            redeemer: instructor1,
+            validUntil: now + 86400,
+            expectSuccessWith: "CourseCreated",
+          });
+          // Step 2: instructor1 updates course via UpdateCourseVoucher
+          const update_course1 = await updateCourseHelper({
+            courseId: course1.courseId,
+            uri: "https://example.com/course/1New",
+            sellable: false,
+            withdrawers: [instructor1.address, instructor3.address],
+            redeemer: instructor1,
+            validUntil: now + 86400,
+            expectSuccessWith: "CourseUpdated",
+            previousWithdrawers: course1.withdrawers,
+          });
+          // Expect: "CourseUpdated" with expected success states
         });
-        // Expect: Reverts with "Signature invalid or unauthorized"
+
+        it("should allow reusing a URI after course updates it to a new URI", async function () {
+          // Step 1: instructor1 creates a course with URI_A
+          const createA = await createCourseHelper({
+            uri: "https://example.com/uri-a",
+            withdrawers: [instructor1.address],
+            redeemer: instructor1,
+            validUntil: now + 86400,
+            expectSuccessWith: "CourseCreated",
+          });
+
+          // Step 2: instructor1 updates that course to URI_B
+          const updateToB = await updateCourseHelper({
+            courseId: createA.courseId,
+            uri: "https://example.com/uri-b",
+            sellable: createA.sellable,
+            withdrawers: createA.withdrawers,
+            redeemer: instructor1,
+            validUntil: now + 86400,
+            expectSuccessWith: "CourseUpdated",
+            previousWithdrawers: createA.withdrawers,
+          });
+
+          // Step 3: instructor1 creates a new course again using URI_A
+          const createAgainA = await createCourseHelper({
+            uri: "https://example.com/uri-a",
+            withdrawers: [instructor1.address],
+            redeemer: instructor1,
+            validUntil: now + 86400,
+            expectSuccessWith: "CourseCreated",
+          });
+          // Expect: all 3 steps succeed, and URI_A is used again for the second course
+        });
+
+        it("should allow course update if redeemer is backend and not in withdrawers", async function () {
+          // Step 1: instructor1 creates a valid course
+          const course1 = await createCourseHelper({
+            uri: "https://example.com/backend-update-course",
+            withdrawers: [instructor1.address],
+            redeemer: instructor1,
+            validUntil: now + 86400,
+            expectSuccessWith: "CourseCreated",
+          });
+
+          // Step 2: backend updates the course (not in withdrawers)
+          const update_course1 = await updateCourseHelper({
+            courseId: course1.courseId,
+            uri: "https://example.com/backend-updated-uri",
+            sellable: true,
+            withdrawers: [instructor2.address, instructor3.address], // yeni withdrawer set
+            redeemer: backend, // backend yetkili
+            validUntil: now + 86400,
+            expectSuccessWith: "CourseUpdated",
+            previousWithdrawers: course1.withdrawers,
+          });
+          // Expect: update succeeds via backend signer
+        });
+
+        it("should allow isolated and combined updates of sellable, withdrawers, and URI", async function () {
+          // Step 1: create course
+          const course1 = await createCourseHelper({
+            uri: "https://example.com/isolate/initial",
+            withdrawers: [instructor1.address],
+            redeemer: instructor1,
+            validUntil: now + 86400,
+            expectSuccessWith: "CourseCreated",
+          });
+
+          // Step 2: update only sellable toggle
+          const update1 = await updateCourseHelper({
+            courseId: course1.courseId,
+            uri: course1.uri,
+            sellable: false,
+            withdrawers: course1.withdrawers,
+            redeemer: instructor1,
+            validUntil: now + 86400,
+            expectSuccessWith: "CourseUpdated",
+            previousWithdrawers: course1.withdrawers,
+          });
+
+          // Step 3: update only withdrawers
+          const update2 = await updateCourseHelper({
+            courseId: course1.courseId,
+            uri: update1.uri,
+            sellable: update1.sellable,
+            withdrawers: [instructor2.address],
+            redeemer: instructor2,
+            validUntil: now + 86400,
+            expectSuccessWith: "CourseUpdated",
+            previousWithdrawers: update1.withdrawers,
+          });
+
+          // Step 4: update only URI
+          const update3 = await updateCourseHelper({
+            courseId: course1.courseId,
+            uri: "https://example.com/isolate/only-uri",
+            sellable: update2.sellable,
+            withdrawers: update2.withdrawers,
+            redeemer: instructor2,
+            validUntil: now + 86400,
+            expectSuccessWith: "CourseUpdated",
+            previousWithdrawers: update2.withdrawers,
+          });
+
+          // Step 5: update all fields at once
+          const update4 = await updateCourseHelper({
+            courseId: course1.courseId,
+            uri: "https://example.com/isolate/all-updated",
+            sellable: true,
+            withdrawers: [instructor2.address, instructor3.address],
+            redeemer: instructor2,
+            validUntil: now + 86400,
+            expectSuccessWith: "CourseUpdated",
+            previousWithdrawers: update3.withdrawers,
+          });
+          // Expect: all updates succeed, each isolated and combined update works as expected
+        });
+
+        it("should allow redundant updates with partial or full parameter repetition", async function () {
+          // Step 1: create course
+          const course1 = await createCourseHelper({
+            uri: "https://example.com/redundant/start",
+            withdrawers: [instructor1.address],
+            redeemer: instructor1,
+            validUntil: now + 86400,
+            expectSuccessWith: "CourseCreated",
+          });
+
+          // Step 2: sellable same (true), URI and withdrawers change
+          const update1 = await updateCourseHelper({
+            courseId: course1.courseId,
+            uri: "https://example.com/redundant/uri1",
+            sellable: true,
+            withdrawers: [instructor2.address],
+            redeemer: instructor2,
+            validUntil: now + 86400,
+            expectSuccessWith: "CourseUpdated",
+            previousWithdrawers: course1.withdrawers,
+          });
+
+          // Step 3: withdrawers same as step2, sellable and URI change
+          const update2 = await updateCourseHelper({
+            courseId: course1.courseId,
+            uri: "https://example.com/redundant/uri2-3",
+            sellable: false,
+            withdrawers: update1.withdrawers,
+            redeemer: instructor2,
+            validUntil: now + 86400,
+            expectSuccessWith: "CourseUpdated",
+            previousWithdrawers: update1.withdrawers,
+          });
+
+          // Step 4: URI same as step3, sellable and withdrawers change
+          const update3 = await updateCourseHelper({
+            courseId: course1.courseId,
+            uri: update2.uri,
+            sellable: true,
+            withdrawers: [instructor3.address],
+            redeemer: instructor3,
+            validUntil: now + 86400,
+            expectSuccessWith: "CourseUpdated",
+            previousWithdrawers: update2.withdrawers,
+          });
+
+          // Step 5: all params same as step3
+          const update4 = await updateCourseHelper({
+            courseId: course1.courseId,
+            uri: update3.uri,
+            sellable: update3.sellable,
+            withdrawers: update3.withdrawers,
+            redeemer: instructor3,
+            validUntil: now + 86400,
+            expectSuccessWith: "CourseUpdated",
+            previousWithdrawers: update3.withdrawers,
+          });
+          // Expect: all updates succeed, selective redundancy is handled gracefully
+        });
+        /////### End of UPDATE Course Success Cases###/////
       });
 
-      it("should fail to update a course with invalid signer", async function () {
-        // Step 1: Create course with valid signer (backend)
-        const course1 = await createCourseHelper({
-          uri: "https://example.com/course/1",
-          withdrawers: [instructor1.address],
-          redeemer: instructor1,
-          validUntil: now + 86400,
-          expectSuccessWith: "CourseCreated",
+      describe("❌ Failure Cases", function () {
+        it("should fail to update a course with invalid signer", async function () {
+          // Step 1: Create course with valid signer (backend)
+          const course1 = await createCourseHelper({
+            uri: "https://example.com/course/1",
+            withdrawers: [instructor1.address],
+            redeemer: instructor1,
+            validUntil: now + 86400,
+            expectSuccessWith: "CourseCreated",
+          });
+
+          // Step 2: Override default updateVH and get a new voucher with invalid signer
+          updateVH = getVoucherHelpers({ signer: instructor1 }).updateVH;
+
+          // Step 3: Try to update course using invalid signer
+          const updated = await updateCourseHelper({
+            courseId: course1.courseId,
+            uri: "https://example.com/course/1-updated",
+            sellable: false,
+            withdrawers: [instructor1.address],
+            redeemer: instructor1,
+            validUntil: now + 86400,
+            expectRevertWith: "Signature invalid or unauthorized",
+            previousWithdrawers: course1.withdrawers,
+          });
+
+          // Expect: Reverts with "Signature invalid or unauthorized"
         });
 
-        // Step 2: Override default updateVH and get a new voucher with invalid signer
-        updateVH = getVoucherHelpers({ signer: instructor1 }).updateVH;
+        it("should fail to update a course with expired voucher", async function () {
+          // Step 1: instructor1 creates a valid course first
+          const course1 = await createCourseHelper({
+            uri: "https://example.com/original-course",
+            withdrawers: [instructor1.address],
+            redeemer: instructor1,
+            validUntil: now + 86400,
+            expectSuccessWith: "CourseCreated",
+          });
 
-        // Step 3: Try to update course using invalid signer
-        const updated = await updateCourseHelper({
-          courseId: course1.courseId,
-          uri: "https://example.com/course/1-updated",
-          sellable: false,
-          withdrawers: [instructor1.address],
-          redeemer: instructor1,
-          validUntil: now + 86400,
-          expectRevertWith: "Signature invalid or unauthorized",
-          previousWithdrawers: course1.withdrawers,
+          // Step 2: set up an expired validUntil timestamp
+          const expiredTimestamp = now - 60; // 1 dakika önce
+
+          // Step 3: try to update the course using an expired voucher
+          const update1 = await updateCourseHelper({
+            courseId: course1.courseId,
+            uri: "https://example.com/expired-update",
+            sellable: false,
+            withdrawers: course1.withdrawers,
+            redeemer: instructor1,
+            validUntil: expiredTimestamp,
+            expectRevertWith: "Voucher expired",
+            previousWithdrawers: course1.withdrawers,
+          });
+
+          // Expect: Reverts with "Voucher expired"
         });
 
-        // Expect: Reverts with "Signature invalid or unauthorized"
+        it("should fail to update a course if msg.sender !== redeemer (Only redeemer can use this voucher)", async function () {
+          // Step 1: instructor1 creates a course normally
+          const course1 = await createCourseHelper({
+            uri: "https://example.com/update-redeemer-mismatch/original",
+            withdrawers: [instructor1.address],
+            redeemer: instructor1,
+            validUntil: now + 86400,
+            expectSuccessWith: "CourseCreated",
+          });
+
+          // Step 2: prepare mismatched redeemer (voucher will carry different redeemer)
+          falseRedeemer = ethers.ZeroAddress;
+
+          // Step 3: attempt update with mismatched msg.sender and voucher.redeemer
+          await updateCourseHelper({
+            courseId: course1.courseId,
+            uri: "https://example.com/update-redeemer-mismatch/attempt",
+            sellable: true,
+            withdrawers: course1.withdrawers,
+            redeemer: instructor1, // msg.sender
+            validUntil: now + 86400,
+            expectRevertWith: "Only redeemer can use this voucher",
+            previousWithdrawers: course1.withdrawers,
+          });
+
+          // Expect: Reverts with "Only redeemer can use this voucher"
+        });
+
+        it("should fail to update course with a URI that is already used by another course", async function () {
+          // Step 1: instructor1 creates first course with URI-A
+          const courseA = await createCourseHelper({
+            uri: "https://example.com/uri-a",
+            withdrawers: [instructor1.address],
+            redeemer: instructor1,
+            validUntil: now + 86400,
+            expectSuccessWith: "CourseCreated",
+          });
+
+          // Step 2: instructor2 creates second course with URI-B
+          const courseB = await createCourseHelper({
+            uri: "https://example.com/uri-b",
+            withdrawers: [instructor2.address],
+            redeemer: instructor2,
+            validUntil: now + 86400,
+            expectSuccessWith: "CourseCreated",
+          });
+
+          // Step 3: Try to update their course to use URI-A (which is already taken)
+          const updateB = await updateCourseHelper({
+            courseId: courseB.courseId,
+            uri: "https://example.com/uri-a", // trying to reuse uri-a
+            sellable: courseB.sellable,
+            withdrawers: courseB.withdrawers,
+            redeemer: instructor2,
+            validUntil: now + 86400,
+            expectRevertWith: "New URI already used",
+            previousWithdrawers: courseB.withdrawers,
+          });
+          // Expect: Reverts with "New URI already used"
+        });
+
+        it("should fail to update a course with more than allowed withdrawers", async function () {
+          // Step 1: instructor1 creates a course with valid withdrawers
+          const course = await createCourseHelper({
+            uri: "https://example.com/original-update",
+            withdrawers: [instructor1.address],
+            redeemer: instructor1,
+            validUntil: now + 86400,
+            expectSuccessWith: "CourseCreated",
+          });
+
+          // Step 2: Read maxAllowedWithdrawers from contract and convert to Number
+          const max = Number(await NewTreasury.maxAllowedWithdrawers());
+
+          // Step 3: Generate (max + 1) random addresses
+          const extraWithdrawers = [];
+          for (let i = 0; i < max + 1; i++) {
+            extraWithdrawers.push(ethers.Wallet.createRandom().address);
+          }
+          extraWithdrawers.push(instructor1.address); // Ensure redeemer is included
+
+          // Step 4: Try to update the course with too many withdrawers
+          const update = await updateCourseHelper({
+            courseId: course.courseId,
+            uri: "https://example.com/updated-uri-exceed",
+            sellable: true,
+            withdrawers: extraWithdrawers,
+            redeemer: instructor1,
+            validUntil: now + 86400,
+            expectRevertWith: "Max withdrawers exceeded",
+            previousWithdrawers: course.withdrawers,
+          });
+          // Expect: Reverts with "Max withdrawers exceeded"
+        });
+
+        it("should fail to update a course if any withdrawer is address(0)", async function () {
+          // Step 1: Create valid course first
+          const course = await createCourseHelper({
+            uri: "https://example.com/valid-course-to-update",
+            withdrawers: [instructor1.address],
+            redeemer: instructor1,
+            validUntil: now + 86400,
+            expectSuccessWith: "CourseCreated",
+          });
+
+          // Step 2: Set withdrawers with zero addresses in index 0
+          const invalidWithdrawers = [instructor1.address, ethers.ZeroAddress];
+
+          // Step 3: Try to update course
+          const update = await updateCourseHelper({
+            courseId: course.courseId,
+            uri: "https://example.com/update-with-zero",
+            sellable: true,
+            withdrawers: invalidWithdrawers,
+            redeemer: instructor1,
+            validUntil: now + 86400,
+            expectRevertWith: "Withdrawer cannot be zero address",
+            previousWithdrawers: course.withdrawers,
+          });
+          // Expect: Reverts with "Zero address not allowed"
+        });
+
+        it("should fail to update a course with empty withdrawers array", async function () {
+          // Step 1: Create a valid course
+          const course = await createCourseHelper({
+            uri: "https://example.com/to-be-emptied",
+            withdrawers: [instructor1.address],
+            redeemer: instructor1,
+            validUntil: now + 86400,
+            expectSuccessWith: "CourseCreated",
+          });
+
+          // Step 2: Try to update course with empty withdrawers
+          const update = await updateCourseHelper({
+            courseId: course.courseId,
+            uri: "https://example.com/emptied-uri",
+            sellable: true,
+            withdrawers: [],
+            redeemer: instructor1,
+            validUntil: now + 86400,
+            expectRevertWith: "Withdrawers required",
+            previousWithdrawers: course.withdrawers,
+          });
+          // Expect: Reverts with "Withdrawers required"
+        });
+
+        it("should fail to update course if redeemer is not in withdrawers and not backend", async function () {
+          // Step 1: instructor1 creates a valid course
+          const course1 = await createCourseHelper({
+            uri: "https://example.com/redeemer-not-in-withdrawers-update",
+            withdrawers: [instructor1.address],
+            redeemer: instructor1,
+            validUntil: now + 86400,
+            expectSuccessWith: "CourseCreated",
+          });
+
+          // Step 2: instructor2 tries to update, but is not in withdrawers
+          const update1_course1 = await updateCourseHelper({
+            courseId: course1.courseId,
+            uri: "https://example.com/invalid-update-attempt",
+            sellable: false,
+            withdrawers: [instructor3.address],
+            redeemer: instructor2,
+            validUntil: now + 86400,
+            expectRevertWith: "Redeemer must be backend role if not any withdrawer",
+            previousWithdrawers: course1.withdrawers,
+          });
+
+          // Expect: revert due to unauthorized redeemer
+        });
+
+        it("should fail to update a course with empty URI", async function () {
+          // Step 1: instructor1 creates a valid course first
+          const course1 = await createCourseHelper({
+            uri: "https://example.com/original-uri",
+            withdrawers: [instructor1.address],
+            redeemer: instructor1,
+            validUntil: now + 86400,
+            expectSuccessWith: "CourseCreated",
+          });
+
+          // Step 2: Try to update the course with empty URI
+          const update1_course1 = await updateCourseHelper({
+            courseId: course1.courseId,
+            uri: "", // boş URI
+            sellable: true,
+            withdrawers: [instructor1.address],
+            redeemer: instructor1,
+            validUntil: now + 86400,
+            expectRevertWith: "Course URI empty",
+            previousWithdrawers: course1.withdrawers,
+          });
+          // Expect: Reverts with "Course URI empty"
+        });
+
+        it("should fail to update a course with courseId = 0", async function () {
+          // Step 1: try to update courseId = 0
+          const update1 = await updateCourseHelper({
+            courseId: 0,
+            uri: "https://example.com/update-zero-id",
+            sellable: true,
+            withdrawers: [instructor1.address],
+            redeemer: instructor1,
+            validUntil: now + 86400,
+            expectRevertWith: "Invalid courseId",
+            previousWithdrawers: [], // ID 0 zaten yok
+          });
+          // Expect: Reverts with "Invalid courseId"
+        });
+
+        it("should fail to update a course with non-existing courseId", async function () {
+          // Step 1: Get current courseCounter, then +1 to get a nonexistent ID
+          const current = await NewTreasury.courseCounter();
+          const nonexistentId = current + 1n;
+
+          // Step 2: Try to update a course with this nonexistent ID
+          const update1 = await updateCourseHelper({
+            courseId: nonexistentId,
+            uri: "https://example.com/nonexistent-id",
+            sellable: true,
+            withdrawers: [instructor1.address],
+            redeemer: instructor1,
+            validUntil: now + 86400,
+            expectRevertWith: "Invalid courseId",
+            previousWithdrawers: [], // course zaten yok
+          });
+          // Expect: Reverts with "Invalid courseId"
+
+          // Step 3: Create a course with valid ID to increase courseCounter
+          const course1 = await createCourseHelper({
+            uri: "https://example.com/valid-course-for-high-id",
+            withdrawers: [instructor1.address],
+            redeemer: instructor1,
+            validUntil: now + 86400,
+            expectSuccessWith: "CourseCreated",
+          });
+
+          // Step 4: Get the new courseCounter after creation
+          const currentAfterCreate = await NewTreasury.courseCounter();
+          const nonExistentIdAfterCreate = currentAfterCreate + 1n;
+
+          // Step 5: Try to update again with the new nonexistent ID
+          const update2 = await updateCourseHelper({
+            courseId: nonExistentIdAfterCreate,
+            uri: "https://example.com/update-nonexistent-id",
+            sellable: true,
+            withdrawers: [instructor1.address],
+            redeemer: instructor1,
+            validUntil: now + 86400,
+            expectRevertWith: "Invalid courseId",
+            previousWithdrawers: [], // çünkü o ID yok
+          });
+          // Expect: Reverts with "Invalid courseId"
+        });
+        /////### End of UPDATE Course Failure Cases###/////
       });
-
-      it("should fail to create a course with expired voucher", async function () {
-        // Step 1: set up an expired timestamp for the voucher validUntil
-        const expiredTimestamp = now - 60; // 1 dakika önce
-
-        // Step 2: Try to create a course with an expired voucher
-        const course1 = await createCourseHelper({
-          uri: "https://example.com/expired-voucher",
-          withdrawers: [instructor1.address],
-          redeemer: instructor1,
-          validUntil: expiredTimestamp,
-          expectRevertWith: "Voucher expired",
-        });
-
-        // Expect: Reverts with "Voucher expired"
-      });
-
-      it("should fail to update a course with expired voucher", async function () {
-        // Step 1: instructor1 creates a valid course first
-        const course1 = await createCourseHelper({
-          uri: "https://example.com/original-course",
-          withdrawers: [instructor1.address],
-          redeemer: instructor1,
-          validUntil: now + 86400,
-          expectSuccessWith: "CourseCreated",
-        });
-
-        // Step 2: set up an expired validUntil timestamp
-        const expiredTimestamp = now - 60; // 1 dakika önce
-
-        // Step 3: try to update the course using an expired voucher
-        const update1 = await updateCourseHelper({
-          courseId: course1.courseId,
-          uri: "https://example.com/expired-update",
-          sellable: false,
-          withdrawers: course1.withdrawers,
-          redeemer: instructor1,
-          validUntil: expiredTimestamp,
-          expectRevertWith: "Voucher expired",
-          previousWithdrawers: course1.withdrawers,
-        });
-
-        // Expect: Reverts with "Voucher expired"
-      });
-
-      it("should fail to create a course if msg.sender !== redeemer (Only redeemer can use this voucher)", async function () {
-        // Step 1: Set falseRedeemer to ethers.ZeroAddress (redeemer !== msg.sender)
-        falseRedeemer = ethers.ZeroAddress;
-
-        // Step 2: Try to create course with mismatched msg.sender and voucher.redeemer
-        await createCourseHelper({
-          uri: "https://example.com/fail-redeemer-check",
-          withdrawers: [instructor1.address],
-          redeemer: instructor1,
-          falseRedeemer, // this gets injected into voucher as .address
-          validUntil: now + 86400,
-          expectRevertWith: "Only redeemer can use this voucher",
-        });
-
-        // Expect: reverts with "Only redeemer can use this voucher"
-      });
-
-      it("should fail to update a course if msg.sender !== redeemer (Only redeemer can use this voucher)", async function () {
-        // Step 1: instructor1 creates a course normally
-        const course1 = await createCourseHelper({
-          uri: "https://example.com/update-redeemer-mismatch/original",
-          withdrawers: [instructor1.address],
-          redeemer: instructor1,
-          validUntil: now + 86400,
-          expectSuccessWith: "CourseCreated",
-        });
-
-        // Step 2: prepare mismatched redeemer (voucher will carry different redeemer)
-        falseRedeemer = ethers.ZeroAddress;
-
-        // Step 3: attempt update with mismatched msg.sender and voucher.redeemer
-        await updateCourseHelper({
-          courseId: course1.courseId,
-          uri: "https://example.com/update-redeemer-mismatch/attempt",
-          sellable: true,
-          withdrawers: course1.withdrawers,
-          redeemer: instructor1, // msg.sender
-          validUntil: now + 86400,
-          expectRevertWith: "Only redeemer can use this voucher",
-          previousWithdrawers: course1.withdrawers,
-        });
-
-        // Expect: Reverts with "Only redeemer can use this voucher"
-      });
-
-      it("should fail to create a course with duplicate URI", async function () {
-        // Step 1: instructor1 creates a course via CreateCourseVoucher
-        const course1 = await createCourseHelper({
-          uri: "https://example.com/course/duplicate",
-          withdrawers: [instructor1.address],
-          redeemer: instructor1,
-          validUntil: now + 86400,
-          expectSuccessWith: "CourseCreated",
-        });
-        // Step 2: Try to create another course with the same URI and same voucher
-        const course2 = await createCourseHelper({
-          uri: "https://example.com/course/duplicate",
-          withdrawers: [instructor1.address],
-          redeemer: instructor1,
-          validUntil: now + 86400,
-          expectRevertWith: "URI already used",
-        });
-        // Expect: Reverts with "URI already used", with failure states
-      });
-
-      it("should fail to create a course with same URI but different withdrawers", async function () {
-        // Step 1: instructor1 creates first course with URI
-        await createCourseHelper({
-          uri: "https://example.com/same-uri-different-withdrawers",
-          withdrawers: [instructor1.address],
-          redeemer: instructor1,
-          validUntil: now + 86400,
-          expectSuccessWith: "CourseCreated",
-        });
-
-        // Step 2: Try to create another course with same URI but different withdrawers
-        await createCourseHelper({
-          uri: "https://example.com/same-uri-different-withdrawers",
-          withdrawers: [instructor2.address],
-          redeemer: instructor2,
-          validUntil: now + 86400,
-          expectRevertWith: "URI already used",
-        });
-      });
-
-      it("should fail to update course with a URI that is already used by another course", async function () {
-        // Step 1: instructor1 creates first course with URI-A
-        const courseA = await createCourseHelper({
-          uri: "https://example.com/uri-a",
-          withdrawers: [instructor1.address],
-          redeemer: instructor1,
-          validUntil: now + 86400,
-          expectSuccessWith: "CourseCreated",
-        });
-
-        // Step 2: instructor2 creates second course with URI-B
-        const courseB = await createCourseHelper({
-          uri: "https://example.com/uri-b",
-          withdrawers: [instructor2.address],
-          redeemer: instructor2,
-          validUntil: now + 86400,
-          expectSuccessWith: "CourseCreated",
-        });
-
-        // Step 3: Try to update their course to use URI-A (which is already taken)
-        const updateB = await updateCourseHelper({
-          courseId: courseB.courseId,
-          uri: "https://example.com/uri-a", // trying to reuse uri-a
-          sellable: courseB.sellable,
-          withdrawers: courseB.withdrawers,
-          redeemer: instructor2,
-          validUntil: now + 86400,
-          expectRevertWith: "New URI already used",
-          previousWithdrawers: courseB.withdrawers,
-        });
-        // Expect: Reverts with "New URI already used"
-      });
-
-      it("should fail to create a course with more than 4 withdrawers", async function () {
-        // Step 1: Read maxAllowedWithdrawers from contract and convert to Number
-        const max = Number(await NewTreasury.maxAllowedWithdrawers());
-
-        // Step 2: Generate (max + 1) random addresses
-        const extraWithdrawers = [];
-        for (let i = 0; i < max + 1; i++) {
-          extraWithdrawers.push(ethers.Wallet.createRandom().address);
-        }
-
-        // Step 3: Try to create a course with too many withdrawers
-        const course = await createCourseHelper({
-          uri: "https://example.com/exceed-withdrawers",
-          withdrawers: extraWithdrawers,
-          redeemer: instructor1,
-          validUntil: now + 86400,
-          expectRevertWith: "Max withdrawers exceeded",
-        });
-        // Expect: Reverts with "Max withdrawers exceeded"
-      });
-
-      it("should fail to update a course with more than allowed withdrawers", async function () {
-        // Step 1: instructor1 creates a course with valid withdrawers
-        const course = await createCourseHelper({
-          uri: "https://example.com/original-update",
-          withdrawers: [instructor1.address],
-          redeemer: instructor1,
-          validUntil: now + 86400,
-          expectSuccessWith: "CourseCreated",
-        });
-
-        // Step 2: Read maxAllowedWithdrawers from contract and convert to Number
-        const max = Number(await NewTreasury.maxAllowedWithdrawers());
-
-        // Step 3: Generate (max + 1) random addresses
-        const extraWithdrawers = [];
-        for (let i = 0; i < max + 1; i++) {
-          extraWithdrawers.push(ethers.Wallet.createRandom().address);
-        }
-        extraWithdrawers.push(instructor1.address); // Ensure redeemer is included
-
-        // Step 4: Try to update the course with too many withdrawers
-        const update = await updateCourseHelper({
-          courseId: course.courseId,
-          uri: "https://example.com/updated-uri-exceed",
-          sellable: true,
-          withdrawers: extraWithdrawers,
-          redeemer: instructor1,
-          validUntil: now + 86400,
-          expectRevertWith: "Max withdrawers exceeded",
-          previousWithdrawers: course.withdrawers,
-        });
-        // Expect: Reverts with "Max withdrawers exceeded"
-      });
-
-      it("should fail to create a course if any withdrawer is address(0)", async function () {
-        // Step 1: Construct withdrawers array where 3rd, and 4th are zero address
-        const invalidWithdrawers = [
-          instructor3.address, // index 0 → valid
-          instructor1.address, // index 1 → valid
-          ethers.ZeroAddress, // index 2 → invalid
-          ethers.ZeroAddress, // index 3 → invalid
-        ];
-
-        // Step 2: Try to create course
-        const course = await createCourseHelper({
-          uri: "https://example.com/zero-address-withdrawer",
-          withdrawers: invalidWithdrawers,
-          redeemer: instructor1,
-          validUntil: now + 86400,
-          expectRevertWith: "Withdrawer cannot be zero address",
-        });
-        // Expect: Reverts with "Zero address not allowed"
-      });
-
-      it("should fail to update a course if any withdrawer is address(0)", async function () {
-        // Step 1: Create valid course first
-        const course = await createCourseHelper({
-          uri: "https://example.com/valid-course-to-update",
-          withdrawers: [instructor1.address],
-          redeemer: instructor1,
-          validUntil: now + 86400,
-          expectSuccessWith: "CourseCreated",
-        });
-
-        // Step 2: Set withdrawers with zero addresses in index 0
-        const invalidWithdrawers = [instructor1.address, ethers.ZeroAddress];
-
-        // Step 3: Try to update course
-        const update = await updateCourseHelper({
-          courseId: course.courseId,
-          uri: "https://example.com/update-with-zero",
-          sellable: true,
-          withdrawers: invalidWithdrawers,
-          redeemer: instructor1,
-          validUntil: now + 86400,
-          expectRevertWith: "Withdrawer cannot be zero address",
-          previousWithdrawers: course.withdrawers,
-        });
-        // Expect: Reverts with "Zero address not allowed"
-      });
-
-      it("should fail to create a course with empty withdrawers array", async function () {
-        // Step 1: Try to create course with empty withdrawers
-        const course = await createCourseHelper({
-          uri: "https://example.com/empty-withdrawer",
-          withdrawers: [],
-          redeemer: instructor1,
-          validUntil: now + 86400,
-          expectRevertWith: "Withdrawers required",
-        });
-        // Expect: Reverts with "Withdrawers required"
-      });
-
-      it("should fail to update a course with empty withdrawers array", async function () {
-        // Step 1: Create a valid course
-        const course = await createCourseHelper({
-          uri: "https://example.com/to-be-emptied",
-          withdrawers: [instructor1.address],
-          redeemer: instructor1,
-          validUntil: now + 86400,
-          expectSuccessWith: "CourseCreated",
-        });
-
-        // Step 2: Try to update course with empty withdrawers
-        const update = await updateCourseHelper({
-          courseId: course.courseId,
-          uri: "https://example.com/emptied-uri",
-          sellable: true,
-          withdrawers: [],
-          redeemer: instructor1,
-          validUntil: now + 86400,
-          expectRevertWith: "Withdrawers required",
-          previousWithdrawers: course.withdrawers,
-        });
-        // Expect: Reverts with "Withdrawers required"
-      });
-
-      it("should fail to create a course if redeemer is not in withdrawers and not backend", async function () {
-        // Step 1: Try to create a course where redeemer is not in withdrawers and not backend
-        const course1 = await createCourseHelper({
-          uri: "https://example.com/redeemer-not-in-withdrawers",
-          withdrawers: [instructor2.address, instructor3.address], // instructor1 yok
-          redeemer: instructor1,
-          validUntil: now + 86400,
-          expectRevertWith: "Redeemer must be backend role if not any withdrawer",
-        });
-        // Expect: Reverts due to invalid role
-      });
-
-      it("should fail to update course if redeemer is not in withdrawers and not backend", async function () {
-        // Step 1: instructor1 creates a valid course
-        const course1 = await createCourseHelper({
-          uri: "https://example.com/redeemer-not-in-withdrawers-update",
-          withdrawers: [instructor1.address],
-          redeemer: instructor1,
-          validUntil: now + 86400,
-          expectSuccessWith: "CourseCreated",
-        });
-
-        // Step 2: instructor2 tries to update, but is not in withdrawers
-        const update1_course1 = await updateCourseHelper({
-          courseId: course1.courseId,
-          uri: "https://example.com/invalid-update-attempt",
-          sellable: false,
-          withdrawers: [instructor3.address],
-          redeemer: instructor2,
-          validUntil: now + 86400,
-          expectRevertWith: "Redeemer must be backend role if not any withdrawer",
-          previousWithdrawers: course1.withdrawers,
-        });
-
-        // Expect: revert due to unauthorized redeemer
-      });
-
-      it("should fail to create a course with empty URI", async function () {
-        // Step 1: Try to create a course with empty URI
-        const course1 = await createCourseHelper({
-          uri: "", // boş string
-          withdrawers: [instructor1.address],
-          redeemer: instructor1,
-          validUntil: now + 86400,
-          expectRevertWith: "Course URI empty",
-        });
-        // Expect: Reverts with "Course URI empty"
-      });
-
-      it("should fail to update a course with empty URI", async function () {
-        // Step 1: instructor1 creates a valid course first
-        const course1 = await createCourseHelper({
-          uri: "https://example.com/original-uri",
-          withdrawers: [instructor1.address],
-          redeemer: instructor1,
-          validUntil: now + 86400,
-          expectSuccessWith: "CourseCreated",
-        });
-
-        // Step 2: Try to update the course with empty URI
-        const update1_course1 = await updateCourseHelper({
-          courseId: course1.courseId,
-          uri: "", // boş URI
-          sellable: true,
-          withdrawers: [instructor1.address],
-          redeemer: instructor1,
-          validUntil: now + 86400,
-          expectRevertWith: "Course URI empty",
-          previousWithdrawers: course1.withdrawers,
-        });
-        // Expect: Reverts with "Course URI empty"
-      });
-
-      it("should fail to update a course with courseId = 0", async function () {
-        // Step 1: try to update courseId = 0
-        const update1 = await updateCourseHelper({
-          courseId: 0,
-          uri: "https://example.com/update-zero-id",
-          sellable: true,
-          withdrawers: [instructor1.address],
-          redeemer: instructor1,
-          validUntil: now + 86400,
-          expectRevertWith: "Invalid courseId",
-          previousWithdrawers: [], // ID 0 zaten yok
-        });
-        // Expect: Reverts with "Invalid courseId"
-      });
-
-      it("should fail to update a course with non-existing courseId", async function () {
-        // Step 1: Get current courseCounter, then +1 to get a nonexistent ID
-        const current = await NewTreasury.courseCounter();
-        const nonexistentId = current + 1n;
-
-        // Step 2: Try to update a course with this nonexistent ID
-        const update1 = await updateCourseHelper({
-          courseId: nonexistentId,
-          uri: "https://example.com/nonexistent-id",
-          sellable: true,
-          withdrawers: [instructor1.address],
-          redeemer: instructor1,
-          validUntil: now + 86400,
-          expectRevertWith: "Invalid courseId",
-          previousWithdrawers: [], // course zaten yok
-        });
-        // Expect: Reverts with "Invalid courseId"
-
-        // Step 3: Create a course with valid ID to increase courseCounter
-        const course1 = await createCourseHelper({
-          uri: "https://example.com/valid-course-for-high-id",
-          withdrawers: [instructor1.address],
-          redeemer: instructor1,
-          validUntil: now + 86400,
-          expectSuccessWith: "CourseCreated",
-        });
-
-        // Step 4: Get the new courseCounter after creation
-        const currentAfterCreate = await NewTreasury.courseCounter();
-        const nonExistentIdAfterCreate = currentAfterCreate + 1n;
-
-        // Step 5: Try to update again with the new nonexistent ID
-        const update2 = await updateCourseHelper({
-          courseId: nonExistentIdAfterCreate,
-          uri: "https://example.com/update-nonexistent-id",
-          sellable: true,
-          withdrawers: [instructor1.address],
-          redeemer: instructor1,
-          validUntil: now + 86400,
-          expectRevertWith: "Invalid courseId",
-          previousWithdrawers: [], // çünkü o ID yok
-        });
-        // Expect: Reverts with "Invalid courseId"
-      });
-      /////###End of Failure Cases###/////
+      /////### End of Course Manegement: UPDATE Course###/////
     });
-    /////###End of Course Management###/////
   });
 
   // 2. Course Purchase
