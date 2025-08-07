@@ -162,7 +162,11 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         CreateCourseVoucher[] calldata vouchers
     ) external {
         uint256 len = vouchers.length;
-        // Optional: max batch size koymak istersen buraya require eklenebilir
+        // TODO BATU open comment during tests, also check setters event and variable
+        //require(
+        //    vouchers.length <= maxBatchCreateSize,
+        //    "Max allowed batch create size exceeded"
+        //);
 
         for (uint256 i = 0; i < len; i++) {
             CreateCourseVoucher calldata voucher = vouchers[i];
