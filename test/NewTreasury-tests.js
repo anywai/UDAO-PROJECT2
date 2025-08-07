@@ -261,7 +261,7 @@ async function _expectCreateBatch(expected) {
 
 async function quickCreateACourse({
   uri = "https://example.com/course/1",
-  withdrawers = [instructor1.address],
+  w = [instructor1.address],
   redeemer = instructor1,
   validUntil = now + 86400,
   caller = instructor1,
@@ -269,7 +269,7 @@ async function quickCreateACourse({
 } = {}) {
   const oneCourse = await createCourseBatchHelper({
     uries: [uri],
-    withdrawersArrays: [withdrawers],
+    withdrawersArrays: [w],
     redeemers: [redeemer.address],
     validUntils: [validUntil],
     createBatchTxCaller: caller,
@@ -1988,6 +1988,7 @@ describe("NewTreasury Contract Tests", function () {
 
   // 1. Course Management
   describe("📘 COURSE MANAGEMENT", function () {
+    // 1.1 Create Course
     describe("🟢 CREATE COURSE", function () {
       describe("✅ Success Cases", function () {
         it("should create a course with valid voucher", async function () {
@@ -2034,7 +2035,6 @@ describe("NewTreasury Contract Tests", function () {
             createBatchTxCaller: instructor1,
             expectSuccessWith: "CourseCreated",
           });
-
           // Expect: all 3 courses created successfully with unique URIs
         });
         /////### End of CREATE Course Success Cases###/////
@@ -2056,15 +2056,12 @@ describe("NewTreasury Contract Tests", function () {
             createBatchTxCaller: instructor1,
             expectRevertWith: "Signature invalid or unauthorized",
           });
-
           // Expect: Reverts with "Signature invalid or unauthorized"
-          //console.log("Expected:\n" + util.inspect(course1.expectedOutcome, { depth: null, colors: true }));
         });
 
         it("should fail to create a course with expired voucher", async function () {
           // Step 1: set up an expired timestamp for the voucher validUntil
           const expiredTimestamp = now - 60; // 1 dakika önce
-
           // Step 2: Try to create a course with an expired voucher
           const course1 = await createCourseBatchHelper({
             uries: ["https://example.com/expired-voucher"],
@@ -2074,7 +2071,6 @@ describe("NewTreasury Contract Tests", function () {
             createBatchTxCaller: instructor1,
             expectRevertWith: "Voucher expired",
           });
-
           // Expect: Reverts with "Voucher expired"
         });
 
@@ -2114,7 +2110,6 @@ describe("NewTreasury Contract Tests", function () {
             createBatchTxCaller: instructor1,
             expectSuccessWith: "CourseCreated",
           });
-
           // Step 2: Try to create another course with the same URI and same voucher
           const course2 = await createCourseBatchHelper({
             uries: ["https://example.com/course/duplicate"],
@@ -2150,7 +2145,6 @@ describe("NewTreasury Contract Tests", function () {
             createBatchTxCaller: instructor1,
             expectSuccessWith: "CourseCreated",
           });
-
           // Step 2: Try to create another course with same URI but different withdrawers
           await createCourseBatchHelper({
             uries: ["https://example.com/same-uri-different-withdrawers"],
@@ -2160,18 +2154,17 @@ describe("NewTreasury Contract Tests", function () {
             createBatchTxCaller: instructor2,
             expectRevertWith: "URI already used",
           });
+          // Expect: Reverts with "URI already used", with failure states
         });
 
         it("should fail to create a course with more than 4 withdrawers", async function () {
           // Step 1: Read maxAllowedWithdrawers from contract and convert to Number
           const max = Number(await NewTreasury.maxAllowedWithdrawers());
-
           // Step 2: Generate (max + 1) random addresses
           const extraWithdrawers = [];
           for (let i = 0; i < max + 1; i++) {
             extraWithdrawers.push(ethers.Wallet.createRandom().address);
           }
-
           // Step 3: Try to create a course with too many withdrawers
           const course1 = await createCourseBatchHelper({
             uries: ["https://example.com/exceed-withdrawers"],
@@ -2192,7 +2185,6 @@ describe("NewTreasury Contract Tests", function () {
             ethers.ZeroAddress, // index 2 → invalid
             ethers.ZeroAddress, // index 3 → invalid
           ];
-
           // Step 2: Try to create course
           const course1 = await createCourseBatchHelper({
             uries: ["https://example.com/zero-address-withdrawer"],
@@ -2247,7 +2239,7 @@ describe("NewTreasury Contract Tests", function () {
       });
       /////### End of Course Manegement: CREATE Course###/////
     });
-
+    // 1.2 Update Course
     describe("🟠 UPDATE COURSE", function () {
       describe("✅ Success Cases", function () {
         it("should update an existing course with valid voucher", async function () {
@@ -2286,7 +2278,6 @@ describe("NewTreasury Contract Tests", function () {
             createBatchTxCaller: instructor1,
             expectSuccessWith: "CourseCreated",
           });
-
           // Step 2: instructor1 updates that course to URI_B
           const updateToB = await updateCourseHelper({
             courseId: createA.courseIds[0],
@@ -2298,7 +2289,6 @@ describe("NewTreasury Contract Tests", function () {
             expectSuccessWith: "CourseUpdated",
             previousWithdrawers: withdrawers,
           });
-
           // Step 3: instructor1 creates a new course again using URI_A
           const createAgainA = await createCourseBatchHelper({
             uries: ["https://example.com/uri-a"],
@@ -2322,7 +2312,6 @@ describe("NewTreasury Contract Tests", function () {
             createBatchTxCaller: instructor1,
             expectSuccessWith: "CourseCreated",
           });
-
           // Step 2: backend updates the course (not in withdrawers)
           const update_course1 = await updateCourseHelper({
             courseId: course1.courseIds[0],
@@ -2349,7 +2338,6 @@ describe("NewTreasury Contract Tests", function () {
             createBatchTxCaller: instructor1,
             expectSuccessWith: "CourseCreated",
           });
-
           // Step 2: update only sellable toggle
           const update1 = await updateCourseHelper({
             courseId: course1.courseIds[0],
@@ -2361,7 +2349,6 @@ describe("NewTreasury Contract Tests", function () {
             expectSuccessWith: "CourseUpdated",
             previousWithdrawers: withdrawers1,
           });
-
           // Step 3: update only withdrawers
           const withdrawers2 = [instructor2.address];
           const update2 = await updateCourseHelper({
@@ -2374,7 +2361,6 @@ describe("NewTreasury Contract Tests", function () {
             expectSuccessWith: "CourseUpdated",
             previousWithdrawers: withdrawers1,
           });
-
           // Step 4: update only URI
           const uri2 = "https://example.com/isolate/only-uri";
           const update3 = await updateCourseHelper({
@@ -2387,7 +2373,6 @@ describe("NewTreasury Contract Tests", function () {
             expectSuccessWith: "CourseUpdated",
             previousWithdrawers: withdrawers2,
           });
-
           // Step 5: update all fields at once
           const update4 = await updateCourseHelper({
             courseId: course1.courseIds[0],
@@ -2414,7 +2399,6 @@ describe("NewTreasury Contract Tests", function () {
             createBatchTxCaller: instructor1,
             expectSuccessWith: "CourseCreated",
           });
-
           // Step 2: sellable same (true), URI and withdrawers change
           const uri2 = "https://example.com/redundant/uri1";
           const withdrawers2 = [instructor2.address];
@@ -2428,7 +2412,6 @@ describe("NewTreasury Contract Tests", function () {
             expectSuccessWith: "CourseUpdated",
             previousWithdrawers: withdrawers1,
           });
-
           // Step 3: withdrawers same as step2, sellable and URI change
           const uri3 = "https://example.com/redundant/uri2-3";
           const update2 = await updateCourseHelper({
@@ -2441,7 +2424,6 @@ describe("NewTreasury Contract Tests", function () {
             expectSuccessWith: "CourseUpdated",
             previousWithdrawers: withdrawers2,
           });
-
           // Step 4: URI same as step3, sellable and withdrawers change
           const withdrawers3 = [instructor3.address];
           const update3 = await updateCourseHelper({
@@ -2454,7 +2436,6 @@ describe("NewTreasury Contract Tests", function () {
             expectSuccessWith: "CourseUpdated",
             previousWithdrawers: withdrawers2,
           });
-
           // Step 5: all params same as step3
           const update4 = await updateCourseHelper({
             courseId: course1.courseIds[0],
@@ -2482,10 +2463,8 @@ describe("NewTreasury Contract Tests", function () {
             createBatchTxCaller: instructor1,
             expectSuccessWith: "CourseCreated",
           });
-
           // Step 2: Override default updateVH and get a new voucher with invalid signer
           updateVH = getVoucherHelpers({ signer: instructor1 }).updateVH;
-
           // Step 3: Try to update course using invalid signer
           const updated = await updateCourseHelper({
             courseId: course1.courseIds[0],
@@ -2511,10 +2490,8 @@ describe("NewTreasury Contract Tests", function () {
             createBatchTxCaller: instructor1,
             expectSuccessWith: "CourseCreated",
           });
-
           // Step 2: set up an expired validUntil timestamp
           const expiredTimestamp = now - 60; // 1 dakika önce
-
           // Step 3: try to update the course using an expired voucher
           const update1 = await updateCourseHelper({
             courseId: course1.courseIds[0],
@@ -2526,7 +2503,6 @@ describe("NewTreasury Contract Tests", function () {
             expectRevertWith: "Voucher expired",
             previousWithdrawers: withdrawers,
           });
-
           // Expect: Reverts with "Voucher expired"
         });
 
@@ -2541,10 +2517,8 @@ describe("NewTreasury Contract Tests", function () {
             createBatchTxCaller: instructor1,
             expectSuccessWith: "CourseCreated",
           });
-
           // Step 2: prepare mismatched redeemer (voucher will carry different redeemer)
           falseRedeemer = ethers.ZeroAddress;
-
           // Step 3: attempt update with mismatched msg.sender and voucher.redeemer
           await updateCourseHelper({
             courseId: course1.courseIds[0],
@@ -2556,7 +2530,6 @@ describe("NewTreasury Contract Tests", function () {
             expectRevertWith: "Only redeemer can use this voucher",
             previousWithdrawers: withdrawers,
           });
-
           // Expect: Reverts with "Only redeemer can use this voucher"
         });
 
@@ -2570,7 +2543,6 @@ describe("NewTreasury Contract Tests", function () {
             createBatchTxCaller: instructor1,
             expectSuccessWith: "CourseCreated",
           });
-
           // Step 2: instructor2 creates second course with URI-B
           const withdrawersB = [instructor2.address];
           const courseB = await createCourseBatchHelper({
@@ -2581,7 +2553,6 @@ describe("NewTreasury Contract Tests", function () {
             createBatchTxCaller: instructor2,
             expectSuccessWith: "CourseCreated",
           });
-
           // Step 3: Try to update their course to use URI-A (which is already taken)
           const updateB = await updateCourseHelper({
             courseId: courseB.courseIds[0],
@@ -2607,17 +2578,14 @@ describe("NewTreasury Contract Tests", function () {
             createBatchTxCaller: instructor1,
             expectSuccessWith: "CourseCreated",
           });
-
           // Step 2: Read maxAllowedWithdrawers from contract and convert to Number
           const max = Number(await NewTreasury.maxAllowedWithdrawers());
-
           // Step 3: Generate (max + 1) random addresses
           const extraWithdrawers = [];
           for (let i = 0; i < max + 1; i++) {
             extraWithdrawers.push(ethers.Wallet.createRandom().address);
           }
           extraWithdrawers.push(instructor1.address); // Ensure redeemer is included
-
           // Step 4: Try to update the course with too many withdrawers
           const update = await updateCourseHelper({
             courseId: course1.courseIds[0],
@@ -2643,10 +2611,8 @@ describe("NewTreasury Contract Tests", function () {
             createBatchTxCaller: instructor1,
             expectSuccessWith: "CourseCreated",
           });
-
           // Step 2: Set withdrawers with zero addresses in index 0
           const invalidWithdrawers = [instructor1.address, ethers.ZeroAddress];
-
           // Step 3: Try to update course
           const update = await updateCourseHelper({
             courseId: course1.courseIds[0],
@@ -2672,7 +2638,6 @@ describe("NewTreasury Contract Tests", function () {
             createBatchTxCaller: instructor1,
             expectSuccessWith: "CourseCreated",
           });
-
           // Step 2: Try to update course with empty withdrawers
           const update = await updateCourseHelper({
             courseId: course1.courseIds[0],
@@ -2698,7 +2663,6 @@ describe("NewTreasury Contract Tests", function () {
             createBatchTxCaller: instructor1,
             expectSuccessWith: "CourseCreated",
           });
-
           // Step 2: instructor2 tries to update, but is not in withdrawers
           const update1_course1 = await updateCourseHelper({
             courseId: course1.courseIds[0],
@@ -2710,7 +2674,6 @@ describe("NewTreasury Contract Tests", function () {
             expectRevertWith: "Redeemer must be backend role if not any withdrawer",
             previousWithdrawers: withdrawers,
           });
-
           // Expect: revert due to unauthorized redeemer
         });
 
@@ -2725,7 +2688,6 @@ describe("NewTreasury Contract Tests", function () {
             createBatchTxCaller: instructor1,
             expectSuccessWith: "CourseCreated",
           });
-
           // Step 2: Try to update the course with empty URI
           const update1_course1 = await updateCourseHelper({
             courseId: course1.courseIds[0],
@@ -2759,7 +2721,6 @@ describe("NewTreasury Contract Tests", function () {
           // Step 1: Get current courseCounter, then +1 to get a nonexistent ID
           const current = await NewTreasury.courseCounter();
           const nonexistentId = current + 1n;
-
           // Step 2: Try to update a course with this nonexistent ID
           const update1 = await updateCourseHelper({
             courseId: nonexistentId,
@@ -2772,7 +2733,6 @@ describe("NewTreasury Contract Tests", function () {
             previousWithdrawers: [], // course zaten yok
           });
           // Expect: Reverts with "Invalid courseId"
-
           // Step 3: Create a course with valid ID to increase courseCounter
           const course1 = await createCourseBatchHelper({
             uries: ["https://example.com/course/1"],
@@ -2782,11 +2742,9 @@ describe("NewTreasury Contract Tests", function () {
             createBatchTxCaller: instructor1,
             expectSuccessWith: "CourseCreated",
           });
-
           // Step 4: Get the new courseCounter after creation
           const currentAfterCreate = await NewTreasury.courseCounter();
           const nonExistentIdAfterCreate = currentAfterCreate + 1n;
-
           // Step 5: Try to update again with the new nonexistent ID
           const update2 = await updateCourseHelper({
             courseId: nonExistentIdAfterCreate,
@@ -2810,19 +2768,11 @@ describe("NewTreasury Contract Tests", function () {
   describe("💰 COURSE PURCHASE", function () {
     describe("✅ Success Cases", function () {
       it("should allow a user to buy a course using an ERC20 token and a valid voucher", async function () {
-        // Step 1: instructor1 creates a course
-        const course1 = await createCourseBatchHelper({
-          uries: ["https://example.com/course/1"],
-          withdrawersArrays: [[instructor1.address]],
-          redeemers: [instructor1.address],
-          validUntils: [now + 86400],
-          createBatchTxCaller: instructor1,
-          expectSuccessWith: "CourseCreated",
-        });
-
+        // Step 1: instructor1 creates a generic course with [instructor1] array
+        const courseId1 = await quickCreateACourse();
         // Step 2: buyer1 buys course for person1 via BATCH (ERC20, msg.value = 0)
         await buyCourseBatchHelper({
-          courseIds: [course1.courseIds[0], course1.courseIds[0]],
+          courseIds: [courseId1, courseId1],
           tokenAddresses: [MKT1.target, MKT2.target],
           coursePrices: [ethers.parseEther("10"), ethers.parseEther("10")],
           courseReceivers: [person1.address, person2.address],
@@ -2832,23 +2782,15 @@ describe("NewTreasury Contract Tests", function () {
           buyBatchTxCaller: buyer1, // tx gönderen signer
           expectSuccessWith: "ContentPurchased",
         });
-
         // Step 3: (Ek doğrulama istersen) son durumları kontrattan okuyup assert edebilirsin.
       });
 
       it("should allow a user to buy a course using native token and a valid voucher", async function () {
-        // Step 1: instructor1 creates a course
-        const course1 = await createCourseBatchHelper({
-          uries: ["https://example.com/course/1"],
-          withdrawersArrays: [[instructor1.address]],
-          redeemers: [instructor1.address],
-          validUntils: [now + 86400],
-          createBatchTxCaller: instructor1,
-          expectSuccessWith: "CourseCreated",
-        });
+        // Step 1: instructor1 creates a generic course with [instructor1] array
+        const courseId1 = await quickCreateACourse();
         // Step 2: buyer1 buys course for person1 with native token
         await buyCourseBatchHelper({
-          courseIds: [course1.courseIds[0]],
+          courseIds: [courseId1],
           tokenAddresses: [ethers.ZeroAddress], // native token
           coursePrices: [ethers.parseEther("10")],
           courseReceivers: [person1.address],
@@ -2871,7 +2813,6 @@ describe("NewTreasury Contract Tests", function () {
           createBatchTxCaller: backend,
           expectSuccessWith: "CourseCreated",
         });
-
         // Step 2: buyers buys all 3 courses for person1
         await buyCourseBatchHelper({
           courseIds: [courses.courseIds[0], courses.courseIds[1], courses.courseIds[2]],
@@ -2892,19 +2833,11 @@ describe("NewTreasury Contract Tests", function () {
       });
 
       it("should allow a user to buy a course for themselves", async function () {
-        // Step 1: instructor1 creates a course
-        const course1 = await createCourseBatchHelper({
-          uries: ["https://example.com/course/1"],
-          withdrawersArrays: [[instructor1.address]],
-          redeemers: [instructor1.address],
-          validUntils: [now + 86400],
-          createBatchTxCaller: instructor1,
-          expectSuccessWith: "CourseCreated",
-        });
-
+        // Step 1: instructor1 creates a generic course with [instructor1] array
+        const courseId1 = await quickCreateACourse();
         // Step 2: buyer1 buys course for themselves
         await buyCourseBatchHelper({
-          courseIds: [course1.courseIds[0]],
+          courseIds: [courseId1],
           tokenAddresses: [MKT1.target],
           coursePrices: [ethers.parseEther("10")],
           courseReceivers: [buyer1.address], // self-buy
@@ -2918,19 +2851,11 @@ describe("NewTreasury Contract Tests", function () {
       });
 
       it("should allow a course to be sold to multiple receivers using different tokens and prices", async function () {
-        // Step 1: instructor1 creates a course
-        const course1 = await createCourseBatchHelper({
-          uries: ["https://example.com/course/1"],
-          withdrawersArrays: [[instructor1.address]],
-          redeemers: [instructor1.address],
-          validUntils: [now + 86400],
-          createBatchTxCaller: instructor1,
-          expectSuccessWith: "CourseCreated",
-        });
-
+        // Step 1: instructor1 creates a generic course with [instructor1] array
+        const courseId1 = await quickCreateACourse();
         // Step 2: person1 buys for 10 mtk1
         await buyCourseBatchHelper({
-          courseIds: [course1.courseIds[0]],
+          courseIds: [courseId1],
           tokenAddresses: [MKT1.target],
           coursePrices: [ethers.parseEther("10")],
           courseReceivers: [person1.address],
@@ -2940,10 +2865,9 @@ describe("NewTreasury Contract Tests", function () {
           buyBatchTxCaller: backend,
           expectSuccessWith: "ContentPurchased",
         });
-
         // Step 3: person2 buys for 5 mtk1
         await buyCourseBatchHelper({
-          courseIds: [course1.courseIds[0]],
+          courseIds: [courseId1],
           tokenAddresses: [MKT1.target],
           coursePrices: [ethers.parseEther("5")],
           courseReceivers: [person2.address],
@@ -2953,10 +2877,9 @@ describe("NewTreasury Contract Tests", function () {
           buyBatchTxCaller: backend,
           expectSuccessWith: "ContentPurchased",
         });
-
         // Step 4: person3 buys for 15 mtk2
         await buyCourseBatchHelper({
-          courseIds: [course1.courseIds[0]],
+          courseIds: [courseId1],
           tokenAddresses: [MKT2.target],
           coursePrices: [ethers.parseEther("15")],
           courseReceivers: [person3.address],
@@ -2966,10 +2889,9 @@ describe("NewTreasury Contract Tests", function () {
           buyBatchTxCaller: buyer1,
           expectSuccessWith: "ContentPurchased",
         });
-
         // Step 5: person4 buys for 20 eth (native),
         await buyCourseBatchHelper({
-          courseIds: [course1.courseIds[0]],
+          courseIds: [courseId1],
           tokenAddresses: [ethers.ZeroAddress], // native token
           coursePrices: [ethers.parseEther("20")],
           courseReceivers: [person4.address],
@@ -2979,10 +2901,9 @@ describe("NewTreasury Contract Tests", function () {
           buyBatchTxCaller: buyer1,
           expectSuccessWith: "ContentPurchased",
         });
-
         // Step 6: person5 buys for 25 eth (native)
         await buyCourseBatchHelper({
-          courseIds: [course1.courseIds[0]],
+          courseIds: [courseId1],
           tokenAddresses: [ethers.ZeroAddress], // native token
           coursePrices: [ethers.parseEther("25")],
           courseReceivers: [person5.address],
@@ -2999,22 +2920,13 @@ describe("NewTreasury Contract Tests", function () {
 
     describe("❌ Failure Cases", function () {
       it("should fail to buy a course with invalid signer", async function () {
-        // Step 1: Create a course
-        const course1 = await createCourseBatchHelper({
-          uries: ["https://example.com/course/1"],
-          withdrawersArrays: [[instructor1.address]],
-          redeemers: [instructor1.address],
-          validUntils: [now + 86400],
-          createBatchTxCaller: instructor1,
-          expectSuccessWith: "CourseCreated",
-        });
-
+        // Step 1: instructor1 creates a generic course with [instructor1] array
+        const courseId1 = await quickCreateACourse();
         // Step 2: Override buyVH with invalid signer
         buyVH = getVoucherHelpers({ signer: instructor3 }).buyVH;
-
         // Step 3: Try to buy with invalid voucher signer
         await buyCourseBatchHelper({
-          courseIds: [course1.courseIds[0]],
+          courseIds: [courseId1],
           tokenAddresses: [MKT1.target],
           coursePrices: [ethers.parseEther("10")],
           courseReceivers: [person1.address],
@@ -3028,22 +2940,13 @@ describe("NewTreasury Contract Tests", function () {
       });
 
       it("should fail to buy a course with expired voucher", async function () {
-        // Step 1: Create a course
-        const course1 = await createCourseBatchHelper({
-          uries: ["https://example.com/course/1"],
-          withdrawersArrays: [[instructor1.address]],
-          redeemers: [instructor1.address],
-          validUntils: [now + 86400],
-          createBatchTxCaller: instructor1,
-          expectSuccessWith: "CourseCreated",
-        });
-
+        // Step 1: instructor1 creates a generic course with [instructor1] array
+        const courseId1 = await quickCreateACourse();
         // Step 2: Use expired timestamp
         const expired = now - 60;
-
         // Step 3: Try to buy with expired voucher
         await buyCourseBatchHelper({
-          courseIds: [course1.courseIds[0]],
+          courseIds: [courseId1],
           tokenAddresses: [MKT1.target],
           coursePrices: [ethers.parseEther("10")],
           courseReceivers: [person1.address],
@@ -3057,22 +2960,13 @@ describe("NewTreasury Contract Tests", function () {
       });
 
       it("should fail to buy a course if msg.sender !== redeemer (Only redeemer can use this voucher)", async function () {
-        // Step 1: Create a course
-        const course1 = await createCourseBatchHelper({
-          uries: ["https://example.com/course/1"],
-          withdrawersArrays: [[instructor1.address]],
-          redeemers: [instructor1.address],
-          validUntils: [now + 86400],
-          createBatchTxCaller: instructor1,
-          expectSuccessWith: "CourseCreated",
-        });
-
+        // Step 1: instructor1 creates a generic course with [instructor1] array
+        const courseId1 = await quickCreateACourse();
         // Step 2: Use mismatched redeemer
         falseRedeemer = ethers.ZeroAddress;
-
         // Step 3: Attempt to buy with voucher.redeemer !== msg.sender
         await buyCourseBatchHelper({
-          courseIds: [course1.courseIds[0]],
+          courseIds: [courseId1],
           tokenAddresses: [MKT1.target],
           coursePrices: [ethers.parseEther("10")],
           courseReceivers: [person1.address],
@@ -3086,19 +2980,11 @@ describe("NewTreasury Contract Tests", function () {
       });
 
       it("should fail to buy if duplicate courseId receiver pair exists in batch", async function () {
-        // Step 1: instructor1 creates a course
-        const course1 = await createCourseBatchHelper({
-          uries: ["https://example.com/course/1"],
-          withdrawersArrays: [[instructor1.address]],
-          redeemers: [instructor1.address],
-          validUntils: [now + 86400],
-          createBatchTxCaller: instructor1,
-          expectSuccessWith: "CourseCreated",
-        });
-
+        // Step 1: instructor1 creates a generic course with [instructor1] array
+        const courseId1 = await quickCreateACourse();
         // Step 2: buyer1 try to buy same course to same receiver twice
         await buyCourseBatchHelper({
-          courseIds: [course1.courseIds[0], course1.courseIds[0]],
+          courseIds: [courseId1, courseId1],
           tokenAddresses: [MKT1.target, MKT2.target],
           coursePrices: [ethers.parseEther("10"), ethers.parseEther("10")],
           courseReceivers: [person1.address, person1.address],
@@ -3108,24 +2994,15 @@ describe("NewTreasury Contract Tests", function () {
           buyBatchTxCaller: buyer1, // tx gönderen signer
           expectRevertWith: "Content receiver already owns this course",
         });
-
         // Step 3: (Ek doğrulama istersen) son durumları kontrattan okuyup assert edebilirsin.
       });
 
       it("should fail if the same course is purchased twice for the same receiver", async function () {
-        // Step 1: instructor1 creates a course
-        const course1 = await createCourseBatchHelper({
-          uries: ["https://example.com/course/1"],
-          withdrawersArrays: [[instructor1.address]],
-          redeemers: [instructor1.address],
-          validUntils: [now + 86400],
-          createBatchTxCaller: instructor1,
-          expectSuccessWith: "CourseCreated",
-        });
-
+        // Step 1: instructor1 creates a generic course with [instructor1] array
+        const courseId1 = await quickCreateACourse();
         // Step 2: buyer1 buys the course for person1
         await buyCourseBatchHelper({
-          courseIds: [course1.courseIds[0]],
+          courseIds: [courseId1],
           tokenAddresses: [MKT1.target],
           coursePrices: [ethers.parseEther("10")],
           courseReceivers: [person1.address],
@@ -3135,10 +3012,9 @@ describe("NewTreasury Contract Tests", function () {
           buyBatchTxCaller: buyer1, // tx gönderen signer
           expectSuccessWith: "ContentPurchased",
         });
-
         // Step 3: Try to buy the same course again for the same person → should revert
         await buyCourseBatchHelper({
-          courseIds: [course1.courseIds[0]],
+          courseIds: [courseId1],
           tokenAddresses: [MKT1.target],
           coursePrices: [ethers.parseEther("10")],
           courseReceivers: [person1.address],
@@ -3165,17 +3041,8 @@ describe("NewTreasury Contract Tests", function () {
           expectRevertWith: "Invalid courseId",
         });
         // Expect: Reverts with "Invalid courseId"
-
-        // Step 2: Create a valid course (unrelated, just to init counter)
-        const course1 = await createCourseBatchHelper({
-          uries: ["https://example.com/course/1"],
-          withdrawersArrays: [[instructor1.address]],
-          redeemers: [instructor1.address],
-          validUntils: [now + 86400],
-          createBatchTxCaller: instructor1,
-          expectSuccessWith: "CourseCreated",
-        });
-
+        // Step 2: instructor1 creates a generic course with [instructor1] array to increase courseCounter
+        const courseId1 = await quickCreateACourse();
         // Step 3: Try to buy with courseId = 0
         await buyCourseBatchHelper({
           courseIds: [0],
@@ -3207,15 +3074,8 @@ describe("NewTreasury Contract Tests", function () {
           expectRevertWith: "Invalid courseId",
         });
         // Expect: Reverts with "Invalid courseId"
-        // Step 3: Create a valid course (unrelated, just to init counter)
-        const course1 = await createCourseBatchHelper({
-          uries: ["https://example.com/course/1"],
-          withdrawersArrays: [[instructor1.address]],
-          redeemers: [instructor1.address],
-          validUntils: [now + 86400],
-          createBatchTxCaller: instructor1,
-          expectSuccessWith: "CourseCreated",
-        });
+        // Step 3: instructor1 creates a generic course with [instructor1] array to increase courseCounter
+        const courseId1 = await quickCreateACourse();
         // Step 4: Get again courseCounter from contract and increment by 1
         const invalidCourseId2 = (await NewTreasury.courseCounter()) + 1n;
         // Step 5: Try to buy with non-existent courseId
@@ -3244,7 +3104,6 @@ describe("NewTreasury Contract Tests", function () {
           createBatchTxCaller: instructor1,
           expectSuccessWith: "CourseCreated",
         });
-
         // Step 2: backend disables the course for sale
         const update1_course1 = await updateCourseHelper({
           courseId: course1.courseIds[0],
@@ -3256,7 +3115,6 @@ describe("NewTreasury Contract Tests", function () {
           expectSuccessWith: "CourseUpdated",
           previousWithdrawers: withdrawers,
         });
-
         // Step 3: buyer1 tries to buy the course
         await buyCourseBatchHelper({
           courseIds: [course1.courseIds[0]],
@@ -3273,19 +3131,11 @@ describe("NewTreasury Contract Tests", function () {
       });
 
       it("should fail to buy a course with zero price", async function () {
-        // Step 1: instructor1 creates a course
-        const course1 = await createCourseBatchHelper({
-          uries: ["https://example.com/course/1"],
-          withdrawersArrays: [[instructor1.address]],
-          redeemers: [instructor1.address],
-          validUntils: [now + 86400],
-          createBatchTxCaller: instructor1,
-          expectSuccessWith: "CourseCreated",
-        });
-
+        // Step 1: instructor1 creates a generic course with [instructor1] array
+        const courseId1 = await quickCreateACourse();
         // Step 2: buyer1 tries to buy with zero price
         await buyCourseBatchHelper({
-          courseIds: [course1.courseIds[0]],
+          courseIds: [courseId1],
           tokenAddresses: [MKT1.target],
           coursePrices: [0n], // zero price
           courseReceivers: [person1.address],
@@ -3299,19 +3149,11 @@ describe("NewTreasury Contract Tests", function () {
       });
 
       it("should fail to buy a course with zero price using native token", async function () {
-        // Step 1: instructor1 creates a course
-        const course1 = await createCourseBatchHelper({
-          uries: ["https://example.com/course/1"],
-          withdrawersArrays: [[instructor1.address]],
-          redeemers: [instructor1.address],
-          validUntils: [now + 86400],
-          createBatchTxCaller: instructor1,
-          expectSuccessWith: "CourseCreated",
-        });
-
+        // Step 1: instructor1 creates a generic course with [instructor1] array
+        const courseId1 = await quickCreateACourse();
         // Step 2: buyer1 tries to buy with zero price and native token
         await buyCourseBatchHelper({
-          courseIds: [course1.courseIds[0]],
+          courseIds: [courseId1],
           tokenAddresses: [ethers.ZeroAddress], // native token
           coursePrices: [0n], // zero price
           courseReceivers: [person1.address],
@@ -3325,19 +3167,11 @@ describe("NewTreasury Contract Tests", function () {
       });
 
       it("should fail to buy a course with incorrect native token amount (less or more than price)", async function () {
-        // Step 1: instructor1 creates a course
-        const course1 = await createCourseBatchHelper({
-          uries: ["https://example.com/course/1"],
-          withdrawersArrays: [[instructor1.address]],
-          redeemers: [instructor1.address],
-          validUntils: [now + 86400],
-          createBatchTxCaller: instructor1,
-          expectSuccessWith: "CourseCreated",
-        });
-
+        // Step 1: instructor1 creates a generic course with [instructor1] array
+        const courseId1 = await quickCreateACourse();
         // Step 2: buyer1 tries to pay less than coursePrice in native token
         await buyCourseBatchHelper({
-          courseIds: [course1.courseIds[0]],
+          courseIds: [courseId1],
           tokenAddresses: [ethers.ZeroAddress], // native token
           coursePrices: [ethers.parseEther("10")],
           courseReceivers: [person1.address],
@@ -3348,10 +3182,9 @@ describe("NewTreasury Contract Tests", function () {
           expectRevertWith: "Incorrect total native value sent",
         });
         // Expect: Reverts with "Incorrect total native value sent"
-
         // Step 3: buyer1 tries to pay more than coursePrice in native token
         await buyCourseBatchHelper({
-          courseIds: [course1.courseIds[0]],
+          courseIds: [courseId1],
           tokenAddresses: [ethers.ZeroAddress], // native token
           coursePrices: [ethers.parseEther("10")],
           courseReceivers: [person1.address],
@@ -3365,19 +3198,11 @@ describe("NewTreasury Contract Tests", function () {
       });
 
       it("should fail to buy a course with ERC20 token if any native token value is sent", async function () {
-        // Step 1: instructor1 creates a course
-        const course1 = await createCourseBatchHelper({
-          uries: ["https://example.com/course/1"],
-          withdrawersArrays: [[instructor1.address]],
-          redeemers: [instructor1.address],
-          validUntils: [now + 86400],
-          createBatchTxCaller: instructor1,
-          expectSuccessWith: "CourseCreated",
-        });
-
+        // Step 1: instructor1 creates a generic course with [instructor1] array
+        const courseId1 = await quickCreateACourse();
         // Step 2: buyer1 tries to buy the course with ERC20 but sends native token value
         await buyCourseBatchHelper({
-          courseIds: [course1.courseIds[0]],
+          courseIds: [courseId1],
           tokenAddresses: [MKT1.target], // ERC20 token
           coursePrices: [ethers.parseEther("10")],
           courseReceivers: [person1.address],
@@ -3393,23 +3218,13 @@ describe("NewTreasury Contract Tests", function () {
       it("should fail to buy a course when ERC20 token transfer to treasury fails", async function () {
         // Step 0: Deploy failTransfer contract and distribute tokens
         const { failNativeWallet, failMKT } = await deployFailTransferContracts();
-
-        // Step 1: Create a course
-        const course1 = await createCourseBatchHelper({
-          uries: ["https://example.com/course/1"],
-          withdrawersArrays: [[instructor1.address]],
-          redeemers: [instructor1.address],
-          validUntils: [now + 86400],
-          createBatchTxCaller: instructor1,
-          expectSuccessWith: "CourseCreated",
-        });
-
+        // Step 1: instructor1 creates a generic course with [instructor1] array
+        const courseId1 = await quickCreateACourse();
         // Step 4: block failMTK transfer of treasury address
         await failMKT.connect(backend).blockAddress(NewTreasury.target, true);
-
         // Step 3: Try to buy with buyer1 using failMKT
         await buyCourseBatchHelper({
-          courseIds: [course1.courseIds[0]],
+          courseIds: [courseId1],
           tokenAddresses: [failMKT.target], // failMKT token
           coursePrices: [ethers.parseEther("10")],
           courseReceivers: [person1.address],
@@ -3430,19 +3245,11 @@ describe("NewTreasury Contract Tests", function () {
   describe("💸 REFUNDS: refundCourse", function () {
     describe("✅ Success Cases", function () {
       it("should allow a course purchased with native token to be refunded", async function () {
-        // Step 1: instructor1 creates a course
-        const course1 = await createCourseBatchHelper({
-          uries: ["https://example.com/course/1"],
-          withdrawersArrays: [[instructor1.address]],
-          redeemers: [instructor1.address],
-          validUntils: [now + 86400],
-          createBatchTxCaller: instructor1,
-          expectSuccessWith: "CourseCreated",
-        });
-
+        // Step 1: instructor1 creates a generic course with [instructor1] array
+        const courseId1 = await quickCreateACourse();
         // Step 2: buyer1 buys course for person1 with native token
         const buy_course1 = await buyCourseBatchHelper({
-          courseIds: [course1.courseIds[0]],
+          courseIds: [courseId1],
           tokenAddresses: [ethers.ZeroAddress],
           coursePrices: [ethers.parseEther("7")],
           courseReceivers: [person1.address],
@@ -3452,7 +3259,6 @@ describe("NewTreasury Contract Tests", function () {
           buyBatchTxCaller: buyer1,
           expectSuccessWith: "ContentPurchased",
         });
-
         // Step 3: buyer1 refunds the course
         const refund_course1 = await refundCourseHelper({
           paymentId: buy_course1[0],
@@ -3464,19 +3270,11 @@ describe("NewTreasury Contract Tests", function () {
       });
 
       it("should allow a course purchased with ERC20 token to be refunded", async function () {
-        // Step 1: instructor1 creates a course
-        const course1 = await createCourseBatchHelper({
-          uries: ["https://example.com/course/1"],
-          withdrawersArrays: [[instructor1.address]],
-          redeemers: [instructor1.address],
-          validUntils: [now + 86400],
-          createBatchTxCaller: instructor1,
-          expectSuccessWith: "CourseCreated",
-        });
-
+        // Step 1: instructor1 creates a generic course with [instructor1] array
+        const courseId1 = await quickCreateACourse();
         // Step 2: buyer1 buys course for person1 with ERC20 token
         const buy_course1 = await buyCourseBatchHelper({
-          courseIds: [course1.courseIds[0]],
+          courseIds: [courseId1],
           tokenAddresses: [MKT1.target],
           coursePrices: [ethers.parseEther("5")],
           courseReceivers: [person1.address],
@@ -3510,7 +3308,6 @@ describe("NewTreasury Contract Tests", function () {
           createBatchTxCaller: instructor1,
           expectSuccessWith: "CourseCreated",
         });
-
         // Step 4: buyer1 buys all three courses for person1 with ERC20 token
         const buy_courses = await buyCourseBatchHelper({
           courseIds: [courses.courseIds[0], courses.courseIds[1], courses.courseIds[2]],
@@ -3527,7 +3324,6 @@ describe("NewTreasury Contract Tests", function () {
           buyBatchTxCaller: buyer1, // tx gönderen signer
           expectSuccessWith: "ContentPurchased",
         });
-
         // Step 5: buyer1 refunds all three courses
         const refund1 = await refundCourseHelper({
           paymentId: buy_courses[0],
@@ -3535,38 +3331,27 @@ describe("NewTreasury Contract Tests", function () {
           validUntil: now + 86400,
           expectSuccessWith: "CourseRefunded",
         });
-
         const refund2 = await refundCourseHelper({
           paymentId: buy_courses[1],
           redeemer: buyer2,
           validUntil: now + 86400,
           expectSuccessWith: "CourseRefunded",
         });
-
         const refund3 = await refundCourseHelper({
           paymentId: buy_courses[2],
           redeemer: buyer1,
           validUntil: now + 86400,
           expectSuccessWith: "CourseRefunded",
         });
-
         // Expect: Each refund emits "CourseRefunded" event with expected success states
       });
 
       it("should allow a course to be refunded by a different redeemer than the original buyer", async function () {
-        // Step 1: instructor1 creates a course
-        const course1 = await createCourseBatchHelper({
-          uries: ["https://example.com/course/1"],
-          withdrawersArrays: [[instructor1.address]],
-          redeemers: [instructor1.address],
-          validUntils: [now + 86400],
-          createBatchTxCaller: instructor1,
-          expectSuccessWith: "CourseCreated",
-        });
-
+        // Step 1: instructor1 creates a generic course with [instructor1] array
+        const courseId1 = await quickCreateACourse();
         // Step 2: buyer1 buys course for person1 using ERC20
         const buy_course = await buyCourseBatchHelper({
-          courseIds: [course1.courseIds[0]],
+          courseIds: [courseId1],
           tokenAddresses: [MKT1.target],
           coursePrices: [ethers.parseEther("12")],
           courseReceivers: [person1.address],
@@ -3576,7 +3361,6 @@ describe("NewTreasury Contract Tests", function () {
           buyBatchTxCaller: buyer1, // tx gönderen signer
           expectSuccessWith: "ContentPurchased",
         });
-
         // Step 3: buyer2 (a different redeemer) initiates refund
         const refund_course = await refundCourseHelper({
           paymentId: buy_course[0],
@@ -3584,24 +3368,15 @@ describe("NewTreasury Contract Tests", function () {
           validUntil: now + 86400,
           expectSuccessWith: "CourseRefunded",
         });
-
         // Expect: "CourseRefunded" event with expected success states
       });
 
       it("should allow a course to be bought, refunded, and bought again by the same receiver", async function () {
-        // Step 1: instructor1 creates a course
-        const course1 = await createCourseBatchHelper({
-          uries: ["https://example.com/course/1"],
-          withdrawersArrays: [[instructor1.address]],
-          redeemers: [instructor1.address],
-          validUntils: [now + 86400],
-          createBatchTxCaller: instructor1,
-          expectSuccessWith: "CourseCreated",
-        });
-
+        // Step 1: instructor1 creates a generic course with [instructor1] array
+        const courseId1 = await quickCreateACourse();
         // Step 2: buyer1 buys course for person1
         const buy1 = await buyCourseBatchHelper({
-          courseIds: [course1.courseIds[0]],
+          courseIds: [courseId1],
           tokenAddresses: [MKT1.target],
           coursePrices: [ethers.parseEther("9")],
           courseReceivers: [person1.address],
@@ -3618,10 +3393,9 @@ describe("NewTreasury Contract Tests", function () {
           validUntil: now + 86400,
           expectSuccessWith: "CourseRefunded",
         });
-
         // Step 4: buy again
         const buy2 = await buyCourseBatchHelper({
-          courseIds: [course1.courseIds[0]],
+          courseIds: [courseId1],
           tokenAddresses: [MKT1.target],
           coursePrices: [ethers.parseEther("9")],
           courseReceivers: [person1.address],
@@ -3635,19 +3409,11 @@ describe("NewTreasury Contract Tests", function () {
       });
 
       it("should allow refund if original refund window is still valid despite later refundWindow shortened", async function () {
-        // Step 1: instructor1 creates a course
-        const course1 = await createCourseBatchHelper({
-          uries: ["https://example.com/course/1"],
-          withdrawersArrays: [[instructor1.address]],
-          redeemers: [instructor1.address],
-          validUntils: [now + 86400],
-          createBatchTxCaller: instructor1,
-          expectSuccessWith: "CourseCreated",
-        });
-
+        // Step 1: instructor1 creates a generic course with [instructor1] array
+        const courseId1 = await quickCreateACourse();
         // Step 2: buyer1 buys the course
         const buy_course = await buyCourseBatchHelper({
-          courseIds: [course1.courseIds[0]],
+          courseIds: [courseId1],
           tokenAddresses: [MKT1.target],
           coursePrices: [ethers.parseEther("10")],
           courseReceivers: [person1.address],
@@ -3657,13 +3423,10 @@ describe("NewTreasury Contract Tests", function () {
           buyBatchTxCaller: buyer1,
           expectSuccessWith: "ContentPurchased",
         });
-
         // Step 3: set refundWindow to 1 day
         await NewTreasury.connect(backend).setRefundWindow(1 * 86400);
-
         // Step 4: fast forward 3 days
         await fastForwardTime({ days: 3 });
-
         // Step 5: refund should succeed since original refund window was longer
         const refund = await refundCourseHelper({
           paymentId: buy_course[0],
@@ -3673,25 +3436,16 @@ describe("NewTreasury Contract Tests", function () {
         });
         // Expect: Refund succeeds even though current refundWindow is 1 day
       });
-
       /////###End of Success Cases###/////
     });
 
     describe("❌ Failure Cases", function () {
       it("should fail to refund with invalid signer", async function () {
-        // Step 1: instructor1 creates a course
-        const course1 = await createCourseBatchHelper({
-          uries: ["https://example.com/course/1"],
-          withdrawersArrays: [[instructor1.address]],
-          redeemers: [instructor1.address],
-          validUntils: [now + 86400],
-          createBatchTxCaller: instructor1,
-          expectSuccessWith: "CourseCreated",
-        });
-
+        // Step 1: instructor1 creates a generic course with [instructor1] array
+        const courseId1 = await quickCreateACourse();
         // Step 2: buyer1 buys course for person1
         const buy_course = await buyCourseBatchHelper({
-          courseIds: [course1.courseIds[0]],
+          courseIds: [courseId1],
           tokenAddresses: [MKT1.target],
           coursePrices: [ethers.parseEther("10")],
           courseReceivers: [person1.address],
@@ -3701,10 +3455,8 @@ describe("NewTreasury Contract Tests", function () {
           buyBatchTxCaller: buyer1, // tx gönderen signer
           expectSuccessWith: "ContentPurchased",
         });
-
         // Step 3: Use wrong signer for the refund voucher
         refundVH = getVoucherHelpers({ signer: instructor2 }).refundVH;
-
         // Step 4: Attempt refund with invalid signer
         const refund_course = await refundCourseHelper({
           paymentId: buy_course[0],
@@ -3712,22 +3464,15 @@ describe("NewTreasury Contract Tests", function () {
           validUntil: now + 86400,
           expectRevertWith: "Signature invalid or unauthorized",
         });
+        // Expect: Reverts with "Signature invalid or unauthorized"
       });
 
       it("should fail to refund with expired voucher", async function () {
-        // Step 1: instructor1 creates a course
-        const course1 = await createCourseBatchHelper({
-          uries: ["https://example.com/course/1"],
-          withdrawersArrays: [[instructor1.address]],
-          redeemers: [instructor1.address],
-          validUntils: [now + 86400],
-          createBatchTxCaller: instructor1,
-          expectSuccessWith: "CourseCreated",
-        });
-
+        // Step 1: instructor1 creates a generic course with [instructor1] array
+        const courseId1 = await quickCreateACourse();
         // Step 2: buyer1 buys course for person1
         const buy_course = await buyCourseBatchHelper({
-          courseIds: [course1.courseIds[0]],
+          courseIds: [courseId1],
           tokenAddresses: [MKT1.target],
           coursePrices: [ethers.parseEther("10")],
           courseReceivers: [person1.address],
@@ -3737,7 +3482,6 @@ describe("NewTreasury Contract Tests", function () {
           buyBatchTxCaller: buyer1, // tx gönderen signer
           expectSuccessWith: "ContentPurchased",
         });
-
         // Step 3: Attempt refund with expired voucher
         const refund_course = await refundCourseHelper({
           paymentId: buy_course[0],
@@ -3745,22 +3489,15 @@ describe("NewTreasury Contract Tests", function () {
           validUntil: now - 60, // expired
           expectRevertWith: "Voucher expired",
         });
+        // Expect: Reverts with "Voucher expired"
       });
 
       it("should fail to refund if msg.sender !== redeemer (Only redeemer can use this voucher)", async function () {
-        // Step 1: instructor1 creates a course
-        const course1 = await createCourseBatchHelper({
-          uries: ["https://example.com/course/1"],
-          withdrawersArrays: [[instructor1.address]],
-          redeemers: [instructor1.address],
-          validUntils: [now + 86400],
-          createBatchTxCaller: instructor1,
-          expectSuccessWith: "CourseCreated",
-        });
-
+        // Step 1: instructor1 creates a generic course with [instructor1] array
+        const courseId1 = await quickCreateACourse();
         // Step 2: buyer1 buys course for person1
         const buy_course = await buyCourseBatchHelper({
-          courseIds: [course1.courseIds[0]],
+          courseIds: [courseId1],
           tokenAddresses: [MKT1.target],
           coursePrices: [ethers.parseEther("10")],
           courseReceivers: [person1.address],
@@ -3770,34 +3507,24 @@ describe("NewTreasury Contract Tests", function () {
           buyBatchTxCaller: buyer1, // tx gönderen signer
           expectSuccessWith: "ContentPurchased",
         });
-
         // Step 3: attempt refund where voucher.redeemer !== msg.sender
         falseRedeemer = ethers.ZeroAddress;
-
+        // Step 4: Attempt to refund with mismatched redeemer
         await refundCourseHelper({
           paymentId: buy_course[0],
           redeemer: buyer1, // actual msg.sender
           validUntil: now + 86400,
           expectRevertWith: "Only redeemer can use this voucher",
         });
-
         // Expect: Reverts with "Only redeemer can use this voucher"
       });
 
       it("should fail to refund twice for the same course", async function () {
-        // Step 1: instructor1 creates a course
-        const course1 = await createCourseBatchHelper({
-          uries: ["https://example.com/course/1"],
-          withdrawersArrays: [[instructor1.address]],
-          redeemers: [instructor1.address],
-          validUntils: [now + 86400],
-          createBatchTxCaller: instructor1,
-          expectSuccessWith: "CourseCreated",
-        });
-
+        // Step 1: instructor1 creates a generic course with [instructor1] array
+        const courseId1 = await quickCreateACourse();
         // Step 2: buyer1 buys course for person1
         const buy_course = await buyCourseBatchHelper({
-          courseIds: [course1.courseIds[0]],
+          courseIds: [courseId1],
           tokenAddresses: [MKT1.target],
           coursePrices: [ethers.parseEther("10")],
           courseReceivers: [person1.address],
@@ -3807,7 +3534,6 @@ describe("NewTreasury Contract Tests", function () {
           buyBatchTxCaller: buyer1, // tx gönderen signer
           expectSuccessWith: "ContentPurchased",
         });
-
         // Step 3: First refund
         const refund1 = await refundCourseHelper({
           paymentId: buy_course[0],
@@ -3815,7 +3541,6 @@ describe("NewTreasury Contract Tests", function () {
           validUntil: now + 86400,
           expectSuccessWith: "CourseRefunded",
         });
-
         // Step 4: Attempt second refund → should fail
         const refund2 = await refundCourseHelper({
           paymentId: buy_course[0],
@@ -3823,13 +3548,13 @@ describe("NewTreasury Contract Tests", function () {
           validUntil: now + 86400,
           expectRevertWith: "Already refunded",
         });
+        // Expect: Reverts with "Already refunded"
       });
 
       it("should fail to refund if paymentId is invalid", async function () {
         // Step 1: read latest paymentCounter and use an invalid one (e.g. +1)
         const latestPaymentCounter1 = await NewTreasury.paymentCounter();
         const invalidPaymentId1 = latestPaymentCounter1 + 1n;
-
         // Step 2: try to refund to non existing course with invalidPaymentId
         const refund1 = await refundCourseHelper({
           paymentId: invalidPaymentId1,
@@ -3837,20 +3562,11 @@ describe("NewTreasury Contract Tests", function () {
           validUntil: now + 86400,
           expectRevertWith: "Invalid paymentId",
         });
-
-        // Step 3: create a valid course
-        const course1 = await createCourseBatchHelper({
-          uries: ["https://example.com/course/1"],
-          withdrawersArrays: [[instructor1.address]],
-          redeemers: [instructor1.address],
-          validUntils: [now + 86400],
-          createBatchTxCaller: instructor1,
-          expectSuccessWith: "CourseCreated",
-        });
-
+        // Step 3: instructor1 creates a generic course with [instructor1] array to increase courseCounter
+        const courseId1 = await quickCreateACourse();
         // Step 4: buyer the course (just to advance payment counters)
         const buy_course1 = await buyCourseBatchHelper({
-          courseIds: [course1.courseIds[0]],
+          courseIds: [courseId1],
           tokenAddresses: [MKT1.target],
           coursePrices: [ethers.parseEther("10")],
           courseReceivers: [person1.address],
@@ -3860,11 +3576,9 @@ describe("NewTreasury Contract Tests", function () {
           buyBatchTxCaller: buyer1, // tx gönderen signer
           expectSuccessWith: "ContentPurchased",
         });
-
         // Step 5: read latest paymentCounter and use an invalid one (e.g. +1)
         const latestPaymentCounter2 = await NewTreasury.paymentCounter();
         const invalidPaymentId2 = latestPaymentCounter2 + 1n;
-
         // Step 6: try to refund to non existing course with invalidPaymentId
         const refund_course1 = await refundCourseHelper({
           paymentId: invalidPaymentId2,
@@ -3883,20 +3597,11 @@ describe("NewTreasury Contract Tests", function () {
           validUntil: now + 86400,
           expectRevertWith: "Invalid paymentId",
         });
-
-        // Step 2: create a course
-        const course1 = await createCourseBatchHelper({
-          uries: ["https://example.com/course/1"],
-          withdrawersArrays: [[instructor1.address]],
-          redeemers: [instructor1.address],
-          validUntils: [now + 86400],
-          createBatchTxCaller: instructor1,
-          expectSuccessWith: "CourseCreated",
-        });
-
+        // Step 2: instructor1 creates a generic course with [instructor1] array to increase courseCounter
+        const courseId1 = await quickCreateACourse();
         // Step 3: buyer1 buys course
         const buy_course1 = await buyCourseBatchHelper({
-          courseIds: [course1.courseIds[0]],
+          courseIds: [courseId1],
           tokenAddresses: [MKT1.target],
           coursePrices: [ethers.parseEther("10")],
           courseReceivers: [person1.address],
@@ -3906,7 +3611,6 @@ describe("NewTreasury Contract Tests", function () {
           buyBatchTxCaller: buyer1,
           expectSuccessWith: "ContentPurchased",
         });
-
         // Step 4: Try refunding with paymentId = 0 again after purchase
         await refundCourseHelper({
           paymentId: 0n,
@@ -3920,19 +3624,11 @@ describe("NewTreasury Contract Tests", function () {
       it("should fail to refund if refund window has passed", async function () {
         // Step 1: Read refundWindow from contract
         const refundWindow = await NewTreasury.refundWindow();
-        // Step 2: Create a course
-        const course1 = await createCourseBatchHelper({
-          uries: ["https://example.com/course/1"],
-          withdrawersArrays: [[instructor1.address]],
-          redeemers: [instructor1.address],
-          validUntils: [now + 86400],
-          createBatchTxCaller: instructor1,
-          expectSuccessWith: "CourseCreated",
-        });
-
+        // Step 2: instructor1 creates a generic course with [instructor1] array
+        const courseId1 = await quickCreateACourse();
         // Step 3: Buyer1 buys the course for person1
         const buy_course1 = await buyCourseBatchHelper({
-          courseIds: [course1.courseIds[0]],
+          courseIds: [courseId1],
           tokenAddresses: [MKT1.target],
           coursePrices: [ethers.parseEther("10")],
           courseReceivers: [person1.address],
@@ -3942,11 +3638,9 @@ describe("NewTreasury Contract Tests", function () {
           buyBatchTxCaller: buyer1,
           expectSuccessWith: "ContentPurchased",
         });
-
         // Step 4: Fast forward time by refundWindow + 1 second
         const refundWindowInSec = Number(refundWindow);
         await fastForwardTime({ seconds: refundWindowInSec + 1 });
-
         // Step 5: Try to refund and expect failure
         await refundCourseHelper({
           paymentId: buy_course1[0],
@@ -3954,25 +3648,17 @@ describe("NewTreasury Contract Tests", function () {
           validUntil: now + 86400,
           expectRevertWith: "Refund window passed",
         });
+        // Expect: Reverts with "Refund window passed"
       });
 
       it("should fail refund if original refund window expired despite later refundWindow was extended", async function () {
         // Step 1: set refundWindow to 1 day
         await NewTreasury.connect(backend).setRefundWindow(1);
-
-        // Step 2: instructor1 creates a course
-        const course1 = await createCourseBatchHelper({
-          uries: ["https://example.com/course/1"],
-          withdrawersArrays: [[instructor1.address]],
-          redeemers: [instructor1.address],
-          validUntils: [now + 86400],
-          createBatchTxCaller: instructor1,
-          expectSuccessWith: "CourseCreated",
-        });
-
+        // Step 2: instructor1 creates a generic course with [instructor1] array
+        const courseId1 = await quickCreateACourse();
         // Step 3: buyer1 buys the course
         const buy_course = await buyCourseBatchHelper({
-          courseIds: [course1.courseIds[0]],
+          courseIds: [courseId1],
           tokenAddresses: [MKT1.target],
           coursePrices: [ethers.parseEther("10")],
           courseReceivers: [person1.address],
@@ -3982,13 +3668,10 @@ describe("NewTreasury Contract Tests", function () {
           buyBatchTxCaller: buyer1,
           expectSuccessWith: "ContentPurchased",
         });
-
         // Step 4: extend refundWindow to 10 days (simulates a global policy change)
         await NewTreasury.connect(backend).setRefundWindow(10 * 86400);
-
         // Step 5: fast forward 3 days (beyond original 1 day window)
         await fastForwardTime({ days: 3 });
-
         // Step 6: attempt refund → should fail since original refund window passed
         await refundCourseHelper({
           paymentId: buy_course[0],
@@ -3996,24 +3679,15 @@ describe("NewTreasury Contract Tests", function () {
           validUntil: now + 86400,
           expectRevertWith: "Refund window passed",
         });
-
         // Expect: Reverts even though current refundWindow is 10 days
       });
 
       it("should fail refund by paymentId if payment was already withdrawn", async function () {
-        // Step 1: instructor1 creates a course
-        const course1 = await createCourseBatchHelper({
-          uries: ["https://example.com/course/1"],
-          withdrawersArrays: [[instructor1.address]],
-          redeemers: [instructor1.address],
-          validUntils: [now + 86400],
-          createBatchTxCaller: instructor1,
-          expectSuccessWith: "CourseCreated",
-        });
-
+        // Step 1: instructor1 creates a generic course with [instructor1] array
+        const courseId1 = await quickCreateACourse();
         // Step 2: buyer1 purchases course for person1
         const buy = await buyCourseBatchHelper({
-          courseIds: [course1.courseIds[0]],
+          courseIds: [courseId1],
           tokenAddresses: [MKT1.target],
           coursePrices: [ethers.parseEther("10")],
           courseReceivers: [person1.address],
@@ -4023,14 +3697,12 @@ describe("NewTreasury Contract Tests", function () {
           buyBatchTxCaller: buyer1, // tx gönderen signer
           expectSuccessWith: "ContentPurchased",
         });
-
         // Step 3: fast forward time beyond refund window
         const refundWindowInDays = Number(await NewTreasury.refundWindow()) / 86400;
         await fastForwardTime({ days: refundWindowInDays + 1 });
-
         // Step 4: instructor withdraws the payment
         await withdrawCoursePaymentsHelper({
-          courseId: course1.courseIds[0],
+          courseId: courseId1,
           fromIndex: 1,
           toIndex: 1,
           redeemer: instructor1,
@@ -4038,7 +3710,6 @@ describe("NewTreasury Contract Tests", function () {
           expectSuccessWith: "CoursePaymentsWithdrawn",
           expectations: [PES],
         });
-
         // Step 5: try to refund using paymentId (should fail due to already withdrawn)
         await refundCourseHelper({
           paymentId: buy[0],
@@ -4046,27 +3717,17 @@ describe("NewTreasury Contract Tests", function () {
           validUntil: now + 86400,
           expectRevertWith: "Already withdrawn",
         });
-
         // Expectation: Refund fails because the payment was already withdrawn
       });
 
       it("should fail to refund when ERC20 token transfer to refunder fails", async function () {
         // Step 0: Deploy failTransfer contract and distribute tokens
         const { failNativeWallet, failMKT } = await deployFailTransferContracts();
-
-        // Step 1: instructor1 creates a course
-        const course1 = await createCourseBatchHelper({
-          uries: ["https://example.com/course/1"],
-          withdrawersArrays: [[instructor1.address]],
-          redeemers: [instructor1.address],
-          validUntils: [now + 86400],
-          createBatchTxCaller: instructor1,
-          expectSuccessWith: "CourseCreated",
-        });
-
+        // Step 1: instructor1 creates a generic course with [instructor1] array
+        const courseId1 = await quickCreateACourse();
         // Step 2: buyer1 buys course for person1
         const buy_course = await buyCourseBatchHelper({
-          courseIds: [course1.courseIds[0]],
+          courseIds: [courseId1],
           tokenAddresses: [failMKT.target],
           coursePrices: [ethers.parseEther("10")],
           courseReceivers: [person1.address],
@@ -4076,10 +3737,8 @@ describe("NewTreasury Contract Tests", function () {
           buyBatchTxCaller: buyer1, // tx gönderen signer
           expectSuccessWith: "ContentPurchased",
         });
-
         // Step 4: block failMTK transfer of treasury address
         await failMKT.connect(backend).blockAddress(buyer1.address, true);
-
         // Step 4: Attempt refund with invalid signer
         const refund_course = await refundCourseHelper({
           paymentId: buy_course[0],
@@ -4087,26 +3746,18 @@ describe("NewTreasury Contract Tests", function () {
           validUntil: now + 86400,
           expectRevertWith: "Recipient blocked",
         });
+        // Expect: Reverts with "Recipient blocked"
       });
 
       it("should fail to refund when native token transfer to refunder fails", async function () {
         // Step 0: Deploy failTransfer contract and distribute tokens
         const { failNativeWallet, failMKT } = await deployFailTransferContracts();
-
-        // Step 1: instructor1 creates a course
-        const course1 = await createCourseBatchHelper({
-          uries: ["https://example.com/course/1"],
-          withdrawersArrays: [[instructor1.address]],
-          redeemers: [instructor1.address],
-          validUntils: [now + 86400],
-          createBatchTxCaller: instructor1,
-          expectSuccessWith: "CourseCreated",
-        });
-
+        // Step 1: instructor1 creates a generic course with [instructor1] array
+        const courseId1 = await quickCreateACourse();
         // Step 2: backend triggers failNativeWallets buyTrigger to buy a course with contract
         const nativePrice = ethers.parseEther("10");
         const voucher = await buyVH.signVoucher({
-          courseId: course1.courseIds[0],
+          courseId: courseId1,
           tokenAddress: ethers.ZeroAddress, // native token
           coursePrice: nativePrice,
           courseReceiver: person1.address,
@@ -4114,32 +3765,26 @@ describe("NewTreasury Contract Tests", function () {
           validUntil: now + 86400,
         });
         const vouchers = [voucher]; // tek voucher'ı batch gibi kullan
-
         const expectedOutcome = await _prepareExpectedBuyBatchStates(
           vouchers,
           failNativeWallet.target, // buyBatchTxCaller
           true, // waitSuccess
           backend.address // executer
         );
-
         const currentPaymentCounter = await NewTreasury.paymentCounter();
         const expPaymentId = Number(currentPaymentCounter) + 1; // paymentId'yi hesapla
-
         // Step 3: trigger buy inside failNativeWallet
         const tx = await failNativeWallet
           .connect(backend)
           .triggerBuy(NewTreasury.target, vouchers, { value: nativePrice });
-
         await expect(tx)
           .to.emit(NewTreasury, "ContentPurchased")
           .withArgs(expPaymentId, voucher.courseId, voucher.courseReceiver);
-
         const receipt = await tx.wait();
         const effectiveGasPrice = receipt.effectiveGasPrice ?? receipt.gasPrice ?? 0n;
         const gasCost = receipt.gasUsed * effectiveGasPrice;
         // Step 4: check balances and expected states after buy
         await _expectBuyBatch(nativePrice, expectedOutcome, gasCost, failNativeWallet.target, true, backend.address);
-
         // Step 5: block native token receive of failNativeWallet
         await failNativeWallet.connect(backend).setRejectPayments(true);
         // Step 6: Try to refund the course expect fail
@@ -4149,6 +3794,7 @@ describe("NewTreasury Contract Tests", function () {
           validUntil: now + 86400,
           expectRevertWith: "Native refund failed",
         });
+        // Expect: Reverts with "Native refund failed"
       });
       /////###End of Failure Cases###/////
     });
@@ -4159,18 +3805,11 @@ describe("NewTreasury Contract Tests", function () {
   describe("💸 REFUNDS: refundCourseByOwnerAndCourseId", function () {
     describe("✅ Success Cases", function () {
       it("should allow refund using RefundCourseByOwnerAndCourseIdVoucher", async function () {
-        // 1. instructor1 creates a course
-        const course1 = await createCourseBatchHelper({
-          uries: ["https://example.com/course/1"],
-          withdrawersArrays: [[instructor1.address]],
-          redeemers: [instructor1.address],
-          validUntils: [now + 86400],
-          createBatchTxCaller: instructor1,
-          expectSuccessWith: "CourseCreated",
-        });
+        // Step 1: instructor1 creates a generic course with [instructor1] array
+        const courseId1 = await quickCreateACourse();
         // 2. buyer1 buys course for person1
         const buy_course = await buyCourseBatchHelper({
-          courseIds: [course1.courseIds[0]],
+          courseIds: [courseId1],
           tokenAddresses: [MKT1.target],
           coursePrices: [ethers.parseEther("10")],
           courseReceivers: [person1.address],
@@ -4180,11 +3819,10 @@ describe("NewTreasury Contract Tests", function () {
           buyBatchTxCaller: buyer1, // tx gönderen signer
           expectSuccessWith: "ContentPurchased",
         });
-
         // 3. instructor5 initiates refund using courseOwner + courseId
         const refund_course = await refundCourseByOwnerHelper({
           courseOwner: person1.address,
-          courseId: course1.courseIds[0],
+          courseId: courseId1,
           redeemer: buyer1,
           validUntil: now + 86400,
           expectSuccessWith: "CourseRefunded",
@@ -4193,19 +3831,11 @@ describe("NewTreasury Contract Tests", function () {
       });
 
       it("should allow a course purchased with native token to be refunded", async function () {
-        // Step 1: instructor1 creates a course
-        const course1 = await createCourseBatchHelper({
-          uries: ["https://example.com/course/1"],
-          withdrawersArrays: [[instructor1.address]],
-          redeemers: [instructor1.address],
-          validUntils: [now + 86400],
-          createBatchTxCaller: instructor1,
-          expectSuccessWith: "CourseCreated",
-        });
-
+        // Step 1: instructor1 creates a generic course with [instructor1] array
+        const courseId1 = await quickCreateACourse();
         // Step 2: buyer1 buys course for person1 with native token
         const buy_course1 = await buyCourseBatchHelper({
-          courseIds: [course1.courseIds[0]],
+          courseIds: [courseId1],
           tokenAddresses: [ethers.ZeroAddress], // native token
           coursePrices: [ethers.parseEther("7")],
           courseReceivers: [person1.address],
@@ -4215,11 +3845,10 @@ describe("NewTreasury Contract Tests", function () {
           buyBatchTxCaller: buyer1, // tx gönderen signer
           expectSuccessWith: "ContentPurchased",
         });
-
         // Step 3: buyer1 refunds the course
         const refund_course1 = await refundCourseByOwnerHelper({
           courseOwner: person1.address,
-          courseId: course1.courseIds[0],
+          courseId: courseId1,
           redeemer: buyer1,
           validUntil: now + 86400,
           expectSuccessWith: "CourseRefunded",
@@ -4228,19 +3857,11 @@ describe("NewTreasury Contract Tests", function () {
       });
 
       it("should allow a course purchased with ERC20 token to be refunded using refundCourseByOwnerHelper", async function () {
-        // Step 1: instructor1 creates a course
-        const course1 = await createCourseBatchHelper({
-          uries: ["https://example.com/course/1"],
-          withdrawersArrays: [[instructor1.address]],
-          redeemers: [instructor1.address],
-          validUntils: [now + 86400],
-          createBatchTxCaller: instructor1,
-          expectSuccessWith: "CourseCreated",
-        });
-
+        // Step 1: instructor1 creates a generic course with [instructor1] array
+        const courseId1 = await quickCreateACourse();
         // Step 2: buyer1 buys course for person1 with ERC20 token
         const buy_course1 = await buyCourseBatchHelper({
-          courseIds: [course1.courseIds[0]],
+          courseIds: [courseId1],
           tokenAddresses: [MKT1.target],
           coursePrices: [ethers.parseEther("5")],
           courseReceivers: [person1.address],
@@ -4250,11 +3871,10 @@ describe("NewTreasury Contract Tests", function () {
           buyBatchTxCaller: buyer1, // tx gönderen signer
           expectSuccessWith: "ContentPurchased",
         });
-
         // Step 3: buyer1 refunds the course
         const refund_course1 = await refundCourseByOwnerHelper({
           courseOwner: person1.address,
-          courseId: course1.courseIds[0],
+          courseId: courseId1,
           redeemer: buyer1,
           validUntil: now + 86400,
           expectSuccessWith: "CourseRefunded",
@@ -4276,7 +3896,6 @@ describe("NewTreasury Contract Tests", function () {
           createBatchTxCaller: instructor1,
           expectSuccessWith: "CourseCreated",
         });
-
         // Step 4: buyer1 buys all three courses for person1 with ERC20 token
         const buy_courses = await buyCourseBatchHelper({
           courseIds: [courses.courseIds[0], courses.courseIds[1], courses.courseIds[2]],
@@ -4289,7 +3908,6 @@ describe("NewTreasury Contract Tests", function () {
           buyBatchTxCaller: buyer1, // tx gönderen signer
           expectSuccessWith: "ContentPurchased",
         });
-
         // Step 5: buyer1 refunds all three courses
         const refund1 = await refundCourseByOwnerHelper({
           courseOwner: person1.address,
@@ -4298,7 +3916,6 @@ describe("NewTreasury Contract Tests", function () {
           validUntil: now + 86400,
           expectSuccessWith: "CourseRefunded",
         });
-
         const refund2 = await refundCourseByOwnerHelper({
           courseOwner: person1.address,
           courseId: courses.courseIds[1],
@@ -4306,7 +3923,6 @@ describe("NewTreasury Contract Tests", function () {
           validUntil: now + 86400,
           expectSuccessWith: "CourseRefunded",
         });
-
         const refund3 = await refundCourseByOwnerHelper({
           courseOwner: person1.address,
           courseId: courses.courseIds[2],
@@ -4314,24 +3930,15 @@ describe("NewTreasury Contract Tests", function () {
           validUntil: now + 86400,
           expectSuccessWith: "CourseRefunded",
         });
-
         // Expect: Each refund emits "CourseRefunded" event with expected success states
       });
 
       it("should allow a course to be refunded by a different redeemer than the original buyer", async function () {
-        // Step 1: instructor1 creates a course
-        const course1 = await createCourseBatchHelper({
-          uries: ["https://example.com/course/1"],
-          withdrawersArrays: [[instructor1.address]],
-          redeemers: [instructor1.address],
-          validUntils: [now + 86400],
-          createBatchTxCaller: instructor1,
-          expectSuccessWith: "CourseCreated",
-        });
-
+        // Step 1: instructor1 creates a generic course with [instructor1] array
+        const courseId1 = await quickCreateACourse();
         // Step 2: buyer1 buys course for person1 using ERC20
         const buy_course = await buyCourseBatchHelper({
-          courseIds: [course1.courseIds[0]],
+          courseIds: [courseId1],
           tokenAddresses: [MKT1.target],
           coursePrices: [ethers.parseEther("12")],
           courseReceivers: [person1.address],
@@ -4341,33 +3948,23 @@ describe("NewTreasury Contract Tests", function () {
           buyBatchTxCaller: buyer1, // tx gönderen signer
           expectSuccessWith: "ContentPurchased",
         });
-
         // Step 3: buyer2 (a different redeemer) initiates refund
         const refund_course = await refundCourseByOwnerHelper({
           courseOwner: person1.address,
-          courseId: course1.courseIds[0],
+          courseId: courseId1,
           redeemer: buyer2,
           validUntil: now + 86400,
           expectSuccessWith: "CourseRefunded",
         });
-
         // Expect: "CourseRefunded" event with expected success states
       });
 
       it("should allow a course to be bought, refunded, and bought again by the same receiver", async function () {
-        // Step 1: instructor1 creates a course
-        const course1 = await createCourseBatchHelper({
-          uries: ["https://example.com/course/1"],
-          withdrawersArrays: [[instructor1.address]],
-          redeemers: [instructor1.address],
-          validUntils: [now + 86400],
-          createBatchTxCaller: instructor1,
-          expectSuccessWith: "CourseCreated",
-        });
-
+        // Step 1: instructor1 creates a generic course with [instructor1] array
+        const courseId1 = await quickCreateACourse();
         // Step 2: buyer1 buys course for person1
         const buy1 = await buyCourseBatchHelper({
-          courseIds: [course1.courseIds[0]],
+          courseIds: [courseId1],
           tokenAddresses: [MKT1.target],
           coursePrices: [ethers.parseEther("9")],
           courseReceivers: [person1.address],
@@ -4377,19 +3974,17 @@ describe("NewTreasury Contract Tests", function () {
           buyBatchTxCaller: buyer1, // tx gönderen signer
           expectSuccessWith: "ContentPurchased",
         });
-
         // Step 3: refund the course
         const refund1 = await refundCourseByOwnerHelper({
           courseOwner: person1.address,
-          courseId: course1.courseIds[0],
+          courseId: courseId1,
           redeemer: buyer1,
           validUntil: now + 86400,
           expectSuccessWith: "CourseRefunded",
         });
-
         // Step 4: buy again
         const buy2 = await buyCourseBatchHelper({
-          courseIds: [course1.courseIds[0]],
+          courseIds: [courseId1],
           tokenAddresses: [MKT1.target],
           coursePrices: [ethers.parseEther("9")],
           courseReceivers: [person1.address],
@@ -4403,19 +3998,11 @@ describe("NewTreasury Contract Tests", function () {
       });
 
       it("should allow refund by owner if original refund window is still valid despite later refundWindow shortened", async function () {
-        // Step 1: instructor1 creates a course
-        const course1 = await createCourseBatchHelper({
-          uries: ["https://example.com/course/1"],
-          withdrawersArrays: [[instructor1.address]],
-          redeemers: [instructor1.address],
-          validUntils: [now + 86400],
-          createBatchTxCaller: instructor1,
-          expectSuccessWith: "CourseCreated",
-        });
-
+        // Step 1: instructor1 creates a generic course with [instructor1] array
+        const courseId1 = await quickCreateACourse();
         // Step 2: buyer1 buys the course for person1
         const buy_course = await buyCourseBatchHelper({
-          courseIds: [course1.courseIds[0]],
+          courseIds: [courseId1],
           tokenAddresses: [MKT1.target],
           coursePrices: [ethers.parseEther("10")],
           courseReceivers: [person1.address],
@@ -4425,22 +4012,18 @@ describe("NewTreasury Contract Tests", function () {
           buyBatchTxCaller: buyer1, // tx gönderen signer
           expectSuccessWith: "ContentPurchased",
         });
-
         // Step 3: new refund window set to 1 day
         await NewTreasury.connect(backend).setRefundWindow(1 * 86400); // 1 gün
-
         // Step 4: fast forward 3 days
         await fastForwardTime({ days: 3 });
-
         // Step 5: instructor5 refunds the course by owner
         await refundCourseByOwnerHelper({
           courseOwner: person1.address,
-          courseId: course1.courseIds[0],
+          courseId: courseId1,
           redeemer: buyer1,
           validUntil: now + 86400,
           expectSuccessWith: "CourseRefunded",
         });
-
         // Expect: Refund succeeds even though current refundWindow is 1 day old refund window valid for this course
       });
       /////###End of Success Cases###/////
@@ -4448,19 +4031,11 @@ describe("NewTreasury Contract Tests", function () {
 
     describe("❌ Failure Cases", function () {
       it("should fail to refund with invalid signer", async function () {
-        // Step 1: instructor1 creates a course
-        const course1 = await createCourseBatchHelper({
-          uries: ["https://example.com/course/1"],
-          withdrawersArrays: [[instructor1.address]],
-          redeemers: [instructor1.address],
-          validUntils: [now + 86400],
-          createBatchTxCaller: instructor1,
-          expectSuccessWith: "CourseCreated",
-        });
-
+        // Step 1: instructor1 creates a generic course with [instructor1] array
+        const courseId1 = await quickCreateACourse();
         // Step 2: buyer1 buys course for person1
         const buy_course = await buyCourseBatchHelper({
-          courseIds: [course1.courseIds[0]],
+          courseIds: [courseId1],
           tokenAddresses: [MKT1.target],
           coursePrices: [ethers.parseEther("10")],
           courseReceivers: [person1.address],
@@ -4470,34 +4045,25 @@ describe("NewTreasury Contract Tests", function () {
           buyBatchTxCaller: buyer1, // tx gönderen signer
           expectSuccessWith: "ContentPurchased",
         });
-
         // Step 3: Use wrong signer for the refund voucher
         refundByOwnerVH = getVoucherHelpers({ signer: instructor2 }).refundByOwnerVH;
-
         // Step 4: Attempt refund with invalid signer
         const refund_course = await refundCourseByOwnerHelper({
           courseOwner: person1.address,
-          courseId: course1.courseIds[0],
+          courseId: courseId1,
           redeemer: buyer1,
           validUntil: now + 86400,
           expectRevertWith: "Signature invalid or unauthorized",
         });
+        // Expect: Reverts with "Signature invalid or unauthorized"
       });
 
       it("should fail to refund with expired voucher", async function () {
-        // Step 1: instructor1 creates a course
-        const course1 = await createCourseBatchHelper({
-          uries: ["https://example.com/course/1"],
-          withdrawersArrays: [[instructor1.address]],
-          redeemers: [instructor1.address],
-          validUntils: [now + 86400],
-          createBatchTxCaller: instructor1,
-          expectSuccessWith: "CourseCreated",
-        });
-
+        // Step 1: instructor1 creates a generic course with [instructor1] array
+        const courseId1 = await quickCreateACourse();
         // Step 2: buyer1 buys course for person1
         const buy_course = await buyCourseBatchHelper({
-          courseIds: [course1.courseIds[0]],
+          courseIds: [courseId1],
           tokenAddresses: [MKT1.target],
           coursePrices: [ethers.parseEther("10")],
           courseReceivers: [person1.address],
@@ -4507,31 +4073,23 @@ describe("NewTreasury Contract Tests", function () {
           buyBatchTxCaller: buyer1, // tx gönderen signer
           expectSuccessWith: "ContentPurchased",
         });
-
         // Step 3: Attempt refund with expired voucher
         const refund_course = await refundCourseByOwnerHelper({
           courseOwner: person1.address,
-          courseId: course1.courseIds[0],
+          courseId: courseId1,
           redeemer: buyer2,
           validUntil: now - 60, // expired
           expectRevertWith: "Voucher expired",
         });
+        // Expect: Reverts with "Voucher expired"
       });
 
       it("should fail to refund by owner if msg.sender !== redeemer (Only redeemer can use this voucher)", async function () {
-        // Step 1: instructor1 creates a course
-        const course1 = await createCourseBatchHelper({
-          uries: ["https://example.com/course/1"],
-          withdrawersArrays: [[instructor1.address]],
-          redeemers: [instructor1.address],
-          validUntils: [now + 86400],
-          createBatchTxCaller: instructor1,
-          expectSuccessWith: "CourseCreated",
-        });
-
+        // Step 1: instructor1 creates a generic course with [instructor1] array
+        const courseId1 = await quickCreateACourse();
         // Step 2: buyer1 buys course for person1
         const buy_course = await buyCourseBatchHelper({
-          courseIds: [course1.courseIds[0]],
+          courseIds: [courseId1],
           tokenAddresses: [MKT1.target],
           coursePrices: [ethers.parseEther("10")],
           courseReceivers: [person1.address],
@@ -4541,35 +4099,24 @@ describe("NewTreasury Contract Tests", function () {
           buyBatchTxCaller: buyer1, // tx gönderen signer
           expectSuccessWith: "ContentPurchased",
         });
-
         // Step 3: attempt refundByOwner with mismatched msg.sender and voucher.redeemer
         falseRedeemer = ethers.ZeroAddress;
-
         await refundCourseByOwnerHelper({
           courseOwner: person1.address,
-          courseId: course1.courseIds[0],
+          courseId: courseId1,
           redeemer: buyer1, // actual caller
           validUntil: now + 86400,
           expectRevertWith: "Only redeemer can use this voucher",
         });
-
         // Expect: Reverts with "Only redeemer can use this voucher"
       });
 
       it("should fail to refund twice for the same course", async function () {
-        // Step 1: instructor1 creates a course
-        const course1 = await createCourseBatchHelper({
-          uries: ["https://example.com/course/1"],
-          withdrawersArrays: [[instructor1.address]],
-          redeemers: [instructor1.address],
-          validUntils: [now + 86400],
-          createBatchTxCaller: instructor1,
-          expectSuccessWith: "CourseCreated",
-        });
-
+        // Step 1: instructor1 creates a generic course with [instructor1] array
+        const courseId1 = await quickCreateACourse();
         // Step 2: buyer1 buys course for person1
         const buy_course = await buyCourseBatchHelper({
-          courseIds: [course1.courseIds[0]],
+          courseIds: [courseId1],
           tokenAddresses: [MKT1.target],
           coursePrices: [ethers.parseEther("10")],
           courseReceivers: [person1.address],
@@ -4579,31 +4126,29 @@ describe("NewTreasury Contract Tests", function () {
           buyBatchTxCaller: buyer1, // tx gönderen signer
           expectSuccessWith: "ContentPurchased",
         });
-
         // Step 3: First refund
         const refund1 = await refundCourseByOwnerHelper({
           courseOwner: person1.address,
-          courseId: course1.courseIds[0],
+          courseId: courseId1,
           redeemer: buyer1,
           validUntil: now + 86400,
           expectSuccessWith: "CourseRefunded",
         });
-
         // Step 4: Attempt second refund → should fail
         const refund2 = await refundCourseByOwnerHelper({
           courseOwner: person1.address,
-          courseId: course1.courseIds[0],
+          courseId: courseId1,
           redeemer: buyer1,
           validUntil: now + 86400,
           expectRevertWith: "No payment found for this course and owner",
         });
+        // Expect: Reverts with "No payment found for this course and owner"
       });
 
       it("should fail to refund if paymentId is invalid", async function () {
         // Step 1: read latest paymentCounter and use an invalid one (e.g. +1)
         const latestPaymentCounter1 = await NewTreasury.paymentCounter();
         const invalidPaymentId1 = latestPaymentCounter1 + 1n;
-
         // Step 2: try to refund to non existing course with invalidPaymentId
         const refund1 = await refundCourseByOwnerHelper({
           courseOwner: buyer1.address,
@@ -4612,20 +4157,11 @@ describe("NewTreasury Contract Tests", function () {
           validUntil: now + 86400,
           expectRevertWith: "No payment found for this course and owner",
         });
-
-        // Step 3: create a valid course
-        const course1 = await createCourseBatchHelper({
-          uries: ["https://example.com/course/1"],
-          withdrawersArrays: [[instructor1.address]],
-          redeemers: [instructor1.address],
-          validUntils: [now + 86400],
-          createBatchTxCaller: instructor1,
-          expectSuccessWith: "CourseCreated",
-        });
-
+        // Step 3: instructor1 creates a generic course with [instructor1] array to increase courseCounter
+        const courseId1 = await quickCreateACourse();
         // Step 4: buyer the course (just to advance payment counters)
         const buy_course1 = await buyCourseBatchHelper({
-          courseIds: [course1.courseIds[0]],
+          courseIds: [courseId1],
           tokenAddresses: [MKT1.target],
           coursePrices: [ethers.parseEther("10")],
           courseReceivers: [person1.address],
@@ -4635,11 +4171,9 @@ describe("NewTreasury Contract Tests", function () {
           buyBatchTxCaller: buyer1, // tx gönderen signer
           expectSuccessWith: "ContentPurchased",
         });
-
         // Step 5: read latest paymentCounter and use an invalid one (e.g. +1)
         const latestPaymentCounter2 = await NewTreasury.paymentCounter();
         const invalidPaymentId2 = latestPaymentCounter2 + 1n;
-
         // Step 6: try to refund to non existing course with invalidPaymentId
         const refund_course1 = await refundCourseByOwnerHelper({
           courseOwner: buyer1.address,
@@ -4660,20 +4194,11 @@ describe("NewTreasury Contract Tests", function () {
           validUntil: now + 86400,
           expectRevertWith: "No payment found for this course and owner",
         });
-
-        // Step 2: create a course
-        const course1 = await createCourseBatchHelper({
-          uries: ["https://example.com/course/1"],
-          withdrawersArrays: [[instructor1.address]],
-          redeemers: [instructor1.address],
-          validUntils: [now + 86400],
-          createBatchTxCaller: instructor1,
-          expectSuccessWith: "CourseCreated",
-        });
-
+        // Step 2: instructor1 creates a generic course with [instructor1] array
+        const courseId1 = await quickCreateACourse();
         // Step 3: buyer1 buys course
         const buy_course1 = await buyCourseBatchHelper({
-          courseIds: [course1.courseIds[0]],
+          courseIds: [courseId1],
           tokenAddresses: [MKT1.target],
           coursePrices: [ethers.parseEther("10")],
           courseReceivers: [person1.address],
@@ -4683,7 +4208,6 @@ describe("NewTreasury Contract Tests", function () {
           buyBatchTxCaller: buyer1, // tx gönderen signer
           expectSuccessWith: "ContentPurchased",
         });
-
         // Step 4: Try refunding with paymentId = 0 again after purchase
         await refundCourseByOwnerHelper({
           courseOwner: person1.address,
@@ -4698,20 +4222,11 @@ describe("NewTreasury Contract Tests", function () {
       it("should fail to refund if refund window has passed", async function () {
         // Step 1: Read refundWindow from contract
         const refundWindow = await NewTreasury.refundWindow();
-
-        // Step 2: Create a course
-        const course1 = await createCourseBatchHelper({
-          uries: ["https://example.com/course/1"],
-          withdrawersArrays: [[instructor1.address]],
-          redeemers: [instructor1.address],
-          validUntils: [now + 86400],
-          createBatchTxCaller: instructor1,
-          expectSuccessWith: "CourseCreated",
-        });
-
+        // Step 2: instructor1 creates a generic course with [instructor1] array
+        const courseId1 = await quickCreateACourse();
         // Step 3: Buyer1 buys the course for person1
         const buy_course1 = await buyCourseBatchHelper({
-          courseIds: [course1.courseIds[0]],
+          courseIds: [courseId1],
           tokenAddresses: [MKT1.target],
           coursePrices: [ethers.parseEther("10")],
           courseReceivers: [person1.address],
@@ -4721,38 +4236,28 @@ describe("NewTreasury Contract Tests", function () {
           buyBatchTxCaller: buyer1, // tx gönderen signer
           expectSuccessWith: "ContentPurchased",
         });
-
         // Step 4: Fast forward time by refundWindow + 1 second
         const refundWindowInSec = Number(refundWindow);
         await fastForwardTime({ seconds: refundWindowInSec + 1 });
-
         // Step 5: Try to refund and expect failure
         await refundCourseByOwnerHelper({
           courseOwner: person1.address,
-          courseId: course1.courseIds[0],
+          courseId: courseId1,
           redeemer: buyer1,
           validUntil: now + 86400,
           expectRevertWith: "Refund window passed",
         });
+        // Expect: Reverts with "Refund window passed"
       });
 
       it("should fail refund by owner if original refund window expired despite later refundWindow was extended", async function () {
         // Step 1: set refund window to a short duration (e.g. 1 day)
         await NewTreasury.connect(backend).setRefundWindow(1);
-
-        // Step 2: instructor1 creates a course
-        const course1 = await createCourseBatchHelper({
-          uries: ["https://example.com/course/1"],
-          withdrawersArrays: [[instructor1.address]],
-          redeemers: [instructor1.address],
-          validUntils: [now + 86400],
-          createBatchTxCaller: instructor1,
-          expectSuccessWith: "CourseCreated",
-        });
-
+        // Step 2: instructor1 creates a generic course with [instructor1] array
+        const courseId1 = await quickCreateACourse();
         // Step 3: buyer1 purchases course for person1
         const buy_course = await buyCourseBatchHelper({
-          courseIds: [course1.courseIds[0]],
+          courseIds: [courseId1],
           tokenAddresses: [MKT1.target],
           coursePrices: [ethers.parseEther("10")],
           courseReceivers: [person1.address],
@@ -4762,39 +4267,27 @@ describe("NewTreasury Contract Tests", function () {
           buyBatchTxCaller: buyer1, // tx gönderen signer
           expectSuccessWith: "ContentPurchased",
         });
-
         // Step 4: extend refund window to 10 days (policy updated but shouldn't affect past purchases)
         await NewTreasury.connect(backend).setRefundWindow(10 * 86400);
-
         // Step 5: fast forward time by 3 days
         await fastForwardTime({ days: 3 });
-
         // Step 6: try to refund (original window was 1 day, now expired)
         await refundCourseByOwnerHelper({
           courseOwner: person1.address,
-          courseId: course1.courseIds[0],
+          courseId: courseId1,
           redeemer: buyer1,
           validUntil: now + 86400,
           expectRevertWith: "Refund window passed",
         });
-
         // Expectation: Refund fails because the refund window at the time of purchase already expired
       });
 
       it("should fail refund by owner if payment was already withdrawn", async function () {
-        // Step 1: instructor1 creates a course
-        const course1 = await createCourseBatchHelper({
-          uries: ["https://example.com/course/1"],
-          withdrawersArrays: [[instructor1.address]],
-          redeemers: [instructor1.address],
-          validUntils: [now + 86400],
-          createBatchTxCaller: instructor1,
-          expectSuccessWith: "CourseCreated",
-        });
-
+        // Step 1: instructor1 creates a generic course with [instructor1] array
+        const courseId1 = await quickCreateACourse();
         // Step 2: buyer1 purchases course for person1
         const buy = await buyCourseBatchHelper({
-          courseIds: [course1.courseIds[0]],
+          courseIds: [courseId1],
           tokenAddresses: [MKT1.target],
           coursePrices: [ethers.parseEther("10")],
           courseReceivers: [person1.address],
@@ -4804,14 +4297,12 @@ describe("NewTreasury Contract Tests", function () {
           buyBatchTxCaller: buyer1, // tx gönderen signer
           expectSuccessWith: "ContentPurchased",
         });
-
         // Step 3: fast forward the refund window to allow withdrawal
         const refundWindowInDays = Number(await NewTreasury.refundWindow()) / 86400;
         await fastForwardTime({ days: refundWindowInDays + 1 });
-
         // Step 4: instructor withdraws the payment
         await withdrawCoursePaymentsHelper({
-          courseId: course1.courseIds[0],
+          courseId: courseId1,
           fromIndex: 1,
           toIndex: 1,
           redeemer: instructor1,
@@ -4819,36 +4310,25 @@ describe("NewTreasury Contract Tests", function () {
           expectSuccessWith: "CoursePaymentsWithdrawn",
           expectations: [PES],
         });
-
         // Step 5: try to refund by owner (should fail due to already withdrawn)
         await refundCourseByOwnerHelper({
           courseOwner: person1.address,
-          courseId: course1.courseIds[0],
+          courseId: courseId1,
           redeemer: buyer1,
           validUntil: now + 86400,
           expectRevertWith: "Already withdrawn",
         });
-
         // Expectation: Refund fails because funds were already withdrawn
       });
 
       it("should fail refund by owner when ERC20 token transfer to refunder fails", async function () {
         // Step 0: Deploy failTransfer contract and distribute tokens
         const { failNativeWallet, failMKT } = await deployFailTransferContracts();
-
-        // Step 1: instructor1 creates a course
-        const course1 = await createCourseBatchHelper({
-          uries: ["https://example.com/course/1"],
-          withdrawersArrays: [[instructor1.address]],
-          redeemers: [instructor1.address],
-          validUntils: [now + 86400],
-          createBatchTxCaller: instructor1,
-          expectSuccessWith: "CourseCreated",
-        });
-
+        // Step 1: instructor1 creates a generic course with [instructor1] array
+        const courseId1 = await quickCreateACourse();
         // Step 2: buyer1 buys course for person1
         const buy_course = await buyCourseBatchHelper({
-          courseIds: [course1.courseIds[0]],
+          courseIds: [courseId1],
           tokenAddresses: [failMKT.target], // failMKT token
           coursePrices: [ethers.parseEther("10")],
           courseReceivers: [person1.address],
@@ -4858,38 +4338,28 @@ describe("NewTreasury Contract Tests", function () {
           buyBatchTxCaller: buyer1, // tx gönderen signer
           expectSuccessWith: "ContentPurchased",
         });
-
         // Step 4: block failMTK transfer of treasury address
         await failMKT.connect(backend).blockAddress(buyer1.address, true);
-
         // Step 4: Attempt refund with invalid signer
         const refund_course = await refundCourseByOwnerHelper({
           courseOwner: person1.address,
-          courseId: course1.courseIds[0],
+          courseId: courseId1,
           redeemer: buyer3,
           validUntil: now + 86400,
           expectRevertWith: "Recipient blocked",
         });
+        // Expect: Reverts with "Recipient blocked"
       });
 
       it("should fail refund by owner when native token transfer to refunder fails", async function () {
         // Step 0: Deploy failTransfer contract and distribute tokens
         const { failNativeWallet, failMKT } = await deployFailTransferContracts();
-
-        // Step 1: instructor1 creates a course
-        const course1 = await createCourseBatchHelper({
-          uries: ["https://example.com/course/1"],
-          withdrawersArrays: [[instructor1.address]],
-          redeemers: [instructor1.address],
-          validUntils: [now + 86400],
-          createBatchTxCaller: instructor1,
-          expectSuccessWith: "CourseCreated",
-        });
-
+        // Step 1: instructor1 creates a generic course with [instructor1] array
+        const courseId1 = await quickCreateACourse();
         // Step 2: backend triggers failNativeWallets buyTrigger to buy a course with contract
         const nativePrice = ethers.parseEther("10");
         const voucher = await buyVH.signVoucher({
-          courseId: course1.courseIds[0],
+          courseId: courseId1,
           tokenAddress: ethers.ZeroAddress, // native token
           coursePrice: nativePrice,
           courseReceiver: person1.address,
@@ -4903,26 +4373,20 @@ describe("NewTreasury Contract Tests", function () {
           true, // waitSuccess
           backend.address // executer
         );
-
         const currentPaymentCounter = await NewTreasury.paymentCounter();
         const expPaymentId = Number(currentPaymentCounter) + 1; // paymentId'yi hesapla
-
         // Step 3: trigger buy inside failNativeWallet
         const tx = await failNativeWallet
           .connect(backend)
           .triggerBuy(NewTreasury.target, vouchers, { value: nativePrice });
-
         await expect(tx)
           .to.emit(NewTreasury, "ContentPurchased")
           .withArgs(expPaymentId, voucher.courseId, voucher.courseReceiver);
-
         const receipt = await tx.wait();
         const effectiveGasPrice = receipt.effectiveGasPrice ?? receipt.gasPrice ?? 0n;
         const gasCost = receipt.gasUsed * effectiveGasPrice;
-
         // Step 4: check balances and expected states after buy
         await _expectBuyBatch(nativePrice, expectedOutcome, gasCost, failNativeWallet.target, true, backend.address);
-
         // Step 5: block native token receive of failNativeWallet
         await failNativeWallet.connect(backend).setRejectPayments(true);
         // Step 6: Try to refund the course expect fail
@@ -4933,6 +4397,7 @@ describe("NewTreasury Contract Tests", function () {
           validUntil: now + 86400,
           expectRevertWith: "Native refund failed",
         });
+        // Expect: Reverts with "Native refund failed"
       });
       /////###End of Failure Cases###/////
     });
@@ -4943,20 +4408,11 @@ describe("NewTreasury Contract Tests", function () {
   describe("🏦 WITHDRAWALS", function () {
     describe("✅ Success Cases", function () {
       it("should allow instructor to withdraw payments for a subset of sales", async function () {
-        // Step 1: instructor1 creates a course
-        const course1 = await createCourseBatchHelper({
-          uries: ["https://example.com/course/1"],
-          withdrawersArrays: [[instructor1.address]],
-          redeemers: [instructor1.address],
-          validUntils: [now + 86400],
-          createBatchTxCaller: instructor1,
-          expectSuccessWith: "CourseCreated",
-        });
-
+        // Step 1: instructor1 creates a generic course with [instructor1] array
+        const courseId1 = await quickCreateACourse();
         // Step 2: 5 different sale occur for the course
-
         await buyCourseBatchHelper({
-          courseIds: Array(5).fill(course1.courseIds[0]),
+          courseIds: Array(5).fill(courseId1),
           tokenAddresses: [MKT1.target, MKT1.target, MKT1.target, MKT1.target, MKT1.target],
           coursePrices: [
             ethers.parseEther("5"),
@@ -4972,14 +4428,12 @@ describe("NewTreasury Contract Tests", function () {
           buyBatchTxCaller: backend, // tx gönderen signer
           expectSuccessWith: "ContentPurchased",
         });
-
         // Step 3: Fast forward time after refund window
         const refundWindowInDays = Number(await NewTreasury.refundWindow()) / 86400;
         await fastForwardTime({ days: refundWindowInDays + 1 });
-
         // Step 4: Withdraw payments from sales 1 to 3
         const withdrawResult = await withdrawCoursePaymentsHelper({
-          courseId: course1.courseIds[0],
+          courseId: courseId1,
           fromIndex: 1,
           toIndex: 3,
           redeemer: instructor1,
@@ -4991,19 +4445,11 @@ describe("NewTreasury Contract Tests", function () {
       });
 
       it("should allow instructor to withdraw from mixed-token sales (ERC20 and native)", async function () {
-        // Step 1: instructor1 creates a course
-        const course1 = await createCourseBatchHelper({
-          uries: ["https://example.com/course/1"],
-          withdrawersArrays: [[instructor1.address]],
-          redeemers: [instructor1.address],
-          validUntils: [now + 86400],
-          createBatchTxCaller: instructor1,
-          expectSuccessWith: "CourseCreated",
-        });
-
+        // Step 1: instructor1 creates a generic course with [instructor1] array
+        const courseId1 = await quickCreateACourse();
         // Step 2: make 6 sales, 2 with MTK1, 2 with MTK2, 2 with native
         await buyCourseBatchHelper({
-          courseIds: Array(6).fill(course1.courseIds[0]), // 6 sales for the same course
+          courseIds: Array(6).fill(courseId1), // 6 sales for the same course
           tokenAddresses: [MKT1.target, MKT1.target, MKT2.target, MKT2.target, ethers.ZeroAddress, ethers.ZeroAddress],
           coursePrices: [
             ethers.parseEther("5"),
@@ -5027,14 +4473,12 @@ describe("NewTreasury Contract Tests", function () {
           buyBatchTxCaller: backend, // tx gönderen signer
           expectSuccessWith: "ContentPurchased",
         });
-
         // Step 3: Fast forward time after refund window
         const refundWindowInDays = Number(await NewTreasury.refundWindow()) / 86400;
         await fastForwardTime({ days: refundWindowInDays + 1 });
-
         // Step 4: Withdraw payments for all 6 sales
         await withdrawCoursePaymentsHelper({
-          courseId: course1.courseIds[0],
+          courseId: courseId1,
           fromIndex: 1,
           toIndex: 6,
           redeemer: instructor1,
@@ -5048,20 +4492,11 @@ describe("NewTreasury Contract Tests", function () {
       it("should allow instructor to withdraw if pre-sale refund window expired even post-sale refund window extended", async function () {
         // Step 1: set initial refundWindow to 1 days
         await NewTreasury.connect(backend).setRefundWindow(1 * 86400);
-
-        // Step 2: instructor1 creates course
-        const course1 = await createCourseBatchHelper({
-          uries: ["https://example.com/course/1"],
-          withdrawersArrays: [[instructor1.address]],
-          redeemers: [instructor1.address],
-          validUntils: [now + 86400],
-          createBatchTxCaller: instructor1,
-          expectSuccessWith: "CourseCreated",
-        });
-
+        // Step 2: instructor1 creates a generic course with [instructor1] array
+        const courseId1 = await quickCreateACourse();
         // Step 3: buyer buys course
         await buyCourseBatchHelper({
-          courseIds: [course1.courseIds[0]],
+          courseIds: [courseId1],
           tokenAddresses: [MKT1.target],
           coursePrices: [ethers.parseEther("10")],
           courseReceivers: [person1.address],
@@ -5071,16 +4506,13 @@ describe("NewTreasury Contract Tests", function () {
           buyBatchTxCaller: buyer1, // tx gönderen signer
           expectSuccessWith: "ContentPurchased",
         });
-
         // Step 4: shorten refundWindow to 10 day
         await NewTreasury.connect(backend).setRefundWindow(10 * 86400);
-
         // Step 5: fast forward 3 days (beyond original the old 1 day window)
         await fastForwardTime({ days: 3 });
-
         // Step 6: withdraw should succeed
         await withdrawCoursePaymentsHelper({
-          courseId: course1.courseIds[0],
+          courseId: courseId1,
           fromIndex: 1,
           toIndex: 1,
           redeemer: instructor1,
@@ -5091,19 +4523,11 @@ describe("NewTreasury Contract Tests", function () {
       });
 
       it("should allow instructor to withdraw after governance contract is replaced with wallet", async function () {
-        // Step 1: instructor1 creates a course
-        const course1 = await createCourseBatchHelper({
-          uries: ["https://example.com/course/1"],
-          withdrawersArrays: [[instructor1.address]],
-          redeemers: [instructor1.address],
-          validUntils: [now + 86400],
-          createBatchTxCaller: instructor1,
-          expectSuccessWith: "CourseCreated",
-        });
-
+        // Step 1: instructor1 creates a generic course with [instructor1] array
+        const courseId1 = await quickCreateACourse();
         // Step 2: make 3 sales, MTK1, MTK2, native
         await buyCourseBatchHelper({
-          courseIds: Array(3).fill(course1.courseIds[0]), // 3 sales for the same course
+          courseIds: Array(3).fill(courseId1), // 3 sales for the same course
           tokenAddresses: [MKT1.target, MKT2.target, ethers.ZeroAddress],
           coursePrices: [ethers.parseEther("5"), ethers.parseEther("10"), ethers.parseEther("15")],
           courseReceivers: [person1.address, person2.address, person3.address],
@@ -5113,17 +4537,14 @@ describe("NewTreasury Contract Tests", function () {
           buyBatchTxCaller: buyer1, // tx gönderen signer
           expectSuccessWith: "ContentPurchased",
         });
-
         // Step 3: Fast forward time after refund window
         const refundWindowInDays = Number(await NewTreasury.refundWindow()) / 86400;
         await fastForwardTime({ days: refundWindowInDays + 1 });
-
         // Step 4: Replace governance contract with a wallet
         await NewTreasury.connect(backend).setGovernanceAddress(person5.address);
-
-        // Step 4: Withdraw payments for all 3 sales
+        // Step 5: Withdraw payments for all 3 sales
         await withdrawCoursePaymentsHelper({
-          courseId: course1.courseIds[0],
+          courseId: courseId1,
           fromIndex: 1,
           toIndex: 3,
           redeemer: instructor1,
@@ -5140,20 +4561,11 @@ describe("NewTreasury Contract Tests", function () {
       it("should skip withdraw when purchase is within pre-sale refund window despite post-sale refundWindow shortened", async function () {
         // Step 1: set initial refundWindow to 10 days
         await NewTreasury.connect(backend).setRefundWindow(10 * 86400);
-
-        // Step 2: instructor1 creates course
-        const course1 = await createCourseBatchHelper({
-          uries: ["https://example.com/course/1"],
-          withdrawersArrays: [[instructor1.address]],
-          redeemers: [instructor1.address],
-          validUntils: [now + 86400],
-          createBatchTxCaller: instructor1,
-          expectSuccessWith: "CourseCreated",
-        });
-
+        // Step 2: instructor1 creates a generic course with [instructor1] array
+        const courseId1 = await quickCreateACourse();
         // Step 3: buyer buys course
         await buyCourseBatchHelper({
-          courseIds: [course1.courseIds[0]],
+          courseIds: [courseId1],
           tokenAddresses: [MKT1.target],
           coursePrices: [ethers.parseEther("10")],
           courseReceivers: [person1.address],
@@ -5163,16 +4575,13 @@ describe("NewTreasury Contract Tests", function () {
           buyBatchTxCaller: buyer1, // tx gönderen signer
           expectSuccessWith: "ContentPurchased",
         });
-
         // Step 4: shorten refundWindow to 1 day (but purchase was made with 10-day window)
         await NewTreasury.connect(backend).setRefundWindow(1 * 86400);
-
         // Step 5: fast forward 3 days (refund window according to new policy is passed, but not the old one)
         await fastForwardTime({ days: 3 });
-
         // Step 6: withdraw attempt should emit event, but no tokens processed
         await withdrawCoursePaymentsHelper({
-          courseId: course1.courseIds[0],
+          courseId: courseId1,
           fromIndex: 1,
           toIndex: 1,
           redeemer: instructor1,
@@ -5180,6 +4589,7 @@ describe("NewTreasury Contract Tests", function () {
           expectSuccessWith: "CoursePaymentsWithdrawn", // emit edilir
           expectations: [PI], // işlem yapılmaz
         });
+        // Expect: "CoursePaymentsWithdrawn" with expected success states
       });
 
       it("should skip withdraw for refunded-withdrawed sales in complex multi-withdrawer, mixed-token, refund, and re-withdraw scenario", async function () {
@@ -5194,7 +4604,6 @@ describe("NewTreasury Contract Tests", function () {
           createBatchTxCaller: instructor1,
           expectSuccessWith: "CourseCreated",
         });
-
         // Step 3: make 9 mixed-token sales
         const tokenTypes = [
           MKT1.target,
@@ -5209,7 +4618,6 @@ describe("NewTreasury Contract Tests", function () {
         ];
         const prices = ["5", "6", "7", "8", "9", "10", "11", "12", "13"];
         const receivers = [person1, person2, person3, person4, person5, buyer1, buyer2, buyer3, buyer4];
-
         const paymentIds = await buyCourseBatchHelper({
           courseIds: Array(9).fill(courseA.courseIds[0]),
           tokenAddresses: tokenTypes,
@@ -5221,7 +4629,6 @@ describe("NewTreasury Contract Tests", function () {
           buyBatchTxCaller: backend, // tx gönderen signer
           expectSuccessWith: "ContentPurchased",
         });
-
         // Step 4: refund sales 2, 5, 8
         const refundTargets = [6, 7, 8]; // zero-based index
         for (const i of refundTargets) {
@@ -5232,11 +4639,9 @@ describe("NewTreasury Contract Tests", function () {
             expectSuccessWith: "CourseRefunded",
           });
         }
-
         // Step 5: fast forward past refund window
         const refundWindowDays = Number(await NewTreasury.refundWindow()) / 86400;
         await fastForwardTime({ days: refundWindowDays + 1 });
-
         // Step 6: instructor1 withdraws sales 1, 2, 3 (index 1 to 3) — sale 2 was refunded, so skipped
         await withdrawCoursePaymentsHelper({
           courseId: courseA.courseIds[0],
@@ -5247,13 +4652,10 @@ describe("NewTreasury Contract Tests", function () {
           expectSuccessWith: "CoursePaymentsWithdrawn",
           expectations: [PES, PES, PES],
         });
-
         // Step 7: add 3 more sales (10–12)
-
         const tokenTypesNew = [MKT1.target, ethers.ZeroAddress, MKT2.target];
         const pricesNew = ["20", "21", "22"];
         const receiversNew = [buyer3, buyer4, buyer5];
-
         const secondSale = await buyCourseBatchHelper({
           courseIds: Array(3).fill(courseA.courseIds[0]),
           tokenAddresses: tokenTypesNew,
@@ -5265,11 +4667,9 @@ describe("NewTreasury Contract Tests", function () {
           buyBatchTxCaller: backend, // tx gönderen signer
           expectSuccessWith: "ContentPurchased",
         });
-
         for (let i = 0; i < 3; i++) {
           paymentIds.push(secondSale[i]); // store paymentId[9], [10], [11]
         }
-
         // Step 8: refund paymentId[10] (sale 12)
         await refundCourseHelper({
           paymentId: paymentIds[10], //zero-based index
@@ -5277,7 +4677,6 @@ describe("NewTreasury Contract Tests", function () {
           validUntil: now + 86400,
           expectSuccessWith: "CourseRefunded",
         });
-
         // Step 9: instructor2 withdraws all 1–12
         await withdrawCoursePaymentsHelper({
           courseId: courseA.courseIds[0],
@@ -5293,26 +4692,16 @@ describe("NewTreasury Contract Tests", function () {
       it("should skip withdraw when ERC20 transfer to instructor fails", async () => {
         // Step 0: Deploy failTransfer contract and distribute tokens
         const { failNativeWallet, failMKT } = await deployFailTransferContracts();
-
-        // Step 1: Create a course with multiple withdrawers including the failing receiver
-        const courseA = await createCourseBatchHelper({
-          uries: ["native-ERC20-revert-test"],
-          withdrawersArrays: [[instructor1.address, failNativeWallet.target]],
-          redeemers: [instructor1.address],
-          validUntils: [now + 86400],
-          createBatchTxCaller: instructor1,
-          expectSuccessWith: "CourseCreated",
-        });
-
+        // Step 1: instructor1 creates a generic course with [instructor1, failNativeWallet] array
+        const courseIdA = await quickCreateACourse({ w: [instructor1.address, failNativeWallet.target] });
         // Step 2: make 4 mixed-token sales, MTK1, native, failMKT, MTK2
         const tokenTypes = [MKT1.target, ethers.ZeroAddress, failMKT.target, MKT2.target];
         const prices = ["10", "20", "30", "40"];
         const receivers = [person1, person2, person3, person4];
         const expectSuccessWith = "ContentPurchased";
         const expectations = [PES, PES, PEF, PES];
-
         await buyCourseBatchHelper({
-          courseIds: Array(4).fill(courseA.courseIds[0]),
+          courseIds: Array(4).fill(courseIdA),
           tokenAddresses: tokenTypes,
           coursePrices: prices.map((p) => ethers.parseEther(p)),
           courseReceivers: receivers.map((r) => r.address),
@@ -5322,43 +4711,36 @@ describe("NewTreasury Contract Tests", function () {
           buyBatchTxCaller: backend, // tx gönderen signer
           expectSuccessWith: expectSuccessWith,
         });
-
         // Step 3: fast forward past refund window
         const refundWindowDays = Number(await NewTreasury.refundWindow()) / 86400;
         await fastForwardTime({ days: refundWindowDays + 1 });
-
         // Step 4: block failMTK transfer of instructor1
         await failMKT.connect(backend).blockAddress(instructor1.address, true);
-
         // Step 5: Get token stats before withdrawal
         const input = {
-          courseId: courseA.courseIds[0],
+          courseId: courseIdA,
           fromIndex: 1,
           toIndex: 4,
           redeemer: instructor1,
           redeemerInitialNativeBalance: await ethers.provider.getBalance(instructor1.address),
         };
         const beforeTokenStats = await _validateExpectations(input, expectations);
-
         // Step 6: Create a voucher for instructor1 to withdraw payments from sales 1 to 3
         const voucher = await withdrawVH.signVoucher({
-          courseId: courseA.courseIds[0],
+          courseId: courseIdA,
           fromIndex: 1,
           toIndex: 4,
           redeemer: instructor1.address,
           validUntil: now + 86400,
         });
-
         // Step 7: Attempt to withdraw payments from sales 1 to 3
         tx = await NewTreasury.connect(instructor1).withdrawCoursePayments(voucher);
         await expect(tx)
           .to.emit(NewTreasury, "CoursePaymentsWithdrawn")
           .withArgs(input.courseId, input.fromIndex, input.toIndex, input.redeemer, 3);
-
         const receipt = await tx.wait();
         const effectiveGasPrice = receipt.effectiveGasPrice ?? receipt.gasPrice ?? 0n;
         const gasCost = receipt.gasUsed * effectiveGasPrice;
-
         // Step 8: Validate token stats after withdrawal
         await _expectWithdraw(input, beforeTokenStats, gasCost, expectations, true);
       });
@@ -5366,26 +4748,16 @@ describe("NewTreasury Contract Tests", function () {
       it("should skip withdraw when native transfer to instructor fails", async () => {
         // Step 0: Deploy failTransfer contract and distribute tokens
         const { failNativeWallet, failMKT } = await deployFailTransferContracts();
-
-        // Step 1: Create a course with multiple withdrawers including the failing receiver
-        const courseA = await createCourseBatchHelper({
-          uries: ["native-ERC20-revert-test"],
-          withdrawersArrays: [[instructor1.address, failNativeWallet.target]],
-          redeemers: [instructor1.address],
-          validUntils: [now + 86400],
-          createBatchTxCaller: instructor1,
-          expectSuccessWith: "CourseCreated",
-        });
-
+        // Step 1: instructor1 creates a generic course with [instructor1, failNativeWallet] array
+        const courseIdA = await quickCreateACourse({ w: [instructor1.address, failNativeWallet.target] });
         // Step 2: make 4 mixed-token sales, MTK1, native, failMKT, MTK2
         const tokenTypes = [MKT1.target, ethers.ZeroAddress, failMKT.target, MKT2.target];
         const prices = ["10", "20", "30", "40"];
         const receivers = [person1, person2, person3, person4];
         const expectSuccessWith = "ContentPurchased";
         const expectations = [PES, PEF, PES, PES];
-
         await buyCourseBatchHelper({
-          courseIds: Array(4).fill(courseA.courseIds[0]),
+          courseIds: Array(4).fill(courseIdA),
           tokenAddresses: tokenTypes,
           coursePrices: prices.map((p) => ethers.parseEther(p)),
           courseReceivers: receivers.map((r) => r.address),
@@ -5395,24 +4767,21 @@ describe("NewTreasury Contract Tests", function () {
           buyBatchTxCaller: backend, // tx gönderen signer
           expectSuccessWith: expectSuccessWith,
         });
-
         // Step 3: fast forward past refund window
         const refundWindowDays = Number(await NewTreasury.refundWindow()) / 86400;
         await fastForwardTime({ days: refundWindowDays + 1 });
-
         // Step 4: block native token receive of failNativeWallet
         await failNativeWallet.connect(backend).setRejectPayments(true);
         // Step 5: validate before-withdraw balances
         const preTxNativeBalanceOfBackend = await ethers.provider.getBalance(backend.address);
         const input = {
-          courseId: courseA.courseIds[0],
+          courseId: courseIdA,
           fromIndex: 1,
           toIndex: 4,
           redeemer: { address: failNativeWallet.target },
           redeemerInitialNativeBalance: await ethers.provider.getBalance(failNativeWallet.target),
         };
         const beforeTokenStats = await _validateExpectations(input, expectations);
-
         // Step 6: sign voucher for failNativeWallet
         const voucher = await withdrawVH.signVoucher({
           courseId: input.courseId,
@@ -5421,20 +4790,16 @@ describe("NewTreasury Contract Tests", function () {
           redeemer: failNativeWallet.target,
           validUntil: now + 86400,
         });
-
         // Step 7: trigger withdraw from inside failNativeWallet
         const tx = await failNativeWallet.connect(backend).triggerWithdraw(NewTreasury.target, voucher);
-
         // Step 8: expect emit
         await expect(tx)
           .to.emit(NewTreasury, "CoursePaymentsWithdrawn")
           .withArgs(input.courseId, input.fromIndex, input.toIndex, failNativeWallet.target, 3);
-
         // Step 9: compute gas cost
         const receipt = await tx.wait();
         const effectiveGasPrice = receipt.effectiveGasPrice ?? receipt.gasPrice ?? 0n;
         const gasCost = receipt.gasUsed * effectiveGasPrice;
-
         // Step 6: expect balances
         await _expectWithdraw(input, beforeTokenStats, 0n, expectations, true);
         const postTxNativeBalanceOfBackend = await ethers.provider.getBalance(backend.address);
@@ -5444,26 +4809,16 @@ describe("NewTreasury Contract Tests", function () {
       it("should skip withdraw when ERC20 transfer to foundation fails", async () => {
         // Step 0: Deploy failTransfer contract and distribute tokens
         const { failNativeWallet, failMKT } = await deployFailTransferContracts();
-
-        // Step 1: Create a course with multiple withdrawers including the failing receiver
-        const courseA = await createCourseBatchHelper({
-          uries: ["native-ERC20-revert-test"],
-          withdrawersArrays: [[instructor1.address, failNativeWallet.target]],
-          redeemers: [instructor1.address],
-          validUntils: [now + 86400],
-          createBatchTxCaller: instructor1,
-          expectSuccessWith: "CourseCreated",
-        });
-
+        // Step 1: instructor1 creates a generic course with [instructor1, failNativeWallet] array
+        const courseIdA = await quickCreateACourse({ w: [instructor1.address, failNativeWallet.target] });
         // Step 2: make 4 mixed-token sales, MTK1, native, failMKT, MTK2
         const tokenTypes = [MKT1.target, ethers.ZeroAddress, failMKT.target, MKT2.target];
         const prices = ["10", "20", "30", "40"];
         const receivers = [person1, person2, person3, person4];
         const expectSuccessWith = "ContentPurchased";
         const expectations = [PES, PES, PEF, PES];
-
         await buyCourseBatchHelper({
-          courseIds: Array(4).fill(courseA.courseIds[0]),
+          courseIds: Array(4).fill(courseIdA),
           tokenAddresses: tokenTypes,
           coursePrices: prices.map((p) => ethers.parseEther(p)),
           courseReceivers: receivers.map((r) => r.address),
@@ -5473,24 +4828,20 @@ describe("NewTreasury Contract Tests", function () {
           buyBatchTxCaller: backend, // tx gönderen signer
           expectSuccessWith: expectSuccessWith,
         });
-
         // Step 3: fast forward past refund window
         const refundWindowDays = Number(await NewTreasury.refundWindow()) / 86400;
         await fastForwardTime({ days: refundWindowDays + 1 });
-
         // Step 4: block failMKT transfer to foundation (failNativeWallet)
         await failMKT.connect(backend).blockAddress(foundation.address, true);
-
         // Step 5: get balances before withdraw
         const input = {
-          courseId: courseA.courseIds[0],
+          courseId: courseIdA,
           fromIndex: 1,
           toIndex: 4,
           redeemer: instructor1,
           redeemerInitialNativeBalance: await ethers.provider.getBalance(instructor1.address),
         };
         const beforeTokenStats = await _validateExpectations(input, expectations);
-
         // Step 6: sign withdraw voucher
         const voucher = await withdrawVH.signVoucher({
           courseId: input.courseId,
@@ -5499,15 +4850,12 @@ describe("NewTreasury Contract Tests", function () {
           redeemer: instructor1.address,
           validUntil: now + 86400,
         });
-
         // Step 7: perform withdraw
         const tx = await NewTreasury.connect(instructor1).withdrawCoursePayments(voucher);
-
         // Step 8: expect CoursePaymentsWithdrawn with skipped = 1
         await expect(tx)
           .to.emit(NewTreasury, "CoursePaymentsWithdrawn")
           .withArgs(input.courseId, input.fromIndex, input.toIndex, input.redeemer, 3);
-
         // Step 9: validate state after withdraw
         const receipt = await tx.wait();
         const effectiveGasPrice = receipt.effectiveGasPrice ?? receipt.gasPrice ?? 0n;
@@ -5518,26 +4866,16 @@ describe("NewTreasury Contract Tests", function () {
       it("should skip withdraw when native transfer to foundation fails", async () => {
         // Step 0: Deploy failTransfer contract and distribute tokens
         const { failNativeWallet, failMKT } = await deployFailTransferContracts();
-
-        // Step 1: Create a course with multiple withdrawers including the failing receiver
-        const courseA = await createCourseBatchHelper({
-          uries: ["native-ERC20-revert-test"],
-          withdrawersArrays: [[instructor1.address, failNativeWallet.target]],
-          redeemers: [instructor1.address],
-          validUntils: [now + 86400],
-          createBatchTxCaller: instructor1,
-          expectSuccessWith: "CourseCreated",
-        });
-
+        // Step 1: instructor1 creates a generic course with [instructor1, failNativeWallet] array
+        const courseIdA = await quickCreateACourse({ w: [instructor1.address, failNativeWallet.target] });
         // Step 2: make 4 mixed-token sales, MTK1, native, failMKT, MTK2
         const tokenTypes = [MKT1.target, ethers.ZeroAddress, failMKT.target, MKT2.target];
         const prices = ["10", "20", "30", "40"];
         const receivers = [person1, person2, person3, person4];
         const expectSuccessWith = "ContentPurchased";
         const expectations = [PES, PEF, PES, PES];
-
         await buyCourseBatchHelper({
-          courseIds: Array(4).fill(courseA.courseIds[0]),
+          courseIds: Array(4).fill(courseIdA),
           tokenAddresses: tokenTypes,
           coursePrices: prices.map((p) => ethers.parseEther(p)),
           courseReceivers: receivers.map((r) => r.address),
@@ -5547,27 +4885,22 @@ describe("NewTreasury Contract Tests", function () {
           buyBatchTxCaller: backend, // tx gönderen signer
           expectSuccessWith: expectSuccessWith,
         });
-
         // Step 3: fast forward past refund window
         const refundWindowDays = Number(await NewTreasury.refundWindow()) / 86400;
         await fastForwardTime({ days: refundWindowDays + 1 });
-
         // Step 1: Set failNativeWallet as foundation
         await NewTreasury.connect(foundation).setFoundationAddress(failNativeWallet.target);
-
         // Step 5: block native receive on foundation (failNativeWallet)
         await failNativeWallet.connect(backend).setRejectPayments(true);
-
         // Step 6: get balances before withdraw
         const input = {
-          courseId: courseA.courseIds[0],
+          courseId: courseIdA,
           fromIndex: 1,
           toIndex: 4,
           redeemer: instructor1,
           redeemerInitialNativeBalance: await ethers.provider.getBalance(instructor1.address),
         };
         const beforeTokenStats = await _validateExpectations(input, expectations);
-
         // Step 7: sign withdraw voucher
         const voucher = await withdrawVH.signVoucher({
           courseId: input.courseId,
@@ -5576,15 +4909,12 @@ describe("NewTreasury Contract Tests", function () {
           redeemer: instructor1.address,
           validUntil: now + 86400,
         });
-
         // Step 8: perform withdraw
         const tx = await NewTreasury.connect(instructor1).withdrawCoursePayments(voucher);
-
         // Step 9: expect CoursePaymentsWithdrawn with skipped = 1
         await expect(tx)
           .to.emit(NewTreasury, "CoursePaymentsWithdrawn")
           .withArgs(input.courseId, input.fromIndex, input.toIndex, input.redeemer, 3);
-
         // Step 10: validate state after withdraw
         const receipt = await tx.wait();
         const effectiveGasPrice = receipt.effectiveGasPrice ?? receipt.gasPrice ?? 0n;
@@ -5595,26 +4925,16 @@ describe("NewTreasury Contract Tests", function () {
       it("should skip withdraw when ERC20 transfer to governance contract fails", async () => {
         // Step 0: Deploy failTransfer contract and distribute tokens
         const { failNativeWallet, failMKT } = await deployFailTransferContracts();
-
-        // Step 1: Create a course with multiple withdrawers including the failing receiver
-        const courseA = await createCourseBatchHelper({
-          uries: ["native-ERC20-revert-test"],
-          withdrawersArrays: [[instructor1.address, failNativeWallet.target]],
-          redeemers: [instructor1.address],
-          validUntils: [now + 86400],
-          createBatchTxCaller: instructor1,
-          expectSuccessWith: "CourseCreated",
-        });
-
+        // Step 1: instructor1 creates a generic course with [instructor1, failNativeWallet] array
+        const courseIdA = await quickCreateACourse({ w: [instructor1.address, failNativeWallet.target] });
         // Step 2: make 4 mixed-token sales, MTK1, native, failMKT, MTK2
         const tokenTypes = [MKT1.target, ethers.ZeroAddress, failMKT.target, MKT2.target];
         const prices = ["10", "20", "30", "40"];
         const receivers = [person1, person2, person3, person4];
         const expectSuccessWith = "ContentPurchased";
         const expectations = [PES, PES, PEF, PES];
-
         await buyCourseBatchHelper({
-          courseIds: Array(4).fill(courseA.courseIds[0]),
+          courseIds: Array(4).fill(courseIdA),
           tokenAddresses: tokenTypes,
           coursePrices: prices.map((p) => ethers.parseEther(p)),
           courseReceivers: receivers.map((r) => r.address),
@@ -5624,24 +4944,20 @@ describe("NewTreasury Contract Tests", function () {
           buyBatchTxCaller: backend, // tx gönderen signer
           expectSuccessWith: expectSuccessWith,
         });
-
         // Step 3: fast forward past refund window
         const refundWindowDays = Number(await NewTreasury.refundWindow()) / 86400;
         await fastForwardTime({ days: refundWindowDays + 1 });
-
         // Step 4: block failMKT transfer to governance (failNativeWallet)
         await failMKT.connect(backend).blockAddress(NewGovDummy.target, true);
-
         // Step 5: get balances before withdraw
         const input = {
-          courseId: courseA.courseIds[0],
+          courseId: courseIdA,
           fromIndex: 1,
           toIndex: 4,
           redeemer: instructor1,
           redeemerInitialNativeBalance: await ethers.provider.getBalance(instructor1.address),
         };
         const beforeTokenStats = await _validateExpectations(input, expectations);
-
         // Step 6: sign withdraw voucher
         const voucher = await withdrawVH.signVoucher({
           courseId: input.courseId,
@@ -5650,15 +4966,12 @@ describe("NewTreasury Contract Tests", function () {
           redeemer: instructor1.address,
           validUntil: now + 86400,
         });
-
         // Step 7: perform withdraw
         const tx = await NewTreasury.connect(instructor1).withdrawCoursePayments(voucher);
-
         // Step 8: expect CoursePaymentsWithdrawn with skipped = 1
         await expect(tx)
           .to.emit(NewTreasury, "CoursePaymentsWithdrawn")
           .withArgs(input.courseId, input.fromIndex, input.toIndex, input.redeemer, 3);
-
         // Step 9: validate state after withdraw
         const receipt = await tx.wait();
         const effectiveGasPrice = receipt.effectiveGasPrice ?? receipt.gasPrice ?? 0n;
@@ -5669,26 +4982,16 @@ describe("NewTreasury Contract Tests", function () {
       it("should skip withdraw when governance is replaced with wallet that fails ERC20 transfers", async () => {
         // Step 0: Deploy failTransfer contract and distribute tokens
         const { failNativeWallet, failMKT } = await deployFailTransferContracts();
-
-        // Step 1: Create a course with multiple withdrawers including the failing receiver
-        const courseA = await createCourseBatchHelper({
-          uries: ["native-ERC20-revert-test"],
-          withdrawersArrays: [[instructor1.address, failNativeWallet.target]],
-          redeemers: [instructor1.address],
-          validUntils: [now + 86400],
-          createBatchTxCaller: instructor1,
-          expectSuccessWith: "CourseCreated",
-        });
-
+        // Step 1: instructor1 creates a generic course with [instructor1, failNativeWallet] array
+        const courseIdA = await quickCreateACourse({ w: [instructor1.address, failNativeWallet.target] });
         // Step 2: make 4 mixed-token sales, MTK1, native, failMKT, MTK2
         const tokenTypes = [MKT1.target, ethers.ZeroAddress, failMKT.target, MKT2.target];
         const prices = ["10", "20", "30", "40"];
         const receivers = [person1, person2, person3, person4];
         const expectSuccessWith = "ContentPurchased";
         const expectations = [PES, PES, PEF, PES];
-
         await buyCourseBatchHelper({
-          courseIds: Array(4).fill(courseA.courseIds[0]),
+          courseIds: Array(4).fill(courseIdA),
           tokenAddresses: tokenTypes,
           coursePrices: prices.map((p) => ethers.parseEther(p)),
           courseReceivers: receivers.map((r) => r.address),
@@ -5698,25 +5001,21 @@ describe("NewTreasury Contract Tests", function () {
           buyBatchTxCaller: backend, // tx gönderen signer
           expectSuccessWith: expectSuccessWith,
         });
-
         // Step 3: fast forward past refund window
         const refundWindowDays = Number(await NewTreasury.refundWindow()) / 86400;
         await fastForwardTime({ days: refundWindowDays + 1 });
-
         // Step 4: replace governance with a wallet that fails on erc20 transfer
         await NewTreasury.connect(backend).setGovernanceAddress(person5.address);
         await failMKT.connect(backend).blockAddress(person5.address, true);
-
         // Step 5: get balances before withdraw
         const input = {
-          courseId: courseA.courseIds[0],
+          courseId: courseIdA,
           fromIndex: 1,
           toIndex: 4,
           redeemer: instructor1,
           redeemerInitialNativeBalance: await ethers.provider.getBalance(instructor1.address),
         };
         const beforeTokenStats = await _validateExpectations(input, expectations);
-
         // Step 6: sign withdraw voucher
         const voucher = await withdrawVH.signVoucher({
           courseId: input.courseId,
@@ -5725,15 +5024,12 @@ describe("NewTreasury Contract Tests", function () {
           redeemer: instructor1.address,
           validUntil: now + 86400,
         });
-
         // Step 7: perform withdraw
         const tx = await NewTreasury.connect(instructor1).withdrawCoursePayments(voucher);
-
         // Step 8: expect CoursePaymentsWithdrawn with skipped = 1
         await expect(tx)
           .to.emit(NewTreasury, "CoursePaymentsWithdrawn")
           .withArgs(input.courseId, input.fromIndex, input.toIndex, input.redeemer, 3);
-
         // Step 9: validate state after withdraw
         const receipt = await tx.wait();
         const effectiveGasPrice = receipt.effectiveGasPrice ?? receipt.gasPrice ?? 0n;
@@ -5744,26 +5040,16 @@ describe("NewTreasury Contract Tests", function () {
       it("should skip withdraw when governance contract rejects receive native token", async () => {
         // Step 0: Deploy failTransfer contract and distribute tokens
         const { failNativeWallet, failMKT } = await deployFailTransferContracts();
-
-        // Step 1: Create a course with multiple withdrawers including the failing receiver
-        const courseA = await createCourseBatchHelper({
-          uries: ["native-ERC20-revert-test"],
-          withdrawersArrays: [[instructor1.address, failNativeWallet.target]],
-          redeemers: [instructor1.address],
-          validUntils: [now + 86400],
-          createBatchTxCaller: instructor1,
-          expectSuccessWith: "CourseCreated",
-        });
-
+        // Step 1: instructor1 creates a generic course with [instructor1, failNativeWallet] array
+        const courseIdA = await quickCreateACourse({ w: [instructor1.address, failNativeWallet.target] });
         // Step 2: make 4 mixed-token sales, MTK1, native, failMKT, MTK2
         const tokenTypes = [MKT1.target, ethers.ZeroAddress, failMKT.target, MKT2.target];
         const prices = ["10", "20", "30", "40"];
         const receivers = [person1, person2, person3, person4];
         const expectSuccessWith = "ContentPurchased";
         const expectations = [PES, PEF, PES, PES];
-
         await buyCourseBatchHelper({
-          courseIds: Array(4).fill(courseA.courseIds[0]),
+          courseIds: Array(4).fill(courseIdA),
           tokenAddresses: tokenTypes,
           coursePrices: prices.map((p) => ethers.parseEther(p)),
           courseReceivers: receivers.map((r) => r.address),
@@ -5773,24 +5059,20 @@ describe("NewTreasury Contract Tests", function () {
           buyBatchTxCaller: backend, // tx gönderen signer
           expectSuccessWith: expectSuccessWith,
         });
-
         // Step 3: fast forward past refund window
         const refundWindowDays = Number(await NewTreasury.refundWindow()) / 86400;
         await fastForwardTime({ days: refundWindowDays + 1 });
-
         // Step 4: block native token receive on governance (failNativeWallet)
         await NewGovDummy.connect(backend).setTokenBan(ethers.ZeroAddress, true);
-
         // Step 5: get balances before withdraw
         const input = {
-          courseId: courseA.courseIds[0],
+          courseId: courseIdA,
           fromIndex: 1,
           toIndex: 4,
           redeemer: instructor1,
           redeemerInitialNativeBalance: await ethers.provider.getBalance(instructor1.address),
         };
         const beforeTokenStats = await _validateExpectations(input, expectations);
-
         // Step 6: sign withdraw voucher
         const voucher = await withdrawVH.signVoucher({
           courseId: input.courseId,
@@ -5799,15 +5081,12 @@ describe("NewTreasury Contract Tests", function () {
           redeemer: instructor1.address,
           validUntil: now + 86400,
         });
-
         // Step 7: perform withdraw
         const tx = await NewTreasury.connect(instructor1).withdrawCoursePayments(voucher);
-
         // Step 8: expect CoursePaymentsWithdrawn with skipped = 1
         await expect(tx)
           .to.emit(NewTreasury, "CoursePaymentsWithdrawn")
           .withArgs(input.courseId, input.fromIndex, input.toIndex, input.redeemer, 3);
-
         // Step 9: validate state after withdraw
         const receipt = await tx.wait();
         const effectiveGasPrice = receipt.effectiveGasPrice ?? receipt.gasPrice ?? 0n;
@@ -5818,26 +5097,16 @@ describe("NewTreasury Contract Tests", function () {
       it("should skip withdraw when governance contract refuses to record ERC20", async () => {
         // Step 0: Deploy failTransfer contract and distribute tokens
         const { failNativeWallet, failMKT } = await deployFailTransferContracts();
-
-        // Step 1: Create a course with multiple withdrawers including the failing receiver
-        const courseA = await createCourseBatchHelper({
-          uries: ["native-ERC20-revert-test"],
-          withdrawersArrays: [[instructor1.address, failNativeWallet.target]],
-          redeemers: [instructor1.address],
-          validUntils: [now + 86400],
-          createBatchTxCaller: instructor1,
-          expectSuccessWith: "CourseCreated",
-        });
-
+        // Step 1: instructor1 creates a generic course with [instructor1, failNativeWallet] array
+        const courseIdA = await quickCreateACourse({ w: [instructor1.address, failNativeWallet.target] });
         // Step 2: make 4 mixed-token sales, MTK1, native, failMKT, MTK2
         const tokenTypes = [MKT1.target, ethers.ZeroAddress, failMKT.target, MKT2.target];
         const prices = ["10", "20", "30", "40"];
         const receivers = [person1, person2, person3, person4];
         const expectSuccessWith = "ContentPurchased";
         const expectations = [PES, PES, PEF, PES];
-
         await buyCourseBatchHelper({
-          courseIds: Array(4).fill(courseA.courseIds[0]),
+          courseIds: Array(4).fill(courseIdA),
           tokenAddresses: tokenTypes,
           coursePrices: prices.map((p) => ethers.parseEther(p)),
           courseReceivers: receivers.map((r) => r.address),
@@ -5847,24 +5116,20 @@ describe("NewTreasury Contract Tests", function () {
           buyBatchTxCaller: backend, // tx gönderen signer
           expectSuccessWith: expectSuccessWith,
         });
-
         // Step 3: fast forward past refund window
         const refundWindowDays = Number(await NewTreasury.refundWindow()) / 86400;
         await fastForwardTime({ days: refundWindowDays + 1 });
-
         // Step 4: reject recording of failMKT transfer
         await NewGovDummy.connect(backend).setTokenBan(failMKT.target, true);
-
         // Step 5: get balances before withdraw
         const input = {
-          courseId: courseA.courseIds[0],
+          courseId: courseIdA,
           fromIndex: 1,
           toIndex: 4,
           redeemer: instructor1,
           redeemerInitialNativeBalance: await ethers.provider.getBalance(instructor1.address),
         };
         const beforeTokenStats = await _validateExpectations(input, expectations);
-
         // Step 6: sign withdraw voucher
         const voucher = await withdrawVH.signVoucher({
           courseId: input.courseId,
@@ -5873,15 +5138,12 @@ describe("NewTreasury Contract Tests", function () {
           redeemer: instructor1.address,
           validUntil: now + 86400,
         });
-
         // Step 7: perform withdraw
         const tx = await NewTreasury.connect(instructor1).withdrawCoursePayments(voucher);
-
         // Step 8: expect CoursePaymentsWithdrawn with skipped = 1
         await expect(tx)
           .to.emit(NewTreasury, "CoursePaymentsWithdrawn")
           .withArgs(input.courseId, input.fromIndex, input.toIndex, input.redeemer, 3);
-
         // Step 9: validate state after withdraw
         const receipt = await tx.wait();
         const effectiveGasPrice = receipt.effectiveGasPrice ?? receipt.gasPrice ?? 0n;
@@ -5892,26 +5154,16 @@ describe("NewTreasury Contract Tests", function () {
       it("should skip withdraw when governance contract lacks addGovernanceFunds function", async function () {
         // Step 0: Deploy failTransfer contract and distribute tokens
         const { failNativeWallet, failMKT } = await deployFailTransferContracts();
-
-        // Step 1: Create a course with multiple withdrawers including the failing receiver
-        const courseA = await createCourseBatchHelper({
-          uries: ["native-ERC20-revert-test"],
-          withdrawersArrays: [[instructor1.address, failNativeWallet.target]],
-          redeemers: [instructor1.address],
-          validUntils: [now + 86400],
-          createBatchTxCaller: instructor1,
-          expectSuccessWith: "CourseCreated",
-        });
-
+        // Step 1: instructor1 creates a generic course with [instructor1, failNativeWallet] array
+        const courseIdA = await quickCreateACourse({ w: [instructor1.address, failNativeWallet.target] });
         // Step 2: make 4 mixed-token sales, MTK1, native, failMKT, MTK2
         const tokenTypes = [MKT1.target, ethers.ZeroAddress, failMKT.target, MKT2.target];
         const prices = ["10", "20", "30", "40"];
         const receivers = [person1, person2, person3, person4];
         const expectSuccessWith = "ContentPurchased";
         const expectations = [PEF, PEF, PEF, PEF];
-
         await buyCourseBatchHelper({
-          courseIds: Array(4).fill(courseA.courseIds[0]),
+          courseIds: Array(4).fill(courseIdA),
           tokenAddresses: tokenTypes,
           coursePrices: prices.map((p) => ethers.parseEther(p)),
           courseReceivers: receivers.map((r) => r.address),
@@ -5921,24 +5173,20 @@ describe("NewTreasury Contract Tests", function () {
           buyBatchTxCaller: backend, // tx gönderen signer
           expectSuccessWith: expectSuccessWith,
         });
-
         // Step 3: fast forward past refund window
         const refundWindowDays = Number(await NewTreasury.refundWindow()) / 86400;
         await fastForwardTime({ days: refundWindowDays + 1 });
-
         // Step 4: Replace governance contract with an other contract that doesn't have addGovernanceFunds function
         await NewTreasury.connect(backend).setGovernanceAddress(failNativeWallet.target);
-
         // Step 5: get balances before withdraw
         const input = {
-          courseId: courseA.courseIds[0],
+          courseId: courseIdA,
           fromIndex: 1,
           toIndex: 4,
           redeemer: instructor1,
           redeemerInitialNativeBalance: await ethers.provider.getBalance(instructor1.address),
         };
         const beforeTokenStats = await _validateExpectations(input, expectations);
-
         // Step 6: sign withdraw voucher
         const voucher = await withdrawVH.signVoucher({
           courseId: input.courseId,
@@ -5947,15 +5195,12 @@ describe("NewTreasury Contract Tests", function () {
           redeemer: instructor1.address,
           validUntil: now + 86400,
         });
-
         // Step 7: perform withdraw
         const tx = await NewTreasury.connect(instructor1).withdrawCoursePayments(voucher);
-
         // Step 8: expect CoursePaymentsWithdrawn with skipped = 1
         await expect(tx)
           .to.emit(NewTreasury, "CoursePaymentsWithdrawn")
           .withArgs(input.courseId, input.fromIndex, input.toIndex, input.redeemer, 0);
-
         // Step 9: validate state after withdraw
         const receipt = await tx.wait();
         const effectiveGasPrice = receipt.effectiveGasPrice ?? receipt.gasPrice ?? 0n;
@@ -5967,19 +5212,11 @@ describe("NewTreasury Contract Tests", function () {
 
     describe("❌ Failure Cases", function () {
       it("should fail to withdraw with invalid signer", async function () {
-        // Step 1: instructor1 creates course
-        const course1 = await createCourseBatchHelper({
-          uries: ["https://example.com/course/1"],
-          withdrawersArrays: [[instructor1.address]],
-          redeemers: [instructor1.address],
-          validUntils: [now + 86400],
-          createBatchTxCaller: instructor1,
-          expectSuccessWith: "CourseCreated",
-        });
-
+        // Step 1: instructor1 creates a generic course with [instructor1] array
+        const courseId1 = await quickCreateACourse();
         // Step 2: buyer1 purchases course for person1
         await buyCourseBatchHelper({
-          courseIds: [course1.courseIds[0]],
+          courseIds: [courseId1],
           tokenAddresses: [MKT1.target],
           coursePrices: [ethers.parseEther("10")],
           courseReceivers: [person1.address],
@@ -5989,17 +5226,14 @@ describe("NewTreasury Contract Tests", function () {
           buyBatchTxCaller: buyer1,
           expectSuccessWith: "ContentPurchased",
         });
-
         // Step 3: fast forward to after refund window
         const refundWindowInDays = Number(await NewTreasury.refundWindow()) / 86400;
         await fastForwardTime({ days: refundWindowInDays + 1 });
-
         // Step 4: switch to an invalid signer
         withdrawVH = getVoucherHelpers({ signer: instructor2 }).withdrawVH;
-
         // Step 5: attempt withdraw with wrong signer
         const withdrawResult = await withdrawCoursePaymentsHelper({
-          courseId: course1.courseIds[0],
+          courseId: courseId1,
           fromIndex: 1,
           toIndex: 1,
           redeemer: instructor1,
@@ -6011,19 +5245,11 @@ describe("NewTreasury Contract Tests", function () {
       });
 
       it("should fail to withdraw with expired voucher", async function () {
-        // Step 1: instructor1 creates course
-        const course1 = await createCourseBatchHelper({
-          uries: ["https://example.com/course/1"],
-          withdrawersArrays: [[instructor1.address]],
-          redeemers: [instructor1.address],
-          validUntils: [now + 86400],
-          createBatchTxCaller: instructor1,
-          expectSuccessWith: "CourseCreated",
-        });
-
+        // Step 1: instructor1 creates a generic course with [instructor1] array
+        const courseId1 = await quickCreateACourse();
         // Step 2: buyer1 purchases course
         await buyCourseBatchHelper({
-          courseIds: [course1.courseIds[0]],
+          courseIds: [courseId1],
           tokenAddresses: [MKT1.target],
           coursePrices: [ethers.parseEther("10")],
           courseReceivers: [person1.address],
@@ -6033,14 +5259,12 @@ describe("NewTreasury Contract Tests", function () {
           buyBatchTxCaller: buyer1,
           expectSuccessWith: "ContentPurchased",
         });
-
         // Step 3: fast forward time to pass refund window
         const refundWindowInDays = Number(await NewTreasury.refundWindow()) / 86400;
         await fastForwardTime({ days: refundWindowInDays + 1 });
-
         // Step 4: expired voucher
         const withdrawResult = await withdrawCoursePaymentsHelper({
-          courseId: course1.courseIds[0],
+          courseId: courseId1,
           fromIndex: 1,
           toIndex: 1,
           redeemer: instructor1,
@@ -6052,19 +5276,11 @@ describe("NewTreasury Contract Tests", function () {
       });
 
       it("should fail to withdraw when msg.sender is not redeemer", async function () {
-        // Step 1: instructor1 creates course
-        const course1 = await createCourseBatchHelper({
-          uries: ["https://example.com/course/1"],
-          withdrawersArrays: [[instructor1.address]],
-          redeemers: [instructor1.address],
-          validUntils: [now + 86400],
-          createBatchTxCaller: instructor1,
-          expectSuccessWith: "CourseCreated",
-        });
-
+        // Step 1: instructor1 creates a generic course with [instructor1] array
+        const courseId1 = await quickCreateACourse();
         // Step 2: buyer1 purchases course
         await buyCourseBatchHelper({
-          courseIds: [course1.courseIds[0]],
+          courseIds: [courseId1],
           tokenAddresses: [MKT1.target],
           coursePrices: [ethers.parseEther("10")],
           courseReceivers: [person1.address],
@@ -6074,17 +5290,14 @@ describe("NewTreasury Contract Tests", function () {
           buyBatchTxCaller: buyer1,
           expectSuccessWith: "ContentPurchased",
         });
-
         // Step 3: fast forward to after refund window
         const refundWindowInDays = Number(await NewTreasury.refundWindow()) / 86400;
         await fastForwardTime({ days: refundWindowInDays + 1 });
-
         // Step 4: set up voucher with mismatched redeemer
         falseRedeemer = ethers.ZeroAddress;
-
         // Step 5: try to withdraw with wrong redeemer inside voucher
         await withdrawCoursePaymentsHelper({
-          courseId: course1.courseIds[0],
+          courseId: courseId1,
           fromIndex: 1,
           toIndex: 1,
           redeemer: instructor1, // actual msg.sender
@@ -6092,7 +5305,6 @@ describe("NewTreasury Contract Tests", function () {
           expectRevertWith: "Only redeemer can use this voucher",
           expectations: [PES],
         });
-
         // Expect: reverts with "Only redeemer can use this voucher"
       });
 
@@ -6107,17 +5319,8 @@ describe("NewTreasury Contract Tests", function () {
           expectRevertWith: "Invalid courseId",
           expectations: [PES],
         });
-
-        // Step 2: Create a valid course
-        const course1 = await createCourseBatchHelper({
-          uries: ["https://example.com/course/1"],
-          withdrawersArrays: [[instructor1.address]],
-          redeemers: [instructor1.address],
-          validUntils: [now + 86400],
-          createBatchTxCaller: instructor1,
-          expectSuccessWith: "CourseCreated",
-        });
-
+        // Step 2: instructor1 creates a generic course with [instructor1] array to increase courseCounter
+        const courseId1 = await quickCreateACourse();
         // Step 3: Try withdraw without any course created for non-existing courseId = 0 expect fail
         const withdrawResult2 = await withdrawCoursePaymentsHelper({
           courseId: 0,
@@ -6134,7 +5337,6 @@ describe("NewTreasury Contract Tests", function () {
       it("should fail to withdraw with invalid courseId that is greater than courseCounter", async function () {
         // Step 1: Use a courseId greater than current courseCounter
         const invalidCourseId1 = Number(await NewTreasury.courseCounter()) + 1;
-
         // Step 2: Try withdraw with invalid courseId
         const withdrawResult1 = await withdrawCoursePaymentsHelper({
           courseId: invalidCourseId1,
@@ -6145,20 +5347,10 @@ describe("NewTreasury Contract Tests", function () {
           expectRevertWith: "Invalid courseId",
           expectations: [PES],
         });
-
-        // Step 3: Create a valid course
-        const course1 = await createCourseBatchHelper({
-          uries: ["https://example.com/course/1"],
-          withdrawersArrays: [[instructor1.address]],
-          redeemers: [instructor1.address],
-          validUntils: [now + 86400],
-          createBatchTxCaller: instructor1,
-          expectSuccessWith: "CourseCreated",
-        });
-
+        // Step 3: instructor1 creates a generic course with [instructor1] array to increase courseCounter
+        const courseId1 = await quickCreateACourse();
         // Step 4: Use a courseId greater than current courseCounter
         const invalidCourseId2 = Number(await NewTreasury.courseCounter()) + 1;
-
         // Step 5: Try withdraw with invalid courseId
         const withdrawResult = await withdrawCoursePaymentsHelper({
           courseId: invalidCourseId2,
@@ -6173,20 +5365,12 @@ describe("NewTreasury Contract Tests", function () {
       });
 
       it("should fail to withdraw when invalid index range (0, from > to, to > saleCount)", async function () {
-        // Step 1: instructor1 creates a course
-        const course1 = await createCourseBatchHelper({
-          uries: ["https://example.com/course/1"],
-          withdrawersArrays: [[instructor1.address]],
-          redeemers: [instructor1.address],
-          validUntils: [now + 86400],
-          createBatchTxCaller: instructor1,
-          expectSuccessWith: "CourseCreated",
-        });
-
+        // Step 1: instructor1 creates a generic course with [instructor1] array
+        const courseId1 = await quickCreateACourse();
         // Step 2: 5 different valid sales occur for the course
         const receivers = [person1, person2, person3, person4, person5];
         await buyCourseBatchHelper({
-          courseIds: Array(5).fill(course1.courseIds[0]),
+          courseIds: Array(5).fill(courseId1),
           tokenAddresses: Array(5).fill(MKT1.target),
           coursePrices: Array(5).fill(ethers.parseEther("10")),
           courseReceivers: receivers.map((r) => r.address),
@@ -6196,10 +5380,9 @@ describe("NewTreasury Contract Tests", function () {
           buyBatchTxCaller: backend, // tx gönderen signer
           expectSuccessWith: "ContentPurchased",
         });
-
         // Step 3: fromIndex = 0
         await withdrawCoursePaymentsHelper({
-          courseId: course1.courseIds[0],
+          courseId: courseId1,
           fromIndex: 0,
           toIndex: 1,
           redeemer: instructor1,
@@ -6207,10 +5390,9 @@ describe("NewTreasury Contract Tests", function () {
           expectRevertWith: "Invalid index range: 1toMax_saleCounterPerCourse",
           expectations: [PES],
         });
-
         // Step 4: fromIndex > toIndex
         await withdrawCoursePaymentsHelper({
-          courseId: course1.courseIds[0],
+          courseId: courseId1,
           fromIndex: 3,
           toIndex: 2,
           redeemer: instructor1,
@@ -6218,11 +5400,10 @@ describe("NewTreasury Contract Tests", function () {
           expectRevertWith: "Invalid index range: 1toMax_saleCounterPerCourse",
           expectations: [PES],
         });
-
         // Step 5: toIndex > saleCounterPerCourse[courseId] (5 satış oldu, toIndex = 6)
-        const invalidEnd = Number(await NewTreasury.saleCounterPerCourse(course1.courseIds[0])) + 1;
+        const invalidEnd = Number(await NewTreasury.saleCounterPerCourse(courseId1)) + 1;
         await withdrawCoursePaymentsHelper({
-          courseId: course1.courseIds[0],
+          courseId: courseId1,
           fromIndex: 4,
           toIndex: invalidEnd, //its 6, only five sales occured: "1-2-3-4-5"
           redeemer: instructor1,
@@ -6234,25 +5415,15 @@ describe("NewTreasury Contract Tests", function () {
       });
 
       it("should fail to withdraw when batch size exceeds maxBatchWithdrawSize", async function () {
-        // Step 1: instructor1 creates a course
-        const course1 = await createCourseBatchHelper({
-          uries: ["https://example.com/course/1"],
-          withdrawersArrays: [[instructor1.address]],
-          redeemers: [instructor1.address],
-          validUntils: [now + 86400],
-          createBatchTxCaller: instructor1,
-          expectSuccessWith: "CourseCreated",
-        });
-
+        // Step 1: instructor1 creates a generic course with [instructor1] array
+        const courseId1 = await quickCreateACourse();
         // Step 2: get maxBatchWithdrawSize
         const maxBatch = Number(await NewTreasury.maxBatchWithdrawSize());
         const numSales = maxBatch + 1; // one more than max allowed batch size
-
         // Step 3: make sales more than max allowed batch size of withdraw
         const receivers = Array.from({ length: numSales }, () => ethers.Wallet.createRandom());
-
         await buyCourseBatchHelper({
-          courseIds: Array(numSales).fill(course1.courseIds[0]),
+          courseIds: Array(numSales).fill(courseId1),
           tokenAddresses: Array(numSales).fill(MKT1.target),
           coursePrices: Array(numSales).fill(ethers.parseEther("10")),
           courseReceivers: receivers.map((r) => r.address),
@@ -6262,19 +5433,15 @@ describe("NewTreasury Contract Tests", function () {
           buyBatchTxCaller: backend, // tx gönderen signer
           expectSuccessWith: "ContentPurchased",
         });
-
         // Step 4: fast forward time after refund window
         const refundWindowInDays = Number(await NewTreasury.refundWindow()) / 86400;
         await fastForwardTime({ days: refundWindowInDays + 1 });
-
         // Step 5: attempt withdraw with a batch size exceeding the limit
         const fromIndex = 1; // first sale also minimum allowed index
         const toIndex = numSales; // bigger than maxBatchWithdrawSize also its last sale index
-
         const expectations = Array(toIndex - fromIndex + 1).fill(PES);
-
         const withdrawResult = await withdrawCoursePaymentsHelper({
-          courseId: course1.courseIds[0],
+          courseId: courseId1,
           fromIndex,
           toIndex,
           redeemer: instructor1,
@@ -6286,19 +5453,11 @@ describe("NewTreasury Contract Tests", function () {
       });
 
       it("should fail to withdraw when redeemer is not an authorized withdrawer", async function () {
-        // Step 1: instructor1 creates course with only instructor1 as authorized withdrawer
-        const course1 = await createCourseBatchHelper({
-          uries: ["https://example.com/course/1"],
-          withdrawersArrays: [[instructor1.address]],
-          redeemers: [instructor1.address],
-          validUntils: [now + 86400],
-          createBatchTxCaller: instructor1,
-          expectSuccessWith: "CourseCreated",
-        });
-
+        // Step 1: instructor1 creates a generic course with [instructor1] array
+        const courseId1 = await quickCreateACourse();
         // Step 2: buyer1 purchases course
         await buyCourseBatchHelper({
-          courseIds: [course1.courseIds[0]],
+          courseIds: [courseId1],
           tokenAddresses: [MKT1.target],
           coursePrices: [ethers.parseEther("10")],
           courseReceivers: [person1.address],
@@ -6308,14 +5467,12 @@ describe("NewTreasury Contract Tests", function () {
           buyBatchTxCaller: buyer1,
           expectSuccessWith: "ContentPurchased",
         });
-
         // Step 3: fast forward time to pass refund window
         const refundWindowInDays = Number(await NewTreasury.refundWindow()) / 86400;
         await fastForwardTime({ days: refundWindowInDays + 1 });
-
         // Step 4: try withdraw with unauthorized redeemer (backend not in withdrawers list)
         const withdrawResult1 = await withdrawCoursePaymentsHelper({
-          courseId: course1.courseIds[0],
+          courseId: courseId1,
           fromIndex: 1,
           toIndex: 1,
           redeemer: backend,
@@ -6323,10 +5480,9 @@ describe("NewTreasury Contract Tests", function () {
           expectRevertWith: "Not authorized withdrawer for this course",
           expectations: [PES],
         });
-
         // Step 5: try withdraw with unauthorized redeemer (instructor2 not in withdrawers list)
         const withdrawResult2 = await withdrawCoursePaymentsHelper({
-          courseId: course1.courseIds[0],
+          courseId: courseId1,
           fromIndex: 1,
           toIndex: 1,
           redeemer: instructor2,
@@ -6334,24 +5490,15 @@ describe("NewTreasury Contract Tests", function () {
           expectRevertWith: "Not authorized withdrawer for this course",
           expectations: [PES],
         });
-
         // Expect: Reverts with "Not authorized withdrawer for this course" in both cases
       });
 
       it("should fail to call attemptSingleWithdrawOrRevert externally by anyone except treasury contract", async function () {
-        // Step 1: instructor creates a course
-        const course1 = await createCourseBatchHelper({
-          uries: ["https://example.com/course/1"],
-          withdrawersArrays: [[instructor1.address]],
-          redeemers: [instructor1.address],
-          validUntils: [now + 86400],
-          createBatchTxCaller: instructor1,
-          expectSuccessWith: "CourseCreated",
-        });
-
+        // Step 1: instructor1 creates a generic course with [instructor1] array
+        const courseId1 = await quickCreateACourse();
         // Step 2: buyer purchases course
         const buy_course1 = await buyCourseBatchHelper({
-          courseIds: [course1.courseIds[0]],
+          courseIds: [courseId1],
           tokenAddresses: [MKT1.target],
           coursePrices: [ethers.parseEther("10")],
           courseReceivers: [person1.address],
@@ -6361,15 +5508,12 @@ describe("NewTreasury Contract Tests", function () {
           buyBatchTxCaller: buyer1, // tx gönderen signer
           expectSuccessWith: "ContentPurchased",
         });
-
         // Step 3: fast forward beyond refund window
         const refundWindowInDays = Number(await NewTreasury.refundWindow()) / 86400;
         await fastForwardTime({ days: refundWindowInDays + 1 });
-
         // Step 4: test direct call reverts from all actors
         const paymentId = buy_course1[0];
         const actors = [instructor1, backend, foundation];
-
         for (const actor of actors) {
           await expect(
             NewTreasury.connect(actor).attemptSingleWithdrawOrRevert(paymentId, actor.address)
@@ -6378,19 +5522,11 @@ describe("NewTreasury Contract Tests", function () {
       });
 
       it("should fail to call checkWithdrawStatus with invalid courseId or index range", async () => {
-        // Step 1: instructor1 creates a course
-        const course1 = await createCourseBatchHelper({
-          uries: ["https://example.com/course/1"],
-          withdrawersArrays: [[instructor1.address]],
-          redeemers: [instructor1.address],
-          validUntils: [now + 86400],
-          createBatchTxCaller: instructor1,
-          expectSuccessWith: "CourseCreated",
-        });
-
+        // Step 1: instructor1 creates a generic course with [instructor1] array
+        const courseId1 = await quickCreateACourse();
         // Step 2: make 3 sales
         await buyCourseBatchHelper({
-          courseIds: Array(3).fill(course1.courseIds[0]),
+          courseIds: Array(3).fill(courseId1),
           tokenAddresses: [MKT1.target, MKT1.target, MKT1.target],
           coursePrices: [ethers.parseEther("10"), ethers.parseEther("10"), ethers.parseEther("10")],
           courseReceivers: [person1.address, person2.address, person3.address],
@@ -6400,32 +5536,27 @@ describe("NewTreasury Contract Tests", function () {
           buyBatchTxCaller: buyer1, // tx gönderen signer
           expectSuccessWith: "ContentPurchased",
         });
-
         // Step 3: invalid courseId = 0
         await expect(NewTreasury.connect(instructor1).checkWithdrawStatus(0, 1, 1)).to.be.revertedWith(
           "Invalid courseId"
         );
-
         // Step 4: invalid courseId = courseCounter + 1
         const invalidId = Number(await NewTreasury.courseCounter()) + 1;
         await expect(NewTreasury.connect(instructor1).checkWithdrawStatus(invalidId, 1, 1)).to.be.revertedWith(
           "Invalid courseId"
         );
-
         // Step 5: invalid fromIndex = 0
-        await expect(
-          NewTreasury.connect(instructor1).checkWithdrawStatus(course1.courseIds[0], 0, 1)
-        ).to.be.revertedWith("Invalid index range: 1toSaleCountOfCourse");
-
-        // Step 6: fromIndex > toIndex
-        await expect(NewTreasury.connect(instructor1).checkWithdrawStatus(course1.courseIds, 3, 2)).to.be.revertedWith(
+        await expect(NewTreasury.connect(instructor1).checkWithdrawStatus(courseId1, 0, 1)).to.be.revertedWith(
           "Invalid index range: 1toSaleCountOfCourse"
         );
-
+        // Step 6: fromIndex > toIndex
+        await expect(NewTreasury.connect(instructor1).checkWithdrawStatus(courseId1, 3, 2)).to.be.revertedWith(
+          "Invalid index range: 1toSaleCountOfCourse"
+        );
         // Step 7: toIndex > saleCounter
-        const saleCount = await NewTreasury.saleCounterPerCourse(course1.courseIds[0]);
+        const saleCount = await NewTreasury.saleCounterPerCourse(courseId1);
         await expect(
-          NewTreasury.connect(instructor1).checkWithdrawStatus(course1.courseIds[0], 1, Number(saleCount) + 1)
+          NewTreasury.connect(instructor1).checkWithdrawStatus(courseId1, 1, Number(saleCount) + 1)
         ).to.be.revertedWith("Invalid index range: 1toSaleCountOfCourse");
       });
       /////###End of Failure Cases###/////
@@ -6450,12 +5581,10 @@ describe("NewTreasury Contract Tests", function () {
         // Step 1: Grant backend role to person1
         await NewTreasury.connect(foundation).grantBackendRole(person1.address);
         expect(await NewTreasury.hasBackendRole(person1.address)).to.be.true;
-
         // Step 2: Revoke backend role from person1 by foundation
         await expect(await NewTreasury.connect(foundation).revokeBackendRole(person1.address))
           .to.emit(NewTreasury, "BackendRoleRevoked")
           .withArgs(person1.address);
-
         // Expect: person1 should no longer have backend role
         expect(await NewTreasury.hasBackendRole(person1.address)).to.be.false;
       });
@@ -6465,13 +5594,10 @@ describe("NewTreasury Contract Tests", function () {
         await expect(NewTreasury.connect(foundation).setFoundationAddress(person1.address))
           .to.emit(NewTreasury, "FoundationAddressUpdated")
           .withArgs(person1.address, foundation.address);
-
         // Expect: new foundation is person1
         expect(await NewTreasury.foundationAddress()).to.equal(person1.address);
-
         // Expect: person1 has backend role
         expect(await NewTreasury.hasBackendRole(person1.address)).to.be.true;
-
         // Expect: old foundation (original) no longer has backend role
         expect(await NewTreasury.hasBackendRole(foundation.address)).to.be.false;
       });
@@ -6481,12 +5607,10 @@ describe("NewTreasury Contract Tests", function () {
         await expect(NewTreasury.connect(foundation).revokeBackendRole(foundation.address))
           .to.emit(NewTreasury, "BackendRoleRevoked")
           .withArgs(foundation.address);
-
         // Step 2: foundation calls setFoundationAddress to assign new foundation
         await expect(NewTreasury.connect(foundation).setFoundationAddress(person1.address))
           .to.emit(NewTreasury, "FoundationAddressUpdated")
           .withArgs(person1.address, foundation.address);
-
         // Step 3: Confirm new foundation and backend role transfer
         expect(await NewTreasury.foundationAddress()).to.equal(person1.address);
         expect(await NewTreasury.hasBackendRole(person1.address)).to.be.true;
@@ -6498,7 +5622,6 @@ describe("NewTreasury Contract Tests", function () {
         await expect(NewTreasury.connect(backend).setUdaoTokenAddress(MKT2.target))
           .to.emit(NewTreasury, "UdaoTokenAddressUpdated")
           .withArgs(MKT2.target, MKT1.target);
-
         // Expect: new udao token address is set
         expect(await NewTreasury.udaoTokenAddress()).to.equal(MKT2.target);
       });
@@ -6508,7 +5631,6 @@ describe("NewTreasury Contract Tests", function () {
         await expect(NewTreasury.connect(backend).setGovernanceAddress(person2.address))
           .to.emit(NewTreasury, "GovernanceAddressUpdated")
           .withArgs(person2.address, NewGovDummy.target);
-
         // Expect: new governance address is set
         expect(await NewTreasury.governanceAddress()).to.equal(person2.address);
       });
@@ -6516,13 +5638,11 @@ describe("NewTreasury Contract Tests", function () {
       it("should allow backend to update max allowed withdrawers", async () => {
         // Step 1: Read current maxAllowedWithdrawers
         const existing = await NewTreasury.maxAllowedWithdrawers();
-
         // Step 2: Update maxAllowedWithdrawers to higher value
         const newMax = Number(existing) + 1;
         await expect(NewTreasury.connect(backend).setMaxAllowedWithdrawers(newMax))
           .to.emit(NewTreasury, "MaxAllowedWithdrawersUpdated")
           .withArgs(newMax, existing);
-
         // Expect: new value is set
         expect(await NewTreasury.maxAllowedWithdrawers()).to.equal(newMax);
       });
@@ -6530,13 +5650,11 @@ describe("NewTreasury Contract Tests", function () {
       it("should allow backend to update max batch withdraw size", async () => {
         // Step 1: Read current maxBatchWithdrawSize
         const existing = await NewTreasury.maxBatchWithdrawSize();
-
         // Step 2: Update maxBatchWithdrawSize to higher value
         const newValue = Number(existing) + 1;
         await expect(NewTreasury.connect(backend).setMaxBatchWithdrawSize(newValue))
           .to.emit(NewTreasury, "MaxBatchWithdrawSizeUpdated")
           .withArgs(newValue, existing);
-
         // Expect: new value is set
         expect(await NewTreasury.maxBatchWithdrawSize()).to.equal(newValue);
       });
@@ -6544,13 +5662,11 @@ describe("NewTreasury Contract Tests", function () {
       it("should allow backend to update refund window", async () => {
         // Step 1: Read current refundWindow
         const existing = await NewTreasury.refundWindow();
-
         // Step 2: Update refundWindow to a different value
         const newValue = Number(existing) + 86400; // +1 day
         await expect(NewTreasury.connect(backend).setRefundWindow(newValue))
           .to.emit(NewTreasury, "RefundWindowUpdated")
           .withArgs(newValue, existing);
-
         // Expect: new value is set
         expect(await NewTreasury.refundWindow()).to.equal(newValue);
       });
@@ -6563,7 +5679,6 @@ describe("NewTreasury Contract Tests", function () {
           utFound: await NewTreasury.utFoundCut(),
           utGover: await NewTreasury.utGoverCut(),
         };
-
         // Step 2: Define new values
         const updated = {
           atFound: Number(current.atFound) + 1000,
@@ -6571,12 +5686,10 @@ describe("NewTreasury Contract Tests", function () {
           utFound: Number(current.utFound) + 1000,
           utGover: Number(current.utGover) + 1000,
         };
-
         // Step 3: Update via setCourseCuts
         await expect(
           NewTreasury.connect(backend).setCourseCuts(updated.atFound, updated.atGover, updated.utFound, updated.utGover)
         ).to.emit(NewTreasury, "CourseCutsUpdated");
-
         // Step 4: Assert new values
         expect(await NewTreasury.atFoundCut()).to.equal(updated.atFound);
         expect(await NewTreasury.atGoverCut()).to.equal(updated.atGover);
@@ -6585,6 +5698,7 @@ describe("NewTreasury Contract Tests", function () {
       });
       /////###End of Success Cases###/////
     });
+
     describe("❌ Failure Cases", function () {
       it("should fail to deploy treasury if constructor foundation address is zero", async () => {
         // Step 1: Try to deploy NewTreasury with zero foundation address
@@ -6662,13 +5776,11 @@ describe("NewTreasury Contract Tests", function () {
       it("should fail to revoke backend role if called by a non-foundation address", async () => {
         // Step 1: Grant backend role to person1
         await NewTreasury.connect(foundation).grantBackendRole(person1.address);
-
         // Step 2: Try to revoke by backend (not foundation)
         await expect(NewTreasury.connect(backend).revokeBackendRole(person1.address)).to.be.revertedWithCustomError(
           NewTreasury,
           "onlyFoundationAuthorized()"
         );
-
         // Expect: person1 should still have backend role
         expect(await NewTreasury.hasBackendRole(person1.address)).to.be.true;
       });
@@ -6678,7 +5790,6 @@ describe("NewTreasury Contract Tests", function () {
         await expect(
           NewTreasury.connect(foundation).revokeBackendRole(ethers.ZeroAddress)
         ).to.be.revertedWithCustomError(NewTreasury, "ZeroAddressBackend()");
-
         // Expect: role still false
         expect(await NewTreasury.hasBackendRole(ethers.ZeroAddress)).to.be.false;
       });
@@ -6686,13 +5797,11 @@ describe("NewTreasury Contract Tests", function () {
       it("should fail to revoke backend role if address doesn't have role", async () => {
         // Step 1: Ensure person1 has no backend role
         expect(await NewTreasury.hasBackendRole(person1.address)).to.be.false;
-
         // Step 2: Try to revoke
         await expect(NewTreasury.connect(foundation).revokeBackendRole(person1.address)).to.be.revertedWithCustomError(
           NewTreasury,
           "alreadyHasNotBackendRole()"
         );
-
         // Expect: still false
         expect(await NewTreasury.hasBackendRole(person1.address)).to.be.false;
       });
@@ -6703,7 +5812,6 @@ describe("NewTreasury Contract Tests", function () {
           NewTreasury,
           "onlyFoundationAuthorized()"
         );
-
         // Expect: foundation still unchanged
         expect(await NewTreasury.foundationAddress()).to.equal(foundation.address);
       });
@@ -6713,7 +5821,6 @@ describe("NewTreasury Contract Tests", function () {
         await expect(
           NewTreasury.connect(foundation).setFoundationAddress(ethers.ZeroAddress)
         ).to.be.revertedWithCustomError(NewTreasury, "ZeroAddressFoundation()");
-
         // Expect: foundation still unchanged
         expect(await NewTreasury.foundationAddress()).to.equal(foundation.address);
       });
@@ -6723,7 +5830,6 @@ describe("NewTreasury Contract Tests", function () {
         await expect(
           NewTreasury.connect(foundation).setFoundationAddress(foundation.address)
         ).to.be.revertedWithCustomError(NewTreasury, "NoChange()");
-
         // Expect: foundation still unchanged
         expect(await NewTreasury.foundationAddress()).to.equal(foundation.address);
       });
@@ -6734,7 +5840,6 @@ describe("NewTreasury Contract Tests", function () {
           NewTreasury,
           "onlyBackendAuthorized()"
         );
-
         // Expect: address remains unchanged
         expect(await NewTreasury.udaoTokenAddress()).to.equal(MKT1.target);
       });
@@ -6744,7 +5849,6 @@ describe("NewTreasury Contract Tests", function () {
         await expect(
           NewTreasury.connect(backend).setUdaoTokenAddress(ethers.ZeroAddress)
         ).to.be.revertedWithCustomError(NewTreasury, "ZeroAddressUdaoToken()");
-
         // Expect: address remains unchanged
         expect(await NewTreasury.udaoTokenAddress()).to.equal(MKT1.target);
       });
@@ -6755,7 +5859,6 @@ describe("NewTreasury Contract Tests", function () {
           NewTreasury,
           "NoChange()"
         );
-
         // Expect: address remains unchanged
         expect(await NewTreasury.udaoTokenAddress()).to.equal(MKT1.target);
       });
@@ -6766,7 +5869,6 @@ describe("NewTreasury Contract Tests", function () {
           NewTreasury,
           "onlyBackendAuthorized()"
         );
-
         // Expect: address remains unchanged
         expect(await NewTreasury.governanceAddress()).to.equal(NewGovDummy.target);
       });
@@ -6776,7 +5878,6 @@ describe("NewTreasury Contract Tests", function () {
         await expect(
           NewTreasury.connect(backend).setGovernanceAddress(ethers.ZeroAddress)
         ).to.be.revertedWithCustomError(NewTreasury, "ZeroAddressGovernance()");
-
         // Expect: address remains unchanged
         expect(await NewTreasury.governanceAddress()).to.equal(NewGovDummy.target);
       });
@@ -6786,7 +5887,6 @@ describe("NewTreasury Contract Tests", function () {
         await expect(
           NewTreasury.connect(backend).setGovernanceAddress(NewGovDummy.target)
         ).to.be.revertedWithCustomError(NewTreasury, "NoChange()");
-
         // Expect: address remains unchanged
         expect(await NewTreasury.governanceAddress()).to.equal(NewGovDummy.target);
       });
@@ -6794,14 +5894,12 @@ describe("NewTreasury Contract Tests", function () {
       it("should fail to update max allowed withdrawers if called by non-backend", async () => {
         // Step 1: Read current maxAllowedWithdrawers
         const existing = await NewTreasury.maxAllowedWithdrawers();
-
         // Step 2: Try to update max allowed withdrawers by outsider (not backend)
         const newMax = Number(existing) + 1;
         await expect(NewTreasury.connect(person1).setMaxAllowedWithdrawers(newMax)).to.be.revertedWithCustomError(
           NewTreasury,
           "onlyBackendAuthorized()"
         );
-
         // Expect: value remains unchanged
         expect(await NewTreasury.maxAllowedWithdrawers()).to.equal(existing);
       });
@@ -6809,13 +5907,11 @@ describe("NewTreasury Contract Tests", function () {
       it("should fail to update max allowed withdrawers if value is 0", async () => {
         // Step 1: Read current maxAllowedWithdrawers
         const existing = await NewTreasury.maxAllowedWithdrawers();
-
         // Step 2: Try to update max allowed withdrawers to 0
         await expect(NewTreasury.connect(backend).setMaxAllowedWithdrawers(0)).to.be.revertedWithCustomError(
           NewTreasury,
           "ZeroValueNotAccepted()"
         );
-
         // Expect: value remains unchanged
         expect(await NewTreasury.maxAllowedWithdrawers()).to.equal(existing);
       });
@@ -6827,7 +5923,6 @@ describe("NewTreasury Contract Tests", function () {
           NewTreasury,
           "NoChange()"
         );
-
         // Expect: value remains unchanged
         expect(await NewTreasury.maxAllowedWithdrawers()).to.equal(existing);
       });
@@ -6835,14 +5930,12 @@ describe("NewTreasury Contract Tests", function () {
       it("should fail to update max batch withdraw size if called by non-backend", async () => {
         // Step 1: Read current maxBatchWithdrawSize
         const existing = await NewTreasury.maxBatchWithdrawSize();
-
         // Step 2: Try to update max batch withdraw size by outsider (not backend)
         const newValue = Number(existing) + 1;
         await expect(NewTreasury.connect(person1).setMaxBatchWithdrawSize(newValue)).to.be.revertedWithCustomError(
           NewTreasury,
           "onlyBackendAuthorized()"
         );
-
         // Expect: value remains unchanged
         expect(await NewTreasury.maxBatchWithdrawSize()).to.equal(existing);
       });
@@ -6850,13 +5943,11 @@ describe("NewTreasury Contract Tests", function () {
       it("should fail to update max batch withdraw size if value is 0", async () => {
         // Step 1: Read current maxBatchWithdrawSize
         const existing = await NewTreasury.maxBatchWithdrawSize();
-
         // Step 2: Try to update max batch withdraw size to 0
         await expect(NewTreasury.connect(backend).setMaxBatchWithdrawSize(0)).to.be.revertedWithCustomError(
           NewTreasury,
           "ZeroValueNotAccepted()"
         );
-
         // Expect: value remains unchanged
         expect(await NewTreasury.maxBatchWithdrawSize()).to.equal(existing);
       });
@@ -6864,13 +5955,11 @@ describe("NewTreasury Contract Tests", function () {
       it("should fail to update max batch withdraw size if new value is same", async () => {
         // Step 1: Read current maxBatchWithdrawSize
         const existing = await NewTreasury.maxBatchWithdrawSize();
-
         // Step 2: Try to update with same value
         await expect(NewTreasury.connect(backend).setMaxBatchWithdrawSize(existing)).to.be.revertedWithCustomError(
           NewTreasury,
           "NoChange()"
         );
-
         // Expect: value remains unchanged
         expect(await NewTreasury.maxBatchWithdrawSize()).to.equal(existing);
       });
@@ -6878,14 +5967,12 @@ describe("NewTreasury Contract Tests", function () {
       it("should fail to update refund window if called by non-backend", async () => {
         // Step 1: Read current refundWindow
         const existing = await NewTreasury.refundWindow();
-
         // Step 2: Try to update refundWindow from outsider
         const newValue = Number(existing) + 86400;
         await expect(NewTreasury.connect(person1).setRefundWindow(newValue)).to.be.revertedWithCustomError(
           NewTreasury,
           "onlyBackendAuthorized()"
         );
-
         // Expect: value remains unchanged
         expect(await NewTreasury.refundWindow()).to.equal(existing);
       });
@@ -6893,13 +5980,11 @@ describe("NewTreasury Contract Tests", function () {
       it("should fail to update refund window if new value is same", async () => {
         // Step 1: Read current refundWindow
         const existing = await NewTreasury.refundWindow();
-
         // Step 2: Try to update with same value
         await expect(NewTreasury.connect(backend).setRefundWindow(existing)).to.be.revertedWithCustomError(
           NewTreasury,
           "NoChange()"
         );
-
         // Expect: value remains unchanged
         expect(await NewTreasury.refundWindow()).to.equal(existing);
       });
@@ -6937,7 +6022,6 @@ describe("NewTreasury Contract Tests", function () {
           utFound: await NewTreasury.utFoundCut(),
           utGover: await NewTreasury.utGoverCut(),
         };
-
         // Step 2: Try to set with same values
         await expect(
           NewTreasury.connect(backend).setCourseCuts(current.atFound, current.atGover, current.utFound, current.utGover)
