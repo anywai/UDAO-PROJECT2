@@ -2848,6 +2848,32 @@ describe("NewTreasury Contract Tests", function () {
         // Expect: Reverts with "Only redeemer can use this voucher"
       });
 
+      it("should fail to buy if duplicate courseId receiver pair exists in batch", async function () {
+        // Step 1: instructor1 creates a course
+        const course1 = await createCourseHelper({
+          uri: "https://example.com/course/1",
+          withdrawers: [instructor1.address, instructor2.address],
+          redeemer: instructor1,
+          validUntil: now + 86400,
+          expectSuccessWith: "CourseCreated",
+        });
+
+        // Step 2: buyer1 try to buy same course to same receiver twice
+        await buyCourseBatchHelper({
+          courseIds: [course1.courseId, course1.courseId],
+          tokenAddresses: [MKT1.target, MKT2.target],
+          coursePrices: [ethers.parseEther("10"), ethers.parseEther("10")],
+          courseReceivers: [person1.address, person1.address],
+          redeemers: [buyer1, buyer1], // genelde hepsi aynı: tx'i buyer1 atıyor
+          validUntils: [now + 86400, now + 86400],
+          nativeMsgValue: 0, // sadece ERC20 olduğundan 0
+          buyBatchTxCaller: buyer1, // tx gönderen signer
+          expectRevertWith: "Content receiver already owns this course",
+        });
+
+        // Step 3: (Ek doğrulama istersen) son durumları kontrattan okuyup assert edebilirsin.
+      });
+
       it("should fail if the same course is purchased twice for the same receiver", async function () {
         // Step 1: instructor1 creates a course
         const course1 = await createCourseHelper({

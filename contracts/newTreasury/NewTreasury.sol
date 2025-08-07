@@ -130,6 +130,9 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         hasBackendRole[msg.sender] = true;
     }
 
+    //string constant EMPTY_URI = "";
+    bytes32 constant EMPTY_URI_HASH = keccak256(bytes(""));
+
     /////### COURSE CREATION & UPDATING LOGIC ###/////
     struct Course {
         string uri;
@@ -155,6 +158,82 @@ contract NewTreasury is EIP712, ReentrancyGuard {
             "CreateCourseVoucher(string uri,address[] withdrawers,address redeemer,uint256 validUntil)"
         );
 
+    function createCourseBatch(
+        CreateCourseVoucher[] calldata vouchers
+    ) external {
+        uint256 len = vouchers.length;
+        // Optional: max batch size koymak istersen buraya require eklenebilir
+
+        for (uint256 i = 0; i < len; i++) {
+            CreateCourseVoucher calldata voucher = vouchers[i];
+            address[] memory withdrawers = voucher.withdrawers;
+            uint256 lenW = withdrawers.length; //array length
+            address redeemer = voucher.redeemer;
+            uint256 validUntil = voucher.validUntil;
+
+            // hash URI
+            bytes32 uriHash = keccak256(bytes(voucher.uri));
+            require(uriToCourseId[uriHash] == 0, "URI already used"); //or duplicate
+            require(uriHash != EMPTY_URI_HASH, "Empty URI not allowed");
+
+            require(lenW > 0, "Withdrawers required");
+            require(lenW <= maxAllowedWithdrawers, "Max withdrawers exceeded");
+
+            // create digest for the voucher
+            bytes32 digest = _hashTypedDataV4(
+                keccak256(
+                    abi.encode(
+                        CREATE_COURSE_VOUCHER_TYPEHASH,
+                        uriHash,
+                        keccak256(abi.encodePacked(withdrawers)),
+                        redeemer,
+                        validUntil
+                    )
+                )
+            );
+
+            // verify voucher, signer and validity
+            _verifyVoucherSignerAndValidity(
+                digest,
+                voucher.signature,
+                redeemer,
+                validUntil
+            );
+
+            courseCounter++;
+            uint256 newCourseId = courseCounter;
+
+            bool isRedeemerAuthorized = false;
+            for (uint256 j = 0; j < lenW; j++) {
+                address w = withdrawers[j];
+                require(w != address(0), "Withdrawer cannot be zero address");
+                require(
+                    !isAuthorizedWithdrawer[w][newCourseId],
+                    "Duplicate withdrawer is not allowed"
+                );
+
+                isAuthorizedWithdrawer[w][newCourseId] = true;
+
+                if (!isRedeemerAuthorized && w == msg.sender) {
+                    isRedeemerAuthorized = true;
+                }
+            }
+
+            if (!isRedeemerAuthorized) {
+                require(
+                    hasBackendRole[msg.sender],
+                    "Redeemer must be backend role if not any withdrawer"
+                );
+            }
+
+            uriToCourseId[uriHash] = newCourseId;
+            authorizedWithdrawers[newCourseId] = withdrawers;
+            courses[newCourseId] = Course({uri: voucher.uri, sellable: true});
+
+            emit CourseCreated(newCourseId);
+        }
+    }
+
     function createCourse(CreateCourseVoucher calldata voucher) external {
         // local copy to optimize calldata reads
         string memory uri = voucher.uri;
@@ -165,6 +244,7 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         // hash URI
         bytes32 uriHash = keccak256(bytes(uri));
         require(uriToCourseId[uriHash] == 0, "URI already used");
+        //require(uriHash != EMPTY_URI_HASH, "Empty URI not allowed");
 
         // create digest for the voucher
         bytes32 digest = _hashTypedDataV4(
@@ -687,7 +767,7 @@ contract NewTreasury is EIP712, ReentrancyGuard {
             //content receiver has to be dont have the course already
             require(
                 !hasOwnedCourse[courseReceiver][courseId],
-                "Content receiver already owns this course"
+                "Content receiver already owns this course" // or duplicate pair in batch
             );
             //course price must be greater than 0
             require(coursePrice > 0, "Course price must be greater than 0");
