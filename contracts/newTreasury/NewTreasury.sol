@@ -162,11 +162,10 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         CreateCourseVoucher[] calldata vouchers
     ) external {
         uint256 len = vouchers.length;
-        // TODO BATU open comment during tests, also check setters event and variable
-        //require(
-        //    vouchers.length <= maxBatchCreateSize,
-        //    "Max allowed batch create size exceeded"
-        //);
+        require(
+            vouchers.length <= maxBatchCreateSize,
+            "Max allowed batch create size exceeded"
+        );
 
         for (uint256 i = 0; i < len; i++) {
             CreateCourseVoucher calldata voucher = vouchers[i];
@@ -304,12 +303,12 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         // local copy to optimize calldata reads
         uint256 courseId = voucher.courseId;
         bool sellable = voucher.sellable;
-        string memory newUri = voucher.uri;
         address[] memory withdrawers = voucher.withdrawers;
-        address redeemer = voucher.redeemer;
-        uint256 validUntil = voucher.validUntil;
+        //address redeemer = voucher.redeemer;
+        //uint256 validUntil = voucher.validUntil;
 
-        bytes32 newUriHash = keccak256(bytes(newUri));
+        bytes32 newUriHash = keccak256(bytes(voucher.uri));
+        require(newUriHash != EMPTY_URI_HASH, "Empty URI not allowed");
 
         // create digest
         bytes32 digest = _hashTypedDataV4(
@@ -317,11 +316,11 @@ contract NewTreasury is EIP712, ReentrancyGuard {
                 abi.encode(
                     UPDATE_COURSE_VOUCHER_TYPEHASH,
                     courseId,
-                    sellable,
+                    voucher.sellable,
                     newUriHash,
                     keccak256(abi.encodePacked(withdrawers)),
-                    redeemer,
-                    validUntil
+                    voucher.redeemer,
+                    voucher.validUntil
                 )
             )
         );
@@ -330,21 +329,34 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         _verifyVoucherSignerAndValidity(
             digest,
             voucher.signature,
-            redeemer,
-            validUntil
+            voucher.redeemer,
+            voucher.validUntil
         );
 
         // check withdrawers and redeemer and uri are valid
-        _validateWithdrawersAndRedeemer(withdrawers, newUri);
-
+        uint256 lenW = withdrawers.length; //array length
+        require(lenW > 0, "Withdrawers required");
+        require(lenW <= maxAllowedWithdrawers, "Max withdrawers exceeded");
+        bool isRedeemerAuthorized = false;
+        for (uint256 i = 0; i < lenW; i++) {
+            address w = withdrawers[i];
+            require(w != address(0), "Withdrawer cannot be zero address");
+            if (w == msg.sender) {
+                isRedeemerAuthorized = true;
+            }
+        }
+        if (!isRedeemerAuthorized) {
+            require(
+                hasBackendRole[msg.sender],
+                "Redeemer must be backend role if not any withdrawer"
+            );
+        }
         require(courseId > 0 && courseId <= courseCounter, "Invalid courseId");
 
         // get existing course
         Course storage courseExisting = courses[courseId];
-
         // get old URI and compare
         bytes32 oldUriHash = keccak256(bytes(courseExisting.uri));
-
         // only if uri is changing
         if (oldUriHash != newUriHash) {
             require(uriToCourseId[newUriHash] == 0, "New URI already used");
@@ -352,14 +364,13 @@ contract NewTreasury is EIP712, ReentrancyGuard {
             delete uriToCourseId[oldUriHash]; // clean up old
             uriToCourseId[newUriHash] = courseId; // assign new
 
-            courseExisting.uri = newUri;
+            courseExisting.uri = voucher.uri;
         }
 
         // clear previous authorized withdrawers
         address[] storage previousWithdrawers = authorizedWithdrawers[courseId]; //storage gas cheper in this case
-
-        uint256 len = previousWithdrawers.length;
-        for (uint256 i = 0; i < len; i++) {
+        uint256 lenPW = previousWithdrawers.length;
+        for (uint256 i = 0; i < lenPW; i++) {
             isAuthorizedWithdrawer[previousWithdrawers[i]][courseId] = false;
         }
 
@@ -367,16 +378,21 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         if (courseExisting.sellable != sellable) {
             courseExisting.sellable = sellable;
         }
-        _setAuthorizedWithdrawers(courseId, withdrawers);
+
+        authorizedWithdrawers[courseId] = withdrawers;
+        for (uint256 i = 0; i < lenW; i++) {
+            address w = withdrawers[i];
+            isAuthorizedWithdrawer[w][courseId] = true;
+        }
 
         emit CourseUpdated(courseId);
     }
 
     function _validateWithdrawersAndRedeemer(
-        address[] memory _withdrawers,
+        address[] memory withdrawers,
         string memory _uri
     ) internal view {
-        uint256 len = _withdrawers.length; //array length
+        uint256 len = withdrawers.length; //array length
 
         require(len > 0, "Withdrawers required");
 
@@ -384,7 +400,7 @@ contract NewTreasury is EIP712, ReentrancyGuard {
 
         bool isRedeemerAuthorized = false;
         for (uint256 i = 0; i < len; i++) {
-            address w = _withdrawers[i];
+            address w = withdrawers[i];
             require(w != address(0), "Withdrawer cannot be zero address");
             if (w == msg.sender) {
                 isRedeemerAuthorized = true;
@@ -403,19 +419,20 @@ contract NewTreasury is EIP712, ReentrancyGuard {
 
     function _setAuthorizedWithdrawers(
         uint256 _courseId,
-        address[] memory _withdrawers
+        address[] memory withdrawers
     ) internal {
-        authorizedWithdrawers[_courseId] = _withdrawers;
-
-        uint256 len = _withdrawers.length;
+        authorizedWithdrawers[_courseId] = withdrawers;
+        uint256 len = withdrawers.length;
         for (uint256 i = 0; i < len; i++) {
-            address w = _withdrawers[i];
+            address w = withdrawers[i];
             isAuthorizedWithdrawer[w][_courseId] = true;
         }
     }
 
     /////### BASE PAYMENT SETTINGS & LOGIC ###/////
     uint256 public maxAllowedWithdrawers = 4; // max 4 withdrawers allowed
+    uint256 public maxBatchCreateSize = 10; // max 10 courses can be created at once
+    uint256 public maxBatchBuySize = 10; // max 10 courses can be bought at once
     uint256 public maxBatchWithdrawSize = 10; // max 10 sales can be withdrawn at once
     uint256 public refundWindow = 20 days;
 
@@ -427,6 +444,14 @@ contract NewTreasury is EIP712, ReentrancyGuard {
     event MaxAllowedWithdrawersUpdated(
         uint256 indexed newMaxAllowedWithdrawers,
         uint256 indexed previousMaxAllowedWithdrawers
+    );
+    event MaxBatchCreateSizeUpdated(
+        uint256 indexed newMaxBatchCreateSize,
+        uint256 indexed previousMaxBatchCreateSize
+    );
+    event MaxBatchBuySizeUpdated(
+        uint256 indexed newMaxBatchBuySize,
+        uint256 indexed previousMaxBatchBuySize
     );
     event MaxBatchWithdrawSizeUpdated(
         uint256 indexed newMaxBatchWithdrawSize,
@@ -446,6 +471,26 @@ contract NewTreasury is EIP712, ReentrancyGuard {
 
         maxAllowedWithdrawers = newMax;
         emit MaxAllowedWithdrawersUpdated(newMax, currentMax);
+    }
+
+    function setMaxBatchCreateSize(uint256 newMaxBatch) external {
+        if (!hasBackendRole[msg.sender]) revert onlyBackendAuthorized();
+        if (newMaxBatch == 0) revert ZeroValueNotAccepted();
+        uint256 currentMaxBatch = maxBatchCreateSize;
+        if (newMaxBatch == currentMaxBatch) revert NoChange();
+
+        maxBatchCreateSize = newMaxBatch;
+        emit MaxBatchCreateSizeUpdated(newMaxBatch, currentMaxBatch);
+    }
+
+    function setMaxBatchBuySize(uint256 newMaxBatch) external {
+        if (!hasBackendRole[msg.sender]) revert onlyBackendAuthorized();
+        if (newMaxBatch == 0) revert ZeroValueNotAccepted();
+        uint256 currentMaxBatch = maxBatchBuySize;
+        if (newMaxBatch == currentMaxBatch) revert NoChange();
+
+        maxBatchBuySize = newMaxBatch;
+        emit MaxBatchBuySizeUpdated(newMaxBatch, currentMaxBatch);
     }
 
     function setMaxBatchWithdrawSize(uint256 newMaxBatch) external {
@@ -515,22 +560,6 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         goverShare = (_totalAmount * goverCut) / 100_000;
 
         instructorShare = _totalAmount - foundShare - goverShare;
-    }
-
-    uint256 public maxBatchBuySize = 10; // max 10 courses can be bought at once
-    event MaxBatchBuySizeUpdated(
-        uint256 indexed newMaxBatchBuySize,
-        uint256 indexed previousMaxBatchBuySize
-    );
-
-    function setMaxBatchBuySize(uint256 newMaxBatch) external {
-        if (!hasBackendRole[msg.sender]) revert onlyBackendAuthorized();
-        if (newMaxBatch == 0) revert ZeroValueNotAccepted();
-        uint256 currentMaxBatch = maxBatchBuySize;
-        if (newMaxBatch == currentMaxBatch) revert NoChange();
-
-        maxBatchBuySize = newMaxBatch;
-        emit MaxBatchBuySizeUpdated(newMaxBatch, currentMaxBatch);
     }
 
     /////### VOUCHER LOGIC ###/////
@@ -723,11 +752,10 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         BuyCourseVoucher[] calldata vouchers
     ) external payable nonReentrant {
         uint256 len = vouchers.length;
-        // TODO BATU open comment during tests, also check setters event and variable
-        //require(
-        //    vouchers.length <= maxBatchBuySize,
-        //    "Max allowed batch buy size exceeded"
-        //);
+        require(
+            vouchers.length <= maxBatchBuySize,
+            "Max allowed batch buy size exceeded"
+        );
         uint256 totalNativeRequired = 0;
 
         for (uint256 i = 0; i < len; i++) {
