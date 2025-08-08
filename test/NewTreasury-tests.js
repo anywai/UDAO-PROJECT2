@@ -2210,6 +2210,27 @@ describe("NewTreasury Contract Tests", function () {
           // Expect: Reverts with "Withdrawers required"
         });
 
+        it("should fail to create courses when batch size exceeds maxBatchCreateSize", async function () {
+          // Step 1: get maxBatchCreateSize
+          const maxBatch = Number(await NewTreasury.maxBatchCreateSize());
+          const numCourses = maxBatch + 1; // one more than max allowed
+          // Step 2: prepare uries, withdrawersArrays, redeemers, validUntils
+          const uries = Array.from({ length: numCourses }, (_, i) => `https://example.com/too-many/${i + 1}`);
+          const withdrawersArrays = Array(numCourses).fill([instructor1.address]);
+          const redeemers = Array(numCourses).fill(instructor1.address);
+          const validUntils = Array(numCourses).fill(now + 86400);
+          // Step 3: attempt to create more courses than allowed
+          await createCourseBatchHelper({
+            uries,
+            withdrawersArrays,
+            redeemers,
+            validUntils,
+            createBatchTxCaller: instructor1,
+            expectRevertWith: "Max allowed batch create size exceeded", // kontrattaki revert mesajına göre ayarla
+          });
+          // Expect: Reverts with "Max allowed batch create size exceeded"
+        });
+
         it("should fail to create a course if redeemer is not in withdrawers and not backend", async function () {
           // Step 1: Try to create a course where redeemer is not in withdrawers and not backend
           await createCourseBatchHelper({
@@ -2696,7 +2717,7 @@ describe("NewTreasury Contract Tests", function () {
             withdrawers: [instructor1.address],
             redeemer: instructor1,
             validUntil: now + 86400,
-            expectRevertWith: "Course URI empty",
+            expectRevertWith: "Empty URI not allowed",
             previousWithdrawers: withdrawers,
           });
           // Expect: Reverts with "Course URI empty"
@@ -3128,6 +3149,28 @@ describe("NewTreasury Contract Tests", function () {
           expectRevertWith: "Course is not sellable",
         });
         // Expect: Reverts with "Course is not sellable"
+      });
+
+      it("should fail to buy when batch size exceeds maxBatchBuySize", async function () {
+        // Step 1: instructor1 creates a generic course
+        const courseId1 = await quickCreateACourse();
+        // Step 2: get maxBatchBuySize
+        const maxBatch = Number(await NewTreasury.maxBatchBuySize());
+        const numSales = maxBatch + 1; // one more than max allowed batch size
+        // Step 3: attempt to buy more than allowed batch size in one tx
+        const receivers = Array.from({ length: numSales }, () => ethers.Wallet.createRandom());
+        await buyCourseBatchHelper({
+          courseIds: Array(numSales).fill(courseId1),
+          tokenAddresses: Array(numSales).fill(MKT1.target),
+          coursePrices: Array(numSales).fill(ethers.parseEther("10")),
+          courseReceivers: receivers.map((r) => r.address),
+          redeemers: Array(numSales).fill(backend),
+          validUntils: Array(numSales).fill(now + 86400),
+          nativeMsgValue: 0,
+          buyBatchTxCaller: backend,
+          expectRevertWith: "Max allowed batch buy size exceeded", // kontrattaki revert mesajına göre değiştir
+        });
+        // Expect: Reverts with "Max allowed batch buy size exceeded"
       });
 
       it("should fail to buy a course with zero price", async function () {
@@ -5420,7 +5463,9 @@ describe("NewTreasury Contract Tests", function () {
         // Step 2: get maxBatchWithdrawSize
         const maxBatch = Number(await NewTreasury.maxBatchWithdrawSize());
         const numSales = maxBatch + 1; // one more than max allowed batch size
-        // Step 3: make sales more than max allowed batch size of withdraw
+        // Step 3: increase maxBatchBuySize so it allows the desired number of purchases
+        await NewTreasury.connect(backend).setMaxBatchBuySize(numSales);
+        // Step 4: make sales more than max allowed batch size of withdraw
         const receivers = Array.from({ length: numSales }, () => ethers.Wallet.createRandom());
         await buyCourseBatchHelper({
           courseIds: Array(numSales).fill(courseId1),
@@ -5433,10 +5478,10 @@ describe("NewTreasury Contract Tests", function () {
           buyBatchTxCaller: backend, // tx gönderen signer
           expectSuccessWith: "ContentPurchased",
         });
-        // Step 4: fast forward time after refund window
+        // Step 5: fast forward time after refund window
         const refundWindowInDays = Number(await NewTreasury.refundWindow()) / 86400;
         await fastForwardTime({ days: refundWindowInDays + 1 });
-        // Step 5: attempt withdraw with a batch size exceeding the limit
+        // Step 6: attempt withdraw with a batch size exceeding the limit
         const fromIndex = 1; // first sale also minimum allowed index
         const toIndex = numSales; // bigger than maxBatchWithdrawSize also its last sale index
         const expectations = Array(toIndex - fromIndex + 1).fill(PES);
@@ -5645,6 +5690,30 @@ describe("NewTreasury Contract Tests", function () {
           .withArgs(newMax, existing);
         // Expect: new value is set
         expect(await NewTreasury.maxAllowedWithdrawers()).to.equal(newMax);
+      });
+
+      it("should allow backend to update max batch create size", async () => {
+        // Step 1: Read current maxBatchCreateSize
+        const existing = await NewTreasury.maxBatchCreateSize();
+        // Step 2: Update maxBatchCreateSize to higher value
+        const newValue = Number(existing) + 1;
+        await expect(NewTreasury.connect(backend).setMaxBatchCreateSize(newValue))
+          .to.emit(NewTreasury, "MaxBatchCreateSizeUpdated")
+          .withArgs(newValue, existing);
+        // Expect: new value is set
+        expect(await NewTreasury.maxBatchCreateSize()).to.equal(newValue);
+      });
+
+      it("should allow backend to update max batch buy size", async () => {
+        // Step 1: Read current maxBatchBuySize
+        const existing = await NewTreasury.maxBatchBuySize();
+        // Step 2: Update maxBatchBuySize to higher value
+        const newValue = Number(existing) + 1;
+        await expect(NewTreasury.connect(backend).setMaxBatchBuySize(newValue))
+          .to.emit(NewTreasury, "MaxBatchBuySizeUpdated")
+          .withArgs(newValue, existing);
+        // Expect: new value is set
+        expect(await NewTreasury.maxBatchBuySize()).to.equal(newValue);
       });
 
       it("should allow backend to update max batch withdraw size", async () => {
@@ -5925,6 +5994,80 @@ describe("NewTreasury Contract Tests", function () {
         );
         // Expect: value remains unchanged
         expect(await NewTreasury.maxAllowedWithdrawers()).to.equal(existing);
+      });
+
+      it("should fail to update max batch create size if called by non-backend", async () => {
+        // Step 1: Read current maxBatchCreateSize
+        const existing = await NewTreasury.maxBatchCreateSize();
+        // Step 2: Try to update max batch create size by outsider (not backend)
+        const newValue = Number(existing) + 1;
+        await expect(NewTreasury.connect(person1).setMaxBatchCreateSize(newValue)).to.be.revertedWithCustomError(
+          NewTreasury,
+          "onlyBackendAuthorized()"
+        );
+        // Expect: value remains unchanged
+        expect(await NewTreasury.maxBatchCreateSize()).to.equal(existing);
+      });
+
+      it("should fail to update max batch create size if value is 0", async () => {
+        // Step 1: Read current maxBatchCreateSize
+        const existing = await NewTreasury.maxBatchCreateSize();
+        // Step 2: Try to update max batch create size to 0
+        await expect(NewTreasury.connect(backend).setMaxBatchCreateSize(0)).to.be.revertedWithCustomError(
+          NewTreasury,
+          "ZeroValueNotAccepted()"
+        );
+        // Expect: value remains unchanged
+        expect(await NewTreasury.maxBatchCreateSize()).to.equal(existing);
+      });
+
+      it("should fail to update max batch create size if new value is same", async () => {
+        // Step 1: Read current maxBatchCreateSize
+        const existing = await NewTreasury.maxBatchCreateSize();
+        // Step 2: Try to update with same value
+        await expect(NewTreasury.connect(backend).setMaxBatchCreateSize(existing)).to.be.revertedWithCustomError(
+          NewTreasury,
+          "NoChange()"
+        );
+        // Expect: value remains unchanged
+        expect(await NewTreasury.maxBatchCreateSize()).to.equal(existing);
+      });
+
+      it("should fail to update max batch buy size if called by non-backend", async () => {
+        // Step 1: Read current maxBatchBuySize
+        const existing = await NewTreasury.maxBatchBuySize();
+        // Step 2: Try to update max batch buy size by outsider (not backend)
+        const newValue = Number(existing) + 1;
+        await expect(NewTreasury.connect(person1).setMaxBatchBuySize(newValue)).to.be.revertedWithCustomError(
+          NewTreasury,
+          "onlyBackendAuthorized()"
+        );
+        // Expect: value remains unchanged
+        expect(await NewTreasury.maxBatchBuySize()).to.equal(existing);
+      });
+
+      it("should fail to update max batch buy size if value is 0", async () => {
+        // Step 1: Read current maxBatchBuySize
+        const existing = await NewTreasury.maxBatchBuySize();
+        // Step 2: Try to update max batch buy size to 0
+        await expect(NewTreasury.connect(backend).setMaxBatchBuySize(0)).to.be.revertedWithCustomError(
+          NewTreasury,
+          "ZeroValueNotAccepted()"
+        );
+        // Expect: value remains unchanged
+        expect(await NewTreasury.maxBatchBuySize()).to.equal(existing);
+      });
+
+      it("should fail to update max batch buy size if new value is same", async () => {
+        // Step 1: Read current maxBatchBuySize
+        const existing = await NewTreasury.maxBatchBuySize();
+        // Step 2: Try to update with same value
+        await expect(NewTreasury.connect(backend).setMaxBatchBuySize(existing)).to.be.revertedWithCustomError(
+          NewTreasury,
+          "NoChange()"
+        );
+        // Expect: value remains unchanged
+        expect(await NewTreasury.maxBatchBuySize()).to.equal(existing);
       });
 
       it("should fail to update max batch withdraw size if called by non-backend", async () => {
