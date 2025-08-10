@@ -167,6 +167,8 @@ contract NewTreasury is EIP712, ReentrancyGuard {
             "Max allowed batch create size exceeded"
         );
 
+        uint256 maxW = maxAllowedWithdrawers;
+
         for (uint256 i = 0; i < len; i++) {
             CreateCourseVoucher calldata voucher = vouchers[i];
             address[] memory withdrawers = voucher.withdrawers;
@@ -180,7 +182,7 @@ contract NewTreasury is EIP712, ReentrancyGuard {
             require(uriHash != EMPTY_URI_HASH, "Empty URI not allowed");
 
             require(lenW > 0, "Withdrawers required");
-            require(lenW <= maxAllowedWithdrawers, "Max withdrawers exceeded");
+            require(lenW <= maxW, "Max withdrawers exceeded");
 
             // create digest for the voucher
             bytes32 digest = _hashTypedDataV4(
@@ -235,53 +237,6 @@ contract NewTreasury is EIP712, ReentrancyGuard {
 
             emit CourseCreated(newCourseId);
         }
-    }
-
-    function createCourse(CreateCourseVoucher calldata voucher) external {
-        // local copy to optimize calldata reads
-        string memory uri = voucher.uri;
-        address[] memory withdrawers = voucher.withdrawers;
-        address redeemer = voucher.redeemer;
-        uint256 validUntil = voucher.validUntil;
-
-        // hash URI
-        bytes32 uriHash = keccak256(bytes(uri));
-        require(uriToCourseId[uriHash] == 0, "URI already used");
-        //require(uriHash != EMPTY_URI_HASH, "Empty URI not allowed");
-
-        // create digest for the voucher
-        bytes32 digest = _hashTypedDataV4(
-            keccak256(
-                abi.encode(
-                    CREATE_COURSE_VOUCHER_TYPEHASH,
-                    uriHash,
-                    keccak256(abi.encodePacked(withdrawers)),
-                    redeemer,
-                    validUntil
-                )
-            )
-        );
-
-        // verify voucher, signer and validity
-        _verifyVoucherSignerAndValidity(
-            digest,
-            voucher.signature,
-            redeemer,
-            validUntil
-        );
-
-        // check withdrawers and redeemer and uri are valid
-        _validateWithdrawersAndRedeemer(withdrawers, uri);
-
-        courseCounter++;
-        uint256 newCourseId = courseCounter;
-        courses[newCourseId] = Course({uri: uri, sellable: true});
-        // save uriHash to courseId to eliminate duplicate courses
-        uriToCourseId[uriHash] = newCourseId;
-
-        _setAuthorizedWithdrawers(newCourseId, withdrawers);
-
-        emit CourseCreated(newCourseId);
     }
 
     event CourseUpdated(uint256 indexed courseId);
@@ -386,47 +341,6 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         }
 
         emit CourseUpdated(courseId);
-    }
-
-    function _validateWithdrawersAndRedeemer(
-        address[] memory withdrawers,
-        string memory _uri
-    ) internal view {
-        uint256 len = withdrawers.length; //array length
-
-        require(len > 0, "Withdrawers required");
-
-        require(len <= maxAllowedWithdrawers, "Max withdrawers exceeded");
-
-        bool isRedeemerAuthorized = false;
-        for (uint256 i = 0; i < len; i++) {
-            address w = withdrawers[i];
-            require(w != address(0), "Withdrawer cannot be zero address");
-            if (w == msg.sender) {
-                isRedeemerAuthorized = true;
-            }
-        }
-
-        if (!isRedeemerAuthorized) {
-            require(
-                hasBackendRole[msg.sender],
-                "Redeemer must be backend role if not any withdrawer"
-            );
-        }
-
-        require(bytes(_uri).length > 0, "Course URI empty");
-    }
-
-    function _setAuthorizedWithdrawers(
-        uint256 _courseId,
-        address[] memory withdrawers
-    ) internal {
-        authorizedWithdrawers[_courseId] = withdrawers;
-        uint256 len = withdrawers.length;
-        for (uint256 i = 0; i < len; i++) {
-            address w = withdrawers[i];
-            isAuthorizedWithdrawer[w][_courseId] = true;
-        }
     }
 
     /////### BASE PAYMENT SETTINGS & LOGIC ###/////
@@ -539,29 +453,6 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         emit CourseCutsUpdated();
     }
 
-    function _calculateCourseCutShares(
-        uint256 _totalAmount,
-        address _tokenAddress
-    )
-        internal
-        view
-        returns (
-            uint256 foundShare,
-            uint256 goverShare,
-            uint256 instructorShare
-        )
-    {
-        bool isUdao = _tokenAddress == udaoTokenAddress;
-
-        uint256 foundCut = isUdao ? utFoundCut : atFoundCut;
-        uint256 goverCut = isUdao ? utGoverCut : atGoverCut;
-
-        foundShare = (_totalAmount * foundCut) / 100_000;
-        goverShare = (_totalAmount * goverCut) / 100_000;
-
-        instructorShare = _totalAmount - foundShare - goverShare;
-    }
-
     /////### VOUCHER LOGIC ###/////
     function _verifyVoucherSignerAndValidity(
         bytes32 _digest,
@@ -621,132 +512,6 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         keccak256(
             "BuyCourseVoucher(uint256 courseId,address tokenAddress,uint256 coursePrice,address courseReceiver,address redeemer,uint256 validUntil)"
         );
-
-    function buyCourse(
-        BuyCourseVoucher calldata voucher
-    ) external payable nonReentrant {
-        // encode the voucher fields to reduce gas cost
-        uint256 courseId = voucher.courseId;
-        address tokenAddress = voucher.tokenAddress;
-        uint256 coursePrice = voucher.coursePrice;
-        address courseReceiver = voucher.courseReceiver;
-        address redeemer = voucher.redeemer;
-        uint256 validUntil = voucher.validUntil;
-
-        // create digest for the voucher
-        bytes32 digest = _hashTypedDataV4(
-            keccak256(
-                abi.encode(
-                    BUY_COURSE_VOUCHER_TYPEHASH,
-                    courseId,
-                    tokenAddress,
-                    coursePrice,
-                    courseReceiver,
-                    redeemer,
-                    validUntil
-                )
-            )
-        );
-
-        // verify voucher, signer and validity
-        _verifyVoucherSignerAndValidity(
-            digest,
-            voucher.signature,
-            redeemer,
-            validUntil
-        );
-        // do the job
-        _buyCourse(courseId, courseReceiver, tokenAddress, coursePrice);
-    }
-
-    function _buyCourse(
-        uint _courseId,
-        address _courseReceiver,
-        address _tokenAddress,
-        uint _coursePrice
-    ) internal {
-        require(
-            _courseId > 0 && _courseId <= courseCounter,
-            "Invalid courseId"
-        );
-        require(courses[_courseId].sellable, "Course is not sellable");
-        //content receiver has to be dont have the course already
-        require(
-            !hasOwnedCourse[_courseReceiver][_courseId],
-            "Content receiver already owns this course"
-        );
-        //course price must be greater than 0
-        require(_coursePrice > 0, "Course price must be greater than 0");
-
-        // calculate shares
-        (
-            uint256 foundShare,
-            uint256 goverShare,
-            uint256 instructorShare
-        ) = _calculateCourseCutShares(_coursePrice, _tokenAddress);
-
-        // check if the payment is made in native token or erc20 token
-        if (_tokenAddress == address(0)) {
-            // payment in native token
-            require(
-                msg.value == _coursePrice,
-                "Incorrect amount sent for native token payment"
-            );
-        } else {
-            // payment in erc20 token
-            require(msg.value == 0, "Use ERC20, not native token");
-            // transfer the erc20 token from redeemer to this contract
-            IERC20(_tokenAddress).safeTransferFrom(
-                msg.sender,
-                address(this),
-                _coursePrice
-            );
-        }
-        // save the payment details
-
-        paymentCounter++;
-
-        uint256 newPaymentId = paymentCounter;
-        payments[newPaymentId] = Payment({
-            courseId: _courseId,
-            payer: msg.sender,
-            courseReceiver: _courseReceiver,
-            tokenAddress: _tokenAddress,
-            totalAmount: _coursePrice,
-            instructorShare: instructorShare,
-            foundationShare: foundShare,
-            governanceShare: goverShare,
-            endOfRefundWindow: block.timestamp + refundWindow,
-            isRefunded: false,
-            isWithdrawn: false
-        });
-
-        // increase saleCounterPerCourse for this course
-        saleCounterPerCourse[_courseId]++;
-        // save paymentId to courseSaleRecords mapping according to CourseSaleCounter for this course
-        courseSaleRecords[_courseId][
-            saleCounterPerCourse[_courseId]
-        ] = newPaymentId;
-
-        // pair paymentId with courseReceiver and courseId
-        courseOwnerToPayment[_courseReceiver][_courseId] = newPaymentId;
-
-        if (ownedCourses[_courseReceiver].length == 0) {
-            // if the course receiver does not have any courses yet, initialize the mapping
-            ownedCourses[_courseReceiver].push(0); // zero index always holds 0
-        }
-
-        // add the courseId to the ownedCourses mapping
-        ownedCourses[_courseReceiver].push(_courseId);
-        // save the index of the courseId in the ownedCourses mapping
-        ownedCourseIndex[_courseReceiver][_courseId] =
-            ownedCourses[_courseReceiver].length -
-            1; // aslında +1 index değil çünkü satın alımda 0 pushlandı.
-        // update hasOwnedCourse mapping
-        hasOwnedCourse[_courseReceiver][_courseId] = true;
-
-        emit ContentPurchased(newPaymentId, _courseId, _courseReceiver);
-    }
 
     function buyCourseBatch(
         BuyCourseVoucher[] calldata vouchers
@@ -1320,6 +1085,29 @@ contract NewTreasury is EIP712, ReentrancyGuard {
             p.isRefunded,
             p.isWithdrawn
         );
+    }
+
+    function getCalculatedCourseCutShares(
+        uint256 _totalAmount,
+        address _tokenAddress
+    )
+        external
+        view
+        returns (
+            uint256 foundShare,
+            uint256 goverShare,
+            uint256 instructorShare
+        )
+    {
+        bool isUdao = _tokenAddress == udaoTokenAddress;
+
+        uint256 foundCut = isUdao ? utFoundCut : atFoundCut;
+        uint256 goverCut = isUdao ? utGoverCut : atGoverCut;
+
+        foundShare = (_totalAmount * foundCut) / 100_000;
+        goverShare = (_totalAmount * goverCut) / 100_000;
+
+        instructorShare = _totalAmount - foundShare - goverShare;
     }
 
     receive() external payable {
