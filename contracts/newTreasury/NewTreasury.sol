@@ -33,22 +33,22 @@ contract NewTreasury is EIP712, ReentrancyGuard {
     // Generic
     error ChangeHasNoEffect();
     error ValueIsZero();
-    error NonUdaoCutsSumExceeds100Percent(); // NonUdaoCutsExceedMaxBps
-    error UdaoCutsSumExceeds100Percent(); // UdaoCutsExceedMaxBps
+    error NonUdaoCutsSumExceeds100Percent();
+    error UdaoCutsSumExceeds100Percent();
 
     // voucher
-    error SignatureIsInvalidOrSignerIsNotBackend(); // divide later
+    error SignatureIsInvalidOrSignerIsNotBackend(); // TODO: divide later
     error CallerIsNotVoucherRedeemer();
-    error VoucherIsExpired(); // VoucherExpired
+    error VoucherIsExpired();
 
     // create/update course
     error CreateBatchSizeExceedsLimit();
-    error UriIsAlreadyUsedOrDuplicatedInBatch(); // UriIsAlreadyUsedOrDuplicateInBatch
+    error UriIsAlreadyUsedOrDuplicatedInBatch();
     error UriIsEmpty();
     error WithdrawerArrayIsEmpty();
     error WithdrawerArrayExceedsLimit();
     error WithdrawerArrayContainsDuplicates();
-    error CallerIsNeitherWithdrawerNorBackend(); // CallerIsNotWithdrawerOrBackend
+    error CallerIsNeitherWithdrawerNorBackend();
 
     // buy
     error BuyBatchSizeExceedsLimit();
@@ -60,11 +60,11 @@ contract NewTreasury is EIP712, ReentrancyGuard {
 
     // refund
     error PaymentIdIsInvalid();
-    error PaymentNotFoundForOwnerAndCourse(); //PaymentForOwnerAndCourseNotFound
-    error PaymentIsAlreadyRefunded(); // PaymentAlreadyRefunded
-    error PaymentIsAlreadyWithdrawn(); //PaymentAlreadyWithdrawn
-    error RefundWindowHasPassed(); // RefundWindowPassed
-    error CourseIsNotOwnedByReceiver(); // CourseNotOwnedByReceiver
+    error PaymentNotFoundForOwnerAndCourse();
+    error PaymentIsAlreadyRefunded();
+    error PaymentIsAlreadyWithdrawn();
+    error RefundWindowHasPassed();
+    error CourseIsNotOwnedByReceiver();
     error NativeRefundFailed();
 
     // withdraw
@@ -202,7 +202,7 @@ contract NewTreasury is EIP712, ReentrancyGuard {
     event CourseCreated(uint256 indexed courseId);
     struct CreateCourseVoucher {
         string uri;
-        address[] withdrawers; // max 4 enforced, first is required in all cases
+        address[] withdrawers;
         address redeemer;
         uint256 validUntil;
         bytes signature;
@@ -216,10 +216,7 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         CreateCourseVoucher[] calldata vouchers
     ) external {
         uint256 len = vouchers.length;
-        require(
-            vouchers.length <= maxBatchCreateSize,
-            "Max allowed batch create size exceeded"
-        );
+        if (len > maxBatchCreateSize) revert CreateBatchSizeExceedsLimit();
 
         uint256 maxW = maxAllowedWithdrawers;
 
@@ -232,11 +229,12 @@ contract NewTreasury is EIP712, ReentrancyGuard {
 
             // hash URI
             bytes32 uriHash = keccak256(bytes(voucher.uri));
-            require(uriToCourseId[uriHash] == 0, "URI already used"); //or duplicate
-            require(uriHash != EMPTY_URI_HASH, "Empty URI not allowed");
+            if (uriToCourseId[uriHash] != 0)
+                revert UriIsAlreadyUsedOrDuplicatedInBatch();
+            if (uriHash == EMPTY_URI_HASH) revert UriIsEmpty();
 
-            require(lenW > 0, "Withdrawers required");
-            require(lenW <= maxW, "Max withdrawers exceeded");
+            if (lenW == 0) revert WithdrawerArrayIsEmpty();
+            if (lenW > maxW) revert WithdrawerArrayExceedsLimit();
 
             // create digest for the voucher
             bytes32 digest = _hashTypedDataV4(
@@ -252,7 +250,7 @@ contract NewTreasury is EIP712, ReentrancyGuard {
             );
 
             // verify voucher, signer and validity
-            _verifyVoucherSignerAndValidity(
+            _verifyVoucherSignerAndValidity2(
                 digest,
                 voucher.signature,
                 redeemer,
@@ -265,11 +263,9 @@ contract NewTreasury is EIP712, ReentrancyGuard {
             bool isRedeemerAuthorized = false;
             for (uint256 j = 0; j < lenW; j++) {
                 address w = withdrawers[j];
-                require(w != address(0), "Withdrawer cannot be zero address");
-                require(
-                    !isAuthorizedWithdrawer[w][newCourseId],
-                    "Duplicate withdrawer is not allowed"
-                );
+                if (w == address(0)) revert WithdrawerAddressIsZero();
+                if (isAuthorizedWithdrawer[w][newCourseId])
+                    revert WithdrawerArrayContainsDuplicates();
 
                 isAuthorizedWithdrawer[w][newCourseId] = true;
 
@@ -279,10 +275,8 @@ contract NewTreasury is EIP712, ReentrancyGuard {
             }
 
             if (!isRedeemerAuthorized) {
-                require(
-                    hasBackendRole[msg.sender],
-                    "Redeemer must be backend role if not any withdrawer"
-                );
+                if (!hasBackendRole[msg.sender])
+                    revert CallerIsNeitherWithdrawerNorBackend();
             }
 
             uriToCourseId[uriHash] = newCourseId;
@@ -298,7 +292,7 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         uint256 courseId;
         bool sellable; // true if sellable, false if not
         string uri;
-        address[] withdrawers; // max 4 enforced, first required
+        address[] withdrawers;
         address redeemer;
         uint256 validUntil;
         bytes signature;
@@ -317,7 +311,8 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         //uint256 validUntil = voucher.validUntil;
 
         bytes32 newUriHash = keccak256(bytes(voucher.uri));
-        require(newUriHash != EMPTY_URI_HASH, "Empty URI not allowed");
+
+        if (newUriHash == EMPTY_URI_HASH) revert UriIsEmpty();
 
         // create digest
         bytes32 digest = _hashTypedDataV4(
@@ -335,7 +330,7 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         );
 
         // verify signer and validity
-        _verifyVoucherSignerAndValidity(
+        _verifyVoucherSignerAndValidity2(
             digest,
             voucher.signature,
             voucher.redeemer,
@@ -344,23 +339,30 @@ contract NewTreasury is EIP712, ReentrancyGuard {
 
         // check withdrawers and redeemer and uri are valid
         uint256 lenW = withdrawers.length; //array length
-        require(lenW > 0, "Withdrawers required");
-        require(lenW <= maxAllowedWithdrawers, "Max withdrawers exceeded");
+        if (lenW == 0) revert WithdrawerArrayIsEmpty();
+        if (lenW > maxAllowedWithdrawers) revert WithdrawerArrayExceedsLimit();
+
         bool isRedeemerAuthorized = false;
         for (uint256 i = 0; i < lenW; i++) {
             address w = withdrawers[i];
-            require(w != address(0), "Withdrawer cannot be zero address");
+            if (w == address(0)) revert WithdrawerAddressIsZero();
             if (w == msg.sender) {
                 isRedeemerAuthorized = true;
             }
+
+            // duplicate in array?
+            //for (uint256 j = i + 1; j < lenW; j++) {
+            //    if (w == withdrawers[j])
+            //        revert WithdrawerArrayContainsDuplicates();
+            //}
         }
         if (!isRedeemerAuthorized) {
-            require(
-                hasBackendRole[msg.sender],
-                "Redeemer must be backend role if not any withdrawer"
-            );
+            if (!hasBackendRole[msg.sender])
+                revert CallerIsNeitherWithdrawerNorBackend();
         }
-        require(courseId > 0 && courseId <= courseCounter, "Invalid courseId");
+
+        if (courseId == 0 || courseId > courseCounter)
+            revert CourseIdIsInvalid();
 
         // get existing course
         Course storage courseExisting = courses[courseId];
@@ -368,7 +370,8 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         bytes32 oldUriHash = keccak256(bytes(courseExisting.uri));
         // only if uri is changing
         if (oldUriHash != newUriHash) {
-            require(uriToCourseId[newUriHash] == 0, "New URI already used");
+            if (uriToCourseId[newUriHash] != 0)
+                revert UriIsAlreadyUsedOrDuplicatedInBatch();
 
             delete uriToCourseId[oldUriHash]; // clean up old
             uriToCourseId[newUriHash] = courseId; // assign new
@@ -508,20 +511,18 @@ contract NewTreasury is EIP712, ReentrancyGuard {
     }
 
     /////### VOUCHER LOGIC ###/////
-    /*
     function _verifyVoucherSignerAndValidity2(
         bytes32 _digest,
         bytes memory signature,
         address _redeemer,
         uint256 _validUntil
     ) internal view {
-        if (_redeemer != msg.sender) revert onlyRedeemerCanUseThisVoucher();
-        if (_validUntil < block.timestamp) revert VoucherExpired();
-
+        if (_redeemer != msg.sender) revert CallerIsNotVoucherRedeemer();
+        if (_validUntil < block.timestamp) revert VoucherIsExpired();
         address signer = ECDSA.recover(_digest, signature);
-        if (!hasBackendRole[signer]) revert SignatureInvalidOrUnauthorized();
+        if (!hasBackendRole[signer])
+            revert SignatureIsInvalidOrSignerIsNotBackend();
     }
-    */
 
     function _verifyVoucherSignerAndValidity(
         bytes32 _digest,
@@ -586,10 +587,8 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         BuyCourseVoucher[] calldata vouchers
     ) external payable nonReentrant {
         uint256 len = vouchers.length;
-        require(
-            vouchers.length <= maxBatchBuySize,
-            "Max allowed batch buy size exceeded"
-        );
+        if (len > maxBatchBuySize) revert BuyBatchSizeExceedsLimit();
+
         uint256 totalNativeRequired = 0;
 
         for (uint256 i = 0; i < len; i++) {
@@ -618,25 +617,22 @@ contract NewTreasury is EIP712, ReentrancyGuard {
             );
 
             // verify voucher, signer and validity
-            _verifyVoucherSignerAndValidity(
+            _verifyVoucherSignerAndValidity2(
                 digest,
                 voucher.signature,
                 redeemer,
                 validUntil
             );
 
-            require(
-                courseId > 0 && courseId <= courseCounter,
-                "Invalid courseId"
-            );
-            require(courses[courseId].sellable, "Course is not sellable");
+            if (courseId == 0 || courseId > courseCounter)
+                revert CourseIdIsInvalid();
+            if (!courses[courseId].sellable) revert CourseIsNotSellable();
             //content receiver has to be dont have the course already
-            require(
-                !hasOwnedCourse[courseReceiver][courseId],
-                "Content receiver already owns this course" // or duplicate pair in batch
-            );
+            if (hasOwnedCourse[courseReceiver][courseId]) {
+                revert CourseIsAlreadyOwnedByReceiverOrDuplicatedInBatch();
+            }
             //course price must be greater than 0
-            require(coursePrice > 0, "Course price must be greater than 0");
+            if (coursePrice == 0) revert CoursePriceIsZero();
 
             // check if the payment is made in native token or erc20 token
             if (tokenAddress == address(0)) {
@@ -653,10 +649,8 @@ contract NewTreasury is EIP712, ReentrancyGuard {
             hasOwnedCourse[courseReceiver][courseId] = true;
         }
 
-        require(
-            msg.value == totalNativeRequired,
-            "Incorrect total native value sent"
-        );
+        if (msg.value != totalNativeRequired)
+            revert NativeValueNotEqualToTotal();
 
         for (uint256 i = 0; i < len; i++) {
             BuyCourseVoucher calldata voucher = vouchers[i];

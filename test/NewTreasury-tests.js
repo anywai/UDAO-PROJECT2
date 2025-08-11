@@ -147,10 +147,10 @@ async function createCourseBatchHelper({
   // 4) Tx gönderimi ve kontrol
   let tx = null;
   if (!waitSuccess) {
-    await expect(NewTreasury.connect(createBatchTxCaller).createCourseBatch(vouchers)).to.be.revertedWith(
+    await expect(NewTreasury.connect(createBatchTxCaller).createCourseBatch(vouchers)).to.be.revertedWithCustomError(
+      NewTreasury,
       expectRevertWith
     );
-    //...).to.be.revertedWithCustomError(NewTreasury, "BackendAddressIsZero()");
   } else if (waitSuccess) {
     tx = await NewTreasury.connect(createBatchTxCaller).createCourseBatch(vouchers);
     const receipt = await tx.wait();
@@ -335,7 +335,10 @@ async function updateCourseHelper({
   let tx;
 
   if (expectRevertWith) {
-    await expect(NewTreasury.connect(redeemer).updateCourse(voucher)).to.be.revertedWith(expectRevertWith);
+    await expect(NewTreasury.connect(redeemer).updateCourse(voucher)).to.be.revertedWithCustomError(
+      NewTreasury,
+      expectRevertWith
+    );
   } else if (expectSuccessWith) {
     tx = await NewTreasury.connect(redeemer).updateCourse(voucher);
     await expect(tx).to.emit(NewTreasury, expectSuccessWith).withArgs(courseId);
@@ -375,7 +378,7 @@ async function _prepareExpectedUpdateState({ input, current, waitSuccess }) {
         newUriHashHolds: current.newUriHashHolds,
       };
     }
-    // Case 2: Max withdrawers exceeded, zero withdrawer or empty withdrawers, empty URI, or unauthorized updater
+    // Case 2: WithdrawerArrayExceedsLimit(), zero withdrawer or empty withdrawers, empty URI, or unauthorized updater
     if (
       isMaxWithdrawersExceeded ||
       hasZeroWithdrawer ||
@@ -496,11 +499,20 @@ async function buyCourseBatchHelper({
   let tx = null;
   let gasCost = 0n;
   if (!waitSuccess) {
-    await expect(
-      NewTreasury.connect(buyBatchTxCaller).buyCourseBatch(vouchers, {
-        value: nativeMsgValue,
-      })
-    ).to.be.revertedWith(expectRevertWith);
+    if (expectRevertWith === "Recipient blocked from") {
+      // its a bad design, ı write it to pass only one test
+      await expect(
+        NewTreasury.connect(buyBatchTxCaller).buyCourseBatch(vouchers, {
+          value: nativeMsgValue,
+        })
+      ).to.be.revertedWith(expectRevertWith);
+    } else {
+      await expect(
+        NewTreasury.connect(buyBatchTxCaller).buyCourseBatch(vouchers, {
+          value: nativeMsgValue,
+        })
+      ).to.be.revertedWithCustomError(NewTreasury, expectRevertWith);
+    }
     // not possible to catch gas cost on revert
   } else if (waitSuccess) {
     // send tx
@@ -1921,7 +1933,7 @@ describe("NewTreasury Contract Tests", function () {
             redeemers: [instructor1.address, instructor1.address],
             validUntils: [now + 86400, now + 86400],
             createBatchTxCaller: instructor1,
-            expectRevertWith: "Signature invalid or unauthorized",
+            expectRevertWith: "SignatureIsInvalidOrSignerIsNotBackend()",
           });
           // Expect: Reverts with "Signature invalid or unauthorized"
         });
@@ -1936,7 +1948,7 @@ describe("NewTreasury Contract Tests", function () {
             redeemers: [instructor1.address],
             validUntils: [expiredTimestamp],
             createBatchTxCaller: instructor1,
-            expectRevertWith: "Voucher expired",
+            expectRevertWith: "VoucherIsExpired()",
           });
           // Expect: Reverts with "Voucher expired"
         });
@@ -1949,7 +1961,7 @@ describe("NewTreasury Contract Tests", function () {
             redeemers: [person1.address], // gerçek redeemer backend
             validUntils: [now + 86400],
             createBatchTxCaller: backend, // tx'i atan kişi farklı: msg.sender !== voucher.redeemer
-            expectRevertWith: "Only redeemer can use this voucher",
+            expectRevertWith: "CallerIsNotVoucherRedeemer()",
           });
           // Expect: reverts with "Only redeemer can use this voucher"
         });
@@ -1962,7 +1974,7 @@ describe("NewTreasury Contract Tests", function () {
             redeemers: [instructor1.address],
             validUntils: [now + 86400],
             createBatchTxCaller: instructor1,
-            expectRevertWith: "Duplicate withdrawer is not allowed",
+            expectRevertWith: "WithdrawerArrayContainsDuplicates()",
           });
           // Expect: "CourseCreated" with expected success states
         });
@@ -1984,9 +1996,9 @@ describe("NewTreasury Contract Tests", function () {
             redeemers: [instructor1.address],
             validUntils: [now + 86400],
             createBatchTxCaller: instructor1,
-            expectRevertWith: "URI already used",
+            expectRevertWith: "UriIsAlreadyUsedOrDuplicatedInBatch()",
           });
-          // Expect: Reverts with "URI already used", with failure states
+          // Expect: Reverts with "UriIsAlreadyUsedOrDuplicatedInBatch()", with failure states
         });
 
         it("should fail to create a course with duplicate URI", async function () {
@@ -1997,9 +2009,9 @@ describe("NewTreasury Contract Tests", function () {
             redeemers: [backend.address, backend.address],
             validUntils: [now + 86400, now + 86400],
             createBatchTxCaller: backend,
-            expectRevertWith: "URI already used",
+            expectRevertWith: "UriIsAlreadyUsedOrDuplicatedInBatch()",
           });
-          // Expect: Reverts with "URI already used", with failure states
+          // Expect: Reverts with "UriIsAlreadyUsedOrDuplicatedInBatch()", with failure states
         });
 
         it("should fail to create a course with same URI but different withdrawers", async function () {
@@ -2019,9 +2031,9 @@ describe("NewTreasury Contract Tests", function () {
             redeemers: [instructor2.address],
             validUntils: [now + 86400],
             createBatchTxCaller: instructor2,
-            expectRevertWith: "URI already used",
+            expectRevertWith: "UriIsAlreadyUsedOrDuplicatedInBatch()",
           });
-          // Expect: Reverts with "URI already used", with failure states
+          // Expect: Reverts with "UriIsAlreadyUsedOrDuplicatedInBatch()", with failure states
         });
 
         it("should fail to create a course with more than 4 withdrawers", async function () {
@@ -2039,9 +2051,9 @@ describe("NewTreasury Contract Tests", function () {
             redeemers: [instructor1.address],
             validUntils: [now + 86400],
             createBatchTxCaller: instructor1,
-            expectRevertWith: "Max withdrawers exceeded",
+            expectRevertWith: "WithdrawerArrayExceedsLimit()",
           });
-          // Expect: Reverts with "Max withdrawers exceeded"
+          // Expect: Reverts with "WithdrawerArrayExceedsLimit()"
         });
 
         it("should fail to create a course if any withdrawer is address(0)", async function () {
@@ -2059,9 +2071,9 @@ describe("NewTreasury Contract Tests", function () {
             redeemers: [instructor1.address],
             validUntils: [now + 86400],
             createBatchTxCaller: instructor1,
-            expectRevertWith: "Withdrawer cannot be zero address",
+            expectRevertWith: "WithdrawerAddressIsZero()",
           });
-          // Expect: Reverts with "Zero address not allowed"
+          // Expect: Reverts with "WithdrawerAddressIsZero()"
         });
 
         it("should fail to create a course with empty withdrawers array", async function () {
@@ -2072,9 +2084,9 @@ describe("NewTreasury Contract Tests", function () {
             redeemers: [instructor1.address],
             validUntils: [now + 86400],
             createBatchTxCaller: instructor1,
-            expectRevertWith: "Withdrawers required",
+            expectRevertWith: "WithdrawerArrayIsEmpty()",
           });
-          // Expect: Reverts with "Withdrawers required"
+          // Expect: Reverts with "WithdrawerArrayIsEmpty()"
         });
 
         it("should fail to create courses when batch size exceeds maxBatchCreateSize", async function () {
@@ -2093,9 +2105,9 @@ describe("NewTreasury Contract Tests", function () {
             redeemers,
             validUntils,
             createBatchTxCaller: instructor1,
-            expectRevertWith: "Max allowed batch create size exceeded", // kontrattaki revert mesajına göre ayarla
+            expectRevertWith: "CreateBatchSizeExceedsLimit()", // kontrattaki revert mesajına göre ayarla
           });
-          // Expect: Reverts with "Max allowed batch create size exceeded"
+          // Expect: Reverts with "CreateBatchSizeExceedsLimit()"
         });
 
         it("should fail to create a course if redeemer is not in withdrawers and not backend", async function () {
@@ -2106,7 +2118,7 @@ describe("NewTreasury Contract Tests", function () {
             redeemers: [instructor1.address],
             validUntils: [now + 86400],
             createBatchTxCaller: instructor1,
-            expectRevertWith: "Redeemer must be backend role if not any withdrawer",
+            expectRevertWith: "CallerIsNeitherWithdrawerNorBackend()",
           });
           // Expect: Reverts due to invalid role
         });
@@ -2119,7 +2131,7 @@ describe("NewTreasury Contract Tests", function () {
             redeemers: [instructor1.address],
             validUntils: [now + 86400],
             createBatchTxCaller: instructor1,
-            expectRevertWith: "Empty URI not allowed",
+            expectRevertWith: "UriIsEmpty()",
           });
           // Expect: Reverts with "Course URI empty"
         });
@@ -2361,10 +2373,10 @@ describe("NewTreasury Contract Tests", function () {
             withdrawers: [instructor1.address],
             redeemer: instructor1,
             validUntil: now + 86400,
-            expectRevertWith: "Signature invalid or unauthorized",
+            expectRevertWith: "SignatureIsInvalidOrSignerIsNotBackend()",
             previousWithdrawers: course1.withdrawers,
           });
-          // Expect: Reverts with "Signature invalid or unauthorized"
+          // Expect: Reverts with "SignatureIsInvalidOrSignerIsNotBackend()"
         });
 
         it("should fail to update a course with expired voucher", async function () {
@@ -2388,10 +2400,10 @@ describe("NewTreasury Contract Tests", function () {
             withdrawers: withdrawers,
             redeemer: instructor1,
             validUntil: expiredTimestamp,
-            expectRevertWith: "Voucher expired",
+            expectRevertWith: "VoucherIsExpired()",
             previousWithdrawers: withdrawers,
           });
-          // Expect: Reverts with "Voucher expired"
+          // Expect: Reverts with "VoucherIsExpired()"
         });
 
         it("should fail to update a course if msg.sender !== redeemer (Only redeemer can use this voucher)", async function () {
@@ -2415,10 +2427,10 @@ describe("NewTreasury Contract Tests", function () {
             withdrawers: withdrawers,
             redeemer: instructor1, // msg.sender
             validUntil: now + 86400,
-            expectRevertWith: "Only redeemer can use this voucher",
+            expectRevertWith: "CallerIsNotVoucherRedeemer()",
             previousWithdrawers: withdrawers,
           });
-          // Expect: Reverts with "Only redeemer can use this voucher"
+          // Expect: Reverts with "CallerIsNotVoucherRedeemer()"
         });
 
         it("should fail to update course with a URI that is already used by another course", async function () {
@@ -2449,10 +2461,10 @@ describe("NewTreasury Contract Tests", function () {
             withdrawers: withdrawersB,
             redeemer: instructor2,
             validUntil: now + 86400,
-            expectRevertWith: "New URI already used",
+            expectRevertWith: "UriIsAlreadyUsedOrDuplicatedInBatch()",
             previousWithdrawers: withdrawersB,
           });
-          // Expect: Reverts with "New URI already used"
+          // Expect: Reverts with "UriIsAlreadyUsedOrDuplicatedInBatch()"
         });
 
         it("should fail to update a course with more than allowed withdrawers", async function () {
@@ -2482,10 +2494,10 @@ describe("NewTreasury Contract Tests", function () {
             withdrawers: extraWithdrawers,
             redeemer: instructor1,
             validUntil: now + 86400,
-            expectRevertWith: "Max withdrawers exceeded",
+            expectRevertWith: "WithdrawerArrayExceedsLimit()",
             previousWithdrawers: withdrawers,
           });
-          // Expect: Reverts with "Max withdrawers exceeded"
+          // Expect: Reverts with "WithdrawerArrayExceedsLimit()"
         });
 
         it("should fail to update a course if any withdrawer is address(0)", async function () {
@@ -2509,7 +2521,7 @@ describe("NewTreasury Contract Tests", function () {
             withdrawers: invalidWithdrawers,
             redeemer: instructor1,
             validUntil: now + 86400,
-            expectRevertWith: "Withdrawer cannot be zero address",
+            expectRevertWith: "WithdrawerAddressIsZero()",
             previousWithdrawers: withdrawers,
           });
           // Expect: Reverts with "Zero address not allowed"
@@ -2534,10 +2546,10 @@ describe("NewTreasury Contract Tests", function () {
             withdrawers: [],
             redeemer: instructor1,
             validUntil: now + 86400,
-            expectRevertWith: "Withdrawers required",
+            expectRevertWith: "WithdrawerArrayIsEmpty()",
             previousWithdrawers: withdrawers,
           });
-          // Expect: Reverts with "Withdrawers required"
+          // Expect: Reverts with "WithdrawerArrayIsEmpty()"
         });
 
         it("should fail to update course if redeemer is not in withdrawers and not backend", async function () {
@@ -2559,7 +2571,7 @@ describe("NewTreasury Contract Tests", function () {
             withdrawers: [instructor3.address],
             redeemer: instructor2,
             validUntil: now + 86400,
-            expectRevertWith: "Redeemer must be backend role if not any withdrawer",
+            expectRevertWith: "CallerIsNeitherWithdrawerNorBackend()",
             previousWithdrawers: withdrawers,
           });
           // Expect: revert due to unauthorized redeemer
@@ -2584,7 +2596,7 @@ describe("NewTreasury Contract Tests", function () {
             withdrawers: [instructor1.address],
             redeemer: instructor1,
             validUntil: now + 86400,
-            expectRevertWith: "Empty URI not allowed",
+            expectRevertWith: "UriIsEmpty()",
             previousWithdrawers: withdrawers,
           });
           // Expect: Reverts with "Course URI empty"
@@ -2599,10 +2611,10 @@ describe("NewTreasury Contract Tests", function () {
             withdrawers: [instructor1.address],
             redeemer: instructor1,
             validUntil: now + 86400,
-            expectRevertWith: "Invalid courseId",
+            expectRevertWith: "CourseIdIsInvalid()",
             previousWithdrawers: [], // ID 0 zaten yok
           });
-          // Expect: Reverts with "Invalid courseId"
+          // Expect: Reverts with "CourseIdIsInvalid()-update"
         });
 
         it("should fail to update a course with non-existing courseId", async function () {
@@ -2617,10 +2629,10 @@ describe("NewTreasury Contract Tests", function () {
             withdrawers: [instructor1.address],
             redeemer: instructor1,
             validUntil: now + 86400,
-            expectRevertWith: "Invalid courseId",
+            expectRevertWith: "CourseIdIsInvalid()",
             previousWithdrawers: [], // course zaten yok
           });
-          // Expect: Reverts with "Invalid courseId"
+          // Expect: Reverts with "CourseIdIsInvalid()-update"
           // Step 3: Create a course with valid ID to increase courseCounter
           const course1 = await createCourseBatchHelper({
             uries: ["https://example.com/course/1"],
@@ -2641,10 +2653,10 @@ describe("NewTreasury Contract Tests", function () {
             withdrawers: [instructor1.address],
             redeemer: instructor1,
             validUntil: now + 86400,
-            expectRevertWith: "Invalid courseId",
+            expectRevertWith: "CourseIdIsInvalid()",
             previousWithdrawers: [], // çünkü o ID yok
           });
-          // Expect: Reverts with "Invalid courseId"
+          // Expect: Reverts with "CourseIdIsInvalid()-update"
         });
         /////### End of UPDATE Course Failure Cases###/////
       });
@@ -2822,9 +2834,9 @@ describe("NewTreasury Contract Tests", function () {
           validUntils: [now + 86400],
           nativeMsgValue: 0, // sadece ERC20 olduğundan 0
           buyBatchTxCaller: buyer1, // tx gönderen signer
-          expectRevertWith: "Signature invalid or unauthorized",
+          expectRevertWith: "SignatureIsInvalidOrSignerIsNotBackend()",
         });
-        // Expect: Reverts with "Signature invalid or unauthorized"
+        // Expect: Reverts with "SignatureIsInvalidOrSignerIsNotBackend()"
       });
 
       it("should fail to buy a course with expired voucher", async function () {
@@ -2842,9 +2854,9 @@ describe("NewTreasury Contract Tests", function () {
           validUntils: [expired],
           nativeMsgValue: 0, // sadece ERC20 olduğundan 0
           buyBatchTxCaller: buyer1, // tx gönderen signer
-          expectRevertWith: "Voucher expired",
+          expectRevertWith: "VoucherIsExpired()",
         });
-        // Expect: Reverts with "Voucher expired"
+        // Expect: Reverts with "VoucherIsExpired()"
       });
 
       it("should fail to buy a course if msg.sender !== redeemer (Only redeemer can use this voucher)", async function () {
@@ -2862,9 +2874,9 @@ describe("NewTreasury Contract Tests", function () {
           validUntils: [now + 86400],
           nativeMsgValue: 0, // sadece ERC20 olduğundan 0
           buyBatchTxCaller: buyer1, // tx gönderen signer
-          expectRevertWith: "Only redeemer can use this voucher",
+          expectRevertWith: "CallerIsNotVoucherRedeemer()",
         });
-        // Expect: Reverts with "Only redeemer can use this voucher"
+        // Expect: Reverts with "CallerIsNotVoucherRedeemer()"
       });
 
       it("should fail to buy if duplicate courseId receiver pair exists in batch", async function () {
@@ -2880,9 +2892,9 @@ describe("NewTreasury Contract Tests", function () {
           validUntils: [now + 86400, now + 86400],
           nativeMsgValue: 0, // sadece ERC20 olduğundan 0
           buyBatchTxCaller: buyer1, // tx gönderen signer
-          expectRevertWith: "Content receiver already owns this course",
+          expectRevertWith: "CourseIsAlreadyOwnedByReceiverOrDuplicatedInBatch()",
         });
-        // Step 3: (Ek doğrulama istersen) son durumları kontrattan okuyup assert edebilirsin.
+        // Step 3: Reverts with "CourseIsAlreadyOwnedByReceiverOrDuplicatedInBatch()"
       });
 
       it("should fail if the same course is purchased twice for the same receiver", async function () {
@@ -2910,9 +2922,9 @@ describe("NewTreasury Contract Tests", function () {
           validUntils: [now + 86400],
           nativeMsgValue: 0, // sadece ERC20 olduğundan 0
           buyBatchTxCaller: buyer2, // tx gönderen signer
-          expectRevertWith: "Content receiver already owns this course",
+          expectRevertWith: "CourseIsAlreadyOwnedByReceiverOrDuplicatedInBatch()",
         });
-        // Expect: Reverts with "Content receiver already owns this course"
+        // Expect: Reverts with "CourseIsAlreadyOwnedByReceiverOrDuplicatedInBatch()"
       });
 
       it("should fail to buy a course with courseId zero", async function () {
@@ -2926,9 +2938,9 @@ describe("NewTreasury Contract Tests", function () {
           validUntils: [now + 86400],
           nativeMsgValue: 0, // sadece ERC20 olduğundan 0
           buyBatchTxCaller: buyer1, // tx gönderen signer
-          expectRevertWith: "Invalid courseId",
+          expectRevertWith: "CourseIdIsInvalid()",
         });
-        // Expect: Reverts with "Invalid courseId"
+        // Expect: Reverts with "CourseIdIsInvalid()-buy"
         // Step 2: instructor1 creates a generic course with [instructor1] array to increase courseCounter
         const courseId1 = await quickCreateACourse();
         // Step 3: Try to buy with courseId = 0
@@ -2941,9 +2953,9 @@ describe("NewTreasury Contract Tests", function () {
           validUntils: [now + 86400],
           nativeMsgValue: 0, // sadece ERC20 olduğundan 0
           buyBatchTxCaller: buyer1, // tx gönderen signer
-          expectRevertWith: "Invalid courseId",
+          expectRevertWith: "CourseIdIsInvalid()",
         });
-        // Expect: Reverts with "Invalid courseId"
+        // Expect: Reverts with "CourseIdIsInvalid()-buy"
       });
 
       it("should fail to buy a course with non-existent courseId", async function () {
@@ -2959,9 +2971,9 @@ describe("NewTreasury Contract Tests", function () {
           validUntils: [now + 86400],
           nativeMsgValue: 0, // sadece ERC20 olduğundan 0
           buyBatchTxCaller: buyer1, // tx gönderen signer
-          expectRevertWith: "Invalid courseId",
+          expectRevertWith: "CourseIdIsInvalid()",
         });
-        // Expect: Reverts with "Invalid courseId"
+        // Expect: Reverts with "CourseIdIsInvalid()-buy"
         // Step 3: instructor1 creates a generic course with [instructor1] array to increase courseCounter
         const courseId1 = await quickCreateACourse();
         // Step 4: Get again courseCounter from contract and increment by 1
@@ -2976,9 +2988,9 @@ describe("NewTreasury Contract Tests", function () {
           validUntils: [now + 86400],
           nativeMsgValue: 0, // sadece ERC20 olduğundan 0
           buyBatchTxCaller: buyer1, // tx gönderen signer
-          expectRevertWith: "Invalid courseId",
+          expectRevertWith: "CourseIdIsInvalid()",
         });
-        // Expect: Reverts with "Invalid courseId"
+        // Expect: Reverts with "CourseIdIsInvalid()-buy"
       });
 
       it("should fail to buy a course that is not sellable", async function () {
@@ -3013,9 +3025,9 @@ describe("NewTreasury Contract Tests", function () {
           validUntils: [now + 86400],
           nativeMsgValue: 0, // sadece ERC20 olduğundan 0
           buyBatchTxCaller: buyer1, // tx gönderen signer
-          expectRevertWith: "Course is not sellable",
+          expectRevertWith: "CourseIsNotSellable()",
         });
-        // Expect: Reverts with "Course is not sellable"
+        // Expect: Reverts with "CourseIsNotSellable()"
       });
 
       it("should fail to buy when batch size exceeds maxBatchBuySize", async function () {
@@ -3035,9 +3047,9 @@ describe("NewTreasury Contract Tests", function () {
           validUntils: Array(numSales).fill(now + 86400),
           nativeMsgValue: 0,
           buyBatchTxCaller: backend,
-          expectRevertWith: "Max allowed batch buy size exceeded", // kontrattaki revert mesajına göre değiştir
+          expectRevertWith: "BuyBatchSizeExceedsLimit()", // kontrattaki revert mesajına göre değiştir
         });
-        // Expect: Reverts with "Max allowed batch buy size exceeded"
+        // Expect: Reverts with "BuyBatchSizeExceedsLimit()"
       });
 
       it("should fail to buy a course with zero price", async function () {
@@ -3053,9 +3065,9 @@ describe("NewTreasury Contract Tests", function () {
           validUntils: [now + 86400],
           nativeMsgValue: 0, // sadece ERC20 olduğundan 0
           buyBatchTxCaller: buyer1, // tx gönderen signer
-          expectRevertWith: "Course price must be greater than 0",
+          expectRevertWith: "CoursePriceIsZero()",
         });
-        // Expect: Reverts with "Course price must be greater than 0"
+        // Expect: Reverts with "CoursePriceIsZero()"
       });
 
       it("should fail to buy a course with zero price using native token", async function () {
@@ -3071,9 +3083,9 @@ describe("NewTreasury Contract Tests", function () {
           validUntils: [now + 86400],
           nativeMsgValue: 0, // native token için msg.value
           buyBatchTxCaller: buyer1, // tx gönderen signer
-          expectRevertWith: "Course price must be greater than 0",
+          expectRevertWith: "CoursePriceIsZero()",
         });
-        // Expect: Reverts with "Course price must be greater than 0"
+        // Expect: Reverts with "CoursePriceIsZero()"
       });
 
       it("should fail to buy a course with incorrect native token amount (less or more than price)", async function () {
@@ -3089,9 +3101,9 @@ describe("NewTreasury Contract Tests", function () {
           validUntils: [now + 86400],
           nativeMsgValue: ethers.parseEther("5"), // less than price
           buyBatchTxCaller: buyer1, // tx gönderen signer
-          expectRevertWith: "Incorrect total native value sent",
+          expectRevertWith: "NativeValueNotEqualToTotal()",
         });
-        // Expect: Reverts with "Incorrect total native value sent"
+        // Expect: Reverts with "NativeValueNotEqualToTotal()"
         // Step 3: buyer1 tries to pay more than coursePrice in native token
         await buyCourseBatchHelper({
           courseIds: [courseId1],
@@ -3102,9 +3114,9 @@ describe("NewTreasury Contract Tests", function () {
           validUntils: [now + 86400],
           nativeMsgValue: ethers.parseEther("15"), // more than price
           buyBatchTxCaller: buyer1, // tx gönderen signer
-          expectRevertWith: "Incorrect total native value sent",
+          expectRevertWith: "NativeValueNotEqualToTotal()",
         });
-        // Expect: Reverts with "Incorrect total native value sent"
+        // Expect: Reverts with "NativeValueNotEqualToTotal()"
       });
 
       it("should fail to buy a course with ERC20 token if any native token value is sent", async function () {
@@ -3120,9 +3132,9 @@ describe("NewTreasury Contract Tests", function () {
           validUntils: [now + 86400],
           nativeMsgValue: ethers.parseEther("1"), // should be 0
           buyBatchTxCaller: buyer1, // tx gönderen signer
-          expectRevertWith: "Incorrect total native value sent",
+          expectRevertWith: "NativeValueNotEqualToTotal()",
         });
-        // Expect: Reverts with "Incorrect total native value sent"
+        // Expect: Reverts with "NativeValueNotEqualToTotal()"
       });
 
       it("should fail to buy a course when ERC20 token transfer to treasury fails", async function () {
@@ -3142,9 +3154,9 @@ describe("NewTreasury Contract Tests", function () {
           validUntils: [now + 86400],
           nativeMsgValue: 0, // sadece ERC20 olduğundan 0
           buyBatchTxCaller: buyer1, // tx gönderen signer
-          expectRevertWith: "Recipient blocked (from)",
+          expectRevertWith: "Recipient blocked from",
         });
-        // Expect: Reverts with "Recipient blocked (from)"
+        // Expect: Reverts with "Recipient blocked from"
       });
       /////###End of Failure Cases###/////
     });

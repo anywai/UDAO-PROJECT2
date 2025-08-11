@@ -31,7 +31,7 @@ contract FailMockERC20 is ERC20 {
         address to,
         uint256 amount
     ) public override returns (bool) {
-        require(!blocked[to], "Recipient blocked (from)");
+        require(!blocked[to], "Recipient blocked from");
         return super.transferFrom(from, to, amount);
     }
 }
