@@ -2,7 +2,7 @@
 pragma solidity ^0.8.20;
 
 //import "@openzeppelin/contracts/access/AccessControl.sol"; //is AccessControl
-import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
+import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol"; // draft-EIP712.sol path’i eski. OZ v5+’te EIP712.sol.
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -32,6 +32,74 @@ contract NewTreasury is EIP712, ReentrancyGuard {
     error ZeroValueNotAccepted();
     error NonUdaoCutsCantExceed100Percent();
     error UdaoCutsCantExceed100Percent();
+
+    //___________________________________//
+
+    // Zero address
+    error BackendAddressIsZero();
+    error FoundationAddressIsZero();
+    error UdaoTokenAddressIsZero();
+    error GovernanceAddressIsZero();
+    error WithdrawerAddressIsZero();
+
+    // Auth / Role
+    error CallerIsNotBackend();
+    error CallerIsNotFoundation();
+    error BackendRoleAlreadyAssigned();
+    error BackendRoleAlreadyAbsent();
+
+    // Generic
+    error ChangeHasNoEffect();
+    error ValueIsZero();
+    error NonUdaoCutsSumExceeds100Percent(); // NonUdaoCutsExceedMaxBps
+    error UdaoCutsSumExceeds100Percent(); // UdaoCutsExceedMaxBps
+
+    // voucher
+    error SignatureIsInvalidOrSignerIsNotBackend(); // divide later
+    error CallerIsNotVoucherRedeemer();
+    error VoucherIsExpired(); // VoucherExpired
+
+    // create/update course
+    error CreateBatchSizeExceedsLimit();
+    error UriIsAlreadyUsedOrDuplicatedInBatch(); // UriIsAlreadyUsedOrDuplicateInBatch
+    error UriIsEmpty();
+    error WithdrawerArrayIsEmpty();
+    error WithdrawerArrayExceedsLimit();
+    error WithdrawerArrayContainsDuplicates();
+    error CallerIsNeitherWithdrawerNorBackend(); // CallerIsNotWithdrawerOrBackend
+
+    // buy
+    error BuyBatchSizeExceedsLimit();
+    error CourseIdIsInvalid();
+    error CourseIsNotSellable();
+    error CourseIsAlreadyOwnedByReceiverOrDuplicatedInBatch();
+    error CoursePriceIsZero();
+    error NativeValueNotEqualToTotal();
+
+    // refund
+    error PaymentIdIsInvalid();
+    error PaymentNotFoundForOwnerAndCourse(); //PaymentForOwnerAndCourseNotFound
+    error PaymentIsAlreadyRefunded(); // PaymentAlreadyRefunded
+    error PaymentIsAlreadyWithdrawn(); //PaymentAlreadyWithdrawn
+    error RefundWindowHasPassed(); // RefundWindowPassed
+    error CourseIsNotOwnedByReceiver(); // CourseNotOwnedByReceiver
+    error NativeRefundFailed();
+
+    // withdraw
+    error WithdrawBatchSizeExceedsLimit();
+    error WithdrawIndexRangeIsInvalid();
+
+    error CallerIsNotAuthorizedWithdrawer();
+    error CallerIsNotThisContract();
+
+    error NativeTransferToInstructorFailed();
+    error NativeTransferToFoundationFailed();
+    error NativeTransferToGovernanceFailed();
+
+    // Fallback
+    error DirectETHNotAccepted();
+
+    //___________________________________//
 
     /////### ROLES AND AFFILIATIONS ###/////
     mapping(address => bool) public hasBackendRole;
@@ -350,10 +418,10 @@ contract NewTreasury is EIP712, ReentrancyGuard {
     uint256 public maxBatchWithdrawSize = 10; // max 10 sales can be withdrawn at once
     uint256 public refundWindow = 20 days;
 
-    uint256 public atFoundCut = 6000; // %4 foundation cut (any token)
+    uint256 public atFoundCut = 6000; // %46 foundation cut (any token)
     uint256 public atGoverCut = 1000; // %1 governance cut (any token)
     uint256 public utFoundCut = 4000; // %4 foundation cut (udao)
-    uint256 public utGoverCut = 500; // %1 governance cut (udao)
+    uint256 public utGoverCut = 500; // %0.5 governance cut (udao)
 
     event MaxAllowedWithdrawersUpdated(
         uint256 indexed newMaxAllowedWithdrawers,
@@ -454,6 +522,19 @@ contract NewTreasury is EIP712, ReentrancyGuard {
     }
 
     /////### VOUCHER LOGIC ###/////
+    function _verifyVoucherSignerAndValidity2(
+        bytes32 _digest,
+        bytes memory signature,
+        address _redeemer,
+        uint256 _validUntil
+    ) internal view {
+        if (_redeemer != msg.sender) revert onlyRedeemerCanUseThisVoucher();
+        if (_validUntil < block.timestamp) revert VoucherExpired();
+
+        address signer = ECDSA.recover(_digest, signature);
+        if (!hasBackendRole[signer]) revert SignatureInvalidOrUnauthorized();
+    }
+
     function _verifyVoucherSignerAndValidity(
         bytes32 _digest,
         bytes memory signature,
