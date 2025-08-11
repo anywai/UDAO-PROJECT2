@@ -17,24 +17,6 @@ contract NewTreasury is EIP712, ReentrancyGuard {
     string private constant SIGNING_DOMAIN = "NewTreasuryVouchers";
     string private constant SIGNATURE_VERSION = "1";
 
-    error ZeroAddressBackend();
-    error ZeroAddressFoundation();
-    error ZeroAddressUdaoToken();
-    error ZeroAddressGovernance();
-    error ZeroAddressWithdrawer();
-
-    error onlyBackendAuthorized();
-    error onlyFoundationAuthorized();
-    error alreadyHasBackendRole();
-    error alreadyHasNotBackendRole();
-
-    error NoChange();
-    error ZeroValueNotAccepted();
-    error NonUdaoCutsCantExceed100Percent();
-    error UdaoCutsCantExceed100Percent();
-
-    //___________________________________//
-
     // Zero address
     error BackendAddressIsZero();
     error FoundationAddressIsZero();
@@ -99,8 +81,6 @@ contract NewTreasury is EIP712, ReentrancyGuard {
     // Fallback
     error DirectETHNotAccepted();
 
-    //___________________________________//
-
     /////### ROLES AND AFFILIATIONS ###/////
     mapping(address => bool) public hasBackendRole;
     address public foundationAddress;
@@ -124,18 +104,19 @@ contract NewTreasury is EIP712, ReentrancyGuard {
     );
 
     function grantBackendRole(address _backendAddress) external {
-        if (msg.sender != foundationAddress) revert onlyFoundationAuthorized();
-        if (_backendAddress == address(0)) revert ZeroAddressBackend();
-        if (hasBackendRole[_backendAddress]) revert alreadyHasBackendRole();
+        if (msg.sender != foundationAddress) revert CallerIsNotFoundation();
+        if (_backendAddress == address(0)) revert BackendAddressIsZero();
+        if (hasBackendRole[_backendAddress])
+            revert BackendRoleAlreadyAssigned();
 
         hasBackendRole[_backendAddress] = true;
         emit BackendRoleGranted(_backendAddress);
     }
 
     function revokeBackendRole(address _backendAddress) external {
-        if (msg.sender != foundationAddress) revert onlyFoundationAuthorized();
-        if (_backendAddress == address(0)) revert ZeroAddressBackend();
-        if (!hasBackendRole[_backendAddress]) revert alreadyHasNotBackendRole();
+        if (msg.sender != foundationAddress) revert CallerIsNotFoundation();
+        if (_backendAddress == address(0)) revert BackendAddressIsZero();
+        if (!hasBackendRole[_backendAddress]) revert BackendRoleAlreadyAbsent();
 
         hasBackendRole[_backendAddress] = false;
         emit BackendRoleRevoked(_backendAddress);
@@ -143,9 +124,11 @@ contract NewTreasury is EIP712, ReentrancyGuard {
 
     function setFoundationAddress(address newFoundationAddress) external {
         address currentFoundation = foundationAddress;
-        if (msg.sender != currentFoundation) revert onlyFoundationAuthorized();
-        if (newFoundationAddress == address(0)) revert ZeroAddressFoundation();
-        if (newFoundationAddress == currentFoundation) revert NoChange();
+        if (msg.sender != currentFoundation) revert CallerIsNotFoundation();
+        if (newFoundationAddress == address(0))
+            revert FoundationAddressIsZero();
+        if (newFoundationAddress == currentFoundation)
+            revert ChangeHasNoEffect();
 
         foundationAddress = newFoundationAddress;
         hasBackendRole[newFoundationAddress] = true; // ensure new foundation wallet has the backend role
@@ -156,10 +139,11 @@ contract NewTreasury is EIP712, ReentrancyGuard {
     }
 
     function setUdaoTokenAddress(address newUdaoTokenAddress) external {
-        if (!hasBackendRole[msg.sender]) revert onlyBackendAuthorized();
-        if (newUdaoTokenAddress == address(0)) revert ZeroAddressUdaoToken();
+        if (!hasBackendRole[msg.sender]) revert CallerIsNotBackend();
+        if (newUdaoTokenAddress == address(0)) revert UdaoTokenAddressIsZero();
         address currentUdaoTokenAddress = udaoTokenAddress;
-        if (newUdaoTokenAddress == currentUdaoTokenAddress) revert NoChange();
+        if (newUdaoTokenAddress == currentUdaoTokenAddress)
+            revert ChangeHasNoEffect();
 
         udaoTokenAddress = newUdaoTokenAddress;
         emit UdaoTokenAddressUpdated(
@@ -169,10 +153,12 @@ contract NewTreasury is EIP712, ReentrancyGuard {
     }
 
     function setGovernanceAddress(address newGovernanceAddress) external {
-        if (!hasBackendRole[msg.sender]) revert onlyBackendAuthorized();
-        if (newGovernanceAddress == address(0)) revert ZeroAddressGovernance();
+        if (!hasBackendRole[msg.sender]) revert CallerIsNotBackend();
+        if (newGovernanceAddress == address(0))
+            revert GovernanceAddressIsZero();
         address currentGovernanceAddress = governanceAddress;
-        if (newGovernanceAddress == currentGovernanceAddress) revert NoChange();
+        if (newGovernanceAddress == currentGovernanceAddress)
+            revert ChangeHasNoEffect();
 
         governanceAddress = newGovernanceAddress;
         emit GovernanceAddressUpdated(
@@ -186,9 +172,9 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         address _udaoTokenAddress,
         address _governanceContract
     ) EIP712(SIGNING_DOMAIN, SIGNATURE_VERSION) {
-        if (_foundationAddress == address(0)) revert ZeroAddressFoundation();
-        if (_udaoTokenAddress == address(0)) revert ZeroAddressUdaoToken();
-        if (_governanceContract == address(0)) revert ZeroAddressGovernance();
+        if (_foundationAddress == address(0)) revert FoundationAddressIsZero();
+        if (_udaoTokenAddress == address(0)) revert UdaoTokenAddressIsZero();
+        if (_governanceContract == address(0)) revert GovernanceAddressIsZero();
 
         foundationAddress = _foundationAddress; // set foundation wallet address
         governanceAddress = _governanceContract; // set governance contract address
@@ -446,49 +432,49 @@ contract NewTreasury is EIP712, ReentrancyGuard {
     event CourseCutsUpdated();
 
     function setMaxAllowedWithdrawers(uint256 newMax) external {
-        if (!hasBackendRole[msg.sender]) revert onlyBackendAuthorized();
-        if (newMax == 0) revert ZeroValueNotAccepted();
+        if (!hasBackendRole[msg.sender]) revert CallerIsNotBackend();
+        if (newMax == 0) revert ValueIsZero();
         uint256 currentMax = maxAllowedWithdrawers;
-        if (newMax == currentMax) revert NoChange();
+        if (newMax == currentMax) revert ChangeHasNoEffect();
 
         maxAllowedWithdrawers = newMax;
         emit MaxAllowedWithdrawersUpdated(newMax, currentMax);
     }
 
     function setMaxBatchCreateSize(uint256 newMaxBatch) external {
-        if (!hasBackendRole[msg.sender]) revert onlyBackendAuthorized();
-        if (newMaxBatch == 0) revert ZeroValueNotAccepted();
+        if (!hasBackendRole[msg.sender]) revert CallerIsNotBackend();
+        if (newMaxBatch == 0) revert ValueIsZero();
         uint256 currentMaxBatch = maxBatchCreateSize;
-        if (newMaxBatch == currentMaxBatch) revert NoChange();
+        if (newMaxBatch == currentMaxBatch) revert ChangeHasNoEffect();
 
         maxBatchCreateSize = newMaxBatch;
         emit MaxBatchCreateSizeUpdated(newMaxBatch, currentMaxBatch);
     }
 
     function setMaxBatchBuySize(uint256 newMaxBatch) external {
-        if (!hasBackendRole[msg.sender]) revert onlyBackendAuthorized();
-        if (newMaxBatch == 0) revert ZeroValueNotAccepted();
+        if (!hasBackendRole[msg.sender]) revert CallerIsNotBackend();
+        if (newMaxBatch == 0) revert ValueIsZero();
         uint256 currentMaxBatch = maxBatchBuySize;
-        if (newMaxBatch == currentMaxBatch) revert NoChange();
+        if (newMaxBatch == currentMaxBatch) revert ChangeHasNoEffect();
 
         maxBatchBuySize = newMaxBatch;
         emit MaxBatchBuySizeUpdated(newMaxBatch, currentMaxBatch);
     }
 
     function setMaxBatchWithdrawSize(uint256 newMaxBatch) external {
-        if (!hasBackendRole[msg.sender]) revert onlyBackendAuthorized();
-        if (newMaxBatch == 0) revert ZeroValueNotAccepted();
+        if (!hasBackendRole[msg.sender]) revert CallerIsNotBackend();
+        if (newMaxBatch == 0) revert ValueIsZero();
         uint256 currentMaxBatch = maxBatchWithdrawSize;
-        if (newMaxBatch == currentMaxBatch) revert NoChange();
+        if (newMaxBatch == currentMaxBatch) revert ChangeHasNoEffect();
 
         maxBatchWithdrawSize = newMaxBatch;
         emit MaxBatchWithdrawSizeUpdated(newMaxBatch, currentMaxBatch);
     }
 
     function setRefundWindow(uint256 newWindow) external {
-        if (!hasBackendRole[msg.sender]) revert onlyBackendAuthorized();
+        if (!hasBackendRole[msg.sender]) revert CallerIsNotBackend();
         uint256 currentWindow = refundWindow;
-        if (newWindow == currentWindow) revert NoChange();
+        if (newWindow == currentWindow) revert ChangeHasNoEffect();
 
         refundWindow = newWindow; // convert days to seconds
         emit RefundWindowUpdated(newWindow, currentWindow);
@@ -500,17 +486,17 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         uint256 _utFoundCut,
         uint256 _utGoverCut
     ) external {
-        if (!hasBackendRole[msg.sender]) revert onlyBackendAuthorized();
+        if (!hasBackendRole[msg.sender]) revert CallerIsNotBackend();
         if (_atFoundCut + _atGoverCut >= 100_000)
-            revert NonUdaoCutsCantExceed100Percent();
+            revert NonUdaoCutsSumExceeds100Percent();
         if (_utFoundCut + _utGoverCut >= 100_000)
-            revert UdaoCutsCantExceed100Percent();
+            revert UdaoCutsSumExceeds100Percent();
         if (
             _atFoundCut == atFoundCut &&
             _atGoverCut == atGoverCut &&
             _utFoundCut == utFoundCut &&
             _utGoverCut == utGoverCut
-        ) revert NoChange();
+        ) revert ChangeHasNoEffect();
 
         atFoundCut = _atFoundCut;
         atGoverCut = _atGoverCut;
@@ -522,6 +508,7 @@ contract NewTreasury is EIP712, ReentrancyGuard {
     }
 
     /////### VOUCHER LOGIC ###/////
+    /*
     function _verifyVoucherSignerAndValidity2(
         bytes32 _digest,
         bytes memory signature,
@@ -534,6 +521,7 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         address signer = ECDSA.recover(_digest, signature);
         if (!hasBackendRole[signer]) revert SignatureInvalidOrUnauthorized();
     }
+    */
 
     function _verifyVoucherSignerAndValidity(
         bytes32 _digest,

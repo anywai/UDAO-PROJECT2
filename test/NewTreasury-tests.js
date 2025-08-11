@@ -150,6 +150,7 @@ async function createCourseBatchHelper({
     await expect(NewTreasury.connect(createBatchTxCaller).createCourseBatch(vouchers)).to.be.revertedWith(
       expectRevertWith
     );
+    //...).to.be.revertedWithCustomError(NewTreasury, "BackendAddressIsZero()");
   } else if (waitSuccess) {
     tx = await NewTreasury.connect(createBatchTxCaller).createCourseBatch(vouchers);
     const receipt = await tx.wait();
@@ -5642,8 +5643,8 @@ describe("NewTreasury Contract Tests", function () {
         );
         await expect(
           TestTreasuryFactory.deploy(ethers.ZeroAddress, MKT1.target, NewGovDummy.target)
-        ).to.be.revertedWithCustomError(TestTreasuryFactory, "ZeroAddressFoundation");
-        // Expect deployment to revert with "ZeroAddressFoundation" custom error
+        ).to.be.revertedWithCustomError(TestTreasuryFactory, "FoundationAddressIsZero");
+        // Expect deployment to revert with "FoundationAddressIsZero" custom error
       });
 
       it("should fail to deploy treasury if constructor udao token address is zero", async () => {
@@ -5653,8 +5654,8 @@ describe("NewTreasury Contract Tests", function () {
         );
         await expect(
           TestTreasuryFactory.deploy(foundation.address, ethers.ZeroAddress, NewGovDummy.target)
-        ).to.be.revertedWithCustomError(TestTreasuryFactory, "ZeroAddressUdaoToken");
-        // Expect deployment to revert with "ZeroAddressUdaoToken" custom error
+        ).to.be.revertedWithCustomError(TestTreasuryFactory, "UdaoTokenAddressIsZero");
+        // Expect deployment to revert with "UdaoTokenAddressIsZero" custom error
       });
 
       it("should fail to deploy treasury if constructor governance address is zero", async () => {
@@ -5664,17 +5665,17 @@ describe("NewTreasury Contract Tests", function () {
         );
         await expect(
           TestTreasuryFactory.deploy(foundation.address, MKT1.target, ethers.ZeroAddress)
-        ).to.be.revertedWithCustomError(TestTreasuryFactory, "ZeroAddressGovernance");
-        // Expect deployment to revert with "ZeroAddressGovernance" custom error
+        ).to.be.revertedWithCustomError(TestTreasuryFactory, "GovernanceAddressIsZero");
+        // Expect deployment to revert with "GovernanceAddressIsZero" custom error
       });
 
       it("should fail to grant backend role if called by a non-foundation address", async () => {
         // Step 1: Try to grant backend role by a non-foundation address
         await expect(NewTreasury.connect(backend).grantBackendRole(person1.address)).to.be.revertedWithCustomError(
           NewTreasury,
-          "onlyFoundationAuthorized()"
+          "CallerIsNotFoundation()"
         );
-        // Expect: Reverts with "onlyFoundationAuthorized" custom error
+        // Expect: Reverts with "CallerIsNotFoundation" custom error
         // Expect: person1 should not have backend role
         expect(await NewTreasury.hasBackendRole(person1.address)).to.be.false;
       });
@@ -5683,8 +5684,8 @@ describe("NewTreasury Contract Tests", function () {
         // Step 1: Try to grant backend role to zero address
         await expect(
           NewTreasury.connect(foundation).grantBackendRole(ethers.ZeroAddress)
-        ).to.be.revertedWithCustomError(NewTreasury, "ZeroAddressBackend()");
-        // Expect: Reverts with "ZeroAddressBackend" custom error
+        ).to.be.revertedWithCustomError(NewTreasury, "BackendAddressIsZero()");
+        // Expect: Reverts with "BackendAddressIsZero" custom error
         // Expect: backend role should not be granted to zero address
         expect(await NewTreasury.hasBackendRole(ethers.ZeroAddress)).to.be.false;
       });
@@ -5693,16 +5694,16 @@ describe("NewTreasury Contract Tests", function () {
         // Step 1: Try to grant backend role to an address that already has it
         await expect(NewTreasury.connect(foundation).grantBackendRole(backend.address)).to.be.revertedWithCustomError(
           NewTreasury,
-          "alreadyHasBackendRole()"
+          "BackendRoleAlreadyAssigned()"
         );
         // Step 2: Grant backend role to person1
         await NewTreasury.connect(foundation).grantBackendRole(person1.address);
         // Step 3: Try to grant backend role to person1 again
         await expect(NewTreasury.connect(foundation).grantBackendRole(person1.address)).to.be.revertedWithCustomError(
           NewTreasury,
-          "alreadyHasBackendRole()"
+          "BackendRoleAlreadyAssigned()"
         );
-        // Expect: Reverts with "alreadyHasBackendRole" custom error in both cases
+        // Expect: Reverts with "BackendRoleAlreadyAssigned" custom error in both cases
         // Expect: both backend and person1 should have backend role
         expect(await NewTreasury.hasBackendRole(backend.address)).to.be.true;
         expect(await NewTreasury.hasBackendRole(person1.address)).to.be.true;
@@ -5714,7 +5715,7 @@ describe("NewTreasury Contract Tests", function () {
         // Step 2: Try to revoke by backend (not foundation)
         await expect(NewTreasury.connect(backend).revokeBackendRole(person1.address)).to.be.revertedWithCustomError(
           NewTreasury,
-          "onlyFoundationAuthorized()"
+          "CallerIsNotFoundation()"
         );
         // Expect: person1 should still have backend role
         expect(await NewTreasury.hasBackendRole(person1.address)).to.be.true;
@@ -5724,7 +5725,7 @@ describe("NewTreasury Contract Tests", function () {
         // Step 1: Try to revoke zero address
         await expect(
           NewTreasury.connect(foundation).revokeBackendRole(ethers.ZeroAddress)
-        ).to.be.revertedWithCustomError(NewTreasury, "ZeroAddressBackend()");
+        ).to.be.revertedWithCustomError(NewTreasury, "BackendAddressIsZero()");
         // Expect: role still false
         expect(await NewTreasury.hasBackendRole(ethers.ZeroAddress)).to.be.false;
       });
@@ -5735,7 +5736,7 @@ describe("NewTreasury Contract Tests", function () {
         // Step 2: Try to revoke
         await expect(NewTreasury.connect(foundation).revokeBackendRole(person1.address)).to.be.revertedWithCustomError(
           NewTreasury,
-          "alreadyHasNotBackendRole()"
+          "BackendRoleAlreadyAbsent()"
         );
         // Expect: still false
         expect(await NewTreasury.hasBackendRole(person1.address)).to.be.false;
@@ -5745,7 +5746,7 @@ describe("NewTreasury Contract Tests", function () {
         // Step 1: Try to update foundation address by backend
         await expect(NewTreasury.connect(backend).setFoundationAddress(person1.address)).to.be.revertedWithCustomError(
           NewTreasury,
-          "onlyFoundationAuthorized()"
+          "CallerIsNotFoundation()"
         );
         // Expect: foundation still unchanged
         expect(await NewTreasury.foundationAddress()).to.equal(foundation.address);
@@ -5755,7 +5756,7 @@ describe("NewTreasury Contract Tests", function () {
         // Step 1: Try to update foundation address to zero address
         await expect(
           NewTreasury.connect(foundation).setFoundationAddress(ethers.ZeroAddress)
-        ).to.be.revertedWithCustomError(NewTreasury, "ZeroAddressFoundation()");
+        ).to.be.revertedWithCustomError(NewTreasury, "FoundationAddressIsZero()");
         // Expect: foundation still unchanged
         expect(await NewTreasury.foundationAddress()).to.equal(foundation.address);
       });
@@ -5764,7 +5765,7 @@ describe("NewTreasury Contract Tests", function () {
         // Step 1: Try to update foundation address to current address
         await expect(
           NewTreasury.connect(foundation).setFoundationAddress(foundation.address)
-        ).to.be.revertedWithCustomError(NewTreasury, "NoChange()");
+        ).to.be.revertedWithCustomError(NewTreasury, "ChangeHasNoEffect()");
         // Expect: foundation still unchanged
         expect(await NewTreasury.foundationAddress()).to.equal(foundation.address);
       });
@@ -5773,7 +5774,7 @@ describe("NewTreasury Contract Tests", function () {
         // Step 1: Try to update UDAO token address by person1 (not backend)
         await expect(NewTreasury.connect(person1).setUdaoTokenAddress(MKT2.target)).to.be.revertedWithCustomError(
           NewTreasury,
-          "onlyBackendAuthorized()"
+          "CallerIsNotBackend()"
         );
         // Expect: address remains unchanged
         expect(await NewTreasury.udaoTokenAddress()).to.equal(MKT1.target);
@@ -5783,7 +5784,7 @@ describe("NewTreasury Contract Tests", function () {
         // Step 1: Try to update UDAO token address to zero address
         await expect(
           NewTreasury.connect(backend).setUdaoTokenAddress(ethers.ZeroAddress)
-        ).to.be.revertedWithCustomError(NewTreasury, "ZeroAddressUdaoToken()");
+        ).to.be.revertedWithCustomError(NewTreasury, "UdaoTokenAddressIsZero()");
         // Expect: address remains unchanged
         expect(await NewTreasury.udaoTokenAddress()).to.equal(MKT1.target);
       });
@@ -5792,7 +5793,7 @@ describe("NewTreasury Contract Tests", function () {
         // Step 1: Try to update UDAO token address to current address
         await expect(NewTreasury.connect(backend).setUdaoTokenAddress(MKT1.target)).to.be.revertedWithCustomError(
           NewTreasury,
-          "NoChange()"
+          "ChangeHasNoEffect()"
         );
         // Expect: address remains unchanged
         expect(await NewTreasury.udaoTokenAddress()).to.equal(MKT1.target);
@@ -5802,7 +5803,7 @@ describe("NewTreasury Contract Tests", function () {
         // Step 1: Try to update governance address by outsider (not backend)
         await expect(NewTreasury.connect(person3).setGovernanceAddress(person1.address)).to.be.revertedWithCustomError(
           NewTreasury,
-          "onlyBackendAuthorized()"
+          "CallerIsNotBackend()"
         );
         // Expect: address remains unchanged
         expect(await NewTreasury.governanceAddress()).to.equal(NewGovDummy.target);
@@ -5812,7 +5813,7 @@ describe("NewTreasury Contract Tests", function () {
         // Step 1: Try to update governance address to zero address
         await expect(
           NewTreasury.connect(backend).setGovernanceAddress(ethers.ZeroAddress)
-        ).to.be.revertedWithCustomError(NewTreasury, "ZeroAddressGovernance()");
+        ).to.be.revertedWithCustomError(NewTreasury, "GovernanceAddressIsZero()");
         // Expect: address remains unchanged
         expect(await NewTreasury.governanceAddress()).to.equal(NewGovDummy.target);
       });
@@ -5821,7 +5822,7 @@ describe("NewTreasury Contract Tests", function () {
         // Step 1: Try to update governance address to current address
         await expect(
           NewTreasury.connect(backend).setGovernanceAddress(NewGovDummy.target)
-        ).to.be.revertedWithCustomError(NewTreasury, "NoChange()");
+        ).to.be.revertedWithCustomError(NewTreasury, "ChangeHasNoEffect()");
         // Expect: address remains unchanged
         expect(await NewTreasury.governanceAddress()).to.equal(NewGovDummy.target);
       });
@@ -5833,7 +5834,7 @@ describe("NewTreasury Contract Tests", function () {
         const newMax = Number(existing) + 1;
         await expect(NewTreasury.connect(person1).setMaxAllowedWithdrawers(newMax)).to.be.revertedWithCustomError(
           NewTreasury,
-          "onlyBackendAuthorized()"
+          "CallerIsNotBackend()"
         );
         // Expect: value remains unchanged
         expect(await NewTreasury.maxAllowedWithdrawers()).to.equal(existing);
@@ -5845,7 +5846,7 @@ describe("NewTreasury Contract Tests", function () {
         // Step 2: Try to update max allowed withdrawers to 0
         await expect(NewTreasury.connect(backend).setMaxAllowedWithdrawers(0)).to.be.revertedWithCustomError(
           NewTreasury,
-          "ZeroValueNotAccepted()"
+          "ValueIsZero()"
         );
         // Expect: value remains unchanged
         expect(await NewTreasury.maxAllowedWithdrawers()).to.equal(existing);
@@ -5856,7 +5857,7 @@ describe("NewTreasury Contract Tests", function () {
         const existing = await NewTreasury.maxAllowedWithdrawers();
         await expect(NewTreasury.connect(backend).setMaxAllowedWithdrawers(existing)).to.be.revertedWithCustomError(
           NewTreasury,
-          "NoChange()"
+          "ChangeHasNoEffect()"
         );
         // Expect: value remains unchanged
         expect(await NewTreasury.maxAllowedWithdrawers()).to.equal(existing);
@@ -5869,7 +5870,7 @@ describe("NewTreasury Contract Tests", function () {
         const newValue = Number(existing) + 1;
         await expect(NewTreasury.connect(person1).setMaxBatchCreateSize(newValue)).to.be.revertedWithCustomError(
           NewTreasury,
-          "onlyBackendAuthorized()"
+          "CallerIsNotBackend()"
         );
         // Expect: value remains unchanged
         expect(await NewTreasury.maxBatchCreateSize()).to.equal(existing);
@@ -5881,7 +5882,7 @@ describe("NewTreasury Contract Tests", function () {
         // Step 2: Try to update max batch create size to 0
         await expect(NewTreasury.connect(backend).setMaxBatchCreateSize(0)).to.be.revertedWithCustomError(
           NewTreasury,
-          "ZeroValueNotAccepted()"
+          "ValueIsZero()"
         );
         // Expect: value remains unchanged
         expect(await NewTreasury.maxBatchCreateSize()).to.equal(existing);
@@ -5893,7 +5894,7 @@ describe("NewTreasury Contract Tests", function () {
         // Step 2: Try to update with same value
         await expect(NewTreasury.connect(backend).setMaxBatchCreateSize(existing)).to.be.revertedWithCustomError(
           NewTreasury,
-          "NoChange()"
+          "ChangeHasNoEffect()"
         );
         // Expect: value remains unchanged
         expect(await NewTreasury.maxBatchCreateSize()).to.equal(existing);
@@ -5906,7 +5907,7 @@ describe("NewTreasury Contract Tests", function () {
         const newValue = Number(existing) + 1;
         await expect(NewTreasury.connect(person1).setMaxBatchBuySize(newValue)).to.be.revertedWithCustomError(
           NewTreasury,
-          "onlyBackendAuthorized()"
+          "CallerIsNotBackend()"
         );
         // Expect: value remains unchanged
         expect(await NewTreasury.maxBatchBuySize()).to.equal(existing);
@@ -5918,7 +5919,7 @@ describe("NewTreasury Contract Tests", function () {
         // Step 2: Try to update max batch buy size to 0
         await expect(NewTreasury.connect(backend).setMaxBatchBuySize(0)).to.be.revertedWithCustomError(
           NewTreasury,
-          "ZeroValueNotAccepted()"
+          "ValueIsZero()"
         );
         // Expect: value remains unchanged
         expect(await NewTreasury.maxBatchBuySize()).to.equal(existing);
@@ -5930,7 +5931,7 @@ describe("NewTreasury Contract Tests", function () {
         // Step 2: Try to update with same value
         await expect(NewTreasury.connect(backend).setMaxBatchBuySize(existing)).to.be.revertedWithCustomError(
           NewTreasury,
-          "NoChange()"
+          "ChangeHasNoEffect()"
         );
         // Expect: value remains unchanged
         expect(await NewTreasury.maxBatchBuySize()).to.equal(existing);
@@ -5943,7 +5944,7 @@ describe("NewTreasury Contract Tests", function () {
         const newValue = Number(existing) + 1;
         await expect(NewTreasury.connect(person1).setMaxBatchWithdrawSize(newValue)).to.be.revertedWithCustomError(
           NewTreasury,
-          "onlyBackendAuthorized()"
+          "CallerIsNotBackend()"
         );
         // Expect: value remains unchanged
         expect(await NewTreasury.maxBatchWithdrawSize()).to.equal(existing);
@@ -5955,7 +5956,7 @@ describe("NewTreasury Contract Tests", function () {
         // Step 2: Try to update max batch withdraw size to 0
         await expect(NewTreasury.connect(backend).setMaxBatchWithdrawSize(0)).to.be.revertedWithCustomError(
           NewTreasury,
-          "ZeroValueNotAccepted()"
+          "ValueIsZero()"
         );
         // Expect: value remains unchanged
         expect(await NewTreasury.maxBatchWithdrawSize()).to.equal(existing);
@@ -5967,7 +5968,7 @@ describe("NewTreasury Contract Tests", function () {
         // Step 2: Try to update with same value
         await expect(NewTreasury.connect(backend).setMaxBatchWithdrawSize(existing)).to.be.revertedWithCustomError(
           NewTreasury,
-          "NoChange()"
+          "ChangeHasNoEffect()"
         );
         // Expect: value remains unchanged
         expect(await NewTreasury.maxBatchWithdrawSize()).to.equal(existing);
@@ -5980,7 +5981,7 @@ describe("NewTreasury Contract Tests", function () {
         const newValue = Number(existing) + 86400;
         await expect(NewTreasury.connect(person1).setRefundWindow(newValue)).to.be.revertedWithCustomError(
           NewTreasury,
-          "onlyBackendAuthorized()"
+          "CallerIsNotBackend()"
         );
         // Expect: value remains unchanged
         expect(await NewTreasury.refundWindow()).to.equal(existing);
@@ -5992,7 +5993,7 @@ describe("NewTreasury Contract Tests", function () {
         // Step 2: Try to update with same value
         await expect(NewTreasury.connect(backend).setRefundWindow(existing)).to.be.revertedWithCustomError(
           NewTreasury,
-          "NoChange()"
+          "ChangeHasNoEffect()"
         );
         // Expect: value remains unchanged
         expect(await NewTreasury.refundWindow()).to.equal(existing);
@@ -6002,25 +6003,25 @@ describe("NewTreasury Contract Tests", function () {
         // Step 1: Try to update cuts from outsider
         await expect(NewTreasury.connect(person1).setCourseCuts(100, 100, 100, 100)).to.be.revertedWithCustomError(
           NewTreasury,
-          "onlyBackendAuthorized()"
+          "CallerIsNotBackend()"
         );
-        // Expect: Reverts with "onlyBackendAuthorized" custom error
+        // Expect: Reverts with "CallerIsNotBackend" custom error
       });
 
       it("should fail if non-udao cuts exceed 100%", async () => {
         // Step 1: Set non-udao cuts over 100%
         await expect(
           NewTreasury.connect(backend).setCourseCuts(90_000, 20_000, 4000, 500)
-        ).to.be.revertedWithCustomError(NewTreasury, "NonUdaoCutsCantExceed100Percent()");
-        // Expect: Reverts with "NonUdaoCutsCantExceed100Percent" custom error
+        ).to.be.revertedWithCustomError(NewTreasury, "NonUdaoCutsSumExceeds100Percent()");
+        // Expect: Reverts with "NonUdaoCutsSumExceeds100Percent" custom error
       });
 
       it("should fail if udao cuts exceed 100%", async () => {
         // Step 1: Set udao cuts over 100%
         await expect(
           NewTreasury.connect(backend).setCourseCuts(6000, 1000, 80_000, 30_000)
-        ).to.be.revertedWithCustomError(NewTreasury, "UdaoCutsCantExceed100Percent()");
-        // Expect: Reverts with "UdaoCutsCantExceed100Percent" custom error
+        ).to.be.revertedWithCustomError(NewTreasury, "UdaoCutsSumExceeds100Percent()");
+        // Expect: Reverts with "UdaoCutsSumExceeds100Percent" custom error
       });
 
       it("should fail if all values are same", async () => {
@@ -6034,8 +6035,8 @@ describe("NewTreasury Contract Tests", function () {
         // Step 2: Try to set with same values
         await expect(
           NewTreasury.connect(backend).setCourseCuts(current.atFound, current.atGover, current.utFound, current.utGover)
-        ).to.be.revertedWithCustomError(NewTreasury, "NoChange()");
-        // Expect: Reverts with "NoChange" custom error
+        ).to.be.revertedWithCustomError(NewTreasury, "ChangeHasNoEffect()");
+        // Expect: Reverts with "ChangeHasNoEffect" custom error
       });
       /////###End of Failure Cases###/////
     });
