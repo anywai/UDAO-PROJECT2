@@ -1002,7 +1002,15 @@ async function refundCourseHelper({ paymentId, redeemer, validUntil, expectRever
   let gasCost = 0n;
 
   if (!waitSuccess) {
-    await expect(NewTreasury.connect(redeemer).refundCourse(refundVoucher)).to.be.revertedWith(expectRevertWith);
+    if (expectRevertWith === "Recipient blocked") {
+      // its a bad design, ı write it to pass only one test
+      await expect(NewTreasury.connect(redeemer).refundCourse(refundVoucher)).to.be.revertedWith(expectRevertWith);
+    } else {
+      await expect(NewTreasury.connect(redeemer).refundCourse(refundVoucher)).to.be.revertedWithCustomError(
+        NewTreasury,
+        expectRevertWith
+      );
+    }
   } else if (waitSuccess) {
     tx = await NewTreasury.connect(redeemer).refundCourse(refundVoucher);
     await expect(tx)
@@ -1101,9 +1109,16 @@ async function refundCourseByOwnerHelper({
   let gasCost = 0n;
 
   if (!waitSuccess) {
-    await expect(NewTreasury.connect(redeemer).refundCourseByOwnerAndCourseId(refundVoucher)).to.be.revertedWith(
-      expectRevertWith
-    );
+    if (expectRevertWith === "Recipient blocked") {
+      // its a bad design, ı write it to pass only one test
+      await expect(NewTreasury.connect(redeemer).refundCourseByOwnerAndCourseId(refundVoucher)).to.be.revertedWith(
+        expectRevertWith
+      );
+    } else {
+      await expect(
+        NewTreasury.connect(redeemer).refundCourseByOwnerAndCourseId(refundVoucher)
+      ).to.be.revertedWithCustomError(NewTreasury, expectRevertWith);
+    }
   } else if (waitSuccess) {
     tx = await NewTreasury.connect(redeemer).refundCourseByOwnerAndCourseId(refundVoucher);
 
@@ -1535,7 +1550,15 @@ async function withdrawCoursePaymentsHelper({
   let gasCost = 0n;
 
   if (!waitSuccess) {
-    await expect(NewTreasury.connect(redeemer).withdrawCoursePayments(voucher)).to.be.revertedWith(expectRevertWith);
+    if (expectRevertWith === "??????") {
+      // its a bad design, ı write it to pass only one test
+      await expect(NewTreasury.connect(redeemer).withdrawCoursePayments(voucher)).to.be.revertedWith(expectRevertWith);
+    } else {
+      await expect(NewTreasury.connect(redeemer).withdrawCoursePayments(voucher)).to.be.revertedWithCustomError(
+        NewTreasury,
+        expectRevertWith
+      );
+    }
   } else if (waitSuccess) {
     const expectedWithdrawCount = expectations.filter((e) => e === PES).length;
 
@@ -1687,7 +1710,7 @@ async function _validateExpectations(input, expectations) {
   //else {
   //  // Wait revert if courseId is invalid
   //  await expect(NewTreasury.checkWithdrawStatus(input.courseId, input.fromIndex, input.toIndex)).to.be.revertedWith(
-  //    "Invalid courseId"
+  //    "CourseIdIsInvalid()"
   //  );
   //}
 
@@ -1935,7 +1958,7 @@ describe("NewTreasury Contract Tests", function () {
             createBatchTxCaller: instructor1,
             expectRevertWith: "SignatureIsInvalidOrSignerIsNotBackend()",
           });
-          // Expect: Reverts with "Signature invalid or unauthorized"
+          // Expect: Reverts with "SignatureIsInvalidOrSignerIsNotBackend()"
         });
 
         it("should fail to create a course with expired voucher", async function () {
@@ -1950,10 +1973,10 @@ describe("NewTreasury Contract Tests", function () {
             createBatchTxCaller: instructor1,
             expectRevertWith: "VoucherIsExpired()",
           });
-          // Expect: Reverts with "Voucher expired"
+          // Expect: Reverts with "VoucherIsExpired()"
         });
 
-        it("should fail to create a course if msg.sender !== redeemer (Only redeemer can use this voucher)", async function () {
+        it("should fail to create a course if msg.sender !== redeemer", async function () {
           // Step 1: Try to create course with mismatched msg.sender and voucher.redeemer
           const course1 = await createCourseBatchHelper({
             uries: ["https://example.com/fail-redeemer-check"],
@@ -1963,7 +1986,7 @@ describe("NewTreasury Contract Tests", function () {
             createBatchTxCaller: backend, // tx'i atan kişi farklı: msg.sender !== voucher.redeemer
             expectRevertWith: "CallerIsNotVoucherRedeemer()",
           });
-          // Expect: reverts with "Only redeemer can use this voucher"
+          // Expect: reverts with "CallerIsNotVoucherRedeemer()"
         });
 
         it("should fail to create a course with duplicate withdrawers", async function () {
@@ -2406,7 +2429,7 @@ describe("NewTreasury Contract Tests", function () {
           // Expect: Reverts with "VoucherIsExpired()"
         });
 
-        it("should fail to update a course if msg.sender !== redeemer (Only redeemer can use this voucher)", async function () {
+        it("should fail to update a course if msg.sender !== redeemer", async function () {
           // Step 1: instructor1 creates a course normally
           const withdrawers = [instructor1.address];
           const course1 = await createCourseBatchHelper({
@@ -2859,7 +2882,7 @@ describe("NewTreasury Contract Tests", function () {
         // Expect: Reverts with "VoucherIsExpired()"
       });
 
-      it("should fail to buy a course if msg.sender !== redeemer (Only redeemer can use this voucher)", async function () {
+      it("should fail to buy a course if msg.sender !== redeemer", async function () {
         // Step 1: instructor1 creates a generic course with [instructor1] array
         const courseId1 = await quickCreateACourse();
         // Step 2: Use mismatched redeemer
@@ -3384,9 +3407,9 @@ describe("NewTreasury Contract Tests", function () {
           paymentId: buy_course[0],
           redeemer: buyer1,
           validUntil: now + 86400,
-          expectRevertWith: "Signature invalid or unauthorized",
+          expectRevertWith: "SignatureIsInvalidOrSignerIsNotBackend()",
         });
-        // Expect: Reverts with "Signature invalid or unauthorized"
+        // Expect: Reverts with "SignatureIsInvalidOrSignerIsNotBackend()"
       });
 
       it("should fail to refund with expired voucher", async function () {
@@ -3409,12 +3432,12 @@ describe("NewTreasury Contract Tests", function () {
           paymentId: buy_course[0],
           redeemer: buyer2,
           validUntil: now - 60, // expired
-          expectRevertWith: "Voucher expired",
+          expectRevertWith: "VoucherIsExpired()",
         });
-        // Expect: Reverts with "Voucher expired"
+        // Expect: Reverts with "VoucherIsExpired()"
       });
 
-      it("should fail to refund if msg.sender !== redeemer (Only redeemer can use this voucher)", async function () {
+      it("should fail to refund if msg.sender !== redeemer", async function () {
         // Step 1: instructor1 creates a generic course with [instructor1] array
         const courseId1 = await quickCreateACourse();
         // Step 2: buyer1 buys course for person1
@@ -3436,9 +3459,9 @@ describe("NewTreasury Contract Tests", function () {
           paymentId: buy_course[0],
           redeemer: buyer1, // actual msg.sender
           validUntil: now + 86400,
-          expectRevertWith: "Only redeemer can use this voucher",
+          expectRevertWith: "CallerIsNotVoucherRedeemer()",
         });
-        // Expect: Reverts with "Only redeemer can use this voucher"
+        // Expect: Reverts with "CallerIsNotVoucherRedeemer()"
       });
 
       it("should fail to refund twice for the same course", async function () {
@@ -3468,9 +3491,9 @@ describe("NewTreasury Contract Tests", function () {
           paymentId: buy_course[0],
           redeemer: buyer1,
           validUntil: now + 86400,
-          expectRevertWith: "Already refunded",
+          expectRevertWith: "PaymentIsAlreadyRefunded()",
         });
-        // Expect: Reverts with "Already refunded"
+        // Expect: Reverts with "PaymentIsAlreadyRefunded()"
       });
 
       it("should fail to refund if paymentId is invalid", async function () {
@@ -3482,7 +3505,7 @@ describe("NewTreasury Contract Tests", function () {
           paymentId: invalidPaymentId1,
           redeemer: buyer1,
           validUntil: now + 86400,
-          expectRevertWith: "Invalid paymentId",
+          expectRevertWith: "PaymentIdIsInvalid()",
         });
         // Step 3: instructor1 creates a generic course with [instructor1] array to increase courseCounter
         const courseId1 = await quickCreateACourse();
@@ -3506,9 +3529,9 @@ describe("NewTreasury Contract Tests", function () {
           paymentId: invalidPaymentId2,
           redeemer: buyer1,
           validUntil: now + 86400,
-          expectRevertWith: "Invalid paymentId",
+          expectRevertWith: "PaymentIdIsInvalid()",
         });
-        // Expect: Reverts with "Invalid paymentId"
+        // Expect: Reverts with "PaymentIdIsInvalid()-refund"
       });
 
       it("should fail to refund if paymentId is zero (before and after course purchase)", async function () {
@@ -3517,7 +3540,7 @@ describe("NewTreasury Contract Tests", function () {
           paymentId: 0n,
           redeemer: buyer1,
           validUntil: now + 86400,
-          expectRevertWith: "Invalid paymentId",
+          expectRevertWith: "PaymentIdIsInvalid()",
         });
         // Step 2: instructor1 creates a generic course with [instructor1] array to increase courseCounter
         const courseId1 = await quickCreateACourse();
@@ -3538,9 +3561,9 @@ describe("NewTreasury Contract Tests", function () {
           paymentId: 0n,
           redeemer: buyer1,
           validUntil: now + 86400,
-          expectRevertWith: "Invalid paymentId",
+          expectRevertWith: "PaymentIdIsInvalid()",
         });
-        // Expect: Reverts with "Invalid paymentId"
+        // Expect: Reverts with "PaymentIdIsInvalid()-refund"
       });
 
       it("should fail to refund if refund window has passed", async function () {
@@ -3568,9 +3591,9 @@ describe("NewTreasury Contract Tests", function () {
           paymentId: buy_course1[0],
           redeemer: buyer1,
           validUntil: now + 86400,
-          expectRevertWith: "Refund window passed",
+          expectRevertWith: "RefundWindowHasPassed()",
         });
-        // Expect: Reverts with "Refund window passed"
+        // Expect: Reverts with "RefundWindowHasPassed()"
       });
 
       it("should fail refund if original refund window expired despite later refundWindow was extended", async function () {
@@ -3599,7 +3622,7 @@ describe("NewTreasury Contract Tests", function () {
           paymentId: buy_course[0],
           redeemer: buyer1,
           validUntil: now + 86400,
-          expectRevertWith: "Refund window passed",
+          expectRevertWith: "RefundWindowHasPassed()",
         });
         // Expect: Reverts even though current refundWindow is 10 days
       });
@@ -3637,7 +3660,7 @@ describe("NewTreasury Contract Tests", function () {
           paymentId: buy[0],
           redeemer: buyer1,
           validUntil: now + 86400,
-          expectRevertWith: "Already withdrawn",
+          expectRevertWith: "PaymentIsAlreadyWithdrawn()",
         });
         // Expectation: Refund fails because the payment was already withdrawn
       });
@@ -3714,9 +3737,9 @@ describe("NewTreasury Contract Tests", function () {
           paymentId: expPaymentId,
           redeemer: buyer3,
           validUntil: now + 86400,
-          expectRevertWith: "Native refund failed",
+          expectRevertWith: "NativeRefundFailed()",
         });
-        // Expect: Reverts with "Native refund failed"
+        // Expect: Reverts with "NativeRefundFailed()"
       });
       /////###End of Failure Cases###/////
     });
@@ -3975,9 +3998,9 @@ describe("NewTreasury Contract Tests", function () {
           courseId: courseId1,
           redeemer: buyer1,
           validUntil: now + 86400,
-          expectRevertWith: "Signature invalid or unauthorized",
+          expectRevertWith: "SignatureIsInvalidOrSignerIsNotBackend()",
         });
-        // Expect: Reverts with "Signature invalid or unauthorized"
+        // Expect: Reverts with "SignatureIsInvalidOrSignerIsNotBackend()"
       });
 
       it("should fail to refund with expired voucher", async function () {
@@ -4001,12 +4024,12 @@ describe("NewTreasury Contract Tests", function () {
           courseId: courseId1,
           redeemer: buyer2,
           validUntil: now - 60, // expired
-          expectRevertWith: "Voucher expired",
+          expectRevertWith: "VoucherIsExpired()",
         });
-        // Expect: Reverts with "Voucher expired"
+        // Expect: Reverts with "VoucherIsExpired()"
       });
 
-      it("should fail to refund by owner if msg.sender !== redeemer (Only redeemer can use this voucher)", async function () {
+      it("should fail to refund by owner if msg.sender !== redeemer", async function () {
         // Step 1: instructor1 creates a generic course with [instructor1] array
         const courseId1 = await quickCreateACourse();
         // Step 2: buyer1 buys course for person1
@@ -4028,9 +4051,9 @@ describe("NewTreasury Contract Tests", function () {
           courseId: courseId1,
           redeemer: buyer1, // actual caller
           validUntil: now + 86400,
-          expectRevertWith: "Only redeemer can use this voucher",
+          expectRevertWith: "CallerIsNotVoucherRedeemer()",
         });
-        // Expect: Reverts with "Only redeemer can use this voucher"
+        // Expect: Reverts with "CallerIsNotVoucherRedeemer()"
       });
 
       it("should fail to refund twice for the same course", async function () {
@@ -4062,9 +4085,9 @@ describe("NewTreasury Contract Tests", function () {
           courseId: courseId1,
           redeemer: buyer1,
           validUntil: now + 86400,
-          expectRevertWith: "No payment found for this course and owner",
+          expectRevertWith: "PaymentNotFoundForOwnerAndCourse()",
         });
-        // Expect: Reverts with "No payment found for this course and owner"
+        // Expect: Reverts with "PaymentNotFoundForOwnerAndCourse()"
       });
 
       it("should fail to refund if paymentId is invalid", async function () {
@@ -4077,7 +4100,7 @@ describe("NewTreasury Contract Tests", function () {
           courseId: invalidPaymentId1, // intentionally bogus
           redeemer: buyer1,
           validUntil: now + 86400,
-          expectRevertWith: "No payment found for this course and owner",
+          expectRevertWith: "PaymentNotFoundForOwnerAndCourse()",
         });
         // Step 3: instructor1 creates a generic course with [instructor1] array to increase courseCounter
         const courseId1 = await quickCreateACourse();
@@ -4102,9 +4125,9 @@ describe("NewTreasury Contract Tests", function () {
           courseId: invalidPaymentId2, // again intentionally wrong
           redeemer: buyer1,
           validUntil: now + 86400,
-          expectRevertWith: "No payment found for this course and owner",
+          expectRevertWith: "PaymentNotFoundForOwnerAndCourse()",
         });
-        // Expect: Reverts with "No payment found for this course and owner"
+        // Expect: Reverts with "PaymentNotFoundForOwnerAndCourse()"
       });
 
       it("should fail to refund if paymentId is zero (before and after course purchase)", async function () {
@@ -4114,7 +4137,7 @@ describe("NewTreasury Contract Tests", function () {
           courseId: 0n,
           redeemer: buyer1,
           validUntil: now + 86400,
-          expectRevertWith: "No payment found for this course and owner",
+          expectRevertWith: "PaymentNotFoundForOwnerAndCourse()",
         });
         // Step 2: instructor1 creates a generic course with [instructor1] array
         const courseId1 = await quickCreateACourse();
@@ -4136,9 +4159,9 @@ describe("NewTreasury Contract Tests", function () {
           courseId: 0n,
           redeemer: buyer1,
           validUntil: now + 86400,
-          expectRevertWith: "No payment found for this course and owner",
+          expectRevertWith: "PaymentNotFoundForOwnerAndCourse()",
         });
-        // Expect: Reverts with "Invalid paymentId"
+        // Expect: Reverts with "PaymentIdIsInvalid()-refund"
       });
 
       it("should fail to refund if refund window has passed", async function () {
@@ -4167,9 +4190,9 @@ describe("NewTreasury Contract Tests", function () {
           courseId: courseId1,
           redeemer: buyer1,
           validUntil: now + 86400,
-          expectRevertWith: "Refund window passed",
+          expectRevertWith: "RefundWindowHasPassed()",
         });
-        // Expect: Reverts with "Refund window passed"
+        // Expect: Reverts with "RefundWindowHasPassed()"
       });
 
       it("should fail refund by owner if original refund window expired despite later refundWindow was extended", async function () {
@@ -4199,7 +4222,7 @@ describe("NewTreasury Contract Tests", function () {
           courseId: courseId1,
           redeemer: buyer1,
           validUntil: now + 86400,
-          expectRevertWith: "Refund window passed",
+          expectRevertWith: "RefundWindowHasPassed()",
         });
         // Expectation: Refund fails because the refund window at the time of purchase already expired
       });
@@ -4238,7 +4261,7 @@ describe("NewTreasury Contract Tests", function () {
           courseId: courseId1,
           redeemer: buyer1,
           validUntil: now + 86400,
-          expectRevertWith: "Already withdrawn",
+          expectRevertWith: "PaymentIsAlreadyWithdrawn()",
         });
         // Expectation: Refund fails because funds were already withdrawn
       });
@@ -4317,9 +4340,9 @@ describe("NewTreasury Contract Tests", function () {
           courseId: voucher.courseId,
           redeemer: buyer3,
           validUntil: now + 86400,
-          expectRevertWith: "Native refund failed",
+          expectRevertWith: "NativeRefundFailed()",
         });
-        // Expect: Reverts with "Native refund failed"
+        // Expect: Reverts with "NativeRefundFailed()"
       });
       /////###End of Failure Cases###/////
     });
@@ -5160,10 +5183,10 @@ describe("NewTreasury Contract Tests", function () {
           toIndex: 1,
           redeemer: instructor1,
           validUntil: now + 86400,
-          expectRevertWith: "Signature invalid or unauthorized",
+          expectRevertWith: "SignatureIsInvalidOrSignerIsNotBackend()",
           expectations: [PES],
         });
-        // Expect: Reverts with "Signature invalid or unauthorized"
+        // Expect: Reverts with "SignatureIsInvalidOrSignerIsNotBackend()"
       });
 
       it("should fail to withdraw with expired voucher", async function () {
@@ -5191,10 +5214,10 @@ describe("NewTreasury Contract Tests", function () {
           toIndex: 1,
           redeemer: instructor1,
           validUntil: now - 60, // expired
-          expectRevertWith: "Voucher expired",
+          expectRevertWith: "VoucherIsExpired()",
           expectations: [PES],
         });
-        // Expect: Reverts with "Voucher expired" with expected fail states
+        // Expect: Reverts with "VoucherIsExpired()" with expected fail states
       });
 
       it("should fail to withdraw when msg.sender is not redeemer", async function () {
@@ -5224,10 +5247,10 @@ describe("NewTreasury Contract Tests", function () {
           toIndex: 1,
           redeemer: instructor1, // actual msg.sender
           validUntil: now + 86400,
-          expectRevertWith: "Only redeemer can use this voucher",
+          expectRevertWith: "CallerIsNotVoucherRedeemer()",
           expectations: [PES],
         });
-        // Expect: reverts with "Only redeemer can use this voucher"
+        // Expect: reverts with "CallerIsNotVoucherRedeemer()"
       });
 
       it("should fail to withdraw with invalid courseId that is zero", async function () {
@@ -5238,7 +5261,7 @@ describe("NewTreasury Contract Tests", function () {
           toIndex: 1,
           redeemer: instructor1,
           validUntil: now + 86400,
-          expectRevertWith: "Invalid courseId",
+          expectRevertWith: "CourseIdIsInvalid()",
           expectations: [PES],
         });
         // Step 2: instructor1 creates a generic course with [instructor1] array to increase courseCounter
@@ -5250,10 +5273,10 @@ describe("NewTreasury Contract Tests", function () {
           toIndex: 1,
           redeemer: instructor1,
           validUntil: now + 86400,
-          expectRevertWith: "Invalid courseId",
+          expectRevertWith: "CourseIdIsInvalid()",
           expectations: [PES],
         });
-        // Expect: Reverts with "Invalid courseId" in both cases
+        // Expect: Reverts with "CourseIdIsInvalid()" in both cases
       });
 
       it("should fail to withdraw with invalid courseId that is greater than courseCounter", async function () {
@@ -5266,7 +5289,7 @@ describe("NewTreasury Contract Tests", function () {
           toIndex: 1,
           redeemer: instructor1,
           validUntil: now + 86400,
-          expectRevertWith: "Invalid courseId",
+          expectRevertWith: "CourseIdIsInvalid()",
           expectations: [PES],
         });
         // Step 3: instructor1 creates a generic course with [instructor1] array to increase courseCounter
@@ -5280,10 +5303,10 @@ describe("NewTreasury Contract Tests", function () {
           toIndex: 1,
           redeemer: instructor1,
           validUntil: now + 86400,
-          expectRevertWith: "Invalid courseId",
+          expectRevertWith: "CourseIdIsInvalid()",
           expectations: [PES],
         });
-        // Expect: Reverts with "Invalid courseId" in both cases
+        // Expect: Reverts with "CourseIdIsInvalid()" in both cases
       });
 
       it("should fail to withdraw when invalid index range (0, from > to, to > saleCount)", async function () {
@@ -5309,7 +5332,7 @@ describe("NewTreasury Contract Tests", function () {
           toIndex: 1,
           redeemer: instructor1,
           validUntil: now + 86400,
-          expectRevertWith: "Invalid index range: 1toMax_saleCounterPerCourse",
+          expectRevertWith: "WithdrawIndexRangeIsInvalid()",
           expectations: [PES],
         });
         // Step 4: fromIndex > toIndex
@@ -5319,7 +5342,7 @@ describe("NewTreasury Contract Tests", function () {
           toIndex: 2,
           redeemer: instructor1,
           validUntil: now + 86400,
-          expectRevertWith: "Invalid index range: 1toMax_saleCounterPerCourse",
+          expectRevertWith: "WithdrawIndexRangeIsInvalid()",
           expectations: [PES],
         });
         // Step 5: toIndex > saleCounterPerCourse[courseId] (5 satış oldu, toIndex = 6)
@@ -5330,10 +5353,10 @@ describe("NewTreasury Contract Tests", function () {
           toIndex: invalidEnd, //its 6, only five sales occured: "1-2-3-4-5"
           redeemer: instructor1,
           validUntil: now + 86400,
-          expectRevertWith: "Invalid index range: 1toMax_saleCounterPerCourse",
+          expectRevertWith: "WithdrawIndexRangeIsInvalid()",
           expectations: [PES, PES, PES], // len doesn't matter here, skipped in helper
         });
-        // Expect: Reverts with "Invalid index range: 1toMax_saleCounterPerCourse" in all cases
+        // Expect: Reverts with "WithdrawIndexRangeIsInvalid()" in all cases
       });
 
       it("should fail to withdraw when batch size exceeds maxBatchWithdrawSize", async function () {
@@ -5370,10 +5393,10 @@ describe("NewTreasury Contract Tests", function () {
           toIndex,
           redeemer: instructor1,
           validUntil: now + 86400,
-          expectRevertWith: "Max allowed batch withdraw range exceeded",
+          expectRevertWith: "WithdrawBatchSizeExceedsLimit()",
           expectations,
         });
-        // Expect: Reverts with "Max allowed batch withdraw range exceeded"
+        // Expect: Reverts with "WithdrawBatchSizeExceedsLimit()"
       });
 
       it("should fail to withdraw when redeemer is not an authorized withdrawer", async function () {
@@ -5401,7 +5424,7 @@ describe("NewTreasury Contract Tests", function () {
           toIndex: 1,
           redeemer: backend,
           validUntil: now + 86400,
-          expectRevertWith: "Not authorized withdrawer for this course",
+          expectRevertWith: "CallerIsNotAuthorizedWithdrawer()",
           expectations: [PES],
         });
         // Step 5: try withdraw with unauthorized redeemer (instructor2 not in withdrawers list)
@@ -5411,10 +5434,10 @@ describe("NewTreasury Contract Tests", function () {
           toIndex: 1,
           redeemer: instructor2,
           validUntil: now + 86400,
-          expectRevertWith: "Not authorized withdrawer for this course",
+          expectRevertWith: "CallerIsNotAuthorizedWithdrawer()",
           expectations: [PES],
         });
-        // Expect: Reverts with "Not authorized withdrawer for this course" in both cases
+        // Expect: Reverts with "CallerIsNotAuthorizedWithdrawer()" in both cases
       });
 
       it("should fail to call attemptSingleWithdrawOrRevert externally by anyone except treasury contract", async function () {
@@ -5441,8 +5464,9 @@ describe("NewTreasury Contract Tests", function () {
         for (const actor of actors) {
           await expect(
             NewTreasury.connect(actor).attemptSingleWithdrawOrRevert(paymentId, actor.address)
-          ).to.be.revertedWith("Only callable internally");
+          ).to.be.revertedWithCustomError(NewTreasury, "CallerIsNotThisContract()");
         }
+        // Expect: Reverts with "CallerIsNotThisContract()" for all actors
       });
 
       it("should fail to call checkWithdrawStatus with invalid courseId or index range", async () => {
@@ -5461,27 +5485,28 @@ describe("NewTreasury Contract Tests", function () {
           expectSuccessWith: "ContentPurchased",
         });
         // Step 3: invalid courseId = 0
-        await expect(NewTreasury.connect(instructor1).checkWithdrawStatus(0, 1, 1)).to.be.revertedWith(
-          "Invalid courseId"
+        await expect(NewTreasury.connect(instructor1).checkWithdrawStatus(0, 1, 1)).to.be.revertedWithCustomError(
+          NewTreasury,
+          "CourseIdIsInvalid()"
         );
         // Step 4: invalid courseId = courseCounter + 1
         const invalidId = Number(await NewTreasury.courseCounter()) + 1;
-        await expect(NewTreasury.connect(instructor1).checkWithdrawStatus(invalidId, 1, 1)).to.be.revertedWith(
-          "Invalid courseId"
-        );
+        await expect(
+          NewTreasury.connect(instructor1).checkWithdrawStatus(invalidId, 1, 1)
+        ).to.be.revertedWithCustomError(NewTreasury, "CourseIdIsInvalid()");
         // Step 5: invalid fromIndex = 0
-        await expect(NewTreasury.connect(instructor1).checkWithdrawStatus(courseId1, 0, 1)).to.be.revertedWith(
-          "Invalid index range: 1toSaleCountOfCourse"
-        );
+        await expect(
+          NewTreasury.connect(instructor1).checkWithdrawStatus(courseId1, 0, 1)
+        ).to.be.revertedWithCustomError(NewTreasury, "WithdrawIndexRangeIsInvalid()");
         // Step 6: fromIndex > toIndex
-        await expect(NewTreasury.connect(instructor1).checkWithdrawStatus(courseId1, 3, 2)).to.be.revertedWith(
-          "Invalid index range: 1toSaleCountOfCourse"
-        );
+        await expect(
+          NewTreasury.connect(instructor1).checkWithdrawStatus(courseId1, 3, 2)
+        ).to.be.revertedWithCustomError(NewTreasury, "WithdrawIndexRangeIsInvalid()");
         // Step 7: toIndex > saleCounter
         const saleCount = await NewTreasury.saleCounterPerCourse(courseId1);
         await expect(
           NewTreasury.connect(instructor1).checkWithdrawStatus(courseId1, 1, Number(saleCount) + 1)
-        ).to.be.revertedWith("Invalid index range: 1toSaleCountOfCourse");
+        ).to.be.revertedWithCustomError(NewTreasury, "WithdrawIndexRangeIsInvalid()");
       });
       /////###End of Failure Cases###/////
     });
@@ -6201,7 +6226,7 @@ describe("NewTreasury Contract Tests", function () {
 */
 
 /*
-Erequire(_redeemer == msg.sender, "Only redeemer can use this voucher");
+Erequire(_redeemer == msg.sender, "CallerIsNotVoucherRedeemer()");
 token.transferFrom başarısız (örnek: approval yoksa)
 1. createCourse && updateCourse: withdrawers.length > 4 denenir olmaz arttırılır denenir olur.
 5. withdrawCoursePayments

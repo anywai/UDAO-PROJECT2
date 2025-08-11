@@ -219,6 +219,7 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         if (len > maxBatchCreateSize) revert CreateBatchSizeExceedsLimit();
 
         uint256 maxW = maxAllowedWithdrawers;
+        //address sender = msg.sender; // ufak cache
 
         for (uint256 i = 0; i < len; i++) {
             CreateCourseVoucher calldata voucher = vouchers[i];
@@ -250,7 +251,7 @@ contract NewTreasury is EIP712, ReentrancyGuard {
             );
 
             // verify voucher, signer and validity
-            _verifyVoucherSignerAndValidity2(
+            _verifyVoucherSignerAndValidity(
                 digest,
                 voucher.signature,
                 redeemer,
@@ -330,7 +331,7 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         );
 
         // verify signer and validity
-        _verifyVoucherSignerAndValidity2(
+        _verifyVoucherSignerAndValidity(
             digest,
             voucher.signature,
             voucher.redeemer,
@@ -511,7 +512,7 @@ contract NewTreasury is EIP712, ReentrancyGuard {
     }
 
     /////### VOUCHER LOGIC ###/////
-    function _verifyVoucherSignerAndValidity2(
+    function _verifyVoucherSignerAndValidity(
         bytes32 _digest,
         bytes memory signature,
         address _redeemer,
@@ -522,18 +523,6 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         address signer = ECDSA.recover(_digest, signature);
         if (!hasBackendRole[signer])
             revert SignatureIsInvalidOrSignerIsNotBackend();
-    }
-
-    function _verifyVoucherSignerAndValidity(
-        bytes32 _digest,
-        bytes memory signature,
-        address _redeemer,
-        uint256 _validUntil
-    ) internal view {
-        address signer = ECDSA.recover(_digest, signature);
-        require(hasBackendRole[signer], "Signature invalid or unauthorized");
-        require(_redeemer == msg.sender, "Only redeemer can use this voucher");
-        require(_validUntil >= block.timestamp, "Voucher expired");
     }
 
     /////### PAYMENT LOGIC ###/////
@@ -617,7 +606,7 @@ contract NewTreasury is EIP712, ReentrancyGuard {
             );
 
             // verify voucher, signer and validity
-            _verifyVoucherSignerAndValidity2(
+            _verifyVoucherSignerAndValidity(
                 digest,
                 voucher.signature,
                 redeemer,
@@ -785,7 +774,7 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         uint256 courseId = voucher.courseId;
 
         uint256 paymentId = courseOwnerToPayment[courseOwner][courseId];
-        require(paymentId > 0, "No payment found for this course and owner");
+        if (paymentId == 0) revert PaymentNotFoundForOwnerAndCourse();
 
         address redeemer = voucher.redeemer;
         uint256 validUntil = voucher.validUntil;
@@ -813,10 +802,8 @@ contract NewTreasury is EIP712, ReentrancyGuard {
     }
 
     function _refundCourse(uint256 _paymentId) internal {
-        require(
-            _paymentId > 0 && _paymentId <= paymentCounter,
-            "Invalid paymentId"
-        );
+        if (_paymentId == 0 || _paymentId > paymentCounter)
+            revert PaymentIdIsInvalid();
 
         Payment storage payment = payments[_paymentId];
         //avoid the field access to save gas
@@ -826,12 +813,10 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         address _receiver = payment.courseReceiver;
         uint256 _courseId = payment.courseId;
 
-        require(!payment.isRefunded, "Already refunded");
-        require(!payment.isWithdrawn, "Already withdrawn");
-        require(
-            payment.endOfRefundWindow >= block.timestamp,
-            "Refund window passed"
-        );
+        if (payment.isRefunded) revert PaymentIsAlreadyRefunded();
+        if (payment.isWithdrawn) revert PaymentIsAlreadyWithdrawn();
+        if (payment.endOfRefundWindow < block.timestamp)
+            revert RefundWindowHasPassed();
 
         // Mark refunded before transfer to prevent re-entrancy
         payment.isRefunded = true;
@@ -840,7 +825,8 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         hasOwnedCourse[_receiver][_courseId] = false;
         // remove the courseId from the ownedCourses list and update the indexes
         uint256 courseIndex = ownedCourseIndex[_receiver][_courseId];
-        require(courseIndex > 0, "Course not found in receiver's owned list"); //TODO: BATU buraya gelemedim ben
+        if (courseIndex == 0) revert CourseIsNotOwnedByReceiver(); //TODO: BATU buraya gelemedim ben
+
         uint256 lastIndex = ownedCourses[_receiver].length - 1;
         uint256 lastCourseId = ownedCourses[_receiver][lastIndex];
 
@@ -858,7 +844,7 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         if (_tokenAddress == address(0)) {
             // native token
             (bool sent, ) = payable(_payer).call{value: _totalAmount}("");
-            require(sent, "Native refund failed");
+            if (!sent) revert NativeRefundFailed();
         } else {
             // ERC20
             IERC20(_tokenAddress).safeTransfer(_payer, _totalAmount);
@@ -900,19 +886,17 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         address redeemer = voucher.redeemer;
         uint256 validUntil = voucher.validUntil;
 
-        require(courseId > 0 && courseId <= courseCounter, "Invalid courseId");
+        if (courseId == 0 || courseId > courseCounter)
+            revert CourseIdIsInvalid();
 
-        require(
-            fromIndex > 0 &&
-                fromIndex <= toIndex &&
-                toIndex <= saleCounterPerCourse[courseId],
-            "Invalid index range: 1toMax_saleCounterPerCourse"
-        );
+        if (
+            fromIndex == 0 ||
+            fromIndex > toIndex ||
+            toIndex > saleCounterPerCourse[courseId]
+        ) revert WithdrawIndexRangeIsInvalid();
 
-        require(
-            toIndex - fromIndex + 1 <= maxBatchWithdrawSize,
-            "Max allowed batch withdraw range exceeded"
-        );
+        if (toIndex - fromIndex + 1 > maxBatchWithdrawSize)
+            revert WithdrawBatchSizeExceedsLimit();
 
         // create digest for the voucher
         bytes32 digest = _hashTypedDataV4(
@@ -936,10 +920,8 @@ contract NewTreasury is EIP712, ReentrancyGuard {
             validUntil
         );
 
-        require(
-            isAuthorizedWithdrawer[msg.sender][courseId],
-            "Not authorized withdrawer for this course"
-        );
+        if (!isAuthorizedWithdrawer[msg.sender][courseId])
+            revert CallerIsNotAuthorizedWithdrawer();
 
         _withdrawCoursePayments(courseId, fromIndex, toIndex);
     }
@@ -994,7 +976,7 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         uint256 paymentId,
         address instructor
     ) external {
-        require(msg.sender == address(this), "Only callable internally");
+        if (msg.sender != address(this)) revert CallerIsNotThisContract();
 
         Payment storage p = payments[paymentId];
         // mark as withdrawn before attempting (reentrancy protection)
@@ -1008,13 +990,16 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         if (tokenAddress == address(0)) {
             // Native token transfers
             (bool iOK, ) = payable(instructor).call{value: iShare}("");
-            require(iOK);
+            //require(iOK);
+            if (!iOK) revert NativeTransferToInstructorFailed(); // da yani okunamıyor ki bu.
 
             (bool fOK, ) = payable(foundationAddress).call{value: fShare}("");
-            require(fOK);
+            //require(fOK);
+            if (!fOK) revert NativeTransferToFoundationFailed();
 
             (bool gOK, ) = payable(governanceAddress).call{value: gShare}("");
-            require(gOK);
+            //require(gOK);
+            if (!gOK) revert NativeTransferToGovernanceFailed();
         } else {
             // ERC20 transfers
             IERC20(tokenAddress).safeTransfer(instructor, iShare);
@@ -1044,14 +1029,14 @@ contract NewTreasury is EIP712, ReentrancyGuard {
             uint256[] memory ready
         )
     {
-        require(courseId > 0 && courseId <= courseCounter, "Invalid courseId");
+        if (courseId == 0 || courseId > courseCounter)
+            revert CourseIdIsInvalid();
 
-        require(
-            fromIndex > 0 &&
-                fromIndex <= toIndex &&
-                toIndex <= saleCounterPerCourse[courseId],
-            "Invalid index range: 1toSaleCountOfCourse"
-        );
+        if (
+            fromIndex == 0 ||
+            fromIndex > toIndex ||
+            toIndex > saleCounterPerCourse[courseId]
+        ) revert WithdrawIndexRangeIsInvalid();
 
         // max length = toIndex - fromIndex + 1
         uint256 len = toIndex - fromIndex + 1;
