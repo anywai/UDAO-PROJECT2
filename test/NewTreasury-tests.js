@@ -104,6 +104,13 @@ let createVH, updateVH, buyVH, refundVH, refundByOwnerVH, withdrawVH;
 let falseRedeemer;
 
 /////### TEST HELPERS ###/////
+const decideSuccess = (expectSuccessWith, expectRevertWith) => {
+  const s = typeof expectSuccessWith === "string" && expectSuccessWith.length > 0;
+  const r = typeof expectRevertWith === "string" && expectRevertWith.length > 0;
+  if (s === r) throw new Error("Exactly one of expectSuccessWith or expectRevertWith must be defined.");
+  return s; // true => success, false => revert
+};
+
 async function createCourseBatchHelper({
   uries,
   withdrawersArrays,
@@ -118,16 +125,8 @@ async function createCourseBatchHelper({
   if (withdrawersArrays.length !== n || redeemers.length !== n || validUntils.length !== n) {
     throw new Error("Input arrays must have the same length");
   }
-  // 1) Success/revert toggle
-  const waitSuccess =
-    expectSuccessWith && !expectRevertWith
-      ? true
-      : expectRevertWith && !expectSuccessWith
-      ? false
-      : (() => {
-          throw new Error("Exactly one of expectSuccessWith or expectRevertWith must be defined.");
-        })();
-
+  // 1) Ensure exactly one is expectation provided; expectSuccess=true, expectRevertWith=false.
+  const waitSuccess = decideSuccess(expectSuccessWith, expectRevertWith);
   // 2) Vouchers'ları imzala
   const vouchers = [];
   for (let i = 0; i < n; i++) {
@@ -290,15 +289,8 @@ async function updateCourseHelper({
   expectRevertWith,
   expectSuccessWith,
 }) {
-  // 0) waitSuccess toggle
-  const waitSuccess =
-    expectSuccessWith && !expectRevertWith
-      ? true
-      : expectRevertWith && !expectSuccessWith
-      ? false
-      : (() => {
-          throw new Error("Exactly one of expectSuccessWith or expectRevertWith must be defined.");
-        })();
+  // 1) Ensure exactly one is expectation provided; expectSuccess=true, expectRevertWith=false.
+  const waitSuccess = decideSuccess(expectSuccessWith, expectRevertWith);
 
   // Create voucher for updateCourse
   const voucher = await updateVH.signVoucher({
@@ -457,15 +449,8 @@ async function buyCourseBatchHelper({
     throw new Error("Array parametrelerinin uzunlukları eşit olmalı.");
   }
 
-  // is success or revert expected?
-  const waitSuccess =
-    expectSuccessWith && !expectRevertWith
-      ? true
-      : expectRevertWith && !expectSuccessWith
-      ? false
-      : (() => {
-          throw new Error("Exactly one of expectSuccessWith or expectRevertWith must be defined.");
-        })();
+  // 1) Ensure exactly one is expectation provided; expectSuccess=true, expectRevertWith=false.
+  const waitSuccess = decideSuccess(expectSuccessWith, expectRevertWith);
 
   // 1) Voucher'ları imzala
   const vouchers = [];
@@ -957,15 +942,8 @@ async function refundCourseHelper({ paymentId, redeemer, validUntil, expectRever
     ownedCourseIndex: await NewTreasury.ownedCourseIndex(payment.courseReceiver, payment.courseId),
     hasOwnedCourse: await NewTreasury.hasOwnedCourse(payment.courseReceiver, payment.courseId),
   };
-  // Get expected contract state after buy operation
-  const waitSuccess =
-    expectSuccessWith && !expectRevertWith
-      ? true
-      : expectRevertWith && !expectSuccessWith
-      ? false
-      : (() => {
-          throw new Error("Exactly one of expectSuccessWith or expectRevertWith must be defined.");
-        })();
+  // 1) Ensure exactly one is expectation provided; expectSuccess=true, expectRevertWith=false.
+  const waitSuccess = decideSuccess(expectSuccessWith, expectRevertWith);
 
   // push paymentId to common helper to get expected values
   const expectedOutcome = await _prepareExpectedRefundStates(input, payment, current, waitSuccess);
@@ -1064,15 +1042,8 @@ async function refundCourseByOwnerHelper({
     ownedCourseIndex: await NewTreasury.ownedCourseIndex(payment.courseReceiver, payment.courseId),
     hasOwnedCourse: await NewTreasury.hasOwnedCourse(payment.courseReceiver, payment.courseId),
   };
-  // Get expected contract state after buy operation
-  const waitSuccess =
-    expectSuccessWith && !expectRevertWith
-      ? true
-      : expectRevertWith && !expectSuccessWith
-      ? false
-      : (() => {
-          throw new Error("Exactly one of expectSuccessWith or expectRevertWith must be defined.");
-        })();
+  // 1) Ensure exactly one is expectation provided; expectSuccess=true, expectRevertWith=false.
+  const waitSuccess = decideSuccess(expectSuccessWith, expectRevertWith);
 
   const expectedOutcome = await _prepareExpectedRefundStates(input, payment, current, waitSuccess);
 
@@ -1496,35 +1467,11 @@ async function withdrawCoursePaymentsHelper({
   expectSuccessWith,
   expectations,
 }) {
-  let isInputError = false; // calculate using toIndex - fromIndex
-  if (fromIndex <= 0 || fromIndex > toIndex) {
-    isInputError = true;
-  } else {
-    const saleCount = await NewTreasury.saleCounterPerCourse(courseId);
-    if (toIndex > Number(saleCount)) isInputError = true;
-  }
-
-  const input = {
-    courseId,
-    fromIndex,
-    toIndex,
-    redeemer,
-    redeemerInitialNativeBalance: await ethers.provider.getBalance(redeemer.address),
-  };
-
-  const waitSuccess =
-    expectSuccessWith && !expectRevertWith
-      ? true
-      : expectRevertWith && !expectSuccessWith
-      ? false
-      : (() => {
-          throw new Error("Exactly one of expectSuccessWith or expectRevertWith must be defined.");
-        })();
-
-  let tokenStats = null;
-  if (!isInputError) {
-    tokenStats = await _validateExpectations(input, expectations);
-  }
+  // check is there a invalid range
+  const isInputError =
+    fromIndex <= 0n || fromIndex > toIndex ? true : toIndex > (await NewTreasury.saleCounterPerCourse(courseId));
+  // 1) Ensure exactly one is expectation provided; expectSuccess=true, expectRevertWith=false.
+  const waitSuccess = decideSuccess(expectSuccessWith, expectRevertWith);
 
   const voucher = await withdrawVH.signVoucher({
     courseId,
@@ -1534,9 +1481,13 @@ async function withdrawCoursePaymentsHelper({
     validUntil,
   });
 
+  let tokenStats = null;
+  if (!isInputError) {
+    tokenStats = await _prepareExpectedWithdrawTokenState(voucher, expectations, redeemer.address);
+  }
+
   let tx = null;
   let gasCost = 0n;
-
   if (!waitSuccess) {
     if (expectRevertWith === "??????") {
       // its a bad design, ı write it to pass only one test
@@ -1561,7 +1512,7 @@ async function withdrawCoursePaymentsHelper({
   }
 
   if (!isInputError) {
-    await _expectWithdraw(input, tokenStats, gasCost, expectations, waitSuccess);
+    await _expectWithdraw(voucher, tokenStats, gasCost, expectations, waitSuccess, redeemer.address);
   }
   return {
     tx,
@@ -1573,27 +1524,29 @@ async function withdrawCoursePaymentsHelper({
   };
 }
 
-async function _validateExpectations(input, expectations) {
-  const expectedLength = input.toIndex - input.fromIndex + 1;
+async function _prepareExpectedWithdrawTokenState(voucher, expectations, withdrawCaller = null) {
+  const { courseId, fromIndex, toIndex, redeemer } = voucher;
+
+  const expectedLength = toIndex - fromIndex + 1;
   if (expectations.length !== expectedLength) {
     throw new Error(
       `expectations.length (${expectations.length}) must equal toIndex - fromIndex + 1 (${expectedLength})`
     );
   }
 
-  const isValidCourseId = input.courseId > 0 && input.courseId <= (await NewTreasury.courseCounter());
+  const isValidCourseId = courseId > 0 && courseId <= (await NewTreasury.courseCounter());
 
   const tokenStats = new Map(); // tokenAddress -> { price, instructor, foundation, governance }
   const treasury = NewTreasury.target;
   const foundation = await NewTreasury.foundationAddress();
   const governance = await NewTreasury.governanceAddress();
-  const instructor = input.redeemer.address;
+  const instructor = withdrawCaller ?? redeemer;
 
   // validate my allegations
-  for (let i = input.fromIndex; i <= input.toIndex; i++) {
-    const expected = expectations[i - input.fromIndex]; // match index
+  for (let i = fromIndex; i <= toIndex; i++) {
+    const expected = expectations[i - fromIndex]; // match index
 
-    const paymentId = await NewTreasury.courseSaleRecords(input.courseId, i);
+    const paymentId = await NewTreasury.courseSaleRecords(courseId, i);
 
     const rawPayment = await NewTreasury.getPayment(paymentId);
     const payment = {
@@ -1668,21 +1621,37 @@ async function _validateExpectations(input, expectations) {
       stats.totalGovernance += payment.governanceShare;
     }
   }
+  // add redemer initial native balance to tokenStats in all cases as a separate entry
+  if (!tokenStats.has(ethers.ZeroAddress)) {
+    // If there is no native token entry, add it
+    tokenStats.set(ethers.ZeroAddress, {
+      totalPrice: 0n,
+      totalInstructor: 0n,
+      totalFoundation: 0n,
+      totalGovernance: 0n,
+      initialBalances: {
+        instructor: await ethers.provider.getBalance(instructor),
+        foundation: await ethers.provider.getBalance(foundation),
+        governance: await ethers.provider.getBalance(governance),
+        treasury: await ethers.provider.getBalance(treasury),
+      },
+    });
+  }
 
   if (isValidCourseId) {
     // On-chain withdraw status ile expectations karşılaştır
     const [refundedOnChain, withdrawnOnChain, inWindowOnChain, readyOnChain] = await NewTreasury.checkWithdrawStatus(
-      input.courseId,
-      input.fromIndex,
-      input.toIndex
+      courseId,
+      fromIndex,
+      toIndex
     );
 
     const refunded = [];
     const withdrawn = [];
     const inWindow = [];
     const ready = [];
-    for (let i = input.fromIndex; i <= input.toIndex; i++) {
-      const expected = expectations[i - input.fromIndex];
+    for (let i = fromIndex; i <= toIndex; i++) {
+      const expected = expectations[i - fromIndex];
 
       if ([PaymentState.RI, PaymentState.RE].includes(expected)) refunded.push(i);
       else if ([PaymentState.WI, PaymentState.WE].includes(expected)) withdrawn.push(i);
@@ -1695,21 +1664,17 @@ async function _validateExpectations(input, expectations) {
     expect(inWindowOnChain.map((n) => Number(n))).to.have.members(inWindow);
     expect(readyOnChain.map((n) => Number(n))).to.have.members(ready);
   }
-  //else {
-  //  // Wait revert if courseId is invalid
-  //  await expect(NewTreasury.checkWithdrawStatus(input.courseId, input.fromIndex, input.toIndex)).to.be.revertedWith(
-  //    "CourseIdIsInvalid()"
-  //  );
-  //}
 
   return tokenStats;
 }
 
-async function _expectWithdraw(input, tokenStats, gasCost, expectations, waitSuccess) {
-  const isValidCourseId = input.courseId > 0 && input.courseId <= (await NewTreasury.courseCounter());
+async function _expectWithdraw(voucher, tokenStats, gasCost, expectations, waitSuccess, withdrawCaller = null) {
+  const { courseId, fromIndex, toIndex, redeemer } = voucher;
+
+  const isValidCourseId = courseId > 0 && courseId <= (await NewTreasury.courseCounter());
 
   const treasury = NewTreasury.target;
-  const instructor = input.redeemer.address;
+  const instructor = withdrawCaller ?? redeemer;
   const foundation = await NewTreasury.foundationAddress();
   const governance = await NewTreasury.governanceAddress();
 
@@ -1758,24 +1723,25 @@ async function _expectWithdraw(input, tokenStats, gasCost, expectations, waitSuc
 
   // Instructor native balance düşüşü gasCost kadar olmalı
   if (!tokenStats.has(ethers.ZeroAddress)) {
+    const redeemerInitialNativeBalance = tokenStats.get(ethers.ZeroAddress).initialBalances.instructor;
     const postNativeBalance = await ethers.provider.getBalance(instructor);
     if (waitSuccess) {
       expect(postNativeBalance).to.equal(
-        input.redeemerInitialNativeBalance - gasCost,
+        redeemerInitialNativeBalance - gasCost,
         "Native balance should drop by gasCost even if token used was ERC20"
       );
     } else {
       expect(postNativeBalance).to.be.below(
-        input.redeemerInitialNativeBalance,
+        redeemerInitialNativeBalance,
         "Instructor native balance should decrease slightly due to revert gas cost"
       );
     }
   }
 
   // check contract state changes.
-  for (let i = input.fromIndex; i <= input.toIndex; i++) {
-    const expected = expectations[i - input.fromIndex];
-    const paymentId = await NewTreasury.courseSaleRecords(input.courseId, i);
+  for (let i = fromIndex; i <= toIndex; i++) {
+    const expected = expectations[i - fromIndex];
+    const paymentId = await NewTreasury.courseSaleRecords(courseId, i);
     const raw = await NewTreasury.getPayment(paymentId);
 
     const payment = {
@@ -1816,9 +1782,9 @@ async function _expectWithdraw(input, tokenStats, gasCost, expectations, waitSuc
   if (isValidCourseId) {
     // Final check with checkWithdrawStatus
     const [refundedOnChain, withdrawnOnChain, inWindowOnChain, readyOnChain] = await NewTreasury.checkWithdrawStatus(
-      input.courseId,
-      input.fromIndex,
-      input.toIndex
+      courseId,
+      fromIndex,
+      toIndex
     );
 
     const refunded = [];
@@ -1826,8 +1792,8 @@ async function _expectWithdraw(input, tokenStats, gasCost, expectations, waitSuc
     const inWindow = [];
     const ready = [];
 
-    for (let i = input.fromIndex; i <= input.toIndex; i++) {
-      const expected = expectations[i - input.fromIndex];
+    for (let i = fromIndex; i <= toIndex; i++) {
+      const expected = expectations[i - fromIndex];
 
       if ([RI, RE].includes(expected)) refunded.push(i);
       else if ([WI, WE].includes(expected) || (expected === PES && waitSuccess)) withdrawn.push(i);
@@ -1895,7 +1861,6 @@ describe("NewTreasury Contract Tests", function () {
             expectSuccessWith: "CourseCreated",
           });
           // Expect: "CourseCreated" with expected success states
-          //console.log("Expected:\n" + util.inspect(course1.expectedOutcome, { depth: null, colors: true }));
         });
 
         it("should allow course creation if redeemer is backend and not in withdrawers", async function () {
@@ -4550,16 +4515,7 @@ describe("NewTreasury Contract Tests", function () {
         await fastForwardTime({ days: refundWindowDays + 1 });
         // Step 4: block failMTK transfer of instructor1
         await failMKT.connect(backend).blockAddress(instructor1.address, true);
-        // Step 5: Get token stats before withdrawal
-        const input = {
-          courseId: courseIdA,
-          fromIndex: 1,
-          toIndex: 4,
-          redeemer: instructor1,
-          redeemerInitialNativeBalance: await ethers.provider.getBalance(instructor1.address),
-        };
-        const beforeTokenStats = await _validateExpectations(input, expectations);
-        // Step 6: Create a voucher for instructor1 to withdraw payments from sales 1 to 3
+        // Step 5: Create a voucher for instructor1 to withdraw payments from sales 1 to 3 and get before token stats
         const voucher = await withdrawVH.signVoucher({
           courseId: courseIdA,
           fromIndex: 1,
@@ -4567,16 +4523,17 @@ describe("NewTreasury Contract Tests", function () {
           redeemer: instructor1.address,
           validUntil: now + 86400,
         });
-        // Step 7: Attempt to withdraw payments from sales 1 to 3
+        const beforeTokenStats = await _prepareExpectedWithdrawTokenState(voucher, expectations);
+        // Step 6: Attempt to withdraw payments from sales 1 to 3
         tx = await NewTreasury.connect(instructor1).withdrawCoursePayments(voucher);
         await expect(tx)
           .to.emit(NewTreasury, "CoursePaymentsWithdrawn")
-          .withArgs(input.courseId, input.fromIndex, input.toIndex, input.redeemer, 3);
+          .withArgs(voucher.courseId, voucher.fromIndex, voucher.toIndex, voucher.redeemer, 3);
         const receipt = await tx.wait();
         const effectiveGasPrice = receipt.effectiveGasPrice ?? receipt.gasPrice ?? 0n;
         const gasCost = receipt.gasUsed * effectiveGasPrice;
         // Step 8: Validate token stats after withdrawal
-        await _expectWithdraw(input, beforeTokenStats, gasCost, expectations, true);
+        await _expectWithdraw(voucher, beforeTokenStats, gasCost, expectations, true);
       });
 
       it("should skip withdraw when native transfer to instructor fails", async () => {
@@ -4608,34 +4565,28 @@ describe("NewTreasury Contract Tests", function () {
         await failNativeWallet.connect(backend).setRejectPayments(true);
         // Step 5: validate before-withdraw balances
         const preTxNativeBalanceOfBackend = await ethers.provider.getBalance(backend.address);
-        const input = {
+        // Step 6: sign voucher for failNativeWallet, and get before token stats
+        const voucher = await withdrawVH.signVoucher({
           courseId: courseIdA,
           fromIndex: 1,
           toIndex: 4,
-          redeemer: { address: failNativeWallet.target },
-          redeemerInitialNativeBalance: await ethers.provider.getBalance(failNativeWallet.target),
-        };
-        const beforeTokenStats = await _validateExpectations(input, expectations);
-        // Step 6: sign voucher for failNativeWallet
-        const voucher = await withdrawVH.signVoucher({
-          courseId: input.courseId,
-          fromIndex: input.fromIndex,
-          toIndex: input.toIndex,
           redeemer: failNativeWallet.target,
           validUntil: now + 86400,
         });
+        const beforeTokenStats = await _prepareExpectedWithdrawTokenState(voucher, expectations);
+
         // Step 7: trigger withdraw from inside failNativeWallet
         const tx = await failNativeWallet.connect(backend).triggerWithdraw(NewTreasury.target, voucher);
         // Step 8: expect emit
         await expect(tx)
           .to.emit(NewTreasury, "CoursePaymentsWithdrawn")
-          .withArgs(input.courseId, input.fromIndex, input.toIndex, failNativeWallet.target, 3);
+          .withArgs(voucher.courseId, voucher.fromIndex, voucher.toIndex, failNativeWallet.target, 3);
         // Step 9: compute gas cost
         const receipt = await tx.wait();
         const effectiveGasPrice = receipt.effectiveGasPrice ?? receipt.gasPrice ?? 0n;
         const gasCost = receipt.gasUsed * effectiveGasPrice;
         // Step 6: expect balances
-        await _expectWithdraw(input, beforeTokenStats, 0n, expectations, true);
+        await _expectWithdraw(voucher, beforeTokenStats, 0n, expectations, true);
         const postTxNativeBalanceOfBackend = await ethers.provider.getBalance(backend.address);
         expect(postTxNativeBalanceOfBackend).to.equal(preTxNativeBalanceOfBackend - gasCost);
       });
@@ -4667,34 +4618,26 @@ describe("NewTreasury Contract Tests", function () {
         await fastForwardTime({ days: refundWindowDays + 1 });
         // Step 4: block failMKT transfer to foundation (failNativeWallet)
         await failMKT.connect(backend).blockAddress(foundation.address, true);
-        // Step 5: get balances before withdraw
-        const input = {
+        // Step 5: sign withdraw voucher, and get before token stats
+        const voucher = await withdrawVH.signVoucher({
           courseId: courseIdA,
           fromIndex: 1,
           toIndex: 4,
-          redeemer: instructor1,
-          redeemerInitialNativeBalance: await ethers.provider.getBalance(instructor1.address),
-        };
-        const beforeTokenStats = await _validateExpectations(input, expectations);
-        // Step 6: sign withdraw voucher
-        const voucher = await withdrawVH.signVoucher({
-          courseId: input.courseId,
-          fromIndex: input.fromIndex,
-          toIndex: input.toIndex,
           redeemer: instructor1.address,
           validUntil: now + 86400,
         });
-        // Step 7: perform withdraw
+        const beforeTokenStats = await _prepareExpectedWithdrawTokenState(voucher, expectations);
+        // Step 6: perform withdraw
         const tx = await NewTreasury.connect(instructor1).withdrawCoursePayments(voucher);
-        // Step 8: expect CoursePaymentsWithdrawn with skipped = 1
+        // Step 7: expect CoursePaymentsWithdrawn with skipped = 1
         await expect(tx)
           .to.emit(NewTreasury, "CoursePaymentsWithdrawn")
-          .withArgs(input.courseId, input.fromIndex, input.toIndex, input.redeemer, 3);
-        // Step 9: validate state after withdraw
+          .withArgs(voucher.courseId, voucher.fromIndex, voucher.toIndex, voucher.redeemer, 3);
+        // Step 8: validate state after withdraw
         const receipt = await tx.wait();
         const effectiveGasPrice = receipt.effectiveGasPrice ?? receipt.gasPrice ?? 0n;
         const gasCost = receipt.gasUsed * effectiveGasPrice;
-        await _expectWithdraw(input, beforeTokenStats, gasCost, expectations, true);
+        await _expectWithdraw(voucher, beforeTokenStats, gasCost, expectations, true);
       });
 
       it("should skip withdraw when native transfer to foundation fails", async () => {
@@ -4722,38 +4665,30 @@ describe("NewTreasury Contract Tests", function () {
         // Step 3: fast forward past refund window
         const refundWindowDays = Number(await NewTreasury.refundWindow()) / 86400;
         await fastForwardTime({ days: refundWindowDays + 1 });
-        // Step 1: Set failNativeWallet as foundation
+        // Step 4: Set failNativeWallet as foundation
         await NewTreasury.connect(foundation).setFoundationAddress(failNativeWallet.target);
         // Step 5: block native receive on foundation (failNativeWallet)
         await failNativeWallet.connect(backend).setRejectPayments(true);
-        // Step 6: get balances before withdraw
-        const input = {
+        // Step 6: sign withdraw voucher, and get before token stats
+        const voucher = await withdrawVH.signVoucher({
           courseId: courseIdA,
           fromIndex: 1,
           toIndex: 4,
-          redeemer: instructor1,
-          redeemerInitialNativeBalance: await ethers.provider.getBalance(instructor1.address),
-        };
-        const beforeTokenStats = await _validateExpectations(input, expectations);
-        // Step 7: sign withdraw voucher
-        const voucher = await withdrawVH.signVoucher({
-          courseId: input.courseId,
-          fromIndex: input.fromIndex,
-          toIndex: input.toIndex,
           redeemer: instructor1.address,
           validUntil: now + 86400,
         });
-        // Step 8: perform withdraw
+        const beforeTokenStats = await _prepareExpectedWithdrawTokenState(voucher, expectations);
+        // Step 7: perform withdraw
         const tx = await NewTreasury.connect(instructor1).withdrawCoursePayments(voucher);
-        // Step 9: expect CoursePaymentsWithdrawn with skipped = 1
+        // Step 8: expect CoursePaymentsWithdrawn with skipped = 1
         await expect(tx)
           .to.emit(NewTreasury, "CoursePaymentsWithdrawn")
-          .withArgs(input.courseId, input.fromIndex, input.toIndex, input.redeemer, 3);
-        // Step 10: validate state after withdraw
+          .withArgs(voucher.courseId, voucher.fromIndex, voucher.toIndex, voucher.redeemer, 3);
+        // Step 9: validate state after withdraw
         const receipt = await tx.wait();
         const effectiveGasPrice = receipt.effectiveGasPrice ?? receipt.gasPrice ?? 0n;
         const gasCost = receipt.gasUsed * effectiveGasPrice;
-        await _expectWithdraw(input, beforeTokenStats, gasCost, expectations, true);
+        await _expectWithdraw(voucher, beforeTokenStats, gasCost, expectations, true);
       });
 
       it("should skip withdraw when ERC20 transfer to governance contract fails", async () => {
@@ -4783,34 +4718,26 @@ describe("NewTreasury Contract Tests", function () {
         await fastForwardTime({ days: refundWindowDays + 1 });
         // Step 4: block failMKT transfer to governance (failNativeWallet)
         await failMKT.connect(backend).blockAddress(NewGovDummy.target, true);
-        // Step 5: get balances before withdraw
-        const input = {
+        // Step 5: sign withdraw voucher, and get before token stats
+        const voucher = await withdrawVH.signVoucher({
           courseId: courseIdA,
           fromIndex: 1,
           toIndex: 4,
-          redeemer: instructor1,
-          redeemerInitialNativeBalance: await ethers.provider.getBalance(instructor1.address),
-        };
-        const beforeTokenStats = await _validateExpectations(input, expectations);
-        // Step 6: sign withdraw voucher
-        const voucher = await withdrawVH.signVoucher({
-          courseId: input.courseId,
-          fromIndex: input.fromIndex,
-          toIndex: input.toIndex,
           redeemer: instructor1.address,
           validUntil: now + 86400,
         });
-        // Step 7: perform withdraw
+        const beforeTokenStats = await _prepareExpectedWithdrawTokenState(voucher, expectations);
+        // Step 6: perform withdraw
         const tx = await NewTreasury.connect(instructor1).withdrawCoursePayments(voucher);
-        // Step 8: expect CoursePaymentsWithdrawn with skipped = 1
+        // Step 7: expect CoursePaymentsWithdrawn with skipped = 1
         await expect(tx)
           .to.emit(NewTreasury, "CoursePaymentsWithdrawn")
-          .withArgs(input.courseId, input.fromIndex, input.toIndex, input.redeemer, 3);
+          .withArgs(voucher.courseId, voucher.fromIndex, voucher.toIndex, voucher.redeemer, 3);
         // Step 9: validate state after withdraw
         const receipt = await tx.wait();
         const effectiveGasPrice = receipt.effectiveGasPrice ?? receipt.gasPrice ?? 0n;
         const gasCost = receipt.gasUsed * effectiveGasPrice;
-        await _expectWithdraw(input, beforeTokenStats, gasCost, expectations, true);
+        await _expectWithdraw(voucher, beforeTokenStats, gasCost, expectations, true);
       });
 
       it("should skip withdraw when governance is replaced with wallet that fails ERC20 transfers", async () => {
@@ -4841,34 +4768,26 @@ describe("NewTreasury Contract Tests", function () {
         // Step 4: replace governance with a wallet that fails on erc20 transfer
         await NewTreasury.connect(backend).setGovernanceAddress(person5.address);
         await failMKT.connect(backend).blockAddress(person5.address, true);
-        // Step 5: get balances before withdraw
-        const input = {
+        // Step 5: sign withdraw voucher, and get before token stats
+        const voucher = await withdrawVH.signVoucher({
           courseId: courseIdA,
           fromIndex: 1,
           toIndex: 4,
-          redeemer: instructor1,
-          redeemerInitialNativeBalance: await ethers.provider.getBalance(instructor1.address),
-        };
-        const beforeTokenStats = await _validateExpectations(input, expectations);
-        // Step 6: sign withdraw voucher
-        const voucher = await withdrawVH.signVoucher({
-          courseId: input.courseId,
-          fromIndex: input.fromIndex,
-          toIndex: input.toIndex,
           redeemer: instructor1.address,
           validUntil: now + 86400,
         });
-        // Step 7: perform withdraw
+        const beforeTokenStats = await _prepareExpectedWithdrawTokenState(voucher, expectations);
+        // Step 6: perform withdraw
         const tx = await NewTreasury.connect(instructor1).withdrawCoursePayments(voucher);
-        // Step 8: expect CoursePaymentsWithdrawn with skipped = 1
+        // Step 7: expect CoursePaymentsWithdrawn with skipped = 1
         await expect(tx)
           .to.emit(NewTreasury, "CoursePaymentsWithdrawn")
-          .withArgs(input.courseId, input.fromIndex, input.toIndex, input.redeemer, 3);
-        // Step 9: validate state after withdraw
+          .withArgs(voucher.courseId, voucher.fromIndex, voucher.toIndex, voucher.redeemer, 3);
+        // Step 8: validate state after withdraw
         const receipt = await tx.wait();
         const effectiveGasPrice = receipt.effectiveGasPrice ?? receipt.gasPrice ?? 0n;
         const gasCost = receipt.gasUsed * effectiveGasPrice;
-        await _expectWithdraw(input, beforeTokenStats, gasCost, expectations, true);
+        await _expectWithdraw(voucher, beforeTokenStats, gasCost, expectations, true);
       });
 
       it("should skip withdraw when governance contract rejects receive native token", async () => {
@@ -4898,34 +4817,26 @@ describe("NewTreasury Contract Tests", function () {
         await fastForwardTime({ days: refundWindowDays + 1 });
         // Step 4: block native token receive on governance (failNativeWallet)
         await NewGovDummy.connect(backend).setTokenBan(ethers.ZeroAddress, true);
-        // Step 5: get balances before withdraw
-        const input = {
+        // Step 6: sign withdraw voucher, and get before token stats
+        const voucher = await withdrawVH.signVoucher({
           courseId: courseIdA,
           fromIndex: 1,
           toIndex: 4,
-          redeemer: instructor1,
-          redeemerInitialNativeBalance: await ethers.provider.getBalance(instructor1.address),
-        };
-        const beforeTokenStats = await _validateExpectations(input, expectations);
-        // Step 6: sign withdraw voucher
-        const voucher = await withdrawVH.signVoucher({
-          courseId: input.courseId,
-          fromIndex: input.fromIndex,
-          toIndex: input.toIndex,
           redeemer: instructor1.address,
           validUntil: now + 86400,
         });
-        // Step 7: perform withdraw
+        const beforeTokenStats = await _prepareExpectedWithdrawTokenState(voucher, expectations);
+        // Step 6: perform withdraw
         const tx = await NewTreasury.connect(instructor1).withdrawCoursePayments(voucher);
-        // Step 8: expect CoursePaymentsWithdrawn with skipped = 1
+        // Step 7: expect CoursePaymentsWithdrawn with skipped = 1
         await expect(tx)
           .to.emit(NewTreasury, "CoursePaymentsWithdrawn")
-          .withArgs(input.courseId, input.fromIndex, input.toIndex, input.redeemer, 3);
-        // Step 9: validate state after withdraw
+          .withArgs(voucher.courseId, voucher.fromIndex, voucher.toIndex, voucher.redeemer, 3);
+        // Step 8: validate state after withdraw
         const receipt = await tx.wait();
         const effectiveGasPrice = receipt.effectiveGasPrice ?? receipt.gasPrice ?? 0n;
         const gasCost = receipt.gasUsed * effectiveGasPrice;
-        await _expectWithdraw(input, beforeTokenStats, gasCost, expectations, true);
+        await _expectWithdraw(voucher, beforeTokenStats, gasCost, expectations, true);
       });
 
       it("should skip withdraw when governance contract refuses to record ERC20", async () => {
@@ -4955,34 +4866,26 @@ describe("NewTreasury Contract Tests", function () {
         await fastForwardTime({ days: refundWindowDays + 1 });
         // Step 4: reject recording of failMKT transfer
         await NewGovDummy.connect(backend).setTokenBan(failMKT.target, true);
-        // Step 5: get balances before withdraw
-        const input = {
+        // Step 5: sign withdraw voucher, and get before token stats
+        const voucher = await withdrawVH.signVoucher({
           courseId: courseIdA,
           fromIndex: 1,
           toIndex: 4,
-          redeemer: instructor1,
-          redeemerInitialNativeBalance: await ethers.provider.getBalance(instructor1.address),
-        };
-        const beforeTokenStats = await _validateExpectations(input, expectations);
-        // Step 6: sign withdraw voucher
-        const voucher = await withdrawVH.signVoucher({
-          courseId: input.courseId,
-          fromIndex: input.fromIndex,
-          toIndex: input.toIndex,
           redeemer: instructor1.address,
           validUntil: now + 86400,
         });
-        // Step 7: perform withdraw
+        const beforeTokenStats = await _prepareExpectedWithdrawTokenState(voucher, expectations);
+        // Step 6: perform withdraw
         const tx = await NewTreasury.connect(instructor1).withdrawCoursePayments(voucher);
-        // Step 8: expect CoursePaymentsWithdrawn with skipped = 1
+        // Step 7: expect CoursePaymentsWithdrawn with skipped = 1
         await expect(tx)
           .to.emit(NewTreasury, "CoursePaymentsWithdrawn")
-          .withArgs(input.courseId, input.fromIndex, input.toIndex, input.redeemer, 3);
-        // Step 9: validate state after withdraw
+          .withArgs(voucher.courseId, voucher.fromIndex, voucher.toIndex, voucher.redeemer, 3);
+        // Step 8: validate state after withdraw
         const receipt = await tx.wait();
         const effectiveGasPrice = receipt.effectiveGasPrice ?? receipt.gasPrice ?? 0n;
         const gasCost = receipt.gasUsed * effectiveGasPrice;
-        await _expectWithdraw(input, beforeTokenStats, gasCost, expectations, true);
+        await _expectWithdraw(voucher, beforeTokenStats, gasCost, expectations, true);
       });
 
       it("should skip withdraw when governance contract lacks addGovernanceFunds function", async function () {
@@ -5012,34 +4915,26 @@ describe("NewTreasury Contract Tests", function () {
         await fastForwardTime({ days: refundWindowDays + 1 });
         // Step 4: Replace governance contract with an other contract that doesn't have addGovernanceFunds function
         await NewTreasury.connect(backend).setGovernanceAddress(failNativeWallet.target);
-        // Step 5: get balances before withdraw
-        const input = {
+        // Step 5: sign withdraw voucher and get before token stats
+        const voucher = await withdrawVH.signVoucher({
           courseId: courseIdA,
           fromIndex: 1,
           toIndex: 4,
-          redeemer: instructor1,
-          redeemerInitialNativeBalance: await ethers.provider.getBalance(instructor1.address),
-        };
-        const beforeTokenStats = await _validateExpectations(input, expectations);
-        // Step 6: sign withdraw voucher
-        const voucher = await withdrawVH.signVoucher({
-          courseId: input.courseId,
-          fromIndex: input.fromIndex,
-          toIndex: input.toIndex,
           redeemer: instructor1.address,
           validUntil: now + 86400,
         });
-        // Step 7: perform withdraw
+        const beforeTokenStats = await _prepareExpectedWithdrawTokenState(voucher, expectations);
+        // Step 6: perform withdraw
         const tx = await NewTreasury.connect(instructor1).withdrawCoursePayments(voucher);
-        // Step 8: expect CoursePaymentsWithdrawn with skipped = 1
+        // Step 7: expect CoursePaymentsWithdrawn with skipped = 1
         await expect(tx)
           .to.emit(NewTreasury, "CoursePaymentsWithdrawn")
-          .withArgs(input.courseId, input.fromIndex, input.toIndex, input.redeemer, 0);
-        // Step 9: validate state after withdraw
+          .withArgs(voucher.courseId, voucher.fromIndex, voucher.toIndex, voucher.redeemer, 0);
+        // Step 8: validate state after withdraw
         const receipt = await tx.wait();
         const effectiveGasPrice = receipt.effectiveGasPrice ?? receipt.gasPrice ?? 0n;
         const gasCost = receipt.gasUsed * effectiveGasPrice;
-        await _expectWithdraw(input, beforeTokenStats, gasCost, expectations, true);
+        await _expectWithdraw(voucher, beforeTokenStats, gasCost, expectations, true);
       });
       /////###End of Partial Success Cases###/////
     });
