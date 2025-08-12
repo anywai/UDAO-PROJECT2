@@ -289,28 +289,8 @@ async function updateCourseHelper({
   validUntil,
   expectRevertWith,
   expectSuccessWith,
-  previousWithdrawers,
 }) {
-  const input = {
-    courseId,
-    uri,
-    sellable,
-    withdrawers,
-    redeemer,
-    uriHash: ethers.keccak256(ethers.toUtf8Bytes(uri)),
-  };
-
-  const current = {
-    courseCounter: await NewTreasury.courseCounter(),
-    course: await NewTreasury.getCourse(courseId),
-    existingWithdrawers: await NewTreasury.getAuthorizedWithdrawers(courseId),
-    oldUriHash: ethers.keccak256(ethers.toUtf8Bytes((await NewTreasury.getCourse(courseId)).uri)),
-    oldUriHashHolds: await NewTreasury.uriToCourseId(
-      ethers.keccak256(ethers.toUtf8Bytes((await NewTreasury.getCourse(courseId)).uri))
-    ),
-    newUriHashHolds: await NewTreasury.uriToCourseId(input.uriHash),
-  };
-
+  // 0) waitSuccess toggle
   const waitSuccess =
     expectSuccessWith && !expectRevertWith
       ? true
@@ -319,8 +299,6 @@ async function updateCourseHelper({
       : (() => {
           throw new Error("Exactly one of expectSuccessWith or expectRevertWith must be defined.");
         })();
-
-  const expectedOutcome = await _prepareExpectedUpdateState({ input, current, waitSuccess });
 
   // Create voucher for updateCourse
   const voucher = await updateVH.signVoucher({
@@ -332,8 +310,11 @@ async function updateCourseHelper({
     validUntil,
   });
 
-  let tx;
+  // Prepare expected state before update
+  const expectedOutcome = await _prepareExpectedUpdateState(voucher, waitSuccess);
+  //console.log("expectedOutcome", util.inspect(expectedOutcome, { depth: null, colors: true }));
 
+  let tx;
   if (expectRevertWith) {
     await expect(NewTreasury.connect(redeemer).updateCourse(voucher)).to.be.revertedWithCustomError(
       NewTreasury,
@@ -346,7 +327,8 @@ async function updateCourseHelper({
     throw new Error("What you expect? No success or revert condition provided. --updateCourseHelper--");
   }
 
-  await _expectUpdate(input, current, expectedOutcome, previousWithdrawers);
+  // verify expected state after update
+  await _expectUpdate(expectedOutcome);
 
   return {
     courseId: courseId,
@@ -357,91 +339,97 @@ async function updateCourseHelper({
   };
 }
 
-async function _prepareExpectedUpdateState({ input, current, waitSuccess }) {
-  const isUriAlreadyExists = current.newUriHashHolds > 0n && current.newUriHashHolds !== input.courseId;
-  const isMaxWithdrawersExceeded = input.withdrawers.length > (await NewTreasury.maxAllowedWithdrawers());
-  const hasZeroWithdrawer = input.withdrawers.includes(ethers.ZeroAddress);
-  const isRedeemerWithdrawer = input.withdrawers.includes(input.redeemer.address);
-  const unauthorizedUpdater = !isRedeemerWithdrawer && input.redeemer.address !== backend.address;
-  const hasEmptyUri = input.uri.length === 0;
-  const hasEmptyWithdrawers = input.withdrawers.length === 0;
-  const isCourseIdValid = input.courseId > 0n && input.courseId <= current.courseCounter;
+async function _prepareExpectedUpdateState(voucher, waitSuccess) {
+  const { courseId, uri, sellable, withdrawers } = voucher;
+  // get existing states from contract
+  const [courseCounter, prevCourse, prevWithdrawers] = await Promise.all([
+    NewTreasury.courseCounter(),
+    NewTreasury.getCourse(courseId), //{ uri, sellable } if invalid courseId retuns "", false
+    NewTreasury.getAuthorizedWithdrawers(courseId), // if invalid courseId returns []
+  ]);
+  const oldUriHash = ethers.keccak256(ethers.toUtf8Bytes(prevCourse.uri));
+  const newUriHash = ethers.keccak256(ethers.toUtf8Bytes(uri));
+  const [oldUriHashToId, newUriHashToId] = await Promise.all([
+    NewTreasury.uriToCourseId(oldUriHash),
+    NewTreasury.uriToCourseId(newUriHash),
+  ]);
 
-  if (!waitSuccess) {
-    if (isUriAlreadyExists) {
-      // Case 1: URI already exists, cannot update course
-      return {
-        uri: current.course.uri,
-        sellable: current.course.sellable,
-        withdrawers: current.existingWithdrawers,
-        oldUriHashHolds: current.oldUriHashHolds,
-        newUriHashHolds: current.newUriHashHolds,
-      };
-    }
-    // Case 2: WithdrawerArrayExceedsLimit(), zero withdrawer or empty withdrawers, empty URI, or unauthorized updater
-    if (
-      isMaxWithdrawersExceeded ||
-      hasZeroWithdrawer ||
-      hasEmptyWithdrawers ||
-      hasEmptyUri ||
-      unauthorizedUpdater ||
-      !isCourseIdValid
-    ) {
-      return {
-        uri: current.course.uri,
-        sellable: current.course.sellable,
-        withdrawers: current.existingWithdrawers,
-        oldUriHashHolds: current.oldUriHashHolds,
-        newUriHashHolds: "",
-      };
-    }
-    // Case 3: Valid input but update reverted (e.g., missing gas, voucher revert)
-    return {
-      uri: current.course.uri,
-      sellable: current.course.sellable,
-      withdrawers: current.existingWithdrawers,
-      oldUriHashHolds: current.oldUriHashHolds,
-      newUriHashHolds: "",
-    };
-  }
-
+  const hasEmptyUri = uri.length === 0;
+  const uriUnchanged = hasEmptyUri || newUriHash === oldUriHash;
+  // ---- expected course fields ----
+  const expectedUri = waitSuccess ? (uriUnchanged ? prevCourse.uri : uri) : prevCourse.uri;
+  const expectedSellable = waitSuccess ? sellable : prevCourse.sellable;
+  // ---- expected withdrawers ----
+  const expectedWithdrawers = waitSuccess ? withdrawers : prevWithdrawers;
+  // union set → isAuthorized map
+  const addrSet = new Set([...prevWithdrawers, ...withdrawers]);
+  const expectedIsAuthorized = Object.fromEntries([...addrSet].map((a) => [a, expectedWithdrawers.includes(a)]));
+  // expected uriToCourseId entries
+  const expectedUriToCourseId = [
+    {
+      uri: prevCourse.uri,
+      uriHash: oldUriHash,
+      courseId: waitSuccess ? (uriUnchanged ? courseId : 0n) : oldUriHashToId,
+    },
+    {
+      uri,
+      uriHash: newUriHash,
+      courseId: waitSuccess ? (hasEmptyUri ? newUriHashToId : courseId) : newUriHashToId,
+    },
+  ];
+  // ---- return expected object ----
   return {
-    uri: input.uri,
-    sellable: input.sellable,
-    withdrawers: input.withdrawers,
-    oldUriHashHolds: input.uriHash == current.oldUriHash ? input.courseId : 0n, // if same, holds courseId, else 0
-    newUriHashHolds: input.courseId,
+    courseId,
+    expectedCourseCounter: courseCounter,
+    expectedCourse: {
+      uri: expectedUri,
+      sellable: expectedSellable,
+    },
+    expectedAuthorizedWithdrawers: {
+      courseId,
+      withdrawers: expectedWithdrawers,
+    },
+    expectedIsAuthorizedWithdrawer: {
+      courseId,
+      isWithdrawer: expectedIsAuthorized, // { address: boolean }
+    },
+    expectedUriToCourseId, // [{ uri, uriHash, courseId }]
   };
 }
 
-async function _expectUpdate(input, previous, expected, previousWithdrawers = []) {
-  const courseCounter = await NewTreasury.courseCounter();
-  expect(courseCounter).to.equal(previous.courseCounter);
+async function _expectUpdate(expected) {
+  const {
+    courseId,
+    expectedCourseCounter,
+    expectedCourse, // { uri, sellable }
+    expectedAuthorizedWithdrawers, // { courseId, withdrawers }
+    expectedIsAuthorizedWithdrawer, // { courseId, isWithdrawer: { addr: bool } }
+    expectedUriToCourseId, // [{ uri, uriHash, courseId }]
+  } = expected;
 
-  const course = await NewTreasury.getCourse(input.courseId);
-  expect(course.uri).to.equal(expected.uri);
-  expect(course.sellable).to.equal(expected.sellable);
-
-  // check uriToCourseId mapping
-  const newHashToId = await NewTreasury.uriToCourseId(input.uriHash);
-  expect(newHashToId).to.equal(expected.newUriHashHolds);
-
-  // Sadece farklıysa eski hash’i kontrol et
-  const oldHashToId = await NewTreasury.uriToCourseId(previous.oldUriHash);
-  expect(oldHashToId).to.equal(expected.oldUriHashHolds);
-
-  // check withdrawers
-  const actualWithdrawers = await NewTreasury.getAuthorizedWithdrawers(input.courseId);
-  expect(actualWithdrawers).to.deep.equal(expected.withdrawers);
-
-  for (const w of expected.withdrawers) {
-    const isAuth = await NewTreasury.isAuthorizedWithdrawer(w, input.courseId);
-    expect(isAuth).to.equal(true);
+  // 1) courseCounter değişmedi
+  const actualCounter = await NewTreasury.courseCounter();
+  expect(actualCounter).to.equal(expectedCourseCounter);
+  // 2) Course (uri & sellable)
+  const course = await NewTreasury.getCourse(courseId);
+  expect(course.uri).to.equal(expectedCourse.uri);
+  expect(course.sellable).to.equal(expectedCourse.sellable);
+  // 3) authorizedWithdrawers listesi (sıra önemliyse expected oluşturulurken aynısını kullan)
+  const actualWithdrawers = await NewTreasury.getAuthorizedWithdrawers(courseId);
+  expect(actualWithdrawers).to.deep.equal(expectedAuthorizedWithdrawers.withdrawers);
+  // 4) isAuthorizedWithdrawer bayrakları (union set üzerinden)
+  const entries = Object.entries(expectedIsAuthorizedWithdrawer.isWithdrawer || {});
+  for (const [addr, expBool] of entries) {
+    const isAuth = await NewTreasury.isAuthorizedWithdrawer(addr, courseId);
+    expect(isAuth).to.equal(expBool);
   }
-
-  for (const oldW of previousWithdrawers) {
-    const isStillAuthorized = await NewTreasury.isAuthorizedWithdrawer(oldW, input.courseId);
-    expect(isStillAuthorized).to.equal(expected.withdrawers.includes(oldW));
+  // 5) uriToCourseId mapping kontrolleri (eski + yeni hash’ler)
+  for (const item of expectedUriToCourseId) {
+    const { uri, uriHash, courseId: expId } = item;
+    const calcHash = ethers.keccak256(ethers.toUtf8Bytes(uri));
+    expect(calcHash).to.equal(uriHash);
+    const onchainId = await NewTreasury.uriToCourseId(uriHash);
+    expect(onchainId).to.equal(expId);
   }
 }
 
@@ -2167,10 +2155,9 @@ describe("NewTreasury Contract Tests", function () {
       describe("✅ Success Cases", function () {
         it("should update an existing course with valid voucher", async function () {
           // Step 1: instructor1 creates a course via CreateCourseVoucher
-          const withdrawers = [instructor1.address, instructor2.address];
           const course1 = await createCourseBatchHelper({
             uries: ["https://example.com/course/1"],
-            withdrawersArrays: [withdrawers],
+            withdrawersArrays: [[instructor1.address, instructor2.address]],
             redeemers: [instructor1.address],
             validUntils: [now + 86400],
             createBatchTxCaller: instructor1,
@@ -2185,17 +2172,15 @@ describe("NewTreasury Contract Tests", function () {
             redeemer: instructor1,
             validUntil: now + 86400,
             expectSuccessWith: "CourseUpdated",
-            previousWithdrawers: withdrawers,
           });
           // Expect: "CourseUpdated" with expected success states
         });
 
         it("should allow reusing a URI after course updates it to a new URI", async function () {
           // Step 1: instructor1 creates a course with URI_A
-          const withdrawers = [instructor1.address];
           const createA = await createCourseBatchHelper({
             uries: ["https://example.com/uri-a"],
-            withdrawersArrays: [withdrawers],
+            withdrawersArrays: [[instructor1.address]],
             redeemers: [instructor1.address],
             validUntils: [now + 86400],
             createBatchTxCaller: instructor1,
@@ -2206,11 +2191,10 @@ describe("NewTreasury Contract Tests", function () {
             courseId: createA.courseIds[0],
             uri: "https://example.com/uri-b",
             sellable: true,
-            withdrawers: withdrawers,
+            withdrawers: [instructor1.address],
             redeemer: instructor1,
             validUntil: now + 86400,
             expectSuccessWith: "CourseUpdated",
-            previousWithdrawers: withdrawers,
           });
           // Step 3: instructor1 creates a new course again using URI_A
           const createAgainA = await createCourseBatchHelper({
@@ -2226,10 +2210,9 @@ describe("NewTreasury Contract Tests", function () {
 
         it("should allow course update if redeemer is backend and not in withdrawers", async function () {
           // Step 1: instructor1 creates a valid course
-          const withdrawers = [instructor1.address];
           const course1 = await createCourseBatchHelper({
             uries: ["https://example.com/backend-update-course"],
-            withdrawersArrays: [withdrawers],
+            withdrawersArrays: [[instructor1.address]],
             redeemers: [instructor1.address],
             validUntils: [now + 86400],
             createBatchTxCaller: instructor1,
@@ -2244,18 +2227,39 @@ describe("NewTreasury Contract Tests", function () {
             redeemer: backend, // backend yetkili
             validUntil: now + 86400,
             expectSuccessWith: "CourseUpdated",
-            previousWithdrawers: withdrawers,
           });
           // Expect: update succeeds via backend signer
         });
 
+        it("should update course while keeping URI unchanged when empty URI is provided", async function () {
+          // 1) önce geçerli bir kurs oluştur
+          const course1 = await createCourseBatchHelper({
+            uries: ["https://example.com/original-uri"],
+            withdrawersArrays: [[instructor1.address]],
+            redeemers: [instructor1.address],
+            validUntils: [now + 86400],
+            createBatchTxCaller: instructor1,
+            expectSuccessWith: "CourseCreated",
+          });
+
+          // 2) boş URI ile update: URI no-op, yine de CourseUpdated bekliyoruz
+          await updateCourseHelper({
+            courseId: course1.courseIds[0],
+            uri: "", // empty => no URI change
+            sellable: true,
+            withdrawers: [instructor1.address],
+            redeemer: instructor1,
+            validUntil: now + 86400,
+            expectSuccessWith: "CourseUpdated",
+          });
+          // Expect: "CourseUpdated" with expected success states, URI remains unchanged
+        });
+
         it("should allow isolated and combined updates of sellable, withdrawers, and URI", async function () {
           // Step 1: create course
-          const withdrawers1 = [instructor1.address];
-          const uri1 = "https://example.com/isolate/initial";
           const course1 = await createCourseBatchHelper({
-            uries: [uri1],
-            withdrawersArrays: [withdrawers1],
+            uries: ["https://example.com/isolate/initial"],
+            withdrawersArrays: [[instructor1.address]],
             redeemers: [instructor1.address],
             validUntils: [now + 86400],
             createBatchTxCaller: instructor1,
@@ -2264,37 +2268,32 @@ describe("NewTreasury Contract Tests", function () {
           // Step 2: update only sellable toggle
           const update1 = await updateCourseHelper({
             courseId: course1.courseIds[0],
-            uri: uri1,
+            uri: "",
             sellable: false,
-            withdrawers: withdrawers1,
+            withdrawers: [instructor1.address],
             redeemer: instructor1,
             validUntil: now + 86400,
             expectSuccessWith: "CourseUpdated",
-            previousWithdrawers: withdrawers1,
           });
           // Step 3: update only withdrawers
-          const withdrawers2 = [instructor2.address];
           const update2 = await updateCourseHelper({
             courseId: course1.courseIds[0],
-            uri: uri1,
+            uri: "https://example.com/isolate/initial",
             sellable: false,
-            withdrawers: withdrawers2,
+            withdrawers: [instructor2.address],
             redeemer: instructor2,
             validUntil: now + 86400,
             expectSuccessWith: "CourseUpdated",
-            previousWithdrawers: withdrawers1,
           });
           // Step 4: update only URI
-          const uri2 = "https://example.com/isolate/only-uri";
           const update3 = await updateCourseHelper({
             courseId: course1.courseIds[0],
-            uri: uri2,
+            uri: "https://example.com/isolate/only-uri",
             sellable: false,
-            withdrawers: withdrawers2,
+            withdrawers: [instructor2.address],
             redeemer: instructor2,
             validUntil: now + 86400,
             expectSuccessWith: "CourseUpdated",
-            previousWithdrawers: withdrawers2,
           });
           // Step 5: update all fields at once
           const update4 = await updateCourseHelper({
@@ -2305,70 +2304,59 @@ describe("NewTreasury Contract Tests", function () {
             redeemer: instructor2,
             validUntil: now + 86400,
             expectSuccessWith: "CourseUpdated",
-            previousWithdrawers: withdrawers2,
           });
           // Expect: all updates succeed, each isolated and combined update works as expected
         });
 
         it("should allow redundant updates with partial or full parameter repetition", async function () {
           // Step 1: create course
-          const uri = "https://example.com/redundant/start";
-          const withdrawers1 = [instructor1.address];
           const course1 = await createCourseBatchHelper({
-            uries: [uri],
-            withdrawersArrays: [withdrawers1],
+            uries: ["https://example.com/redundant/start"],
+            withdrawersArrays: [[instructor1.address]],
             redeemers: [instructor1.address],
             validUntils: [now + 86400],
             createBatchTxCaller: instructor1,
             expectSuccessWith: "CourseCreated",
           });
           // Step 2: sellable same (true), URI and withdrawers change
-          const uri2 = "https://example.com/redundant/uri1";
-          const withdrawers2 = [instructor2.address];
           const update1 = await updateCourseHelper({
             courseId: course1.courseIds[0],
-            uri: uri2,
+            uri: "https://example.com/redundant/uri1",
             sellable: true,
-            withdrawers: withdrawers2,
+            withdrawers: [instructor2.address],
             redeemer: instructor2,
             validUntil: now + 86400,
             expectSuccessWith: "CourseUpdated",
-            previousWithdrawers: withdrawers1,
           });
           // Step 3: withdrawers same as step2, sellable and URI change
-          const uri3 = "https://example.com/redundant/uri2-3";
           const update2 = await updateCourseHelper({
             courseId: course1.courseIds[0],
-            uri: uri3,
+            uri: "https://example.com/redundant/uri2-3",
             sellable: false,
-            withdrawers: withdrawers2,
+            withdrawers: [instructor2.address],
             redeemer: instructor2,
             validUntil: now + 86400,
             expectSuccessWith: "CourseUpdated",
-            previousWithdrawers: withdrawers2,
           });
           // Step 4: URI same as step3, sellable and withdrawers change
-          const withdrawers3 = [instructor3.address];
           const update3 = await updateCourseHelper({
             courseId: course1.courseIds[0],
-            uri: uri3,
+            uri: "https://example.com/redundant/uri2-3",
             sellable: true,
-            withdrawers: withdrawers3,
+            withdrawers: [instructor3.address],
             redeemer: instructor3,
             validUntil: now + 86400,
             expectSuccessWith: "CourseUpdated",
-            previousWithdrawers: withdrawers2,
           });
           // Step 5: all params same as step3
           const update4 = await updateCourseHelper({
             courseId: course1.courseIds[0],
-            uri: uri3,
+            uri: "https://example.com/redundant/uri2-3",
             sellable: true,
-            withdrawers: withdrawers3,
+            withdrawers: [instructor3.address],
             redeemer: instructor3,
             validUntil: now + 86400,
             expectSuccessWith: "CourseUpdated",
-            previousWithdrawers: withdrawers3,
           });
           // Expect: all updates succeed, selective redundancy is handled gracefully
         });
@@ -2377,81 +2365,55 @@ describe("NewTreasury Contract Tests", function () {
 
       describe("❌ Failure Cases", function () {
         it("should fail to update a course with invalid signer", async function () {
-          // Step 1: Create course with valid signer (backend)
-          const course1 = await createCourseBatchHelper({
-            uries: ["https://example.com/course/1"],
-            withdrawersArrays: [[instructor1.address]],
-            redeemers: [instructor1.address],
-            validUntils: [now + 86400],
-            createBatchTxCaller: instructor1,
-            expectSuccessWith: "CourseCreated",
-          });
+          // Step 1: instructor1 creates a generic course with [instructor1] array
+          const courseId1 = await quickCreateACourse();
           // Step 2: Override default updateVH and get a new voucher with invalid signer
           updateVH = getVoucherHelpers({ signer: instructor1 }).updateVH;
           // Step 3: Try to update course using invalid signer
           const updated = await updateCourseHelper({
-            courseId: course1.courseIds[0],
+            courseId: courseId1,
             uri: "https://example.com/course/1-updated",
             sellable: false,
             withdrawers: [instructor1.address],
             redeemer: instructor1,
             validUntil: now + 86400,
             expectRevertWith: "SignatureIsInvalidOrSignerIsNotBackend()",
-            previousWithdrawers: course1.withdrawers,
           });
           // Expect: Reverts with "SignatureIsInvalidOrSignerIsNotBackend()"
         });
 
         it("should fail to update a course with expired voucher", async function () {
-          // Step 1: instructor1 creates a valid course first
-          const withdrawers = [instructor1.address];
-          const course1 = await createCourseBatchHelper({
-            uries: ["https://example.com/original-course"],
-            withdrawersArrays: [withdrawers],
-            redeemers: [instructor1.address],
-            validUntils: [now + 86400],
-            createBatchTxCaller: instructor1,
-            expectSuccessWith: "CourseCreated",
-          });
+          // Step 1: instructor1 creates a generic course with [instructor1] array
+          const courseId1 = await quickCreateACourse();
           // Step 2: set up an expired validUntil timestamp
           const expiredTimestamp = now - 60; // 1 dakika önce
           // Step 3: try to update the course using an expired voucher
           const update1 = await updateCourseHelper({
-            courseId: course1.courseIds[0],
+            courseId: courseId1,
             uri: "https://example.com/expired-update",
             sellable: false,
-            withdrawers: withdrawers,
+            withdrawers: [instructor1.address],
             redeemer: instructor1,
             validUntil: expiredTimestamp,
             expectRevertWith: "VoucherIsExpired()",
-            previousWithdrawers: withdrawers,
           });
           // Expect: Reverts with "VoucherIsExpired()"
         });
 
         it("should fail to update a course if msg.sender !== redeemer", async function () {
-          // Step 1: instructor1 creates a course normally
-          const withdrawers = [instructor1.address];
-          const course1 = await createCourseBatchHelper({
-            uries: ["https://example.com/update-redeemer-mismatch/original"],
-            withdrawersArrays: [withdrawers],
-            redeemers: [instructor1.address],
-            validUntils: [now + 86400],
-            createBatchTxCaller: instructor1,
-            expectSuccessWith: "CourseCreated",
-          });
+          // Step 1: instructor1 creates a generic course with [instructor1] array
+          const courseId1 = await quickCreateACourse();
           // Step 2: prepare mismatched redeemer (voucher will carry different redeemer)
           falseRedeemer = ethers.ZeroAddress;
           // Step 3: attempt update with mismatched msg.sender and voucher.redeemer
           await updateCourseHelper({
-            courseId: course1.courseIds[0],
+            courseId: courseId1,
             uri: "https://example.com/update-redeemer-mismatch/attempt",
             sellable: true,
-            withdrawers: withdrawers,
+            withdrawers: [instructor1.address],
             redeemer: instructor1, // msg.sender
             validUntil: now + 86400,
             expectRevertWith: "CallerIsNotVoucherRedeemer()",
-            previousWithdrawers: withdrawers,
           });
           // Expect: Reverts with "CallerIsNotVoucherRedeemer()"
         });
@@ -2467,10 +2429,9 @@ describe("NewTreasury Contract Tests", function () {
             expectSuccessWith: "CourseCreated",
           });
           // Step 2: instructor2 creates second course with URI-B
-          const withdrawersB = [instructor2.address];
           const courseB = await createCourseBatchHelper({
             uries: ["https://example.com/uri-b"],
-            withdrawersArrays: [withdrawersB],
+            withdrawersArrays: [[instructor2.address]],
             redeemers: [instructor2.address],
             validUntils: [now + 86400],
             createBatchTxCaller: instructor2,
@@ -2481,26 +2442,17 @@ describe("NewTreasury Contract Tests", function () {
             courseId: courseB.courseIds[0],
             uri: "https://example.com/uri-a", // trying to reuse uri-a
             sellable: true,
-            withdrawers: withdrawersB,
+            withdrawers: [instructor2.address],
             redeemer: instructor2,
             validUntil: now + 86400,
             expectRevertWith: "UriIsAlreadyUsedOrDuplicatedInBatch()",
-            previousWithdrawers: withdrawersB,
           });
           // Expect: Reverts with "UriIsAlreadyUsedOrDuplicatedInBatch()"
         });
 
         it("should fail to update a course with more than allowed withdrawers", async function () {
-          // Step 1: instructor1 creates a course with valid withdrawers
-          const withdrawers = [instructor1.address];
-          const course1 = await createCourseBatchHelper({
-            uries: ["https://example.com/original-update"],
-            withdrawersArrays: [withdrawers],
-            redeemers: [instructor1.address],
-            validUntils: [now + 86400],
-            createBatchTxCaller: instructor1,
-            expectSuccessWith: "CourseCreated",
-          });
+          // Step 1: instructor1 creates a generic course with [instructor1] array
+          const courseId1 = await quickCreateACourse();
           // Step 2: Read maxAllowedWithdrawers from contract and convert to Number
           const max = Number(await NewTreasury.maxAllowedWithdrawers());
           // Step 3: Generate (max + 1) random addresses
@@ -2511,118 +2463,65 @@ describe("NewTreasury Contract Tests", function () {
           extraWithdrawers.push(instructor1.address); // Ensure redeemer is included
           // Step 4: Try to update the course with too many withdrawers
           const update = await updateCourseHelper({
-            courseId: course1.courseIds[0],
+            courseId: courseId1,
             uri: "https://example.com/updated-uri-exceed",
             sellable: true,
             withdrawers: extraWithdrawers,
             redeemer: instructor1,
             validUntil: now + 86400,
             expectRevertWith: "WithdrawerArrayExceedsLimit()",
-            previousWithdrawers: withdrawers,
           });
           // Expect: Reverts with "WithdrawerArrayExceedsLimit()"
         });
 
         it("should fail to update a course if any withdrawer is address(0)", async function () {
-          // Step 1: Create valid course first
-          const withdrawers = [instructor1.address];
-          const course1 = await createCourseBatchHelper({
-            uries: ["https://example.com/valid-course-to-update"],
-            withdrawersArrays: [withdrawers],
-            redeemers: [instructor1.address],
-            validUntils: [now + 86400],
-            createBatchTxCaller: instructor1,
-            expectSuccessWith: "CourseCreated",
-          });
+          // Step 1: instructor1 creates a generic course with [instructor1] array
+          const courseId1 = await quickCreateACourse();
           // Step 2: Set withdrawers with zero addresses in index 0
           const invalidWithdrawers = [instructor1.address, ethers.ZeroAddress];
           // Step 3: Try to update course
           const update = await updateCourseHelper({
-            courseId: course1.courseIds[0],
+            courseId: courseId1,
             uri: "https://example.com/update-with-zero",
             sellable: true,
             withdrawers: invalidWithdrawers,
             redeemer: instructor1,
             validUntil: now + 86400,
             expectRevertWith: "WithdrawerAddressIsZero()",
-            previousWithdrawers: withdrawers,
           });
           // Expect: Reverts with "Zero address not allowed"
         });
 
         it("should fail to update a course with empty withdrawers array", async function () {
-          // Step 1: Create a valid course
-          const withdrawers = [instructor1.address];
-          const course1 = await createCourseBatchHelper({
-            uries: ["https://example.com/to-be-emptied"],
-            withdrawersArrays: [withdrawers],
-            redeemers: [instructor1.address],
-            validUntils: [now + 86400],
-            createBatchTxCaller: instructor1,
-            expectSuccessWith: "CourseCreated",
-          });
+          // Step 1: instructor1 creates a generic course with [instructor1] array
+          const courseId1 = await quickCreateACourse();
           // Step 2: Try to update course with empty withdrawers
           const update = await updateCourseHelper({
-            courseId: course1.courseIds[0],
+            courseId: courseId1,
             uri: "https://example.com/emptied-uri",
             sellable: true,
             withdrawers: [],
             redeemer: instructor1,
             validUntil: now + 86400,
             expectRevertWith: "WithdrawerArrayIsEmpty()",
-            previousWithdrawers: withdrawers,
           });
           // Expect: Reverts with "WithdrawerArrayIsEmpty()"
         });
 
         it("should fail to update course if redeemer is not in withdrawers and not backend", async function () {
-          // Step 1: instructor1 creates a valid course
-          const withdrawers = [instructor1.address];
-          const course1 = await createCourseBatchHelper({
-            uries: ["https://example.com/redeemer-not-in-withdrawers-update"],
-            withdrawersArrays: [withdrawers],
-            redeemers: [instructor1.address],
-            validUntils: [now + 86400],
-            createBatchTxCaller: instructor1,
-            expectSuccessWith: "CourseCreated",
-          });
+          // Step 1: instructor1 creates a generic course with [instructor1] array
+          const courseId1 = await quickCreateACourse();
           // Step 2: instructor2 tries to update, but is not in withdrawers
           const update1_course1 = await updateCourseHelper({
-            courseId: course1.courseIds[0],
+            courseId: courseId1,
             uri: "https://example.com/invalid-update-attempt",
             sellable: false,
             withdrawers: [instructor3.address],
             redeemer: instructor2,
             validUntil: now + 86400,
             expectRevertWith: "CallerIsNeitherWithdrawerNorBackend()",
-            previousWithdrawers: withdrawers,
           });
           // Expect: revert due to unauthorized redeemer
-        });
-
-        it("should fail to update a course with empty URI", async function () {
-          // Step 1: instructor1 creates a valid course first
-          const withdrawers = [instructor1.address];
-          const course1 = await createCourseBatchHelper({
-            uries: ["https://example.com/original-uri"],
-            withdrawersArrays: [withdrawers],
-            redeemers: [instructor1.address],
-            validUntils: [now + 86400],
-            createBatchTxCaller: instructor1,
-            expectSuccessWith: "CourseCreated",
-          });
-          // Step 2: Try to update the course with empty URI
-          const update1_course1 = await updateCourseHelper({
-            courseId: course1.courseIds[0],
-            uri: "", // boş URI
-            sellable: true,
-            withdrawers: [instructor1.address],
-            redeemer: instructor1,
-            validUntil: now + 86400,
-            expectRevertWith: "UriIsEmpty()",
-            previousWithdrawers: withdrawers,
-          });
-          // Expect: Reverts with "Course URI empty"
         });
 
         it("should fail to update a course with courseId = 0", async function () {
@@ -2635,7 +2534,6 @@ describe("NewTreasury Contract Tests", function () {
             redeemer: instructor1,
             validUntil: now + 86400,
             expectRevertWith: "CourseIdIsInvalid()",
-            previousWithdrawers: [], // ID 0 zaten yok
           });
           // Expect: Reverts with "CourseIdIsInvalid()-update"
         });
@@ -2656,15 +2554,8 @@ describe("NewTreasury Contract Tests", function () {
             previousWithdrawers: [], // course zaten yok
           });
           // Expect: Reverts with "CourseIdIsInvalid()-update"
-          // Step 3: Create a course with valid ID to increase courseCounter
-          const course1 = await createCourseBatchHelper({
-            uries: ["https://example.com/course/1"],
-            withdrawersArrays: [[instructor1.address]],
-            redeemers: [instructor1.address],
-            validUntils: [now + 86400],
-            createBatchTxCaller: instructor1,
-            expectSuccessWith: "CourseCreated",
-          });
+          // Step 3: instructor1 creates a generic course with [instructor1] array to increase courseCounter
+          const courseId1 = await quickCreateACourse();
           // Step 4: Get the new courseCounter after creation
           const currentAfterCreate = await NewTreasury.courseCounter();
           const nonExistentIdAfterCreate = currentAfterCreate + 1n;
@@ -2677,7 +2568,6 @@ describe("NewTreasury Contract Tests", function () {
             redeemer: instructor1,
             validUntil: now + 86400,
             expectRevertWith: "CourseIdIsInvalid()",
-            previousWithdrawers: [], // çünkü o ID yok
           });
           // Expect: Reverts with "CourseIdIsInvalid()-update"
         });
@@ -3036,7 +2926,6 @@ describe("NewTreasury Contract Tests", function () {
           redeemer: backend,
           validUntil: now + 86400,
           expectSuccessWith: "CourseUpdated",
-          previousWithdrawers: withdrawers,
         });
         // Step 3: buyer1 tries to buy the course
         await buyCourseBatchHelper({

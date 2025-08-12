@@ -220,8 +220,9 @@ contract NewTreasury is EIP712, ReentrancyGuard {
 
         uint256 maxW = maxAllowedWithdrawers;
         //address sender = msg.sender; // ufak cache
+        //     bool senderIsBackend = hasBackendRole[sender];
 
-        for (uint256 i = 0; i < len; i++) {
+        for (uint256 i = 0; i < len; ) {
             CreateCourseVoucher calldata voucher = vouchers[i];
             address[] memory withdrawers = voucher.withdrawers;
             uint256 lenW = withdrawers.length; //array length
@@ -258,11 +259,13 @@ contract NewTreasury is EIP712, ReentrancyGuard {
                 validUntil
             );
 
-            courseCounter++;
-            uint256 newCourseId = courseCounter;
+            uint256 newCourseId;
+            unchecked {
+                newCourseId = ++courseCounter; // önce arttır, sonra arttırdığın değeri ata. Tek okuma ve yazma.
+            }
 
             bool isRedeemerAuthorized = false;
-            for (uint256 j = 0; j < lenW; j++) {
+            for (uint256 j = 0; j < lenW; ) {
                 address w = withdrawers[j];
                 if (w == address(0)) revert WithdrawerAddressIsZero();
                 if (isAuthorizedWithdrawer[w][newCourseId])
@@ -272,6 +275,9 @@ contract NewTreasury is EIP712, ReentrancyGuard {
 
                 if (!isRedeemerAuthorized && w == msg.sender) {
                     isRedeemerAuthorized = true;
+                }
+                unchecked {
+                    j++;
                 }
             }
 
@@ -285,6 +291,9 @@ contract NewTreasury is EIP712, ReentrancyGuard {
             courses[newCourseId] = Course({uri: voucher.uri, sellable: true});
 
             emit CourseCreated(newCourseId);
+            unchecked {
+                i++;
+            }
         }
     }
 
@@ -292,7 +301,7 @@ contract NewTreasury is EIP712, ReentrancyGuard {
     struct UpdateCourseVoucher {
         uint256 courseId;
         bool sellable; // true if sellable, false if not
-        string uri;
+        string uri; // if empty no change in uri
         address[] withdrawers;
         address redeemer;
         uint256 validUntil;
@@ -306,14 +315,18 @@ contract NewTreasury is EIP712, ReentrancyGuard {
     function updateCourse(UpdateCourseVoucher calldata voucher) external {
         // local copy to optimize calldata reads
         uint256 courseId = voucher.courseId;
+        if (courseId == 0 || courseId > courseCounter)
+            revert CourseIdIsInvalid();
+
         bool sellable = voucher.sellable;
         address[] memory withdrawers = voucher.withdrawers;
-        //address redeemer = voucher.redeemer;
-        //uint256 validUntil = voucher.validUntil;
+        address redeemer = voucher.redeemer;
+        uint256 validUntil = voucher.validUntil;
 
         bytes32 newUriHash = keccak256(bytes(voucher.uri));
 
-        if (newUriHash == EMPTY_URI_HASH) revert UriIsEmpty();
+        // remove this revert
+        //if (newUriHash == EMPTY_URI_HASH) revert UriIsEmpty();
 
         // create digest
         bytes32 digest = _hashTypedDataV4(
@@ -324,8 +337,8 @@ contract NewTreasury is EIP712, ReentrancyGuard {
                     voucher.sellable,
                     newUriHash,
                     keccak256(abi.encodePacked(withdrawers)),
-                    voucher.redeemer,
-                    voucher.validUntil
+                    redeemer,
+                    validUntil
                 )
             )
         );
@@ -334,9 +347,16 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         _verifyVoucherSignerAndValidity(
             digest,
             voucher.signature,
-            voucher.redeemer,
-            voucher.validUntil
+            redeemer,
+            validUntil
         );
+
+        // clear previous authorized withdrawers
+        address[] storage previousWithdrawers = authorizedWithdrawers[courseId]; //storage gas cheper in this case
+        uint256 lenPW = previousWithdrawers.length;
+        for (uint256 i = 0; i < lenPW; i++) {
+            isAuthorizedWithdrawer[previousWithdrawers[i]][courseId] = false;
+        }
 
         // check withdrawers and redeemer and uri are valid
         uint256 lenW = withdrawers.length; //array length
@@ -350,52 +370,36 @@ contract NewTreasury is EIP712, ReentrancyGuard {
             if (w == msg.sender) {
                 isRedeemerAuthorized = true;
             }
+            if (isAuthorizedWithdrawer[w][courseId])
+                revert WithdrawerArrayContainsDuplicates();
 
-            // duplicate in array?
-            //for (uint256 j = i + 1; j < lenW; j++) {
-            //    if (w == withdrawers[j])
-            //        revert WithdrawerArrayContainsDuplicates();
-            //}
+            isAuthorizedWithdrawer[w][courseId] = true;
         }
+
         if (!isRedeemerAuthorized) {
             if (!hasBackendRole[msg.sender])
                 revert CallerIsNeitherWithdrawerNorBackend();
         }
-
-        if (courseId == 0 || courseId > courseCounter)
-            revert CourseIdIsInvalid();
+        authorizedWithdrawers[courseId] = withdrawers;
 
         // get existing course
         Course storage courseExisting = courses[courseId];
-        // get old URI and compare
-        bytes32 oldUriHash = keccak256(bytes(courseExisting.uri));
-        // only if uri is changing
-        if (oldUriHash != newUriHash) {
-            if (uriToCourseId[newUriHash] != 0)
-                revert UriIsAlreadyUsedOrDuplicatedInBatch();
-
-            delete uriToCourseId[oldUriHash]; // clean up old
-            uriToCourseId[newUriHash] = courseId; // assign new
-
-            courseExisting.uri = voucher.uri;
-        }
-
-        // clear previous authorized withdrawers
-        address[] storage previousWithdrawers = authorizedWithdrawers[courseId]; //storage gas cheper in this case
-        uint256 lenPW = previousWithdrawers.length;
-        for (uint256 i = 0; i < lenPW; i++) {
-            isAuthorizedWithdrawer[previousWithdrawers[i]][courseId] = false;
+        // URI: only if non-empty and actually changed
+        if (newUriHash != EMPTY_URI_HASH) {
+            // get old URI and compare
+            bytes32 oldUriHash = keccak256(bytes(courseExisting.uri));
+            if (oldUriHash != newUriHash) {
+                if (uriToCourseId[newUriHash] != 0)
+                    revert UriIsAlreadyUsedOrDuplicatedInBatch();
+                delete uriToCourseId[oldUriHash]; // clean up old
+                uriToCourseId[newUriHash] = courseId; // assign new
+                courseExisting.uri = voucher.uri;
+            }
         }
 
         // update sellable
         if (courseExisting.sellable != sellable) {
             courseExisting.sellable = sellable;
-        }
-
-        authorizedWithdrawers[courseId] = withdrawers;
-        for (uint256 i = 0; i < lenW; i++) {
-            address w = withdrawers[i];
-            isAuthorizedWithdrawer[w][courseId] = true;
         }
 
         emit CourseUpdated(courseId);
