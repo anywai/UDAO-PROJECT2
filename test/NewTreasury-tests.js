@@ -930,24 +930,11 @@ async function _expectBuyBatch(
 
 async function refundCourseHelper({ paymentId, redeemer, validUntil, expectRevertWith, expectSuccessWith }) {
   // Prepare input, desired refund payment, current contract state,
-  const input = {
-    paymentId,
-    redeemer,
-  };
   const payment = await NewTreasury.getPayment(paymentId);
-  const current = {
-    paymentCounter: await NewTreasury.paymentCounter(),
-    courseOwnerToPayment: await NewTreasury.courseOwnerToPayment(payment.courseReceiver, payment.courseId),
-    ownedCourses: await NewTreasury.getOwnedCourses(payment.courseReceiver),
-    ownedCourseIndex: await NewTreasury.ownedCourseIndex(payment.courseReceiver, payment.courseId),
-    hasOwnedCourse: await NewTreasury.hasOwnedCourse(payment.courseReceiver, payment.courseId),
-  };
   // 1) Ensure exactly one is expectation provided; expectSuccess=true, expectRevertWith=false.
   const waitSuccess = decideSuccess(expectSuccessWith, expectRevertWith);
-
   // push paymentId to common helper to get expected values
-  const expectedOutcome = await _prepareExpectedRefundStates(input, payment, current, waitSuccess);
-
+  const expectedOutcome = await _prepareExpectedRefundStates(paymentId, waitSuccess);
   // get balances before transaction
   const beforeTxBalances = await getBalances({
     payer: payment.payer,
@@ -956,7 +943,6 @@ async function refundCourseHelper({ paymentId, redeemer, validUntil, expectRever
     tokenAddress: payment.tokenAddress,
     refundCaller: redeemer.address, // redeemer is the caller
   });
-
   //tx create and use voucher
   const refundVoucher = await refundVH.signVoucher({
     paymentId,
@@ -997,11 +983,10 @@ async function refundCourseHelper({ paymentId, redeemer, validUntil, expectRever
     throw new Error("No expectRevertWith or expectSuccessWith provided --refundCourseHelper--");
   }
 
-  await _expectRefund(input, expectedOutcome);
+  await _expectRefund(paymentId, expectedOutcome);
 
   // check balances after transaction
-  await checkBalancesAfter({
-    operation: "refund", // if refund use "refund"
+  await checkBalancesAfterRefund({
     gasCost: gasCost, // 0 if revert, otherwise gas used success
     beforeTxBalances: beforeTxBalances,
     coursePrice: payment.totalAmount,
@@ -1031,22 +1016,11 @@ async function refundCourseByOwnerHelper({
   // get paymentId from courseOwner + courseId and push to common helper
   const paymentId = await NewTreasury.courseOwnerToPayment(courseOwner, courseId);
   // Prepare input, desired refund payment, current contract state,
-  const input = {
-    paymentId,
-    redeemer,
-  };
   const payment = await NewTreasury.getPayment(paymentId);
-  const current = {
-    courseOwnerToPayment: await NewTreasury.courseOwnerToPayment(payment.courseReceiver, payment.courseId),
-    ownedCourses: await NewTreasury.getOwnedCourses(payment.courseReceiver),
-    ownedCourseIndex: await NewTreasury.ownedCourseIndex(payment.courseReceiver, payment.courseId),
-    hasOwnedCourse: await NewTreasury.hasOwnedCourse(payment.courseReceiver, payment.courseId),
-  };
   // 1) Ensure exactly one is expectation provided; expectSuccess=true, expectRevertWith=false.
   const waitSuccess = decideSuccess(expectSuccessWith, expectRevertWith);
-
-  const expectedOutcome = await _prepareExpectedRefundStates(input, payment, current, waitSuccess);
-
+  // push paymentId to common helper to get expected values
+  const expectedOutcome = await _prepareExpectedRefundStates(paymentId, waitSuccess);
   // get balances before transaction
   const beforeTxBalances = await getBalances({
     payer: payment.payer,
@@ -1055,7 +1029,6 @@ async function refundCourseByOwnerHelper({
     tokenAddress: payment.tokenAddress,
     refundCaller: redeemer.address, // redeemer is the caller
   });
-
   // create voucher and send tx
   const refundVoucher = await refundByOwnerVH.signVoucher({
     courseOwner,
@@ -1099,11 +1072,10 @@ async function refundCourseByOwnerHelper({
     throw new Error("No expectRevertWith or expectSuccessWith provided --refundCourseByOwnerHelper--");
   }
 
-  await _expectRefund(input, expectedOutcome);
+  await _expectRefund(paymentId, expectedOutcome);
 
   // check balances after transaction
-  await checkBalancesAfter({
-    operation: "refund",
+  await checkBalancesAfterRefund({
     gasCost: gasCost,
     beforeTxBalances: beforeTxBalances,
     coursePrice: payment.totalAmount,
@@ -1122,8 +1094,15 @@ async function refundCourseByOwnerHelper({
   };
 }
 
-async function _prepareExpectedRefundStates(input, payment, current, waitSuccess) {
-  const { paymentId, redeemer } = input;
+async function _prepareExpectedRefundStates(paymentId, waitSuccess) {
+  const payment = await NewTreasury.getPayment(paymentId);
+  const current = {
+    paymentCounter: await NewTreasury.paymentCounter(),
+    courseOwnerToPayment: await NewTreasury.courseOwnerToPayment(payment.courseReceiver, payment.courseId),
+    ownedCourses: await NewTreasury.getOwnedCourses(payment.courseReceiver),
+    ownedCourseIndex: await NewTreasury.ownedCourseIndex(payment.courseReceiver, payment.courseId),
+    hasOwnedCourse: await NewTreasury.hasOwnedCourse(payment.courseReceiver, payment.courseId),
+  };
 
   const isInvalidPaymentId = paymentId === 0n || paymentId > current.paymentCounter;
   const isAlreadyRefunded = payment.isRefunded;
@@ -1218,8 +1197,7 @@ async function _prepareExpectedRefundStates(input, payment, current, waitSuccess
   };
 }
 
-async function _expectRefund(input, expected) {
-  const { paymentId } = input;
+async function _expectRefund(paymentId, expected) {
   const { payment, courseOwnerToPayment, ownedCoursesArrayOfReceiver, ownedCourseIndex, hasOwnedCourse } = expected;
   // 1) compare payment struct states
   const actualPayment = await NewTreasury.getPayment(paymentId);
@@ -1253,9 +1231,8 @@ async function _expectRefund(input, expected) {
   }
 }
 
-async function getBalances({ payer, courseReceiver, contract, tokenAddress, refundCaller = ethers.ZeroAddress }) {
+async function getBalances({ payer, courseReceiver, contract, tokenAddress, refundCaller }) {
   const isNative = tokenAddress === ethers.ZeroAddress;
-  const isAnyRefCaller = refundCaller !== ethers.ZeroAddress;
 
   let payerToken = 0n;
   let receiverToken = 0n;
@@ -1267,13 +1244,13 @@ async function getBalances({ payer, courseReceiver, contract, tokenAddress, refu
     payerToken = await ERC20.balanceOf(payer);
     receiverToken = await ERC20.balanceOf(courseReceiver);
     contractToken = await ERC20.balanceOf(contract);
-    refundCallerToken = refundCaller !== ethers.ZeroAddress ? await ERC20.balanceOf(refundCaller) : 0n;
+    refundCallerToken = await ERC20.balanceOf(refundCaller);
   }
 
   const payerNative = await ethers.provider.getBalance(payer);
   const receiverNative = await ethers.provider.getBalance(courseReceiver);
   const contractNative = await ethers.provider.getBalance(contract);
-  const refundCallerNative = refundCaller !== ethers.ZeroAddress ? await ethers.provider.getBalance(refundCaller) : 0n;
+  const refundCallerNative = await ethers.provider.getBalance(refundCaller);
 
   return {
     payer: {
@@ -1299,7 +1276,7 @@ async function getBalances({ payer, courseReceiver, contract, tokenAddress, refu
   };
 }
 
-async function checkBalancesAfter({ operation, gasCost, beforeTxBalances, coursePrice, tokenAddress }) {
+async function checkBalancesAfterRefund({ gasCost, beforeTxBalances, coursePrice, tokenAddress }) {
   const beforeTx = beforeTxBalances;
   const afterTx = await getBalances({
     payer: beforeTxBalances.payer.address,
@@ -1310,45 +1287,18 @@ async function checkBalancesAfter({ operation, gasCost, beforeTxBalances, course
   });
 
   const isNative = tokenAddress === ethers.ZeroAddress;
-  const isBuy = operation === "buy";
-  const isRefund = operation === "refund";
   const txSucceeded = gasCost > 0n;
 
-  if (txSucceeded && (isBuy || isRefund)) {
-    if (isBuy && isNative) {
-      // payer native ↓ by coursePrice + gasUsed
-      const nativeDelta = beforeTx.payer.nativeBalance - afterTx.payer.nativeBalance;
-      expect(nativeDelta).to.equal(coursePrice + gasCost);
-      // contract native ↑ by coursePrice
-      const contractNativeDelta = afterTx.contract.nativeBalance - beforeTx.contract.nativeBalance;
-      expect(contractNativeDelta).to.equal(coursePrice);
-    }
-
-    if (isBuy && !isNative) {
-      // payer native ↓ gasUsed
-      const nativeDelta = beforeTx.payer.nativeBalance - afterTx.payer.nativeBalance;
-      expect(nativeDelta).to.equal(gasCost);
-      // contract native is unchanged
-      expect(afterTx.contract.nativeBalance).to.equal(beforeTx.contract.nativeBalance);
-
-      // payer token ↓ by coursePrice
-      const tokenDelta = beforeTx.payer.tokenBalance - afterTx.payer.tokenBalance;
-      expect(tokenDelta).to.equal(coursePrice);
-      // contract token ↑ by coursePrice
-      const contractTokenDelta = afterTx.contract.tokenBalance - beforeTx.contract.tokenBalance;
-      expect(contractTokenDelta).to.equal(coursePrice);
-    }
+  if (txSucceeded) {
     if (beforeTx.payer.address === beforeTx.refundCaller.address) {
-      if (isRefund && isNative) {
+      if (isNative) {
         // payer native ↑ (by coursePrice - by gasCost)
         const nativeDelta = afterTx.payer.nativeBalance - beforeTx.payer.nativeBalance;
         expect(nativeDelta).to.equal(coursePrice - gasCost);
         // contract native ↓ by coursePrice
         const contractNativeDelta = beforeTx.contract.nativeBalance - afterTx.contract.nativeBalance;
         expect(contractNativeDelta).to.equal(coursePrice);
-      }
-
-      if (isRefund && !isNative) {
+      } else {
         // payer native ↓ by gasCost
         const nativeDelta = beforeTx.payer.nativeBalance - afterTx.payer.nativeBalance;
         expect(nativeDelta).to.equal(gasCost);
@@ -1362,8 +1312,9 @@ async function checkBalancesAfter({ operation, gasCost, beforeTxBalances, course
         expect(contractTokenDelta).to.equal(coursePrice);
       }
     }
+
     if (beforeTx.payer.address != beforeTx.refundCaller.address) {
-      if (isRefund && isNative) {
+      if (isNative) {
         // refund caller native ↓ (by gasCost)
         const nativeDeltaRC = beforeTx.refundCaller.nativeBalance - afterTx.refundCaller.nativeBalance;
         expect(nativeDeltaRC).to.equal(gasCost);
@@ -1373,9 +1324,7 @@ async function checkBalancesAfter({ operation, gasCost, beforeTxBalances, course
         // contract native ↓ by coursePrice
         const contractNativeDelta = beforeTx.contract.nativeBalance - afterTx.contract.nativeBalance;
         expect(contractNativeDelta).to.equal(coursePrice);
-      }
-
-      if (isRefund && !isNative) {
+      } else {
         // refund caller native ↓ (by gasCost)
         const nativeDeltaRC = beforeTx.refundCaller.nativeBalance - afterTx.refundCaller.nativeBalance;
         expect(nativeDeltaRC).to.equal(gasCost);
@@ -1393,11 +1342,9 @@ async function checkBalancesAfter({ operation, gasCost, beforeTxBalances, course
     }
   }
 
-  const isThereARefundCaller = beforeTx.refundCaller.address !== ethers.ZeroAddress;
-  const isRefundCallerSameAsPayer = beforeTx.payer.address === beforeTx.refundCaller.address;
-
   if (!txSucceeded) {
-    if ((isThereARefundCaller && isRefundCallerSameAsPayer) || !isThereARefundCaller) {
+    const isRefundCallerSameAsPayer = beforeTx.payer.address === beforeTx.refundCaller.address;
+    if (isRefundCallerSameAsPayer) {
       // payer native ↓ by UNNOWN amount (gas cost)
       const nativeDelta = beforeTx.payer.nativeBalance - afterTx.payer.nativeBalance;
       expect(nativeDelta).to.be.greaterThan(0n);
@@ -1409,9 +1356,7 @@ async function checkBalancesAfter({ operation, gasCost, beforeTxBalances, course
         // contract token is unchanged
         expect(afterTx.contract.tokenBalance).to.equal(beforeTx.contract.tokenBalance);
       }
-    }
-
-    if (isThereARefundCaller && !isRefundCallerSameAsPayer) {
+    } else {
       // refund caller native ↓ by UNNOWN amount (gas cost)
       const nativeDeltaRC = beforeTx.refundCaller.nativeBalance - afterTx.refundCaller.nativeBalance;
       expect(nativeDeltaRC).to.be.greaterThan(0n);
@@ -1429,6 +1374,7 @@ async function checkBalancesAfter({ operation, gasCost, beforeTxBalances, course
       }
     }
   }
+
   const isUniqueReceiver =
     beforeTx.courseReceiver.address !== beforeTx.payer.address &&
     beforeTx.courseReceiver.address !== beforeTx.contract.address &&
@@ -1437,7 +1383,7 @@ async function checkBalancesAfter({ operation, gasCost, beforeTxBalances, course
     // receiver native is unchanged in all cases
     expect(afterTx.courseReceiver.nativeBalance).to.equal(beforeTx.courseReceiver.nativeBalance);
     if (!isNative) {
-      // receiver token is unchanged in all cases during erc20 operations
+      // receiver token is unchanged in all cases during erc20
       expect(afterTx.courseReceiver.tokenBalance).to.equal(beforeTx.courseReceiver.tokenBalance);
     }
   }
