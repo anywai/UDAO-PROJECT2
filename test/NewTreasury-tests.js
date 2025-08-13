@@ -339,6 +339,9 @@ async function _prepareExpectedUpdateState(voucher, waitSuccess) {
     NewTreasury.getCourse(courseId), //{ uri, sellable } if invalid courseId retuns "", false
     NewTreasury.getAuthorizedWithdrawers(courseId), // if invalid courseId returns []
   ]);
+  // if withdrawers is empty, use previous withdrawers
+  const effectiveWithdrawers = withdrawers.length === 0 ? prevWithdrawers : withdrawers;
+
   const oldUriHash = ethers.keccak256(ethers.toUtf8Bytes(prevCourse.uri));
   const newUriHash = ethers.keccak256(ethers.toUtf8Bytes(uri));
   const [oldUriHashToId, newUriHashToId] = await Promise.all([
@@ -352,9 +355,9 @@ async function _prepareExpectedUpdateState(voucher, waitSuccess) {
   const expectedUri = waitSuccess ? (uriUnchanged ? prevCourse.uri : uri) : prevCourse.uri;
   const expectedSellable = waitSuccess ? sellable : prevCourse.sellable;
   // ---- expected withdrawers ----
-  const expectedWithdrawers = waitSuccess ? withdrawers : prevWithdrawers;
+  const expectedWithdrawers = waitSuccess ? effectiveWithdrawers : prevWithdrawers;
   // union set → isAuthorized map
-  const addrSet = new Set([...prevWithdrawers, ...withdrawers]);
+  const addrSet = new Set([...prevWithdrawers, ...effectiveWithdrawers]);
   const expectedIsAuthorized = Object.fromEntries([...addrSet].map((a) => [a, expectedWithdrawers.includes(a)]));
   // expected uriToCourseId entries
   const expectedUriToCourseId = [
@@ -2201,7 +2204,7 @@ describe("NewTreasury Contract Tests", function () {
             courseId: course1.courseIds[0],
             uri: "https://example.com/isolate/only-uri",
             sellable: false,
-            withdrawers: [instructor2.address],
+            withdrawers: [], // same with =[instructor2.address] but cheaper
             redeemer: instructor2,
             validUntil: now + 86400,
             expectSuccessWith: "CourseUpdated",
@@ -2270,6 +2273,27 @@ describe("NewTreasury Contract Tests", function () {
             expectSuccessWith: "CourseUpdated",
           });
           // Expect: all updates succeed, selective redundancy is handled gracefully
+        });
+
+        it("should keep previous withdrawers when empty withdrawers array is provided", async function () {
+          // Step 1: instructor1 creates a generic course with [instructor1]
+          const courseId1 = await quickCreateACourse();
+          const prevWithdrawers = await NewTreasury.getAuthorizedWithdrawers(courseId1);
+
+          // Step 2: Update with empty withdrawers -> should KEEP previous set
+          await updateCourseHelper({
+            courseId: courseId1,
+            uri: "https://example.com/emptied-uri",
+            sellable: true,
+            withdrawers: [], // <-- boş gönderiyoruz
+            redeemer: instructor1,
+            validUntil: now + 86400,
+            expectSuccessWith: "CourseUpdated", // <-- artık success bekliyoruz
+          });
+
+          // Ek güvence: zincirden kontrol (opsiyonel)
+          const wAfter = await NewTreasury.getAuthorizedWithdrawers(courseId1);
+          expect(wAfter).to.deep.equal(prevWithdrawers);
         });
         /////### End of UPDATE Course Success Cases###/////
       });
@@ -2401,22 +2425,6 @@ describe("NewTreasury Contract Tests", function () {
             expectRevertWith: "WithdrawerAddressIsZero()",
           });
           // Expect: Reverts with "Zero address not allowed"
-        });
-
-        it("should fail to update a course with empty withdrawers array", async function () {
-          // Step 1: instructor1 creates a generic course with [instructor1] array
-          const courseId1 = await quickCreateACourse();
-          // Step 2: Try to update course with empty withdrawers
-          const update = await updateCourseHelper({
-            courseId: courseId1,
-            uri: "https://example.com/emptied-uri",
-            sellable: true,
-            withdrawers: [],
-            redeemer: instructor1,
-            validUntil: now + 86400,
-            expectRevertWith: "WithdrawerArrayIsEmpty()",
-          });
-          // Expect: Reverts with "WithdrawerArrayIsEmpty()"
         });
 
         it("should fail to update course if redeemer is not in withdrawers and not backend", async function () {
