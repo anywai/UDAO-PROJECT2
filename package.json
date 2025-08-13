@@ -10,8 +10,8 @@
   },
   "dependencies": {
     "@chainlink/contracts": "^1.4.0",
-    "@openzeppelin/contracts": ">=4.6.0 <4.8.0",
-    "@openzeppelin/contracts-upgradeable": "^4.8.0",
+    "@openzeppelin/contracts": "^5.0.0",
+    "@openzeppelin/contracts-upgradeable": "^5.0.0",
     "alchemy-sdk": "^3.6.1",
     "dotenv": "^17.2.0",
     "merkletreejs": "^0.5.2"
