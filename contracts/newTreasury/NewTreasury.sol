@@ -269,11 +269,11 @@ contract NewTreasury is EIP712, ReentrancyGuard {
 
             address[] storage aw = authorizedWithdrawers[newCourseId];
             // spare memory for withdrawers array
-            uint256 slotNum;
+            uint256 base;
             assembly {
                 sstore(aw.slot, lenW) // set array length once
                 mstore(0x00, aw.slot) // store array slot in memory
-                slotNum := keccak256(0x00, 0x20) // get first element slot
+                base := keccak256(0x00, 0x20) // get first element slot
             }
 
             for (uint256 j = 0; j < lenW; ) {
@@ -285,11 +285,10 @@ contract NewTreasury is EIP712, ReentrancyGuard {
                 isAuthorizedWithdrawer[w][newCourseId] = true;
                 // gas efficient aw.push(w) op:
                 assembly {
-                    sstore(slotNum, w) // store w into array
+                    sstore(add(base, j), w) // store w into array
                 }
 
                 unchecked {
-                    slotNum++;
                     j++;
                 }
             }
@@ -347,45 +346,50 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         }
 
         bool sellable = voucher.sellable;
-        address redeemer = voucher.redeemer;
-        uint256 validUntil = voucher.validUntil;
-
         // create digest
-        bytes32 digest = _hashTypedDataV4(
-            keccak256(
-                abi.encode(
-                    UPDATE_COURSE_VOUCHER_TYPEHASH,
-                    courseId,
-                    sellable,
-                    newUriHash,
-                    keccak256(abi.encodePacked(withdrawers)),
-                    redeemer,
-                    validUntil
+        {
+            address redeemer = voucher.redeemer;
+            //uint256 validUntil = voucher.validUntil;
+            bytes32 digest = _hashTypedDataV4(
+                keccak256(
+                    abi.encode(
+                        UPDATE_COURSE_VOUCHER_TYPEHASH,
+                        courseId,
+                        sellable,
+                        newUriHash,
+                        keccak256(abi.encodePacked(withdrawers)),
+                        redeemer,
+                        voucher.validUntil
+                    )
                 )
-            )
-        );
+            );
 
-        // verify signer and validity
-        _verifyVoucherSignerAndValidity(
-            digest,
-            voucher.signature,
-            redeemer,
-            validUntil
-        );
+            // verify signer and validity
+            _verifyVoucherSignerAndValidity(
+                digest,
+                voucher.signature,
+                redeemer,
+                voucher.validUntil
+            );
+        }
 
         if (lenW != 0) {
             // clear previous authorized withdrawers
-            address[] storage previousWithdrawers = authorizedWithdrawers[
-                courseId
-            ]; //storage gas cheper in this case
-            uint256 lenPW = previousWithdrawers.length;
+            address[] storage aw = authorizedWithdrawers[courseId]; //storage gas cheper in this case
+            uint256 lenPW = aw.length;
             for (uint256 i = 0; i < lenPW; ) {
-                isAuthorizedWithdrawer[previousWithdrawers[i]][
-                    courseId
-                ] = false;
+                isAuthorizedWithdrawer[aw[i]][courseId] = false;
                 unchecked {
                     i++;
                 }
+            }
+
+            //address[] storage aw = authorizedWithdrawers[courseId];
+            uint256 base;
+            assembly {
+                sstore(aw.slot, lenW) // set length once
+                mstore(0x00, aw.slot)
+                base := keccak256(0x00, 0x20) // first element slot
             }
 
             for (uint256 i = 0; i < lenW; ) {
@@ -395,25 +399,29 @@ contract NewTreasury is EIP712, ReentrancyGuard {
                     revert WithdrawerArrayContainsDuplicates();
 
                 isAuthorizedWithdrawer[w][courseId] = true;
+
+                assembly {
+                    sstore(add(base, i), w) //store new ws' to authorizedWithdrawers
+                }
+
                 unchecked {
                     i++;
                 }
             }
-            authorizedWithdrawers[courseId] = withdrawers;
+            //authorizedWithdrawers[courseId] = withdrawers; push daha verimli hatta asembly push dahada verimli.
         }
 
-        if (
-            !isAuthorizedWithdrawer[msg.sender][courseId] &&
-            !hasBackendRole[msg.sender]
-        ) revert CallerIsNeitherWithdrawerNorBackend();
+        if (!hasBackendRole[msg.sender]) {
+            if (!isAuthorizedWithdrawer[msg.sender][courseId])
+                revert CallerIsNeitherWithdrawerNorBackend();
+        }
 
         // get existing course
         Course storage courseExisting = courses[courseId];
         // URI: only if non-empty and actually changed
         if (updateUri) {
-            // get old URI and compare
-            bytes32 oldUriHash = keccak256(bytes(courseExisting.uri));
-            delete uriToCourseId[oldUriHash]; // clean up old
+            //bytes32 oldUriHash = keccak256(bytes(courseExisting.uri));
+            delete uriToCourseId[keccak256(bytes(courseExisting.uri))]; // clean up old
             uriToCourseId[newUriHash] = courseId; // assign new
             courseExisting.uri = voucher.uri;
         }

@@ -153,6 +153,8 @@ async function createCourseBatchHelper({
   } else if (waitSuccess) {
     tx = await NewTreasury.connect(createBatchTxCaller).createCourseBatch(vouchers);
     const receipt = await tx.wait();
+    //const gasUsed = receipt.gasUsed;
+    //console.log("Gas used: ", gasUsed);
 
     // 5) Event parsing ve doğrulama
     const parsedEvents = receipt.logs
