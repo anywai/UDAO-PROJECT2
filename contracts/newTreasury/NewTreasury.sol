@@ -37,7 +37,7 @@ contract NewTreasury is EIP712, ReentrancyGuard {
     error UdaoCutsSumExceeds100Percent();
 
     // voucher
-    error SignatureIsInvalidOrSignerIsNotBackend(); // TODO: divide later
+    error SignatureIsInvalidOrSignerIsNotBackend(); // TODO: X1 divide later
     error CallerIsNotVoucherRedeemer();
     error VoucherIsExpired();
 
@@ -132,13 +132,9 @@ contract NewTreasury is EIP712, ReentrancyGuard {
             revert ChangeHasNoEffect();
 
         foundationAddress = newFoundationAddress;
-        if (!hasBackendRole[newFoundationAddress]) {
-            hasBackendRole[newFoundationAddress] = true; // ensure new foundation wallet has the backend role
-        }
+        hasBackendRole[newFoundationAddress] = true; // ensure new foundation wallet has the backend role
+        hasBackendRole[currentFoundation] = false; // revoke backend role from old foundation address
 
-        if (hasBackendRole[currentFoundation]) {
-            hasBackendRole[currentFoundation] = false; // revoke backend role from old foundation address
-        }
         emit FoundationAddressUpdated(newFoundationAddress, currentFoundation);
     }
 
@@ -384,7 +380,6 @@ contract NewTreasury is EIP712, ReentrancyGuard {
                 }
             }
 
-            //address[] storage aw = authorizedWithdrawers[courseId];
             uint256 base;
             assembly {
                 sstore(aw.slot, lenW) // set length once
@@ -408,7 +403,7 @@ contract NewTreasury is EIP712, ReentrancyGuard {
                     i++;
                 }
             }
-            //authorizedWithdrawers[courseId] = withdrawers; push daha verimli hatta asembly push dahada verimli.
+            //COMMENTED authorizedWithdrawers[courseId] = withdrawers; push daha verimli hatta asembly push dahada verimli.
         }
 
         if (!hasBackendRole[msg.sender]) {
@@ -420,16 +415,15 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         Course storage courseExisting = courses[courseId];
         // URI: only if non-empty and actually changed
         if (updateUri) {
-            //bytes32 oldUriHash = keccak256(bytes(courseExisting.uri));
+            //COMMENTED! bytes32 oldUriHash = keccak256(bytes(courseExisting.uri));
             delete uriToCourseId[keccak256(bytes(courseExisting.uri))]; // clean up old
             uriToCourseId[newUriHash] = courseId; // assign new
             courseExisting.uri = voucher.uri;
         }
 
         // update sellable
-        if (courseExisting.sellable != sellable) {
-            courseExisting.sellable = sellable;
-        }
+        courseExisting.sellable = sellable;
+
         // emit event
         emit CourseUpdated(courseId);
     }
@@ -441,7 +435,7 @@ contract NewTreasury is EIP712, ReentrancyGuard {
     uint256 public maxBatchWithdrawSize = 10; // max 10 sales can be withdrawn at once
     uint256 public refundWindow = 20 days;
 
-    uint256 public atFoundCut = 6000; // %46 foundation cut (any token)
+    uint256 public atFoundCut = 6000; // %6 foundation cut (any token)
     uint256 public atGoverCut = 1000; // %1 governance cut (any token)
     uint256 public utFoundCut = 4000; // %4 foundation cut (udao)
     uint256 public utGoverCut = 500; // %0.5 governance cut (udao)
@@ -513,7 +507,7 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         uint256 currentWindow = refundWindow;
         if (newWindow == currentWindow) revert ChangeHasNoEffect();
 
-        refundWindow = newWindow; // convert days to seconds
+        refundWindow = newWindow;
         emit RefundWindowUpdated(newWindow, currentWindow);
     }
 
@@ -524,16 +518,16 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         uint256 _utGoverCut
     ) external {
         if (!hasBackendRole[msg.sender]) revert CallerIsNotBackend();
-        if (_atFoundCut + _atGoverCut >= 100_000)
-            revert NonUdaoCutsSumExceeds100Percent();
-        if (_utFoundCut + _utGoverCut >= 100_000)
-            revert UdaoCutsSumExceeds100Percent();
         if (
             _atFoundCut == atFoundCut &&
             _atGoverCut == atGoverCut &&
             _utFoundCut == utFoundCut &&
             _utGoverCut == utGoverCut
         ) revert ChangeHasNoEffect();
+        if (_atFoundCut + _atGoverCut >= 100_000)
+            revert NonUdaoCutsSumExceeds100Percent();
+        if (_utFoundCut + _utGoverCut >= 100_000)
+            revert UdaoCutsSumExceeds100Percent();
 
         atFoundCut = _atFoundCut;
         atGoverCut = _atGoverCut;
@@ -1260,4 +1254,14 @@ ya da başka kontratlar seni tekrar çağırabilseydi,
 
 O zaman reentrancy riskine karşı nonReentrant gerekirdi.
 
+*/
+
+/*
+TODO X1: Voucher konusuna tekrar bir bak mümkünse ECDSA yı jumpsız kullan. internal fonksiyonu düzenle ve verify'ın gaz costunu düşür.
+TODO X2: Eventleri gözden geçir. Indexed pahalı. minimum gereken ile minimum gaz costu hedefle
+TODO X3: 32byte değişkeleri 8-16-32 gibi değerlere düşürebilirsin. atFound Refund Window maxxBatch vs.
+TODO X4: fonksiyon içi değişkenler uint256 mı olmak zorunda bir bak. Mesela for loop i.
+TODO X5: onlyBackend onlyFoundation modifier'a dönebilir. Sürekli tekrarlayan revertler internal pure'a dönebilir. (Jump cost)
+TODO X6: public private değişkenler, sabitler gaza etkisi.
+TODO X7: {} sadece o blokta tanımlanan değişkenlerin ömrünü kısaltır. Gerekliyse kullan.
 */

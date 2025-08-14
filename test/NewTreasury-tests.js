@@ -2118,7 +2118,7 @@ describe("NewTreasury Contract Tests", function () {
           // Step 1: instructor1 creates a course via CreateCourseVoucher
           const course1 = await createCourseBatchHelper({
             uries: ["https://example.com/course/1"],
-            withdrawersArrays: [[instructor1.address, instructor2.address]],
+            withdrawersArrays: [[instructor1.address, instructor2.address, instructor4.address]],
             redeemers: [instructor1.address],
             validUntils: [now + 86400],
             createBatchTxCaller: instructor1,
@@ -2186,6 +2186,29 @@ describe("NewTreasury Contract Tests", function () {
             sellable: true,
             withdrawers: [instructor2.address, instructor3.address], // yeni withdrawer set
             redeemer: backend, // backend yetkili
+            validUntil: now + 86400,
+            expectSuccessWith: "CourseUpdated",
+          });
+          // Expect: update succeeds via backend signer
+        });
+
+        it("should allow course update if instructor is in new withdrawers list but not in previous", async function () {
+          // Step 1: instructor1 creates a valid course
+          const course1 = await createCourseBatchHelper({
+            uries: ["https://example.com/backend-update-course"],
+            withdrawersArrays: [[instructor1.address]],
+            redeemers: [instructor1.address],
+            validUntils: [now + 86400],
+            createBatchTxCaller: instructor1,
+            expectSuccessWith: "CourseCreated",
+          });
+          // Step 2: backend updates the course (not in withdrawers)
+          const update_course1 = await updateCourseHelper({
+            courseId: course1.courseIds[0],
+            uri: "https://example.com/backend-updated-uri",
+            sellable: true,
+            withdrawers: [instructor2.address, instructor3.address], // yeni withdrawer set
+            redeemer: instructor2, // backend yetkili
             validUntil: now + 86400,
             expectSuccessWith: "CourseUpdated",
           });
