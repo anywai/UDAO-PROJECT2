@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-//import "@openzeppelin/contracts/access/AccessControl.sol"; //is AccessControl
-import "@openzeppelin/contracts/utils/cryptography/EIP712.sol"; // draft-EIP712.sol path’i eski. OZ v5+’te EIP712.sol.
+import "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -45,6 +44,7 @@ contract NewTreasury is EIP712, ReentrancyGuard {
     // create/update course
     error CreateBatchSizeExceedsLimit();
     error UriIsAlreadyUsedOrDuplicatedInBatch();
+    error UriIsAlreadyUsed();
     error UriIsEmpty();
     error WithdrawerArrayIsEmpty();
     error WithdrawerArrayExceedsLimit();
@@ -132,7 +132,10 @@ contract NewTreasury is EIP712, ReentrancyGuard {
             revert ChangeHasNoEffect();
 
         foundationAddress = newFoundationAddress;
-        hasBackendRole[newFoundationAddress] = true; // ensure new foundation wallet has the backend role
+        if (!hasBackendRole[newFoundationAddress]) {
+            hasBackendRole[newFoundationAddress] = true; // ensure new foundation wallet has the backend role
+        }
+
         if (hasBackendRole[currentFoundation]) {
             hasBackendRole[currentFoundation] = false; // revoke backend role from old foundation address
         }
@@ -182,11 +185,13 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         udaoTokenAddress = _udaoTokenAddress; // set udao token address
 
         hasBackendRole[_foundationAddress] = true; // ensure foundation wallet has the backend role
-        hasBackendRole[msg.sender] = true;
+        if (msg.sender != _foundationAddress) {
+            hasBackendRole[msg.sender] = true;
+        }
     }
 
     //string constant EMPTY_URI = "";
-    bytes32 constant EMPTY_URI_HASH = keccak256(bytes(""));
+    bytes32 public constant EMPTY_URI_HASH = keccak256(bytes(""));
 
     /////### COURSE CREATION & UPDATING LOGIC ###/////
     struct Course {
@@ -218,26 +223,24 @@ contract NewTreasury is EIP712, ReentrancyGuard {
     ) external {
         uint256 len = vouchers.length;
         if (len > maxBatchCreateSize) revert CreateBatchSizeExceedsLimit();
-
         uint256 maxW = maxAllowedWithdrawers;
-        //address sender = msg.sender; // ufak cache
-        //     bool senderIsBackend = hasBackendRole[sender];
+        bool isCallerBackend = hasBackendRole[msg.sender];
 
         for (uint256 i = 0; i < len; ) {
             CreateCourseVoucher calldata voucher = vouchers[i];
-            address[] memory withdrawers = voucher.withdrawers;
-            uint256 lenW = withdrawers.length; //array length
-            address redeemer = voucher.redeemer;
-            uint256 validUntil = voucher.validUntil;
-
-            // hash URI
+            //uri hash
             bytes32 uriHash = keccak256(bytes(voucher.uri));
+            if (uriHash == EMPTY_URI_HASH) revert UriIsEmpty();
             if (uriToCourseId[uriHash] != 0)
                 revert UriIsAlreadyUsedOrDuplicatedInBatch();
-            if (uriHash == EMPTY_URI_HASH) revert UriIsEmpty();
 
+            // withdrawers
+            address[] memory withdrawers = voucher.withdrawers;
+            uint256 lenW = withdrawers.length; //array length
             if (lenW == 0) revert WithdrawerArrayIsEmpty();
             if (lenW > maxW) revert WithdrawerArrayExceedsLimit();
+            address redeemer = voucher.redeemer;
+            uint256 validUntil = voucher.validUntil;
 
             // create digest for the voucher
             bytes32 digest = _hashTypedDataV4(
@@ -251,7 +254,6 @@ contract NewTreasury is EIP712, ReentrancyGuard {
                     )
                 )
             );
-
             // verify voucher, signer and validity
             _verifyVoucherSignerAndValidity(
                 digest,
@@ -265,7 +267,15 @@ contract NewTreasury is EIP712, ReentrancyGuard {
                 newCourseId = ++courseCounter; // önce arttır, sonra arttırdığın değeri ata. Tek okuma ve yazma.
             }
 
-            bool isRedeemerAuthorized = false;
+            address[] storage aw = authorizedWithdrawers[newCourseId];
+            // spare memory for withdrawers array
+            uint256 slotNum;
+            assembly {
+                sstore(aw.slot, lenW) // set array length once
+                mstore(0x00, aw.slot) // store array slot in memory
+                slotNum := keccak256(0x00, 0x20) // get first element slot
+            }
+
             for (uint256 j = 0; j < lenW; ) {
                 address w = withdrawers[j];
                 if (w == address(0)) revert WithdrawerAddressIsZero();
@@ -273,22 +283,23 @@ contract NewTreasury is EIP712, ReentrancyGuard {
                     revert WithdrawerArrayContainsDuplicates();
 
                 isAuthorizedWithdrawer[w][newCourseId] = true;
-
-                if (!isRedeemerAuthorized && w == msg.sender) {
-                    isRedeemerAuthorized = true;
+                // gas efficient aw.push(w) op:
+                assembly {
+                    sstore(slotNum, w) // store w into array
                 }
+
                 unchecked {
+                    slotNum++;
                     j++;
                 }
             }
 
-            if (!isRedeemerAuthorized) {
-                if (!hasBackendRole[msg.sender])
+            if (!isCallerBackend) {
+                if (!isAuthorizedWithdrawer[msg.sender][newCourseId])
                     revert CallerIsNeitherWithdrawerNorBackend();
             }
 
             uriToCourseId[uriHash] = newCourseId;
-            authorizedWithdrawers[newCourseId] = withdrawers;
             courses[newCourseId] = Course({uri: voucher.uri, sellable: true});
 
             emit CourseCreated(newCourseId);
@@ -296,6 +307,7 @@ contract NewTreasury is EIP712, ReentrancyGuard {
                 i++;
             }
         }
+        // end of createCourseBatch
     }
 
     event CourseUpdated(uint256 indexed courseId);
@@ -330,7 +342,7 @@ contract NewTreasury is EIP712, ReentrancyGuard {
             if (hashToId == 0) {
                 updateUri = true;
             } else if (hashToId != courseId) {
-                revert UriIsAlreadyUsedOrDuplicatedInBatch();
+                revert UriIsAlreadyUsed();
             }
         }
 
@@ -1172,7 +1184,7 @@ contract NewTreasury is EIP712, ReentrancyGuard {
     }
 
     receive() external payable {
-        revert("Direct ETH not accepted"); // prevent direct ETH transfers
+        revert DirectETHNotAccepted(); // prevent direct ETH transfers
     }
 }
 

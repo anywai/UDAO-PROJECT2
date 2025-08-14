@@ -1841,6 +1841,51 @@ describe("NewTreasury Contract Tests", function () {
           });
           // Expect: all 3 courses created successfully with unique URIs
         });
+
+        it("should handle two 40 to 10 batches with backend and instructor1", async function () {
+          const BATCH = 40;
+          // 10 withdrawers per course
+          const W = [
+            instructor1.address,
+            instructor2.address,
+            instructor3.address,
+            instructor4.address,
+            instructor5.address,
+            buyer1.address,
+            buyer2.address,
+            buyer3.address,
+            buyer4.address,
+            buyer5.address,
+          ];
+
+          await NewTreasury.connect(backend).setMaxAllowedWithdrawers(10);
+          await NewTreasury.connect(backend).setMaxBatchCreateSize(BATCH);
+
+          const makeUris = (pfx) => Array.from({ length: BATCH }, (_, i) => `https://example.com/${pfx}/${i + 1}`);
+          const makeArray = (val) => Array.from({ length: BATCH }, () => val);
+          const makeWithdrawersArrays = () => Array.from({ length: BATCH }, () => W.slice()); // clone per item
+
+          // ---- Batch #1 called by backend ----
+          await createCourseBatchHelper({
+            uries: makeUris("batch1"),
+            withdrawersArrays: makeWithdrawersArrays(),
+            redeemers: makeArray(backend.address), // <-- .address (NOT signer)
+            validUntils: makeArray(now + 86400),
+            createBatchTxCaller: backend, // signer burada doğru
+            expectSuccessWith: "CourseCreated",
+          });
+
+          // ---- Batch #2 called by instructor1 ----
+          await createCourseBatchHelper({
+            uries: makeUris("batch2"),
+            withdrawersArrays: makeWithdrawersArrays(),
+            redeemers: makeArray(instructor1.address), // <-- .address
+            validUntils: makeArray(now + 86400),
+            createBatchTxCaller: instructor1,
+            expectSuccessWith: "CourseCreated",
+          });
+        });
+
         /////### End of CREATE Course Success Cases###/////
       });
 
@@ -2380,9 +2425,9 @@ describe("NewTreasury Contract Tests", function () {
             withdrawers: [instructor2.address],
             redeemer: instructor2,
             validUntil: now + 86400,
-            expectRevertWith: "UriIsAlreadyUsedOrDuplicatedInBatch()",
+            expectRevertWith: "UriIsAlreadyUsed()",
           });
-          // Expect: Reverts with "UriIsAlreadyUsedOrDuplicatedInBatch()"
+          // Expect: Reverts with "UriIsAlreadyUsed()"
         });
 
         it("should fail to update a course with more than allowed withdrawers", async function () {
