@@ -498,6 +498,7 @@ async function buyCourseBatchHelper({
       value: nativeMsgValue,
     });
     const receipt = await tx.wait();
+    //console.log("Gas used: ", receipt.gasUsed.toString());
     // eventleri kontrol et:
     const parsed = receipt.logs
       .map((l) => {
@@ -4439,6 +4440,19 @@ describe("NewTreasury Contract Tests", function () {
           ethers.ZeroAddress,
           MKT2.target, // 7-8-9
         ];
+
+        const tokenTypesOrd = [
+          MKT1.target,
+          MKT1.target,
+          MKT1.target,
+          ethers.ZeroAddress,
+          ethers.ZeroAddress,
+          ethers.ZeroAddress,
+          MKT2.target, // 1-2-3
+          MKT2.target, // 4-5-6
+          MKT2.target, // 7-8-9
+        ];
+
         const prices = ["5", "6", "7", "8", "9", "10", "11", "12", "13"];
         const receivers = [person1, person2, person3, person4, person5, buyer1, buyer2, buyer3, buyer4];
         const paymentIds = await buyCourseBatchHelper({
@@ -4509,6 +4523,19 @@ describe("NewTreasury Contract Tests", function () {
           validUntil: now + 86400,
           expectSuccessWith: "CoursePaymentsWithdrawn",
           expectations: [WE, WE, WE, PES, PES, PES, RE, RE, RE, PI, RI, PI],
+        });
+
+        // buy course single course with batch helper
+        await buyCourseBatchHelper({
+          courseIds: [courseA.courseIds[0]],
+          tokenAddresses: [MKT1.target],
+          coursePrices: [ethers.parseEther("10")],
+          courseReceivers: [backend.address],
+          redeemers: [backend],
+          validUntils: [now + 86400],
+          nativeMsgValue: 0,
+          buyBatchTxCaller: backend,
+          expectSuccessWith: "ContentPurchased",
         });
       });
 

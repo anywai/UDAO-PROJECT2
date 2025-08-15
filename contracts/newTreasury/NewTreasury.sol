@@ -433,12 +433,12 @@ contract NewTreasury is EIP712, ReentrancyGuard {
     uint256 public maxBatchCreateSize = 10; // max 10 courses can be created at once
     uint256 public maxBatchBuySize = 10; // max 10 courses can be bought at once
     uint256 public maxBatchWithdrawSize = 10; // max 10 sales can be withdrawn at once
-    uint256 public refundWindow = 20 days;
 
     uint32 public atFoundCut = 6000; // %6 foundation cut (any token)
     uint32 public atGoverCut = 1000; // %1 governance cut (any token)
     uint32 public utFoundCut = 4000; // %4 foundation cut (udao)
     uint32 public utGoverCut = 500; // %0.5 governance cut (udao)
+    uint32 public refundWindow = 20 days;
 
     event MaxAllowedWithdrawersUpdated(
         uint256 indexed newMaxAllowedWithdrawers,
@@ -502,9 +502,9 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         emit MaxBatchWithdrawSizeUpdated(newMaxBatch, currentMaxBatch);
     }
 
-    function setRefundWindow(uint256 newWindow) external {
+    function setRefundWindow(uint32 newWindow) external {
         if (!hasBackendRole[msg.sender]) revert CallerIsNotBackend();
-        uint256 currentWindow = refundWindow;
+        uint32 currentWindow = refundWindow;
         if (newWindow == currentWindow) revert ChangeHasNoEffect();
 
         refundWindow = newWindow;
@@ -541,7 +541,7 @@ contract NewTreasury is EIP712, ReentrancyGuard {
     /////### VOUCHER LOGIC ###/////
     function _verifyVoucherSignerAndValidity(
         bytes32 _digest,
-        bytes memory signature,
+        bytes calldata signature,
         address _redeemer,
         uint256 _validUntil
     ) internal view {
@@ -604,8 +604,10 @@ contract NewTreasury is EIP712, ReentrancyGuard {
     ) external payable nonReentrant {
         uint256 len = vouchers.length;
         if (len > maxBatchBuySize) revert BuyBatchSizeExceedsLimit();
-
         uint256 totalNativeRequired = 0;
+        uint256[] memory gotAmounts = new uint256[](len);
+        address lastTok = address(0);
+        uint256 lastBal = 0;
 
         for (uint256 i = 0; i < len; ) {
             BuyCourseVoucher calldata voucher = vouchers[i];
@@ -654,13 +656,21 @@ contract NewTreasury is EIP712, ReentrancyGuard {
             // check if the payment is made in native token or erc20 token
             if (tokenAddress == address(0)) {
                 totalNativeRequired += coursePrice;
+                gotAmounts[i] = coursePrice;
+                lastTok = address(0);
             } else {
-                // transfer the erc20 token from redeemer to this contract
+                uint256 beforeBal = (tokenAddress == lastTok)
+                    ? lastBal
+                    : IERC20(tokenAddress).balanceOf(address(this));
                 IERC20(tokenAddress).safeTransferFrom(
                     msg.sender,
                     address(this),
                     coursePrice
                 );
+
+                lastBal = IERC20(tokenAddress).balanceOf(address(this));
+                gotAmounts[i] = lastBal - beforeBal;
+                lastTok = tokenAddress;
             }
 
             hasOwnedCourse[courseReceiver][courseId] = true;
@@ -678,25 +688,21 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         uint32 _atG = atGoverCut;
         uint32 _utF = utFoundCut;
         uint32 _utG = utGoverCut;
-        uint256 _rw = refundWindow;
+        uint32 _rw = refundWindow;
 
         for (uint256 i = 0; i < len; ) {
             BuyCourseVoucher calldata voucher = vouchers[i];
             // encode the voucher fields to reduce gas cost
             uint256 courseId = voucher.courseId;
             address tokenAddress = voucher.tokenAddress;
-            uint256 coursePrice = voucher.coursePrice;
+            uint256 coursePrice = gotAmounts[i];
             address courseReceiver = voucher.courseReceiver;
 
-            // get cuts
-            bool isUdao = tokenAddress == _udao;
-            uint256 foundCut = isUdao ? _utF : _atF;
-            uint256 goverCut = isUdao ? _utG : _atG;
-
             // calculate shares
-            uint256 foundShare = (coursePrice * foundCut) / 100_000;
-            uint256 goverShare = (coursePrice * goverCut) / 100_000;
-            uint256 instructorShare = coursePrice - foundShare - goverShare;
+            uint256 foundShare = (coursePrice *
+                (tokenAddress == _udao ? _utF : _atF)) / 100_000;
+            uint256 goverShare = (coursePrice *
+                (tokenAddress == _udao ? _utG : _atG)) / 100_000;
 
             // save the payment details
             uint256 newPaymentId;
@@ -710,7 +716,7 @@ contract NewTreasury is EIP712, ReentrancyGuard {
                 courseReceiver: courseReceiver,
                 tokenAddress: tokenAddress,
                 totalAmount: coursePrice,
-                instructorShare: instructorShare,
+                instructorShare: coursePrice - foundShare - goverShare,
                 foundationShare: foundShare,
                 governanceShare: goverShare,
                 endOfRefundWindow: block.timestamp + _rw, //refundWindow,
@@ -719,7 +725,9 @@ contract NewTreasury is EIP712, ReentrancyGuard {
             });
 
             // increase saleCounterPerCourse for this course
-            saleCounterPerCourse[courseId]++;
+            unchecked {
+                saleCounterPerCourse[courseId]++;
+            }
             // save paymentId to courseSaleRecords mapping according to CourseSaleCounter for this course
             courseSaleRecords[courseId][
                 saleCounterPerCourse[courseId]
@@ -1277,8 +1285,8 @@ O zaman reentrancy riskine karşı nonReentrant gerekirdi.
 /*
 TODO X1: Voucher konusuna tekrar bir bak mümkünse ECDSA yı jumpsız kullan. internal fonksiyonu düzenle ve verify'ın gaz costunu düşür.
 TODO X2: Eventleri gözden geçir. Indexed pahalı. minimum gereken ile minimum gaz costu hedefle
-TODO X3: 32byte değişkeleri 8-16-32 gibi değerlere düşürebilirsin. atFound Refund Window maxxBatch vs.
-TODO X4: fonksiyon içi değişkenler uint256 mı olmak zorunda bir bak. Mesela for loop i.
+TODO X3: DONE! 32byte değişkeleri 8-16-32 gibi değerlere düşürebilirsin. atFound Refund Window maxxBatch vs.
+TODO X4: DONE! fonksiyon içi değişkenler uint256 mı olmak zorunda bir bak. Mesela for loop i.
 TODO X5: onlyBackend onlyFoundation modifier'a dönebilir. Sürekli tekrarlayan revertler internal pure'a dönebilir. (Jump cost)
 TODO X6: public private değişkenler, sabitler gaza etkisi.
 TODO X7: {} sadece o blokta tanımlanan değişkenlerin ömrünü kısaltır. Gerekliyse kullan.
