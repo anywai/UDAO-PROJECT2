@@ -762,6 +762,18 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         address tokenAddress,
         address payer
     );
+
+    bytes32 private constant REFUND_COURSE_VOUCHER_TYPEHASH =
+        keccak256(
+            "RefundCourseVoucher(uint256 paymentId,address redeemer,uint256 validUntil)"
+        );
+
+    bytes32
+        private constant REFUND_COURSE_BY_OWNER_AND_COURSE_ID_VOUCHER_TYPEHASH =
+        keccak256(
+            "RefundCourseByOwnerAndCourseIdVoucher(address courseOwner,uint256 courseId,address redeemer,uint256 validUntil)"
+        );
+
     struct RefundCourseVoucher {
         uint256 paymentId;
         address redeemer;
@@ -769,16 +781,13 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         bytes signature;
     }
 
-    bytes32 private constant REFUND_COURSE_VOUCHER_TYPEHASH =
-        keccak256(
-            "RefundCourseVoucher(uint256 paymentId,address redeemer,uint256 validUntil)"
-        );
-
     function refundCourse(
         RefundCourseVoucher calldata voucher
     ) external nonReentrant {
         // encode the voucher fields to reduce gas cost
         uint256 paymentId = voucher.paymentId;
+        if (paymentId == 0 || paymentId > paymentCounter)
+            revert PaymentIdIsInvalid();
         address redeemer = voucher.redeemer;
         uint256 validUntil = voucher.validUntil;
 
@@ -810,12 +819,6 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         uint256 validUntil; // voucher valid until timestamp
         bytes signature;
     }
-
-    bytes32
-        private constant REFUND_COURSE_BY_OWNER_AND_COURSE_ID_VOUCHER_TYPEHASH =
-        keccak256(
-            "RefundCourseByOwnerAndCourseIdVoucher(address courseOwner,uint256 courseId,address redeemer,uint256 validUntil)"
-        );
 
     function refundCourseByOwnerAndCourseId(
         RefundCourseByOwnerAndCourseIdVoucher calldata voucher
@@ -853,43 +856,38 @@ contract NewTreasury is EIP712, ReentrancyGuard {
     }
 
     function _refundCourse(uint256 _paymentId) internal {
-        if (_paymentId == 0 || _paymentId > paymentCounter)
-            revert PaymentIdIsInvalid();
-
         Payment storage payment = payments[_paymentId];
-        //avoid the field access to save gas
-        address _payer = payment.payer;
-        address _tokenAddress = payment.tokenAddress;
-        uint256 _totalAmount = payment.totalAmount;
-        address _receiver = payment.courseReceiver;
-        uint256 _courseId = payment.courseId;
 
         if (payment.isRefunded) revert PaymentIsAlreadyRefunded();
         if (payment.isWithdrawn) revert PaymentIsAlreadyWithdrawn();
         if (payment.endOfRefundWindow < block.timestamp)
             revert RefundWindowHasPassed();
 
+        //avoid the field access to save gas
+        address _receiver = payment.courseReceiver;
+        uint256 _courseId = payment.courseId;
+
+        uint256 courseIndex = ownedCourseIndex[_receiver][_courseId];
+        if (courseIndex == 0) revert CourseIsNotOwnedByReceiver(); //TODO: BATU buraya gelemedim ben
         // Mark refunded before transfer to prevent re-entrancy
         payment.isRefunded = true;
-
         // update hasOwnedCourse mapping
         hasOwnedCourse[_receiver][_courseId] = false;
         // remove the courseId from the ownedCourses list and update the indexes
-        uint256 courseIndex = ownedCourseIndex[_receiver][_courseId];
-        if (courseIndex == 0) revert CourseIsNotOwnedByReceiver(); //TODO: BATU buraya gelemedim ben
-
         uint256 lastIndex = ownedCourses[_receiver].length - 1;
-        uint256 lastCourseId = ownedCourses[_receiver][lastIndex];
-
         //swap & pop
         if (courseIndex != lastIndex) {
+            uint256 lastCourseId = ownedCourses[_receiver][lastIndex];
             ownedCourses[_receiver][courseIndex] = lastCourseId; // swap with the last element
             ownedCourseIndex[_receiver][lastCourseId] = courseIndex; // update the index of the last element
         }
-
         ownedCourses[_receiver].pop(); // remove the last element
         delete ownedCourseIndex[_receiver][_courseId]; // delete the index of the removed courseId
         delete courseOwnerToPayment[_receiver][_courseId]; // remove the paymentId for the course owner
+
+        address _payer = payment.payer;
+        address _tokenAddress = payment.tokenAddress;
+        uint256 _totalAmount = payment.totalAmount;
 
         // Transfer refund
         if (_tokenAddress == address(0)) {
