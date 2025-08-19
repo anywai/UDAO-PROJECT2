@@ -724,6 +724,9 @@ contract NewTreasury is EIP712, ReentrancyGuard {
                 isWithdrawn: false
             });
 
+            // pair paymentId with courseReceiver and courseId
+            courseOwnerToPayment[courseReceiver][courseId] = newPaymentId;
+
             // increase saleCounterPerCourse for this course
             unchecked {
                 saleCounterPerCourse[courseId]++;
@@ -732,9 +735,6 @@ contract NewTreasury is EIP712, ReentrancyGuard {
             courseSaleRecords[courseId][
                 saleCounterPerCourse[courseId]
             ] = newPaymentId;
-
-            // pair paymentId with courseReceiver and courseId
-            courseOwnerToPayment[courseReceiver][courseId] = newPaymentId;
 
             uint256 lenOwned = ownedCourses[courseReceiver].length;
             if (lenOwned == 0) {
