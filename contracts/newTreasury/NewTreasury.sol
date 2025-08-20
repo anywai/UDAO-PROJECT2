@@ -889,9 +889,7 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         oc.pop(); // remove the last element
         delete oi[_courseId]; // delete the index of the removed courseId
         delete courseOwnerToPayment[_receiver][_courseId]; // remove the paymentId for the course owner
-
-        // update hasOwnedCourse mapping
-        hasOwnedCourse[_receiver][_courseId] = false;
+        hasOwnedCourse[_receiver][_courseId] = false; // update hasOwnedCourse mapping
 
         address _payer = payment.payer;
         address _tokenAddress = payment.tokenAddress;
@@ -938,23 +936,23 @@ contract NewTreasury is EIP712, ReentrancyGuard {
     ) external nonReentrant {
         // encode the voucher fields to reduce gas cost
         uint256 courseId = voucher.courseId;
-        uint256 fromIndex = voucher.fromIndex;
-        uint256 toIndex = voucher.toIndex;
-        address redeemer = voucher.redeemer;
-        uint256 validUntil = voucher.validUntil;
-
         if (courseId == 0 || courseId > courseCounter)
             revert CourseIdIsInvalid();
-
+        if (!isAuthorizedWithdrawer[msg.sender][courseId])
+            revert CallerIsNotAuthorizedWithdrawer();
+        uint256 fromIndex = voucher.fromIndex;
+        uint256 toIndex = voucher.toIndex;
         if (
             fromIndex == 0 ||
             fromIndex > toIndex ||
             toIndex > saleCounterPerCourse[courseId]
         ) revert WithdrawIndexRangeIsInvalid();
-
-        if (toIndex - fromIndex + 1 > maxBatchWithdrawSize)
-            revert WithdrawBatchSizeExceedsLimit();
-
+        unchecked {
+            if (toIndex - fromIndex + 1 > maxBatchWithdrawSize)
+                revert WithdrawBatchSizeExceedsLimit();
+        }
+        address redeemer = voucher.redeemer;
+        uint256 validUntil = voucher.validUntil;
         // create digest for the voucher
         bytes32 digest = _hashTypedDataV4(
             keccak256(
@@ -977,10 +975,44 @@ contract NewTreasury is EIP712, ReentrancyGuard {
             validUntil
         );
 
-        if (!isAuthorizedWithdrawer[msg.sender][courseId])
-            revert CallerIsNotAuthorizedWithdrawer();
+        //jump removed so this_withdrawCoursePayments(courseId, fromIndex, toIndex) is below in line code right know:
+        uint256 withdrawnCompleted = 0;
+        uint256 withdrawnFailed = 0;
+        mapping(uint256 => uint256) storage csr = courseSaleRecords[courseId];
 
-        _withdrawCoursePayments(courseId, fromIndex, toIndex);
+        for (uint256 j = fromIndex; j <= toIndex; ) {
+            uint256 paymentId = csr[j];
+            unchecked {
+                j++;
+            }
+            if (paymentId == 0) continue; // imposible branch but cheap
+
+            Payment storage p = payments[paymentId];
+            if (
+                p.isRefunded ||
+                p.isWithdrawn ||
+                p.endOfRefundWindow > block.timestamp
+            ) continue;
+
+            try this.attemptSingleWithdrawOrRevert(paymentId, msg.sender) {
+                unchecked {
+                    withdrawnCompleted++;
+                }
+            } catch {
+                unchecked {
+                    withdrawnFailed++;
+                }
+            }
+        }
+
+        emit CoursePaymentsWithdrawn(
+            courseId,
+            fromIndex,
+            toIndex,
+            msg.sender,
+            withdrawnCompleted
+            //withdrawnFailed // TODO:add this to tests and event
+        );
     }
 
     event CoursePaymentsWithdrawn(
@@ -991,44 +1023,6 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         uint256 withdrawnCompleted
     );
 
-    function _withdrawCoursePayments(
-        uint256 courseId,
-        uint256 fromIndex,
-        uint256 toIndex
-    ) internal {
-        uint256 withdrawnCompleted = 0;
-
-        for (uint256 j = fromIndex; j <= toIndex; j++) {
-            uint256 paymentId = courseSaleRecords[courseId][j];
-            if (paymentId == 0) continue; // TODO: BATU buraya gelemedim ben
-
-            Payment storage p = payments[paymentId];
-
-            if (
-                p.isRefunded ||
-                p.isWithdrawn ||
-                p.endOfRefundWindow > block.timestamp
-            ) continue;
-
-            try this.attemptSingleWithdrawOrRevert(paymentId, msg.sender) {
-                withdrawnCompleted++;
-            } catch {
-                //p.isWithdrawn = false; //if reverted, this will not be set
-                // nothing
-                // needed: emit CourseWithdrawFailed(courseId, paymentId, msg.sender, reason);
-                // TODO: çok silent
-            }
-        }
-
-        emit CoursePaymentsWithdrawn(
-            courseId,
-            fromIndex,
-            toIndex,
-            msg.sender,
-            withdrawnCompleted
-        );
-    }
-
     function attemptSingleWithdrawOrRevert(
         uint256 paymentId,
         address instructor
@@ -1038,34 +1032,46 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         Payment storage p = payments[paymentId];
         // mark as withdrawn before attempting (reentrancy protection)
         p.isWithdrawn = true; //if reverted, this will not be set
-
         address tokenAddress = p.tokenAddress;
         uint256 iShare = p.instructorShare;
         uint256 fShare = p.foundationShare;
         uint256 gShare = p.governanceShare;
+        address gAddress = governanceAddress; // governance address
 
         if (tokenAddress == address(0)) {
-            // Native token transfers
-            (bool iOK, ) = payable(instructor).call{value: iShare}("");
-            //require(iOK);
-            if (!iOK) revert NativeTransferToInstructorFailed(); // da yani okunamıyor ki bu.
-
-            (bool fOK, ) = payable(foundationAddress).call{value: fShare}("");
-            //require(fOK);
-            if (!fOK) revert NativeTransferToFoundationFailed();
-
-            (bool gOK, ) = payable(governanceAddress).call{value: gShare}("");
-            //require(gOK);
-            if (!gOK) revert NativeTransferToGovernanceFailed();
+            if (iShare != 0) {
+                // Native token transfers
+                (bool iOK, ) = payable(instructor).call{value: iShare}("");
+                //require(iOK);
+                if (!iOK) revert NativeTransferToInstructorFailed(); // da yani okunamıyor ki bu.
+            }
+            if (fShare != 0) {
+                (bool fOK, ) = payable(foundationAddress).call{value: fShare}(
+                    ""
+                );
+                //require(fOK);
+                if (!fOK) revert NativeTransferToFoundationFailed();
+            }
+            if (gShare != 0) {
+                (bool gOK, ) = payable(gAddress).call{value: gShare}("");
+                //require(gOK);
+                if (!gOK) revert NativeTransferToGovernanceFailed();
+            }
         } else {
             // ERC20 transfers
-            IERC20(tokenAddress).safeTransfer(instructor, iShare);
-            IERC20(tokenAddress).safeTransfer(foundationAddress, fShare);
-            IERC20(tokenAddress).safeTransfer(governanceAddress, gShare);
+            if (iShare != 0) {
+                IERC20(tokenAddress).safeTransfer(instructor, iShare);
+            }
+            if (fShare != 0) {
+                IERC20(tokenAddress).safeTransfer(foundationAddress, fShare);
+            }
+            if (gShare != 0) {
+                IERC20(tokenAddress).safeTransfer(gAddress, gShare);
+            }
         }
-        if (governanceAddress.code.length > 0) {
-            // governanceAddress is a contract
-            IGovernanceTreasury(governanceAddress).addGovernanceFunds(
+        if (gShare != 0 && gAddress.code.length > 0) {
+            // governanceAddress is a contract gShare != 0 &&
+            IGovernanceTreasury(gAddress).addGovernanceFunds(
                 tokenAddress,
                 gShare
             );
