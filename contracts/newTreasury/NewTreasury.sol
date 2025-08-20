@@ -695,13 +695,13 @@ contract NewTreasury is EIP712, ReentrancyGuard {
             // encode the voucher fields to reduce gas cost
             uint256 courseId = voucher.courseId;
             address tokenAddress = voucher.tokenAddress;
-            uint256 coursePrice = gotAmounts[i];
+            uint256 receivedCoursePrice = gotAmounts[i];
             address courseReceiver = voucher.courseReceiver;
 
             // calculate shares
-            uint256 foundShare = (coursePrice *
+            uint256 foundShare = (receivedCoursePrice *
                 (tokenAddress == _udao ? _utF : _atF)) / 100_000;
-            uint256 goverShare = (coursePrice *
+            uint256 goverShare = (receivedCoursePrice *
                 (tokenAddress == _udao ? _utG : _atG)) / 100_000;
 
             // save the payment details
@@ -715,8 +715,8 @@ contract NewTreasury is EIP712, ReentrancyGuard {
                 payer: msg.sender,
                 courseReceiver: courseReceiver,
                 tokenAddress: tokenAddress,
-                totalAmount: coursePrice,
-                instructorShare: coursePrice - foundShare - goverShare,
+                totalAmount: receivedCoursePrice,
+                instructorShare: receivedCoursePrice - foundShare - goverShare,
                 foundationShare: foundShare,
                 governanceShare: goverShare,
                 endOfRefundWindow: block.timestamp + _rw, //refundWindow,
@@ -867,23 +867,31 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         address _receiver = payment.courseReceiver;
         uint256 _courseId = payment.courseId;
 
-        uint256 courseIndex = ownedCourseIndex[_receiver][_courseId];
-        if (courseIndex == 0) revert CourseIsNotOwnedByReceiver(); //TODO: BATU buraya gelemedim ben
+        uint256[] storage oc = ownedCourses[_receiver];
+        mapping(uint256 => uint256) storage oi = ownedCourseIndex[_receiver];
+        uint256 courseIndex = oi[_courseId];
+        if (courseIndex == 0) revert CourseIsNotOwnedByReceiver(); //TODO: imposible revert case buy cheap
         // Mark refunded before transfer to prevent re-entrancy
         payment.isRefunded = true;
+
+        // remove the courseId from the ownedCourses list and update the indexes
+        // swap & pop
+        unchecked {
+            uint256 lastIndex = oc.length - 1;
+
+            if (courseIndex != lastIndex) {
+                uint256 lastCourseId = oc[lastIndex];
+                oc[courseIndex] = lastCourseId;
+                oi[lastCourseId] = courseIndex; // sentinel 0 burada zaten olamaz
+            }
+        }
+        //
+        oc.pop(); // remove the last element
+        delete oi[_courseId]; // delete the index of the removed courseId
+        delete courseOwnerToPayment[_receiver][_courseId]; // remove the paymentId for the course owner
+
         // update hasOwnedCourse mapping
         hasOwnedCourse[_receiver][_courseId] = false;
-        // remove the courseId from the ownedCourses list and update the indexes
-        uint256 lastIndex = ownedCourses[_receiver].length - 1;
-        //swap & pop
-        if (courseIndex != lastIndex) {
-            uint256 lastCourseId = ownedCourses[_receiver][lastIndex];
-            ownedCourses[_receiver][courseIndex] = lastCourseId; // swap with the last element
-            ownedCourseIndex[_receiver][lastCourseId] = courseIndex; // update the index of the last element
-        }
-        ownedCourses[_receiver].pop(); // remove the last element
-        delete ownedCourseIndex[_receiver][_courseId]; // delete the index of the removed courseId
-        delete courseOwnerToPayment[_receiver][_courseId]; // remove the paymentId for the course owner
 
         address _payer = payment.payer;
         address _tokenAddress = payment.tokenAddress;
@@ -892,8 +900,8 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         // Transfer refund
         if (_tokenAddress == address(0)) {
             // native token
-            (bool sent, ) = payable(_payer).call{value: _totalAmount}("");
-            if (!sent) revert NativeRefundFailed();
+            (bool isSent, ) = payable(_payer).call{value: _totalAmount}("");
+            if (!isSent) revert NativeRefundFailed();
         } else {
             // ERC20
             IERC20(_tokenAddress).safeTransfer(_payer, _totalAmount);
