@@ -524,9 +524,9 @@ contract NewTreasury is EIP712, ReentrancyGuard {
             _utFoundCut == utFoundCut &&
             _utGoverCut == utGoverCut
         ) revert ChangeHasNoEffect();
-        if (_atFoundCut + _atGoverCut >= 100_000)
+        if (_atFoundCut + _atGoverCut > 100_000)
             revert NonUdaoCutsSumExceeds100Percent();
-        if (_utFoundCut + _utGoverCut >= 100_000)
+        if (_utFoundCut + _utGoverCut > 100_000)
             revert UdaoCutsSumExceeds100Percent();
 
         atFoundCut = _atFoundCut;
@@ -1010,8 +1010,8 @@ contract NewTreasury is EIP712, ReentrancyGuard {
             fromIndex,
             toIndex,
             msg.sender,
-            withdrawnCompleted
-            //withdrawnFailed // TODO:add this to tests and event
+            withdrawnCompleted,
+            withdrawnFailed
         );
     }
 
@@ -1020,7 +1020,8 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         uint256 fromIndex,
         uint256 toIndex,
         address indexed withdrawer,
-        uint256 withdrawnCompleted
+        uint256 withdrawnCompleted,
+        uint256 withdrawnFailed
     );
 
     function attemptSingleWithdrawOrRevert(
@@ -1297,8 +1298,6 @@ O zaman reentrancy riskine karşı nonReentrant gerekirdi.
 /*
 TODO X1: Voucher konusuna tekrar bir bak mümkünse ECDSA yı jumpsız kullan. internal fonksiyonu düzenle ve verify'ın gaz costunu düşür.
 TODO X2: Eventleri gözden geçir. Indexed pahalı. minimum gereken ile minimum gaz costu hedefle
-TODO X3: DONE! 32byte değişkeleri 8-16-32 gibi değerlere düşürebilirsin. atFound Refund Window maxxBatch vs.
-TODO X4: DONE! fonksiyon içi değişkenler uint256 mı olmak zorunda bir bak. Mesela for loop i.
 TODO X5: onlyBackend onlyFoundation modifier'a dönebilir. Sürekli tekrarlayan revertler internal pure'a dönebilir. (Jump cost)
 TODO X6: public private değişkenler, sabitler gaza etkisi.
 TODO X7: {} sadece o blokta tanımlanan değişkenlerin ömrünü kısaltır. Gerekliyse kullan.

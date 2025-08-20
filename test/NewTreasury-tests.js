@@ -1461,11 +1461,12 @@ async function withdrawCoursePaymentsHelper({
     }
   } else if (waitSuccess) {
     const expectedWithdrawCount = expectations.filter((e) => e === PES).length;
+    const expectedFailedCount = expectations.filter((e) => e === PEF).length;
 
     tx = await NewTreasury.connect(redeemer).withdrawCoursePayments(voucher);
     await expect(tx)
       .to.emit(NewTreasury, expectSuccessWith)
-      .withArgs(courseId, fromIndex, toIndex, redeemer.address, expectedWithdrawCount);
+      .withArgs(courseId, fromIndex, toIndex, redeemer.address, expectedWithdrawCount, expectedFailedCount);
 
     const receipt = await tx.wait();
     //console.log("Withdraw GasUsed:", receipt.gasUsed);
@@ -2450,6 +2451,22 @@ describe("NewTreasury Contract Tests", function () {
             expectRevertWith: "CallerIsNotVoucherRedeemer()",
           });
           // Expect: Reverts with "CallerIsNotVoucherRedeemer()"
+        });
+
+        it("should fail to update a course with duplicate withdrawers", async function () {
+          // Step 1: instructor1 creates a generic course with [instructor1] array
+          const courseId1 = await quickCreateACourse();
+          // Step 2: instructor1 attempts to update the course with a duplicate withdrawer
+          await updateCourseHelper({
+            courseId: courseId1,
+            uri: "https://example.com/update-duplicate-withdrawer",
+            sellable: true,
+            withdrawers: [instructor1.address, instructor2.address, instructor3.address, instructor1.address], // duplicate withdrawer
+            redeemer: instructor1,
+            validUntil: now + 86400,
+            expectRevertWith: "WithdrawerArrayContainsDuplicates()",
+          });
+          // Expect: Reverts with "WithdrawerArrayContainsDuplicates()"
         });
 
         it("should fail to update course with a URI that is already used by another course", async function () {
@@ -4414,6 +4431,251 @@ describe("NewTreasury Contract Tests", function () {
         });
         // Expect: "CoursePaymentsWithdrawn" with expected success states
       });
+
+      it("should allow instructor to withdraw payments when governance cuts zero", async function () {
+        // Step 0: reduce cuts to zero
+        const [utFoundCut, utGoverCut, atFoundCut, atGoverCut] = await Promise.all([
+          NewTreasury.utFoundCut(),
+          NewTreasury.utGoverCut(),
+          NewTreasury.atFoundCut(),
+          NewTreasury.atGoverCut(),
+        ]);
+        if (utGoverCut !== 0n || atGoverCut !== 0n) {
+          const zeroAtGoverCut = 0; // %1 governance cut (any token)
+          const zeroUtGoverCut = 0;
+          // Handle zero cut case
+          await expect(
+            NewTreasury.connect(backend).setCourseCuts(atFoundCut, zeroAtGoverCut, utFoundCut, zeroUtGoverCut)
+          ).to.emit(NewTreasury, "CourseCutsUpdated");
+        }
+        // Step 1: instructor1 creates a generic course with [instructor1] array
+        const courseId1 = await quickCreateACourse();
+        // Step 2: make 6 sales, 2 with MTK1, 2 with MTK2, 2 with native
+        await buyCourseBatchHelper({
+          courseIds: Array(6).fill(courseId1), // 6 sales for the same course
+          tokenAddresses: [MKT1.target, MKT1.target, MKT2.target, MKT2.target, ethers.ZeroAddress, ethers.ZeroAddress],
+          coursePrices: [
+            ethers.parseEther("5"),
+            ethers.parseEther("10"),
+            ethers.parseEther("15"),
+            ethers.parseEther("20"),
+            ethers.parseEther("25"),
+            ethers.parseEther("30"),
+          ],
+          courseReceivers: [
+            person1.address,
+            person2.address,
+            person3.address,
+            person4.address,
+            person5.address,
+            buyer1.address,
+          ],
+          redeemers: [backend, backend, backend, backend, backend, backend], // genelde hepsi aynı: tx'i buyer1 atıyor
+          validUntils: [now + 86400, now + 86400, now + 86400, now + 86400, now + 86400, now + 86400],
+          nativeMsgValue: ethers.parseEther("55"), // sadece ERC20 olduğundan 0
+          buyBatchTxCaller: backend, // tx gönderen signer
+          expectSuccessWith: "ContentPurchased",
+        });
+        // Step 3: Fast forward time after refund window
+        const refundWindowInDays = Number(await NewTreasury.refundWindow()) / 86400;
+        await fastForwardTime({ days: refundWindowInDays + 1 });
+        // Step 4: Withdraw payments for all 6 sales
+        await withdrawCoursePaymentsHelper({
+          courseId: courseId1,
+          fromIndex: 1,
+          toIndex: 6,
+          redeemer: instructor1,
+          validUntil: now + 86400,
+          expectSuccessWith: "CoursePaymentsWithdrawn",
+          expectations: [PES, PES, PES, PES, PES, PES],
+        });
+        // Expect: "CoursePaymentsWithdrawn" with expected success states
+      });
+
+      it("should allow instructor to withdraw payments when foundation cuts zero", async function () {
+        // Step 0: reduce cuts to zero
+        const [utFoundCut, utGoverCut, atFoundCut, atGoverCut] = await Promise.all([
+          NewTreasury.utFoundCut(),
+          NewTreasury.utGoverCut(),
+          NewTreasury.atFoundCut(),
+          NewTreasury.atGoverCut(),
+        ]);
+        if (utFoundCut !== 0n || atFoundCut !== 0n) {
+          const zeroAtFoundCut = 0;
+          const zeroUtFoundCut = 0;
+          // Handle zero cut case
+          await expect(
+            NewTreasury.connect(backend).setCourseCuts(zeroAtFoundCut, atGoverCut, zeroUtFoundCut, utGoverCut)
+          ).to.emit(NewTreasury, "CourseCutsUpdated");
+        }
+        // Step 1: instructor1 creates a generic course with [instructor1] array
+        const courseId1 = await quickCreateACourse();
+        // Step 2: make 6 sales, 2 with MTK1, 2 with MTK2, 2 with native
+        await buyCourseBatchHelper({
+          courseIds: Array(6).fill(courseId1), // 6 sales for the same course
+          tokenAddresses: [MKT1.target, MKT1.target, MKT2.target, MKT2.target, ethers.ZeroAddress, ethers.ZeroAddress],
+          coursePrices: [
+            ethers.parseEther("5"),
+            ethers.parseEther("10"),
+            ethers.parseEther("15"),
+            ethers.parseEther("20"),
+            ethers.parseEther("25"),
+            ethers.parseEther("30"),
+          ],
+          courseReceivers: [
+            person1.address,
+            person2.address,
+            person3.address,
+            person4.address,
+            person5.address,
+            buyer1.address,
+          ],
+          redeemers: [backend, backend, backend, backend, backend, backend], // genelde hepsi aynı: tx'i buyer1 atıyor
+          validUntils: [now + 86400, now + 86400, now + 86400, now + 86400, now + 86400, now + 86400],
+          nativeMsgValue: ethers.parseEther("55"), // sadece ERC20 olduğundan 0
+          buyBatchTxCaller: backend, // tx gönderen signer
+          expectSuccessWith: "ContentPurchased",
+        });
+        // Step 3: Fast forward time after refund window
+        const refundWindowInDays = Number(await NewTreasury.refundWindow()) / 86400;
+        await fastForwardTime({ days: refundWindowInDays + 1 });
+        // Step 4: Withdraw payments for all 6 sales
+        await withdrawCoursePaymentsHelper({
+          courseId: courseId1,
+          fromIndex: 1,
+          toIndex: 6,
+          redeemer: instructor1,
+          validUntil: now + 86400,
+          expectSuccessWith: "CoursePaymentsWithdrawn",
+          expectations: [PES, PES, PES, PES, PES, PES],
+        });
+        // Expect: "CoursePaymentsWithdrawn" with expected success states
+      });
+
+      it("should allow instructor to withdraw payments when foundation and governance cuts zero", async function () {
+        // Step 0: reduce cuts to zero
+        const [utFoundCut, utGoverCut, atFoundCut, atGoverCut] = await Promise.all([
+          NewTreasury.utFoundCut(),
+          NewTreasury.utGoverCut(),
+          NewTreasury.atFoundCut(),
+          NewTreasury.atGoverCut(),
+        ]);
+        if (utFoundCut !== 0n || atFoundCut !== 0n || utGoverCut !== 0n || atGoverCut !== 0n) {
+          const zeroAtFoundCut = 0;
+          const zeroAtGoverCut = 0;
+          const zeroUtFoundCut = 0;
+          const zeroUtGoverCut = 0;
+          // Handle zero cut case
+          await expect(
+            NewTreasury.connect(backend).setCourseCuts(zeroAtFoundCut, zeroAtGoverCut, zeroUtFoundCut, zeroUtGoverCut)
+          ).to.emit(NewTreasury, "CourseCutsUpdated");
+        }
+        // Step 1: instructor1 creates a generic course with [instructor1] array
+        const courseId1 = await quickCreateACourse();
+        // Step 2: make 6 sales, 2 with MTK1, 2 with MTK2, 2 with native
+        await buyCourseBatchHelper({
+          courseIds: Array(6).fill(courseId1), // 6 sales for the same course
+          tokenAddresses: [MKT1.target, MKT1.target, MKT2.target, MKT2.target, ethers.ZeroAddress, ethers.ZeroAddress],
+          coursePrices: [
+            ethers.parseEther("5"),
+            ethers.parseEther("10"),
+            ethers.parseEther("15"),
+            ethers.parseEther("20"),
+            ethers.parseEther("25"),
+            ethers.parseEther("30"),
+          ],
+          courseReceivers: [
+            person1.address,
+            person2.address,
+            person3.address,
+            person4.address,
+            person5.address,
+            buyer1.address,
+          ],
+          redeemers: [backend, backend, backend, backend, backend, backend], // genelde hepsi aynı: tx'i buyer1 atıyor
+          validUntils: [now + 86400, now + 86400, now + 86400, now + 86400, now + 86400, now + 86400],
+          nativeMsgValue: ethers.parseEther("55"), // sadece ERC20 olduğundan 0
+          buyBatchTxCaller: backend, // tx gönderen signer
+          expectSuccessWith: "ContentPurchased",
+        });
+        // Step 3: Fast forward time after refund window
+        const refundWindowInDays = Number(await NewTreasury.refundWindow()) / 86400;
+        await fastForwardTime({ days: refundWindowInDays + 1 });
+        // Step 4: Withdraw payments for all 6 sales
+        await withdrawCoursePaymentsHelper({
+          courseId: courseId1,
+          fromIndex: 1,
+          toIndex: 6,
+          redeemer: instructor1,
+          validUntil: now + 86400,
+          expectSuccessWith: "CoursePaymentsWithdrawn",
+          expectations: [PES, PES, PES, PES, PES, PES],
+        });
+        // Expect: "CoursePaymentsWithdrawn" with expected success states
+      });
+
+      it("should allow instructor to withdraw payments when total cuts 100 percent", async function () {
+        // Step 0: reduce cuts to zero
+        const [utFoundCut, utGoverCut, atFoundCut, atGoverCut] = await Promise.all([
+          NewTreasury.utFoundCut(),
+          NewTreasury.utGoverCut(),
+          NewTreasury.atFoundCut(),
+          NewTreasury.atGoverCut(),
+        ]);
+        if (utFoundCut !== 50000n || atFoundCut !== 50000n || utGoverCut !== 50000n || atGoverCut !== 50000n) {
+          const newAtFoundCut = 50000;
+          const newAtGoverCut = 50000;
+          const newUtFoundCut = 50000;
+          const newUtGoverCut = 50000;
+          // Handle new cut case
+          await expect(
+            NewTreasury.connect(backend).setCourseCuts(newAtFoundCut, newAtGoverCut, newUtFoundCut, newUtGoverCut)
+          ).to.emit(NewTreasury, "CourseCutsUpdated");
+        }
+        // Step 1: instructor1 creates a generic course with [instructor1] array
+        const courseId1 = await quickCreateACourse();
+        // Step 2: make 6 sales, 2 with MTK1, 2 with MTK2, 2 with native
+        await buyCourseBatchHelper({
+          courseIds: Array(6).fill(courseId1), // 6 sales for the same course
+          tokenAddresses: [MKT1.target, MKT1.target, MKT2.target, MKT2.target, ethers.ZeroAddress, ethers.ZeroAddress],
+          coursePrices: [
+            ethers.parseEther("5"),
+            ethers.parseEther("10"),
+            ethers.parseEther("15"),
+            ethers.parseEther("20"),
+            ethers.parseEther("25"),
+            ethers.parseEther("30"),
+          ],
+          courseReceivers: [
+            person1.address,
+            person2.address,
+            person3.address,
+            person4.address,
+            person5.address,
+            buyer1.address,
+          ],
+          redeemers: [backend, backend, backend, backend, backend, backend], // genelde hepsi aynı: tx'i buyer1 atıyor
+          validUntils: [now + 86400, now + 86400, now + 86400, now + 86400, now + 86400, now + 86400],
+          nativeMsgValue: ethers.parseEther("55"), // sadece ERC20 olduğundan 0
+          buyBatchTxCaller: backend, // tx gönderen signer
+          expectSuccessWith: "ContentPurchased",
+        });
+        // Step 3: Fast forward time after refund window
+        const refundWindowInDays = Number(await NewTreasury.refundWindow()) / 86400;
+        await fastForwardTime({ days: refundWindowInDays + 1 });
+        // Step 4: Withdraw payments for all 6 sales
+        await withdrawCoursePaymentsHelper({
+          courseId: courseId1,
+          fromIndex: 1,
+          toIndex: 6,
+          redeemer: instructor1,
+          validUntil: now + 86400,
+          expectSuccessWith: "CoursePaymentsWithdrawn",
+          expectations: [PES, PES, PES, PES, PES, PES],
+        });
+        // Expect: "CoursePaymentsWithdrawn" with expected success states
+      });
+
       /////###End of Success Cases###/////
     });
 
@@ -4625,7 +4887,7 @@ describe("NewTreasury Contract Tests", function () {
         tx = await NewTreasury.connect(instructor1).withdrawCoursePayments(voucher);
         await expect(tx)
           .to.emit(NewTreasury, "CoursePaymentsWithdrawn")
-          .withArgs(voucher.courseId, voucher.fromIndex, voucher.toIndex, voucher.redeemer, 3);
+          .withArgs(voucher.courseId, voucher.fromIndex, voucher.toIndex, voucher.redeemer, 3, 1);
         const receipt = await tx.wait();
         const effectiveGasPrice = receipt.effectiveGasPrice ?? receipt.gasPrice ?? 0n;
         const gasCost = receipt.gasUsed * effectiveGasPrice;
@@ -4677,7 +4939,7 @@ describe("NewTreasury Contract Tests", function () {
         // Step 8: expect emit
         await expect(tx)
           .to.emit(NewTreasury, "CoursePaymentsWithdrawn")
-          .withArgs(voucher.courseId, voucher.fromIndex, voucher.toIndex, failNativeWallet.target, 3);
+          .withArgs(voucher.courseId, voucher.fromIndex, voucher.toIndex, failNativeWallet.target, 3, 1);
         // Step 9: compute gas cost
         const receipt = await tx.wait();
         const effectiveGasPrice = receipt.effectiveGasPrice ?? receipt.gasPrice ?? 0n;
@@ -4729,7 +4991,7 @@ describe("NewTreasury Contract Tests", function () {
         // Step 7: expect CoursePaymentsWithdrawn with skipped = 1
         await expect(tx)
           .to.emit(NewTreasury, "CoursePaymentsWithdrawn")
-          .withArgs(voucher.courseId, voucher.fromIndex, voucher.toIndex, voucher.redeemer, 3);
+          .withArgs(voucher.courseId, voucher.fromIndex, voucher.toIndex, voucher.redeemer, 3, 1);
         // Step 8: validate state after withdraw
         const receipt = await tx.wait();
         const effectiveGasPrice = receipt.effectiveGasPrice ?? receipt.gasPrice ?? 0n;
@@ -4780,7 +5042,7 @@ describe("NewTreasury Contract Tests", function () {
         // Step 8: expect CoursePaymentsWithdrawn with skipped = 1
         await expect(tx)
           .to.emit(NewTreasury, "CoursePaymentsWithdrawn")
-          .withArgs(voucher.courseId, voucher.fromIndex, voucher.toIndex, voucher.redeemer, 3);
+          .withArgs(voucher.courseId, voucher.fromIndex, voucher.toIndex, voucher.redeemer, 3, 1);
         // Step 9: validate state after withdraw
         const receipt = await tx.wait();
         const effectiveGasPrice = receipt.effectiveGasPrice ?? receipt.gasPrice ?? 0n;
@@ -4829,7 +5091,7 @@ describe("NewTreasury Contract Tests", function () {
         // Step 7: expect CoursePaymentsWithdrawn with skipped = 1
         await expect(tx)
           .to.emit(NewTreasury, "CoursePaymentsWithdrawn")
-          .withArgs(voucher.courseId, voucher.fromIndex, voucher.toIndex, voucher.redeemer, 3);
+          .withArgs(voucher.courseId, voucher.fromIndex, voucher.toIndex, voucher.redeemer, 3, 1);
         // Step 9: validate state after withdraw
         const receipt = await tx.wait();
         const effectiveGasPrice = receipt.effectiveGasPrice ?? receipt.gasPrice ?? 0n;
@@ -4879,7 +5141,7 @@ describe("NewTreasury Contract Tests", function () {
         // Step 7: expect CoursePaymentsWithdrawn with skipped = 1
         await expect(tx)
           .to.emit(NewTreasury, "CoursePaymentsWithdrawn")
-          .withArgs(voucher.courseId, voucher.fromIndex, voucher.toIndex, voucher.redeemer, 3);
+          .withArgs(voucher.courseId, voucher.fromIndex, voucher.toIndex, voucher.redeemer, 3, 1);
         // Step 8: validate state after withdraw
         const receipt = await tx.wait();
         const effectiveGasPrice = receipt.effectiveGasPrice ?? receipt.gasPrice ?? 0n;
@@ -4928,7 +5190,7 @@ describe("NewTreasury Contract Tests", function () {
         // Step 7: expect CoursePaymentsWithdrawn with skipped = 1
         await expect(tx)
           .to.emit(NewTreasury, "CoursePaymentsWithdrawn")
-          .withArgs(voucher.courseId, voucher.fromIndex, voucher.toIndex, voucher.redeemer, 3);
+          .withArgs(voucher.courseId, voucher.fromIndex, voucher.toIndex, voucher.redeemer, 3, 1);
         // Step 8: validate state after withdraw
         const receipt = await tx.wait();
         const effectiveGasPrice = receipt.effectiveGasPrice ?? receipt.gasPrice ?? 0n;
@@ -4977,7 +5239,7 @@ describe("NewTreasury Contract Tests", function () {
         // Step 7: expect CoursePaymentsWithdrawn with skipped = 1
         await expect(tx)
           .to.emit(NewTreasury, "CoursePaymentsWithdrawn")
-          .withArgs(voucher.courseId, voucher.fromIndex, voucher.toIndex, voucher.redeemer, 3);
+          .withArgs(voucher.courseId, voucher.fromIndex, voucher.toIndex, voucher.redeemer, 3, 1);
         // Step 8: validate state after withdraw
         const receipt = await tx.wait();
         const effectiveGasPrice = receipt.effectiveGasPrice ?? receipt.gasPrice ?? 0n;
@@ -5026,7 +5288,7 @@ describe("NewTreasury Contract Tests", function () {
         // Step 7: expect CoursePaymentsWithdrawn with skipped = 1
         await expect(tx)
           .to.emit(NewTreasury, "CoursePaymentsWithdrawn")
-          .withArgs(voucher.courseId, voucher.fromIndex, voucher.toIndex, voucher.redeemer, 0);
+          .withArgs(voucher.courseId, voucher.fromIndex, voucher.toIndex, voucher.redeemer, 0, 4);
         // Step 8: validate state after withdraw
         const receipt = await tx.wait();
         const effectiveGasPrice = receipt.effectiveGasPrice ?? receipt.gasPrice ?? 0n;
