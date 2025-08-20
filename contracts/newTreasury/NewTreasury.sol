@@ -1229,73 +1229,39 @@ contract NewTreasury is EIP712, ReentrancyGuard {
     }
 }
 
-// TODO BATU eğer governanceAddress kontrat değilse try catch'i kapat
-// TODO BATU getCourse ve getPayment getterlarının gereksiz olduğunu düşünüyorum.
-
 /*
-fallback() external payable {
-    revert("Direct ETH not accepted");
-}
-
-NOTE:
-Eğer ileride farklı token’lar için farklı cut yapısı (örneğin USDC, USDT, DAI özel oranlar) gerekiyorsa, 
+0)NOTE: fallback() external payable {revert("Direct ETH not accepted");}
+1)NOTE: Eğer ileride farklı token’lar için farklı cut yapısı (örneğin USDC, USDT, DAI özel oranlar) gerekiyorsa, 
 şöyle extensible yapabilirsin:
-
-struct Cut {
-    uint256 foundation;
-    uint256 governance;
-}
-
-mapping(address => Cut) public tokenCuts;
-
+    struct Cut {
+        uint256 foundation;
+        uint256 governance;
+    }
+    mapping(address => Cut) public tokenCuts;
 ve
+    Cut memory cut = tokenCuts[_tokenAddress];
+    if (cut.foundation == 0 && cut.governance == 0) {
+        cut = tokenCuts[DEFAULT_TOKEN];
+    }
+    // ve setCourseCuts fonksiyonunda da bu mapping’i güncelleyebilirsin.
 
-Cut memory cut = tokenCuts[_tokenAddress];
-if (cut.foundation == 0 && cut.governance == 0) {
-    cut = tokenCuts[DEFAULT_TOKEN];
-}
-// ve setCourseCuts fonksiyonunda da bu mapping’i güncelleyebilirsin.
-NOTE:
-require(_tokenAddress.code.length > 0, "Invalid token contract");
-gerekirse böyle bir şey kontrat çağrışlarını engellemek için kullanılabilir.
-
-2. hasOwnedCourse ≠ ownedCourses Sync Risk
-hasOwnedCourse mapping’i ile ownedCourses dizisinin senkronize olması elzem. refundCourse() içinde hasOwnedCourse update sonrası index manipülasyonu başarılı gözüküyor ama testlerde pop() sonrası doğru elemanın silindiğinden emin olmalısın.
-
-Eğer bir bug çıkacaksa, swap & pop içindeki require(courseIndex > 0) sonrası index=0 durumunda olabilir. Bunun testini yaz.
-
-Adım 5: hasOwnedCourse flag’ini mapping yerine bit-packing ile array’de tutmak
-
-    unchecked { i++; } verimli! 3 gaz sadece ama.
-
-isRefunded isWithdrawn ve course struct daha verimli eğer tamamını okuyacaksan. bölersen SLoad artar
-
-
-✅ Neden Güvende:
-Hiçbir Ether transferi yok.
-
-Hiçbir low-level external call (call, send, transfer) yok.
-
-safeTransfer veya transferFrom gibi token çekme/gönderme işlemi de yok.
-
-external call sadece _verifyVoucherSignerAndValidity ve _validateWithdrawersAndRedeemer gibi internal fonksiyonlar, ve bunların kendisi de reentrant değil (senin kontrolünde).
-
-courseCounter ve uriToCourseId gibi state değişiklikleri external çağrılardan sonra değil, sonra geliyorlar.
-
-🔐 Ne Zaman Gerekebilirdi?
-Eğer fonksiyon:
-
-payable olsaydı,
-
-ya da içinden Ether/token gönderseydi (örneğin _setAuthorizedWithdrawers içinde call varsa dikkat gerekirdi),
-
-ya da başka kontratlar seni tekrar çağırabilseydi,
-
-O zaman reentrancy riskine karşı nonReentrant gerekirdi.
-
+2)NOTE: hasOwnedCourse flag’ini mapping yerine bit-packing ile array’de tutmak
+3)NOTE: course struct daha verimli eğer tamamını okuyacaksan. bölersen SLoad artar
+4)NOTE: Yanlışlıkla kalan bakiyeleri kurtarma (opsiyonel ama pratik)
+    function rescue(address token, uint256 amount) external {
+        if (msg.sender != foundationAddress) revert OnlyFoundation();
+        if (token == address(0)) {
+            (bool ok, ) = payable(foundationAddress).call{value: amount}("");
+            require(ok, "ETH rescue failed");
+        } else {
+            IERC20(token).safeTransfer(foundationAddress, amount);
+        }
+    }
 */
 
 /*
+TODO BATU eğer governanceAddress kontrat değilse try catch'i kapat
+TODO BATU getCourse ve getPayment getterlarının gereksiz olduğunu düşünüyorum.
 TODO X1: Voucher konusuna tekrar bir bak mümkünse ECDSA yı jumpsız kullan. internal fonksiyonu düzenle ve verify'ın gaz costunu düşür.
 TODO X2: Eventleri gözden geçir. Indexed pahalı. minimum gereken ile minimum gaz costu hedefle
 TODO X5: onlyBackend onlyFoundation modifier'a dönebilir. Sürekli tekrarlayan revertler internal pure'a dönebilir. (Jump cost)
