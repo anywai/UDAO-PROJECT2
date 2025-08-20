@@ -958,6 +958,7 @@ async function refundCourseHelper({ paymentId, redeemer, validUntil, expectRever
 
   let tx = null;
   let gasCost = 0n;
+  let gasUsed = null;
 
   if (!waitSuccess) {
     if (expectRevertWith === "Recipient blocked") {
@@ -983,6 +984,7 @@ async function refundCourseHelper({ paymentId, redeemer, validUntil, expectRever
       );
 
     const receipt = await tx.wait();
+    gasUsed = receipt.gasUsed;
     const effectiveGasPrice = receipt.effectiveGasPrice ?? receipt.gasPrice ?? 0n;
     gasCost = receipt.gasUsed * effectiveGasPrice;
   } else if (waitSuccess) {
@@ -1007,7 +1009,8 @@ async function refundCourseHelper({ paymentId, redeemer, validUntil, expectRever
     tokenAddress: payment.tokenAddress,
     payer: payment.payer,
     redeemer: redeemer.address,
-    tx,
+    tx: tx,
+    gasUsed: gasUsed,
   };
 }
 
@@ -1045,6 +1048,7 @@ async function refundCourseByOwnerHelper({
   //const tx = await NewTreasury.connect(redeemer).refundCourseByOwnerAndCourseId(refundVoucher);
   let tx;
   let gasCost = 0n;
+  let gasUsed = null;
 
   if (!waitSuccess) {
     if (expectRevertWith === "Recipient blocked") {
@@ -1059,7 +1063,6 @@ async function refundCourseByOwnerHelper({
     }
   } else if (waitSuccess) {
     tx = await NewTreasury.connect(redeemer).refundCourseByOwnerAndCourseId(refundVoucher);
-
     await expect(tx)
       .to.emit(NewTreasury, expectSuccessWith)
       .withArgs(
@@ -1072,6 +1075,7 @@ async function refundCourseByOwnerHelper({
       );
 
     const receipt = await tx.wait();
+    gasUsed = receipt.gasUsed;
     const effectiveGasPrice = receipt.effectiveGasPrice ?? receipt.gasPrice ?? 0n;
     gasCost = receipt.gasUsed * effectiveGasPrice;
   } else {
@@ -1079,7 +1083,6 @@ async function refundCourseByOwnerHelper({
   }
 
   await _expectRefund(paymentId, expectedOutcome);
-
   // check balances after transaction
   await checkBalancesAfterRefund({
     gasCost: gasCost,
@@ -1096,7 +1099,8 @@ async function refundCourseByOwnerHelper({
     tokenAddress: payment.tokenAddress,
     payer: payment.payer,
     redeemer: redeemer.address,
-    tx,
+    tx: tx,
+    gasUsed: gasUsed,
   };
 }
 
@@ -3195,7 +3199,7 @@ describe("NewTreasury Contract Tests", function () {
         // Expect: "CourseRefunded" event with expected success states
       });
 
-      it("should allow a course to be bought, refunded, and bought again by the same receiver", async function () {
+      it("should allow a course to be bought, refunded with paymentId, and bought again by the same receiver", async function () {
         // Step 1: instructor1 creates a generic course with [instructor1] array
         const courseId1 = await quickCreateACourse();
         // Step 2: buyer1 buys course for person1
@@ -3783,7 +3787,7 @@ describe("NewTreasury Contract Tests", function () {
         // Expect: "CourseRefunded" event with expected success states
       });
 
-      it("should allow a course to be bought, refunded, and bought again by the same receiver", async function () {
+      it("should allow a course to be bought, refunded with byOwner, and bought again by the same receiver", async function () {
         // Step 1: instructor1 creates a generic course with [instructor1] array
         const courseId1 = await quickCreateACourse();
         // Step 2: buyer1 buys course for person1
@@ -3819,6 +3823,13 @@ describe("NewTreasury Contract Tests", function () {
           expectSuccessWith: "ContentPurchased",
         });
         // Expect: both purchases and refund succeed
+        // Step 5: extra case refund by paymentId.
+        const refund_course1 = await refundCourseHelper({
+          paymentId: buy2[0],
+          redeemer: buyer1,
+          validUntil: now + 86400,
+          expectSuccessWith: "CourseRefunded",
+        });
       });
 
       it("should allow refund by owner if original refund window is still valid despite later refundWindow shortened", async function () {
@@ -4040,7 +4051,7 @@ describe("NewTreasury Contract Tests", function () {
           validUntil: now + 86400,
           expectRevertWith: "PaymentNotFoundForOwnerAndCourse()",
         });
-        // Expect: Reverts with "PaymentIdIsInvalid()-refund"
+        // Expect: Reverts with "PaymentNotFoundForOwnerAndCourse()-refund"
       });
 
       it("should fail to refund if refund window has passed", async function () {
