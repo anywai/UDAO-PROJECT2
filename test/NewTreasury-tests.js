@@ -1407,7 +1407,6 @@ async function checkBalancesAfterRefund({ gasCost, beforeTxBalances, coursePrice
 /////### END OF TEST HELPERS ###/////
 
 const PaymentState = {
-  WI: "WI", // Already Withdrawn, In refund window // TODO: IMPOSIBLE STATE
   WE: "WE", // Already Withdrawn, refund window Ended,
   RI: "RI", // Already Refunded, In refund window,
   RE: "RE", // Already Refunded, refund window Ended,
@@ -1416,7 +1415,7 @@ const PaymentState = {
   PES: "PES", // Pending, refund window Ended, expect Success
 };
 
-const { PES, PEF, PI, WI, WE, RI, RE } = PaymentState;
+const { PES, PEF, PI, WE, RI, RE } = PaymentState;
 
 async function withdrawCoursePaymentsHelper({
   courseId,
@@ -1531,7 +1530,7 @@ async function _prepareExpectedWithdrawTokenState(voucher, expectations, withdra
 
     let actualState;
     if (isWithdrawn) {
-      actualState = isInRefundWindow ? PaymentState.WI : PaymentState.WE;
+      actualState = PaymentState.WE;
     } else if (isRefunded) {
       actualState = isInRefundWindow ? PaymentState.RI : PaymentState.RE;
     } else if (isInRefundWindow) {
@@ -1617,7 +1616,7 @@ async function _prepareExpectedWithdrawTokenState(voucher, expectations, withdra
       const expected = expectations[i - fromIndex];
 
       if ([PaymentState.RI, PaymentState.RE].includes(expected)) refunded.push(i);
-      else if ([PaymentState.WI, PaymentState.WE].includes(expected)) withdrawn.push(i);
+      else if ([PaymentState.WE].includes(expected)) withdrawn.push(i);
       else if (expected === PaymentState.PI) inWindow.push(i);
       else if ([PaymentState.PEF, PaymentState.PES].includes(expected)) ready.push(i);
     }
@@ -1716,7 +1715,6 @@ async function _expectWithdraw(voucher, tokenStats, gasCost, expectations, waitS
     const isInRWindow = payment.endOfRefundWindow > BigInt(now);
 
     const expectedWithdrawn = {
-      [WI]: true,
       [WE]: true,
       [RI]: false,
       [RE]: false,
@@ -1726,7 +1724,7 @@ async function _expectWithdraw(voucher, tokenStats, gasCost, expectations, waitS
     }[expected];
 
     const expectedRefunded = [RI, RE].includes(expected);
-    const expectedInRWindow = [WI, RI, PI].includes(expected);
+    const expectedInRWindow = [RI, PI].includes(expected);
 
     expect(expectedWithdrawn).to.not.equal(undefined, `Unhandled expected state: ${expected}`);
     expect(payment.isWithdrawn).to.equal(
@@ -1759,7 +1757,7 @@ async function _expectWithdraw(voucher, tokenStats, gasCost, expectations, waitS
       const expected = expectations[i - fromIndex];
 
       if ([RI, RE].includes(expected)) refunded.push(i);
-      else if ([WI, WE].includes(expected) || (expected === PES && waitSuccess)) withdrawn.push(i);
+      else if ([WE].includes(expected) || (expected === PES && waitSuccess)) withdrawn.push(i);
       else if (expected === PI) inWindow.push(i);
       else if ([PEF, PES].includes(expected) && !(expected === PES && waitSuccess)) ready.push(i);
     }
