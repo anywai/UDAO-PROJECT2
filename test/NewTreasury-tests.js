@@ -154,7 +154,7 @@ async function createCourseBatchHelper({
     tx = await NewTreasury.connect(createBatchTxCaller).createCourseBatch(vouchers);
     const receipt = await tx.wait();
     //const gasUsed = receipt.gasUsed;
-    //console.log("Gas used: ", gasUsed);
+    //console.log("Create Gas used: ", gasUsed);
 
     // 5) Event parsing ve doğrulama
     const parsedEvents = receipt.logs
@@ -316,6 +316,9 @@ async function updateCourseHelper({
     );
   } else if (expectSuccessWith) {
     tx = await NewTreasury.connect(redeemer).updateCourse(voucher);
+    //receipt
+    //const receipt = await tx.wait();
+    //console.log("Update Gas used: ", receipt.gasUsed);
     await expect(tx).to.emit(NewTreasury, expectSuccessWith).withArgs(courseId);
   } else {
     throw new Error("What you expect? No success or revert condition provided. --updateCourseHelper--");
@@ -498,7 +501,7 @@ async function buyCourseBatchHelper({
       value: nativeMsgValue,
     });
     const receipt = await tx.wait();
-    //console.log("Gas used: ", receipt.gasUsed.toString());
+    //console.log("Buy Gas used: ", receipt.gasUsed.toString());
     // eventleri kontrol et:
     const parsed = receipt.logs
       .map((l) => {
@@ -985,6 +988,7 @@ async function refundCourseHelper({ paymentId, redeemer, validUntil, expectRever
 
     const receipt = await tx.wait();
     gasUsed = receipt.gasUsed;
+    //console.log("RefundPId Gas used: ", gasUsed);
     const effectiveGasPrice = receipt.effectiveGasPrice ?? receipt.gasPrice ?? 0n;
     gasCost = receipt.gasUsed * effectiveGasPrice;
   } else if (waitSuccess) {
@@ -1076,6 +1080,7 @@ async function refundCourseByOwnerHelper({
 
     const receipt = await tx.wait();
     gasUsed = receipt.gasUsed;
+    //console.log("RefundBy Gas used: ", gasUsed);
     const effectiveGasPrice = receipt.effectiveGasPrice ?? receipt.gasPrice ?? 0n;
     gasCost = receipt.gasUsed * effectiveGasPrice;
   } else {
@@ -1463,6 +1468,7 @@ async function withdrawCoursePaymentsHelper({
       .withArgs(courseId, fromIndex, toIndex, redeemer.address, expectedWithdrawCount);
 
     const receipt = await tx.wait();
+    //console.log("Withdraw GasUsed:", receipt.gasUsed);
     const effectiveGasPrice = receipt.effectiveGasPrice ?? receipt.gasPrice ?? 0n;
     gasCost = receipt.gasUsed * effectiveGasPrice;
   }
@@ -1782,6 +1788,24 @@ async function deployFailTransferContracts() {
     spenderAddress: NewTreasury.target,
     walletList: walletNames,
   });
+  // get current cuts
+  const [utFoundCut, utGoverCut, atFoundCut, atGoverCut] = await Promise.all([
+    NewTreasury.utFoundCut(),
+    NewTreasury.utGoverCut(),
+    NewTreasury.atFoundCut(),
+    NewTreasury.atGoverCut(),
+  ]);
+  //if any one is zero
+  if ([utFoundCut, utGoverCut, atFoundCut, atGoverCut].some((cut) => cut === 0n)) {
+    const oldAtFoundCut = 6000; // %6 foundation cut (any token)
+    const oldAtGoverCut = 1000; // %1 governance cut (any token)
+    const oldUtFoundCut = 4000; // %4 foundation cut (udao)
+    const oldUtGoverCut = 500;
+    // Handle zero cut case
+    await expect(
+      NewTreasury.connect(backend).setCourseCuts(oldAtFoundCut, oldAtGoverCut, oldUtFoundCut, oldUtGoverCut)
+    ).to.emit(NewTreasury, "CourseCutsUpdated");
+  }
 
   return { failNativeWallet, failMKT };
 }
@@ -3830,6 +3854,7 @@ describe("NewTreasury Contract Tests", function () {
           validUntil: now + 86400,
           expectSuccessWith: "CourseRefunded",
         });
+        // Expect: "CourseRefunded" event with expected success states
       });
 
       it("should allow refund by owner if original refund window is still valid despite later refundWindow shortened", async function () {
@@ -4535,8 +4560,7 @@ describe("NewTreasury Contract Tests", function () {
           expectSuccessWith: "CoursePaymentsWithdrawn",
           expectations: [WE, WE, WE, PES, PES, PES, RE, RE, RE, PI, RI, PI],
         });
-
-        // buy course single course with batch helper
+        // Step Extra 1: buy course single course with batch helper
         await buyCourseBatchHelper({
           courseIds: [courseA.courseIds[0]],
           tokenAddresses: [MKT1.target],
@@ -4547,6 +4571,17 @@ describe("NewTreasury Contract Tests", function () {
           nativeMsgValue: 0,
           buyBatchTxCaller: backend,
           expectSuccessWith: "ContentPurchased",
+        });
+        // Step Extra 2: fast forward refund window and withdraw last sale
+        await fastForwardTime({ days: refundWindowDays + 1 });
+        await withdrawCoursePaymentsHelper({
+          courseId: courseA.courseIds[0],
+          fromIndex: 13,
+          toIndex: 13,
+          redeemer: instructor2,
+          validUntil: now + 86400,
+          expectSuccessWith: "CoursePaymentsWithdrawn",
+          expectations: [PES],
         });
       });
 
