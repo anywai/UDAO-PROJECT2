@@ -1840,797 +1840,828 @@ describe("NewTreasury Contract Tests", function () {
     await updatenow();
   });
 
-  // 1. Course Management
-  describe("📘 COURSE MANAGEMENT", function () {
-    // 1.1 Create Course
-    describe("🟢 CREATE COURSE", function () {
-      describe("✅ Success Cases", function () {
-        it("should create a course with valid voucher", async function () {
-          // Step 1: instructor1 creates a course via CreateCourseVoucher
-          const course1 = await createCourseBatchHelper({
-            uries: ["https://example.com/course/1", "https://example.com/course/2"],
-            withdrawersArrays: [
-              [instructor1.address, instructor2.address],
-              [instructor1.address, instructor3.address],
-            ],
-            redeemers: [instructor1.address, instructor1.address],
-            validUntils: [now + 86400, now + 86400],
-            createBatchTxCaller: instructor1,
-            expectSuccessWith: "CourseCreated",
-          });
-          // Expect: "CourseCreated" with expected success states
+  // 1. Create Course
+  describe("📘🆕 CREATE COURSE", function () {
+    describe("✅ Success Cases", function () {
+      it("should create a course with valid voucher", async function () {
+        // Step 1: instructor1 creates a course via CreateCourseVoucher
+        const course1 = await createCourseBatchHelper({
+          uries: ["https://example.com/course/1", "https://example.com/course/2"],
+          withdrawersArrays: [
+            [instructor1.address, instructor2.address],
+            [instructor1.address, instructor3.address],
+          ],
+          redeemers: [instructor1.address, instructor1.address],
+          validUntils: [now + 86400, now + 86400],
+          createBatchTxCaller: instructor1,
+          expectSuccessWith: "CourseCreated",
         });
-
-        it("should allow course creation if redeemer is backend and not in withdrawers", async function () {
-          // Step 1: backend creates a course for other withdrawers
-          const course1 = await createCourseBatchHelper({
-            uries: ["https://example.com/backend-not-in-withdrawers"],
-            withdrawersArrays: [[instructor2.address, instructor3.address]],
-            redeemers: [backend.address],
-            validUntils: [now + 86400],
-            createBatchTxCaller: backend,
-            expectSuccessWith: "CourseCreated",
-          });
-          // Expect: "CourseCreated" with expected success states
-        });
-
-        it("should allow multiple course creations with unique URIs", async function () {
-          // Step 1: Create course 1, 2, and 3 with unique URIs
-          const courses = await createCourseBatchHelper({
-            uries: ["https://example.com/multi/1", "https://example.com/multi/2", "https://example.com/multi/3"],
-            withdrawersArrays: [
-              [instructor1.address, instructor2.address],
-              [instructor2.address, instructor1.address],
-              [instructor2.address, instructor3.address, instructor1.address],
-            ],
-            redeemers: [instructor1.address, instructor1.address, instructor1.address],
-            validUntils: [now + 86400, now + 86400, now + 86400],
-            createBatchTxCaller: instructor1,
-            expectSuccessWith: "CourseCreated",
-          });
-          // Expect: all 3 courses created successfully with unique URIs
-        });
-
-        it("should handle two 40 to 10 batches with backend and instructor1", async function () {
-          const BATCH = 40;
-          // 10 withdrawers per course
-          const W = [
-            instructor1.address,
-            instructor2.address,
-            instructor3.address,
-            instructor4.address,
-            instructor5.address,
-            buyer1.address,
-            buyer2.address,
-            buyer3.address,
-            buyer4.address,
-            buyer5.address,
-          ];
-
-          await NewTreasury.connect(backend).setMaxAllowedWithdrawers(10);
-          await NewTreasury.connect(backend).setMaxBatchCreateSize(BATCH);
-
-          const makeUris = (pfx) => Array.from({ length: BATCH }, (_, i) => `https://example.com/${pfx}/${i + 1}`);
-          const makeArray = (val) => Array.from({ length: BATCH }, () => val);
-          const makeWithdrawersArrays = () => Array.from({ length: BATCH }, () => W.slice()); // clone per item
-
-          // ---- Batch #1 called by backend ----
-          await createCourseBatchHelper({
-            uries: makeUris("batch1"),
-            withdrawersArrays: makeWithdrawersArrays(),
-            redeemers: makeArray(backend.address), // <-- .address (NOT signer)
-            validUntils: makeArray(now + 86400),
-            createBatchTxCaller: backend, // signer burada doğru
-            expectSuccessWith: "CourseCreated",
-          });
-
-          // ---- Batch #2 called by instructor1 ----
-          await createCourseBatchHelper({
-            uries: makeUris("batch2"),
-            withdrawersArrays: makeWithdrawersArrays(),
-            redeemers: makeArray(instructor1.address), // <-- .address
-            validUntils: makeArray(now + 86400),
-            createBatchTxCaller: instructor1,
-            expectSuccessWith: "CourseCreated",
-          });
-        });
-
-        /////### End of CREATE Course Success Cases###/////
+        // Expect: "CourseCreated" with expected success states
       });
 
-      describe("❌ Failure Cases", function () {
-        it("should fail to create a course with invalid signer", async function () {
-          // Step 1: Override default createVH and get a new voucher with invalid signer
-          createVH = getVoucherHelpers({ signer: instructor3 }).createVH;
-          // Step 2: Try to create a course with invalid signer
-          const course1 = await createCourseBatchHelper({
-            uries: ["https://example.com/course/1", "https://example.com/course/2"],
-            withdrawersArrays: [
-              [instructor1.address, instructor2.address],
-              [instructor1.address, instructor2.address],
-            ],
-            redeemers: [instructor1.address, instructor1.address],
-            validUntils: [now + 86400, now + 86400],
-            createBatchTxCaller: instructor1,
-            expectRevertWith: "SignerIsNotBackend()",
-          });
-          // Expect: Reverts with "SignerIsNotBackend()"
+      it("should allow course creation if redeemer is backend and not in withdrawers", async function () {
+        // Step 1: backend creates a course for other withdrawers
+        const course1 = await createCourseBatchHelper({
+          uries: ["https://example.com/backend-not-in-withdrawers"],
+          withdrawersArrays: [[instructor2.address, instructor3.address]],
+          redeemers: [backend.address],
+          validUntils: [now + 86400],
+          createBatchTxCaller: backend,
+          expectSuccessWith: "CourseCreated",
         });
-
-        it("should fail to create a course with expired voucher", async function () {
-          // Step 1: set up an expired timestamp for the voucher validUntil
-          const expiredTimestamp = now - 60; // 1 dakika önce
-          // Step 2: Try to create a course with an expired voucher
-          const course1 = await createCourseBatchHelper({
-            uries: ["https://example.com/expired-voucher"],
-            withdrawersArrays: [[instructor1.address]],
-            redeemers: [instructor1.address],
-            validUntils: [expiredTimestamp],
-            createBatchTxCaller: instructor1,
-            expectRevertWith: "VoucherIsExpired()",
-          });
-          // Expect: Reverts with "VoucherIsExpired()"
-        });
-
-        it("should fail to create a course if msg.sender !== redeemer", async function () {
-          // Step 1: Try to create course with mismatched msg.sender and voucher.redeemer
-          const course1 = await createCourseBatchHelper({
-            uries: ["https://example.com/fail-redeemer-check"],
-            withdrawersArrays: [[instructor1.address]],
-            redeemers: [person1.address], // gerçek redeemer backend
-            validUntils: [now + 86400],
-            createBatchTxCaller: backend, // tx'i atan kişi farklı: msg.sender !== voucher.redeemer
-            expectRevertWith: "CallerIsNotVoucherRedeemer()",
-          });
-          // Expect: reverts with "CallerIsNotVoucherRedeemer()"
-        });
-
-        it("should fail to create a course with duplicate withdrawers", async function () {
-          // Step 1: instructor1 creates a course with duplicate withdrawers
-          const course1 = await createCourseBatchHelper({
-            uries: ["https://example.com/duplicate-withdrawers"],
-            withdrawersArrays: [[instructor1.address, instructor1.address, instructor1.address]],
-            redeemers: [instructor1.address],
-            validUntils: [now + 86400],
-            createBatchTxCaller: instructor1,
-            expectRevertWith: "WithdrawerArrayContainsDuplicates()",
-          });
-          // Expect: "CourseCreated" with expected success states
-        });
-
-        it("should fail to create a course with existing URI", async function () {
-          // Step 1: instructor1 creates a course via CreateCourseVoucher
-          const course1 = await createCourseBatchHelper({
-            uries: ["https://example.com/course/duplicate"],
-            withdrawersArrays: [[instructor1.address]],
-            redeemers: [instructor1.address],
-            validUntils: [now + 86400],
-            createBatchTxCaller: instructor1,
-            expectSuccessWith: "CourseCreated",
-          });
-          // Step 2: Try to create another course with the same URI and same voucher
-          const course2 = await createCourseBatchHelper({
-            uries: ["https://example.com/course/duplicate"],
-            withdrawersArrays: [[instructor1.address]],
-            redeemers: [instructor1.address],
-            validUntils: [now + 86400],
-            createBatchTxCaller: instructor1,
-            expectRevertWith: "UriIsAlreadyUsedOrDuplicatedInBatch()",
-          });
-          // Expect: Reverts with "UriIsAlreadyUsedOrDuplicatedInBatch()", with failure states
-        });
-
-        it("should fail to create a course with duplicate URI", async function () {
-          // Step 1: instructor1 creates a course via CreateCourseVoucher
-          const course1 = await createCourseBatchHelper({
-            uries: ["https://example.com/course/duplicate", "https://example.com/course/duplicate"],
-            withdrawersArrays: [[instructor1.address], [instructor3.address]],
-            redeemers: [backend.address, backend.address],
-            validUntils: [now + 86400, now + 86400],
-            createBatchTxCaller: backend,
-            expectRevertWith: "UriIsAlreadyUsedOrDuplicatedInBatch()",
-          });
-          // Expect: Reverts with "UriIsAlreadyUsedOrDuplicatedInBatch()", with failure states
-        });
-
-        it("should fail to create a course with same URI but different withdrawers", async function () {
-          // Step 1: instructor1 creates first course with URI
-          await createCourseBatchHelper({
-            uries: ["https://example.com/same-uri-different-withdrawers"],
-            withdrawersArrays: [[instructor1.address]],
-            redeemers: [instructor1.address],
-            validUntils: [now + 86400],
-            createBatchTxCaller: instructor1,
-            expectSuccessWith: "CourseCreated",
-          });
-          // Step 2: Try to create another course with same URI but different withdrawers
-          await createCourseBatchHelper({
-            uries: ["https://example.com/same-uri-different-withdrawers"],
-            withdrawersArrays: [[instructor2.address]],
-            redeemers: [instructor2.address],
-            validUntils: [now + 86400],
-            createBatchTxCaller: instructor2,
-            expectRevertWith: "UriIsAlreadyUsedOrDuplicatedInBatch()",
-          });
-          // Expect: Reverts with "UriIsAlreadyUsedOrDuplicatedInBatch()", with failure states
-        });
-
-        it("should fail to create a course with more than 4 withdrawers", async function () {
-          // Step 1: Read maxAllowedWithdrawers from contract and convert to Number
-          const max = Number(await NewTreasury.maxAllowedWithdrawers());
-          // Step 2: Generate (max + 1) random addresses
-          const extraWithdrawers = [];
-          for (let i = 0; i < max + 1; i++) {
-            extraWithdrawers.push(ethers.Wallet.createRandom().address);
-          }
-          // Step 3: Try to create a course with too many withdrawers
-          const course1 = await createCourseBatchHelper({
-            uries: ["https://example.com/exceed-withdrawers"],
-            withdrawersArrays: [extraWithdrawers],
-            redeemers: [instructor1.address],
-            validUntils: [now + 86400],
-            createBatchTxCaller: instructor1,
-            expectRevertWith: "WithdrawerArrayExceedsLimit()",
-          });
-          // Expect: Reverts with "WithdrawerArrayExceedsLimit()"
-        });
-
-        it("should fail to create a course if any withdrawer is address(0)", async function () {
-          // Step 1: Construct withdrawers array where 3rd, and 4th are zero address
-          const invalidWithdrawers = [
-            instructor3.address, // index 0 → valid
-            instructor1.address, // index 1 → valid
-            ethers.ZeroAddress, // index 2 → invalid
-            ethers.ZeroAddress, // index 3 → invalid
-          ];
-          // Step 2: Try to create course
-          const course1 = await createCourseBatchHelper({
-            uries: ["https://example.com/zero-address-withdrawer"],
-            withdrawersArrays: [invalidWithdrawers],
-            redeemers: [instructor1.address],
-            validUntils: [now + 86400],
-            createBatchTxCaller: instructor1,
-            expectRevertWith: "WithdrawerAddressIsZero()",
-          });
-          // Expect: Reverts with "WithdrawerAddressIsZero()"
-        });
-
-        it("should fail to create a course with empty withdrawers array", async function () {
-          // Step 1: Try to create course with empty withdrawers
-          await createCourseBatchHelper({
-            uries: ["https://example.com/empty-withdrawer"],
-            withdrawersArrays: [[]],
-            redeemers: [instructor1.address],
-            validUntils: [now + 86400],
-            createBatchTxCaller: instructor1,
-            expectRevertWith: "WithdrawerArrayIsEmpty()",
-          });
-          // Expect: Reverts with "WithdrawerArrayIsEmpty()"
-        });
-
-        it("should fail to create courses when batch size exceeds maxBatchCreateSize", async function () {
-          // Step 1: get maxBatchCreateSize
-          const maxBatch = Number(await NewTreasury.maxBatchCreateSize());
-          const numCourses = maxBatch + 1; // one more than max allowed
-          // Step 2: prepare uries, withdrawersArrays, redeemers, validUntils
-          const uries = Array.from({ length: numCourses }, (_, i) => `https://example.com/too-many/${i + 1}`);
-          const withdrawersArrays = Array(numCourses).fill([instructor1.address]);
-          const redeemers = Array(numCourses).fill(instructor1.address);
-          const validUntils = Array(numCourses).fill(now + 86400);
-          // Step 3: attempt to create more courses than allowed
-          await createCourseBatchHelper({
-            uries,
-            withdrawersArrays,
-            redeemers,
-            validUntils,
-            createBatchTxCaller: instructor1,
-            expectRevertWith: "CreateBatchSizeExceedsLimit()", // kontrattaki revert mesajına göre ayarla
-          });
-          // Expect: Reverts with "CreateBatchSizeExceedsLimit()"
-        });
-
-        it("should fail to create a course if redeemer is not in withdrawers and not backend", async function () {
-          // Step 1: Try to create a course where redeemer is not in withdrawers and not backend
-          await createCourseBatchHelper({
-            uries: ["https://example.com/redeemer-not-in-withdrawers"],
-            withdrawersArrays: [[instructor2.address, instructor3.address]], // instructor1 yok
-            redeemers: [instructor1.address],
-            validUntils: [now + 86400],
-            createBatchTxCaller: instructor1,
-            expectRevertWith: "CallerIsNeitherWithdrawerNorBackend()",
-          });
-          // Expect: Reverts due to invalid role
-        });
-
-        it("should fail to create a course with empty URI", async function () {
-          // Step 1: Try to create a course with empty URI
-          await createCourseBatchHelper({
-            uries: [""], // boş URI
-            withdrawersArrays: [[instructor1.address]],
-            redeemers: [instructor1.address],
-            validUntils: [now + 86400],
-            createBatchTxCaller: instructor1,
-            expectRevertWith: "UriIsEmpty()",
-          });
-          // Expect: Reverts with "Course URI empty"
-        });
-        /////### End of CREATE Course Failure Cases###/////
+        // Expect: "CourseCreated" with expected success states
       });
-      /////### End of Course Manegement: CREATE Course###/////
+
+      it("should allow multiple course creations with unique URIs", async function () {
+        // Step 1: Create course 1, 2, and 3 with unique URIs
+        const courses = await createCourseBatchHelper({
+          uries: ["https://example.com/multi/1", "https://example.com/multi/2", "https://example.com/multi/3"],
+          withdrawersArrays: [
+            [instructor1.address, instructor2.address],
+            [instructor2.address, instructor1.address],
+            [instructor2.address, instructor3.address, instructor1.address],
+          ],
+          redeemers: [instructor1.address, instructor1.address, instructor1.address],
+          validUntils: [now + 86400, now + 86400, now + 86400],
+          createBatchTxCaller: instructor1,
+          expectSuccessWith: "CourseCreated",
+        });
+        // Expect: all 3 courses created successfully with unique URIs
+      });
+
+      it("should handle two 40 to 10 batches with backend and instructor1", async function () {
+        const BATCH = 40;
+        // 10 withdrawers per course
+        const W = [
+          instructor1.address,
+          instructor2.address,
+          instructor3.address,
+          instructor4.address,
+          instructor5.address,
+          buyer1.address,
+          buyer2.address,
+          buyer3.address,
+          buyer4.address,
+          buyer5.address,
+        ];
+        await NewTreasury.connect(backend).setMaxAllowedWithdrawers(10);
+        await NewTreasury.connect(backend).setMaxBatchCreateSize(BATCH);
+        const makeUris = (pfx) => Array.from({ length: BATCH }, (_, i) => `https://example.com/${pfx}/${i + 1}`);
+        const makeArray = (val) => Array.from({ length: BATCH }, () => val);
+        const makeWithdrawersArrays = () => Array.from({ length: BATCH }, () => W.slice()); // clone per item
+        // ---- Batch #1 called by backend ----
+        await createCourseBatchHelper({
+          uries: makeUris("batch1"),
+          withdrawersArrays: makeWithdrawersArrays(),
+          redeemers: makeArray(backend.address), // <-- .address (NOT signer)
+          validUntils: makeArray(now + 86400),
+          createBatchTxCaller: backend, // signer burada doğru
+          expectSuccessWith: "CourseCreated",
+        });
+        // ---- Batch #2 called by instructor1 ----
+        await createCourseBatchHelper({
+          uries: makeUris("batch2"),
+          withdrawersArrays: makeWithdrawersArrays(),
+          redeemers: makeArray(instructor1.address), // <-- .address
+          validUntils: makeArray(now + 86400),
+          createBatchTxCaller: instructor1,
+          expectSuccessWith: "CourseCreated",
+        });
+      });
+      /////### End of CREATE Course Success Cases###/////
     });
-    // 1.2 Update Course
-    describe("🟠 UPDATE COURSE", function () {
-      describe("✅ Success Cases", function () {
-        it("should update an existing course with valid voucher", async function () {
-          // Step 1: instructor1 creates a course via CreateCourseVoucher
-          const course1 = await createCourseBatchHelper({
-            uries: ["https://example.com/course/1"],
-            withdrawersArrays: [[instructor1.address, instructor2.address, instructor4.address]],
-            redeemers: [instructor1.address],
-            validUntils: [now + 86400],
-            createBatchTxCaller: instructor1,
-            expectSuccessWith: "CourseCreated",
-          });
-          // Step 2: instructor1 updates course via UpdateCourseVoucher
-          const update_course1 = await updateCourseHelper({
-            courseId: course1.courseIds[0],
-            uri: "https://example.com/course/1New",
-            sellable: false,
-            withdrawers: [instructor1.address, instructor3.address],
-            redeemer: instructor1,
-            validUntil: now + 86400,
-            expectSuccessWith: "CourseUpdated",
-          });
-          // Expect: "CourseUpdated" with expected success states
+
+    describe("❌ Failure Cases", function () {
+      it("should fail to create a course with invalid signer", async function () {
+        // Step 1: Override default createVH and get a new voucher with invalid signer
+        createVH = getVoucherHelpers({ signer: instructor3 }).createVH;
+        // Step 2: Try to create a course with invalid signer
+        const course1 = await createCourseBatchHelper({
+          uries: ["https://example.com/course/1", "https://example.com/course/2"],
+          withdrawersArrays: [
+            [instructor1.address, instructor2.address],
+            [instructor1.address, instructor2.address],
+          ],
+          redeemers: [instructor1.address, instructor1.address],
+          validUntils: [now + 86400, now + 86400],
+          createBatchTxCaller: instructor1,
+          expectRevertWith: "SignerIsNotBackend()",
         });
-
-        it("should allow reusing a URI after course updates it to a new URI", async function () {
-          // Step 1: instructor1 creates a course with URI_A
-          const createA = await createCourseBatchHelper({
-            uries: ["https://example.com/uri-a"],
-            withdrawersArrays: [[instructor1.address]],
-            redeemers: [instructor1.address],
-            validUntils: [now + 86400],
-            createBatchTxCaller: instructor1,
-            expectSuccessWith: "CourseCreated",
-          });
-          // Step 2: instructor1 updates that course to URI_B
-          const updateToB = await updateCourseHelper({
-            courseId: createA.courseIds[0],
-            uri: "https://example.com/uri-b",
-            sellable: true,
-            withdrawers: [instructor1.address],
-            redeemer: instructor1,
-            validUntil: now + 86400,
-            expectSuccessWith: "CourseUpdated",
-          });
-          // Step 3: instructor1 creates a new course again using URI_A
-          const createAgainA = await createCourseBatchHelper({
-            uries: ["https://example.com/uri-a"],
-            withdrawersArrays: [[instructor1.address]],
-            redeemers: [instructor1.address],
-            validUntils: [now + 86400],
-            createBatchTxCaller: instructor1,
-            expectSuccessWith: "CourseCreated",
-          });
-          // Expect: all 3 steps succeed, and URI_A is used again for the second course
-        });
-
-        it("should allow course update if redeemer is backend and not in withdrawers", async function () {
-          // Step 1: instructor1 creates a valid course
-          const course1 = await createCourseBatchHelper({
-            uries: ["https://example.com/backend-update-course"],
-            withdrawersArrays: [[instructor1.address]],
-            redeemers: [instructor1.address],
-            validUntils: [now + 86400],
-            createBatchTxCaller: instructor1,
-            expectSuccessWith: "CourseCreated",
-          });
-          // Step 2: backend updates the course (not in withdrawers)
-          const update_course1 = await updateCourseHelper({
-            courseId: course1.courseIds[0],
-            uri: "https://example.com/backend-updated-uri",
-            sellable: true,
-            withdrawers: [instructor2.address, instructor3.address], // yeni withdrawer set
-            redeemer: backend, // backend yetkili
-            validUntil: now + 86400,
-            expectSuccessWith: "CourseUpdated",
-          });
-          // Expect: update succeeds via backend signer
-        });
-
-        it("should allow course update if instructor is in new withdrawers list but not in previous", async function () {
-          // Step 1: instructor1 creates a valid course
-          const course1 = await createCourseBatchHelper({
-            uries: ["https://example.com/backend-update-course"],
-            withdrawersArrays: [[instructor1.address]],
-            redeemers: [instructor1.address],
-            validUntils: [now + 86400],
-            createBatchTxCaller: instructor1,
-            expectSuccessWith: "CourseCreated",
-          });
-          // Step 2: backend updates the course (not in withdrawers)
-          const update_course1 = await updateCourseHelper({
-            courseId: course1.courseIds[0],
-            uri: "https://example.com/backend-updated-uri",
-            sellable: true,
-            withdrawers: [instructor2.address, instructor3.address], // yeni withdrawer set
-            redeemer: instructor2, // backend yetkili
-            validUntil: now + 86400,
-            expectSuccessWith: "CourseUpdated",
-          });
-          // Expect: update succeeds via backend signer
-        });
-
-        it("should update course while keeping URI unchanged when empty URI is provided", async function () {
-          // 1) önce geçerli bir kurs oluştur
-          const course1 = await createCourseBatchHelper({
-            uries: ["https://example.com/original-uri"],
-            withdrawersArrays: [[instructor1.address]],
-            redeemers: [instructor1.address],
-            validUntils: [now + 86400],
-            createBatchTxCaller: instructor1,
-            expectSuccessWith: "CourseCreated",
-          });
-
-          // 2) boş URI ile update: URI no-op, yine de CourseUpdated bekliyoruz
-          await updateCourseHelper({
-            courseId: course1.courseIds[0],
-            uri: "", // empty => no URI change
-            sellable: true,
-            withdrawers: [instructor1.address],
-            redeemer: instructor1,
-            validUntil: now + 86400,
-            expectSuccessWith: "CourseUpdated",
-          });
-          // Expect: "CourseUpdated" with expected success states, URI remains unchanged
-        });
-
-        it("should allow isolated and combined updates of sellable, withdrawers, and URI", async function () {
-          // Step 1: create course
-          const course1 = await createCourseBatchHelper({
-            uries: ["https://example.com/isolate/initial"],
-            withdrawersArrays: [[instructor1.address]],
-            redeemers: [instructor1.address],
-            validUntils: [now + 86400],
-            createBatchTxCaller: instructor1,
-            expectSuccessWith: "CourseCreated",
-          });
-          // Step 2: update only sellable toggle
-          const update1 = await updateCourseHelper({
-            courseId: course1.courseIds[0],
-            uri: "",
-            sellable: false,
-            withdrawers: [instructor1.address],
-            redeemer: instructor1,
-            validUntil: now + 86400,
-            expectSuccessWith: "CourseUpdated",
-          });
-          // Step 3: update only withdrawers
-          const update2 = await updateCourseHelper({
-            courseId: course1.courseIds[0],
-            uri: "https://example.com/isolate/initial",
-            sellable: false,
-            withdrawers: [instructor2.address],
-            redeemer: instructor2,
-            validUntil: now + 86400,
-            expectSuccessWith: "CourseUpdated",
-          });
-          // Step 4: update only URI
-          const update3 = await updateCourseHelper({
-            courseId: course1.courseIds[0],
-            uri: "https://example.com/isolate/only-uri",
-            sellable: false,
-            withdrawers: [], // same with =[instructor2.address] but cheaper
-            redeemer: instructor2,
-            validUntil: now + 86400,
-            expectSuccessWith: "CourseUpdated",
-          });
-          // Step 5: update all fields at once
-          const update4 = await updateCourseHelper({
-            courseId: course1.courseIds[0],
-            uri: "https://example.com/isolate/all-updated",
-            sellable: true,
-            withdrawers: [instructor2.address, instructor3.address],
-            redeemer: instructor2,
-            validUntil: now + 86400,
-            expectSuccessWith: "CourseUpdated",
-          });
-          // Expect: all updates succeed, each isolated and combined update works as expected
-        });
-
-        it("should allow redundant updates with partial or full parameter repetition", async function () {
-          // Step 1: create course
-          const course1 = await createCourseBatchHelper({
-            uries: ["https://example.com/redundant/start"],
-            withdrawersArrays: [[instructor1.address]],
-            redeemers: [instructor1.address],
-            validUntils: [now + 86400],
-            createBatchTxCaller: instructor1,
-            expectSuccessWith: "CourseCreated",
-          });
-          // Step 2: sellable same (true), URI and withdrawers change
-          const update1 = await updateCourseHelper({
-            courseId: course1.courseIds[0],
-            uri: "https://example.com/redundant/uri1",
-            sellable: true,
-            withdrawers: [instructor2.address],
-            redeemer: instructor2,
-            validUntil: now + 86400,
-            expectSuccessWith: "CourseUpdated",
-          });
-          // Step 3: withdrawers same as step2, sellable and URI change
-          const update2 = await updateCourseHelper({
-            courseId: course1.courseIds[0],
-            uri: "https://example.com/redundant/uri2-3",
-            sellable: false,
-            withdrawers: [instructor2.address],
-            redeemer: instructor2,
-            validUntil: now + 86400,
-            expectSuccessWith: "CourseUpdated",
-          });
-          // Step 4: URI same as step3, sellable and withdrawers change
-          const update3 = await updateCourseHelper({
-            courseId: course1.courseIds[0],
-            uri: "https://example.com/redundant/uri2-3",
-            sellable: true,
-            withdrawers: [instructor3.address],
-            redeemer: instructor3,
-            validUntil: now + 86400,
-            expectSuccessWith: "CourseUpdated",
-          });
-          // Step 5: all params same as step3
-          const update4 = await updateCourseHelper({
-            courseId: course1.courseIds[0],
-            uri: "https://example.com/redundant/uri2-3",
-            sellable: true,
-            withdrawers: [instructor3.address],
-            redeemer: instructor3,
-            validUntil: now + 86400,
-            expectSuccessWith: "CourseUpdated",
-          });
-          // Expect: all updates succeed, selective redundancy is handled gracefully
-        });
-
-        it("should keep previous withdrawers when empty withdrawers array is provided", async function () {
-          // Step 1: instructor1 creates a generic course with [instructor1]
-          const courseId1 = await quickCreateACourse();
-          const prevWithdrawers = await NewTreasury.getAuthorizedWithdrawers(courseId1);
-
-          // Step 2: Update with empty withdrawers -> should KEEP previous set
-          await updateCourseHelper({
-            courseId: courseId1,
-            uri: "https://example.com/emptied-uri",
-            sellable: true,
-            withdrawers: [], // <-- boş gönderiyoruz
-            redeemer: instructor1,
-            validUntil: now + 86400,
-            expectSuccessWith: "CourseUpdated", // <-- artık success bekliyoruz
-          });
-
-          // Ek güvence: zincirden kontrol (opsiyonel)
-          const wAfter = await NewTreasury.getAuthorizedWithdrawers(courseId1);
-          expect(wAfter).to.deep.equal(prevWithdrawers);
-        });
-        /////### End of UPDATE Course Success Cases###/////
+        // Expect: Reverts with "SignerIsNotBackend()"
       });
 
-      describe("❌ Failure Cases", function () {
-        it("should fail to update a course with invalid signer", async function () {
-          // Step 1: instructor1 creates a generic course with [instructor1] array
-          const courseId1 = await quickCreateACourse();
-          // Step 2: Override default updateVH and get a new voucher with invalid signer
-          updateVH = getVoucherHelpers({ signer: instructor1 }).updateVH;
-          // Step 3: Try to update course using invalid signer
-          const updated = await updateCourseHelper({
-            courseId: courseId1,
-            uri: "https://example.com/course/1-updated",
-            sellable: false,
-            withdrawers: [instructor1.address],
-            redeemer: instructor1,
-            validUntil: now + 86400,
-            expectRevertWith: "SignerIsNotBackend()",
-          });
-          // Expect: Reverts with "SignerIsNotBackend()"
+      it("should fail to create a course with invalid signature (SignatureIsInvalid)", async function () {
+        // Step 1: Create a valid voucher
+        const good = await createVH.signVoucher({
+          uri: "https://example.com/course/invalid-sig",
+          withdrawers: [instructor1.address],
+          redeemer: instructor1.address, // msg.sender ile aynı
+          validUntil: now + 86400,
         });
-
-        it("should fail to update a course with expired voucher", async function () {
-          // Step 1: instructor1 creates a generic course with [instructor1] array
-          const courseId1 = await quickCreateACourse();
-          // Step 2: set up an expired validUntil timestamp
-          const expiredTimestamp = now - 60; // 1 dakika önce
-          // Step 3: try to update the course using an expired voucher
-          const update1 = await updateCourseHelper({
-            courseId: courseId1,
-            uri: "https://example.com/expired-update",
-            sellable: false,
-            withdrawers: [instructor1.address],
-            redeemer: instructor1,
-            validUntil: expiredTimestamp,
-            expectRevertWith: "VoucherIsExpired()",
-          });
-          // Expect: Reverts with "VoucherIsExpired()"
-        });
-
-        it("should fail to update a course if msg.sender !== redeemer", async function () {
-          // Step 1: instructor1 creates a generic course with [instructor1] array
-          const courseId1 = await quickCreateACourse();
-          // Step 2: prepare mismatched redeemer (voucher will carry different redeemer)
-          falseRedeemer = ethers.ZeroAddress;
-          // Step 3: attempt update with mismatched msg.sender and voucher.redeemer
-          await updateCourseHelper({
-            courseId: courseId1,
-            uri: "https://example.com/update-redeemer-mismatch/attempt",
-            sellable: true,
-            withdrawers: [instructor1.address],
-            redeemer: instructor1, // msg.sender
-            validUntil: now + 86400,
-            expectRevertWith: "CallerIsNotVoucherRedeemer()",
-          });
-          // Expect: Reverts with "CallerIsNotVoucherRedeemer()"
-        });
-
-        it("should fail to update a course with duplicate withdrawers", async function () {
-          // Step 1: instructor1 creates a generic course with [instructor1] array
-          const courseId1 = await quickCreateACourse();
-          // Step 2: instructor1 attempts to update the course with a duplicate withdrawer
-          await updateCourseHelper({
-            courseId: courseId1,
-            uri: "https://example.com/update-duplicate-withdrawer",
-            sellable: true,
-            withdrawers: [instructor1.address, instructor2.address, instructor3.address, instructor1.address], // duplicate withdrawer
-            redeemer: instructor1,
-            validUntil: now + 86400,
-            expectRevertWith: "WithdrawerArrayContainsDuplicates()",
-          });
-          // Expect: Reverts with "WithdrawerArrayContainsDuplicates()"
-        });
-
-        it("should fail to update course with a URI that is already used by another course", async function () {
-          // Step 1: instructor1 creates first course with URI-A
-          const courseA = await createCourseBatchHelper({
-            uries: ["https://example.com/uri-a"],
-            withdrawersArrays: [[instructor1.address]],
-            redeemers: [instructor1.address],
-            validUntils: [now + 86400],
-            createBatchTxCaller: instructor1,
-            expectSuccessWith: "CourseCreated",
-          });
-          // Step 2: instructor2 creates second course with URI-B
-          const courseB = await createCourseBatchHelper({
-            uries: ["https://example.com/uri-b"],
-            withdrawersArrays: [[instructor2.address]],
-            redeemers: [instructor2.address],
-            validUntils: [now + 86400],
-            createBatchTxCaller: instructor2,
-            expectSuccessWith: "CourseCreated",
-          });
-          // Step 3: Try to update their course to use URI-A (which is already taken)
-          const updateB = await updateCourseHelper({
-            courseId: courseB.courseIds[0],
-            uri: "https://example.com/uri-a", // trying to reuse uri-a
-            sellable: true,
-            withdrawers: [instructor2.address],
-            redeemer: instructor2,
-            validUntil: now + 86400,
-            expectRevertWith: "UriIsAlreadyUsed()",
-          });
-          // Expect: Reverts with "UriIsAlreadyUsed()"
-        });
-
-        it("should fail to update a course with more than allowed withdrawers", async function () {
-          // Step 1: instructor1 creates a generic course with [instructor1] array
-          const courseId1 = await quickCreateACourse();
-          // Step 2: Read maxAllowedWithdrawers from contract and convert to Number
-          const max = Number(await NewTreasury.maxAllowedWithdrawers());
-          // Step 3: Generate (max + 1) random addresses
-          const extraWithdrawers = [];
-          for (let i = 0; i < max + 1; i++) {
-            extraWithdrawers.push(ethers.Wallet.createRandom().address);
-          }
-          extraWithdrawers.push(instructor1.address); // Ensure redeemer is included
-          // Step 4: Try to update the course with too many withdrawers
-          const update = await updateCourseHelper({
-            courseId: courseId1,
-            uri: "https://example.com/updated-uri-exceed",
-            sellable: true,
-            withdrawers: extraWithdrawers,
-            redeemer: instructor1,
-            validUntil: now + 86400,
-            expectRevertWith: "WithdrawerArrayExceedsLimit()",
-          });
-          // Expect: Reverts with "WithdrawerArrayExceedsLimit()"
-        });
-
-        it("should fail to update a course if any withdrawer is address(0)", async function () {
-          // Step 1: instructor1 creates a generic course with [instructor1] array
-          const courseId1 = await quickCreateACourse();
-          // Step 2: Set withdrawers with zero addresses in index 0
-          const invalidWithdrawers = [instructor1.address, ethers.ZeroAddress];
-          // Step 3: Try to update course
-          const update = await updateCourseHelper({
-            courseId: courseId1,
-            uri: "https://example.com/update-with-zero",
-            sellable: true,
-            withdrawers: invalidWithdrawers,
-            redeemer: instructor1,
-            validUntil: now + 86400,
-            expectRevertWith: "WithdrawerAddressIsZero()",
-          });
-          // Expect: Reverts with "Zero address not allowed"
-        });
-
-        it("should fail to update course if redeemer is not in withdrawers and not backend", async function () {
-          // Step 1: instructor1 creates a generic course with [instructor1] array
-          const courseId1 = await quickCreateACourse();
-          // Step 2: instructor2 tries to update, but is not in withdrawers
-          const update1_course1 = await updateCourseHelper({
-            courseId: courseId1,
-            uri: "https://example.com/invalid-update-attempt",
-            sellable: false,
-            withdrawers: [instructor3.address],
-            redeemer: instructor2,
-            validUntil: now + 86400,
-            expectRevertWith: "CallerIsNeitherWithdrawerNorBackend()",
-          });
-          // Expect: revert due to unauthorized redeemer
-        });
-
-        it("should fail to update a course with courseId = 0", async function () {
-          // Step 1: try to update courseId = 0
-          const update1 = await updateCourseHelper({
-            courseId: 0,
-            uri: "https://example.com/update-zero-id",
-            sellable: true,
-            withdrawers: [instructor1.address],
-            redeemer: instructor1,
-            validUntil: now + 86400,
-            expectRevertWith: "CourseIdIsInvalid()",
-          });
-          // Expect: Reverts with "CourseIdIsInvalid()-update"
-        });
-
-        it("should fail to update a course with non-existing courseId", async function () {
-          // Step 1: Get current courseCounter, then +1 to get a nonexistent ID
-          const current = await NewTreasury.courseCounter();
-          const nonexistentId = current + 1n;
-          // Step 2: Try to update a course with this nonexistent ID
-          const update1 = await updateCourseHelper({
-            courseId: nonexistentId,
-            uri: "https://example.com/nonexistent-id",
-            sellable: true,
-            withdrawers: [instructor1.address],
-            redeemer: instructor1,
-            validUntil: now + 86400,
-            expectRevertWith: "CourseIdIsInvalid()",
-            previousWithdrawers: [], // course zaten yok
-          });
-          // Expect: Reverts with "CourseIdIsInvalid()-update"
-          // Step 3: instructor1 creates a generic course with [instructor1] array to increase courseCounter
-          const courseId1 = await quickCreateACourse();
-          // Step 4: Get the new courseCounter after creation
-          const currentAfterCreate = await NewTreasury.courseCounter();
-          const nonExistentIdAfterCreate = currentAfterCreate + 1n;
-          // Step 5: Try to update again with the new nonexistent ID
-          const update2 = await updateCourseHelper({
-            courseId: nonExistentIdAfterCreate,
-            uri: "https://example.com/update-nonexistent-id",
-            sellable: true,
-            withdrawers: [instructor1.address],
-            redeemer: instructor1,
-            validUntil: now + 86400,
-            expectRevertWith: "CourseIdIsInvalid()",
-          });
-          // Expect: Reverts with "CourseIdIsInvalid()-update"
-        });
-        /////### End of UPDATE Course Failure Cases###/////
+        // Step 2: Corrupt the voucher
+        const bad = { ...good, uri: "https://example.com/course/invalid-sig-2" };
+        bad.signature = "0x12"; // 65 byte değil -> tryRecover err != NoError
+        // Expect: Reverts with "SignatureIsInvalid"
+        await expect(NewTreasury.connect(instructor1).createCourseBatch([bad])).to.be.revertedWithCustomError(
+          NewTreasury,
+          "SignatureIsInvalid()"
+        );
       });
-      /////### End of Course Manegement: UPDATE Course###/////
+
+      it("should fail to create a course with expired voucher", async function () {
+        // Step 1: set up an expired timestamp for the voucher validUntil
+        const expiredTimestamp = now - 60; // 1 dakika önce
+        // Step 2: Try to create a course with an expired voucher
+        const course1 = await createCourseBatchHelper({
+          uries: ["https://example.com/expired-voucher"],
+          withdrawersArrays: [[instructor1.address]],
+          redeemers: [instructor1.address],
+          validUntils: [expiredTimestamp],
+          createBatchTxCaller: instructor1,
+          expectRevertWith: "VoucherIsExpired()",
+        });
+        // Expect: Reverts with "VoucherIsExpired()"
+      });
+
+      it("should fail to create a course if msg.sender !== redeemer", async function () {
+        // Step 1: Try to create course with mismatched msg.sender and voucher.redeemer
+        const course1 = await createCourseBatchHelper({
+          uries: ["https://example.com/fail-redeemer-check"],
+          withdrawersArrays: [[instructor1.address]],
+          redeemers: [person1.address], // gerçek redeemer backend
+          validUntils: [now + 86400],
+          createBatchTxCaller: backend, // tx'i atan kişi farklı: msg.sender !== voucher.redeemer
+          expectRevertWith: "CallerIsNotVoucherRedeemer()",
+        });
+        // Expect: reverts with "CallerIsNotVoucherRedeemer()"
+      });
+
+      it("should fail to create a course with duplicate withdrawers", async function () {
+        // Step 1: instructor1 creates a course with duplicate withdrawers
+        const course1 = await createCourseBatchHelper({
+          uries: ["https://example.com/duplicate-withdrawers"],
+          withdrawersArrays: [[instructor1.address, instructor1.address, instructor1.address]],
+          redeemers: [instructor1.address],
+          validUntils: [now + 86400],
+          createBatchTxCaller: instructor1,
+          expectRevertWith: "WithdrawerArrayContainsDuplicates()",
+        });
+        // Expect: "CourseCreated" with expected success states
+      });
+
+      it("should fail to create a course with existing URI", async function () {
+        // Step 1: instructor1 creates a course via CreateCourseVoucher
+        const course1 = await createCourseBatchHelper({
+          uries: ["https://example.com/course/duplicate"],
+          withdrawersArrays: [[instructor1.address]],
+          redeemers: [instructor1.address],
+          validUntils: [now + 86400],
+          createBatchTxCaller: instructor1,
+          expectSuccessWith: "CourseCreated",
+        });
+        // Step 2: Try to create another course with the same URI and same voucher
+        const course2 = await createCourseBatchHelper({
+          uries: ["https://example.com/course/duplicate"],
+          withdrawersArrays: [[instructor1.address]],
+          redeemers: [instructor1.address],
+          validUntils: [now + 86400],
+          createBatchTxCaller: instructor1,
+          expectRevertWith: "UriIsAlreadyUsedOrDuplicatedInBatch()",
+        });
+        // Expect: Reverts with "UriIsAlreadyUsedOrDuplicatedInBatch()", with failure states
+      });
+
+      it("should fail to create a course with duplicate URI", async function () {
+        // Step 1: instructor1 creates a course via CreateCourseVoucher
+        const course1 = await createCourseBatchHelper({
+          uries: ["https://example.com/course/duplicate", "https://example.com/course/duplicate"],
+          withdrawersArrays: [[instructor1.address], [instructor3.address]],
+          redeemers: [backend.address, backend.address],
+          validUntils: [now + 86400, now + 86400],
+          createBatchTxCaller: backend,
+          expectRevertWith: "UriIsAlreadyUsedOrDuplicatedInBatch()",
+        });
+        // Expect: Reverts with "UriIsAlreadyUsedOrDuplicatedInBatch()", with failure states
+      });
+
+      it("should fail to create a course with same URI but different withdrawers", async function () {
+        // Step 1: instructor1 creates first course with URI
+        await createCourseBatchHelper({
+          uries: ["https://example.com/same-uri-different-withdrawers"],
+          withdrawersArrays: [[instructor1.address]],
+          redeemers: [instructor1.address],
+          validUntils: [now + 86400],
+          createBatchTxCaller: instructor1,
+          expectSuccessWith: "CourseCreated",
+        });
+        // Step 2: Try to create another course with same URI but different withdrawers
+        await createCourseBatchHelper({
+          uries: ["https://example.com/same-uri-different-withdrawers"],
+          withdrawersArrays: [[instructor2.address]],
+          redeemers: [instructor2.address],
+          validUntils: [now + 86400],
+          createBatchTxCaller: instructor2,
+          expectRevertWith: "UriIsAlreadyUsedOrDuplicatedInBatch()",
+        });
+        // Expect: Reverts with "UriIsAlreadyUsedOrDuplicatedInBatch()", with failure states
+      });
+
+      it("should fail to create a course with more than 4 withdrawers", async function () {
+        // Step 1: Read maxAllowedWithdrawers from contract and convert to Number
+        const max = Number(await NewTreasury.maxAllowedWithdrawers());
+        // Step 2: Generate (max + 1) random addresses
+        const extraWithdrawers = [];
+        for (let i = 0; i < max + 1; i++) {
+          extraWithdrawers.push(ethers.Wallet.createRandom().address);
+        }
+        // Step 3: Try to create a course with too many withdrawers
+        const course1 = await createCourseBatchHelper({
+          uries: ["https://example.com/exceed-withdrawers"],
+          withdrawersArrays: [extraWithdrawers],
+          redeemers: [instructor1.address],
+          validUntils: [now + 86400],
+          createBatchTxCaller: instructor1,
+          expectRevertWith: "WithdrawerArrayExceedsLimit()",
+        });
+        // Expect: Reverts with "WithdrawerArrayExceedsLimit()"
+      });
+
+      it("should fail to create a course if any withdrawer is address(0)", async function () {
+        // Step 1: Construct withdrawers array where 3rd, and 4th are zero address
+        const invalidWithdrawers = [
+          instructor3.address, // index 0 → valid
+          instructor1.address, // index 1 → valid
+          ethers.ZeroAddress, // index 2 → invalid
+          ethers.ZeroAddress, // index 3 → invalid
+        ];
+        // Step 2: Try to create course
+        const course1 = await createCourseBatchHelper({
+          uries: ["https://example.com/zero-address-withdrawer"],
+          withdrawersArrays: [invalidWithdrawers],
+          redeemers: [instructor1.address],
+          validUntils: [now + 86400],
+          createBatchTxCaller: instructor1,
+          expectRevertWith: "WithdrawerAddressIsZero()",
+        });
+        // Expect: Reverts with "WithdrawerAddressIsZero()"
+      });
+
+      it("should fail to create a course with empty withdrawers array", async function () {
+        // Step 1: Try to create course with empty withdrawers
+        await createCourseBatchHelper({
+          uries: ["https://example.com/empty-withdrawer"],
+          withdrawersArrays: [[]],
+          redeemers: [instructor1.address],
+          validUntils: [now + 86400],
+          createBatchTxCaller: instructor1,
+          expectRevertWith: "WithdrawerArrayIsEmpty()",
+        });
+        // Expect: Reverts with "WithdrawerArrayIsEmpty()"
+      });
+
+      it("should fail to create courses when batch size exceeds maxBatchCreateSize", async function () {
+        // Step 1: get maxBatchCreateSize
+        const maxBatch = Number(await NewTreasury.maxBatchCreateSize());
+        const numCourses = maxBatch + 1; // one more than max allowed
+        // Step 2: prepare uries, withdrawersArrays, redeemers, validUntils
+        const uries = Array.from({ length: numCourses }, (_, i) => `https://example.com/too-many/${i + 1}`);
+        const withdrawersArrays = Array(numCourses).fill([instructor1.address]);
+        const redeemers = Array(numCourses).fill(instructor1.address);
+        const validUntils = Array(numCourses).fill(now + 86400);
+        // Step 3: attempt to create more courses than allowed
+        await createCourseBatchHelper({
+          uries,
+          withdrawersArrays,
+          redeemers,
+          validUntils,
+          createBatchTxCaller: instructor1,
+          expectRevertWith: "CreateBatchSizeExceedsLimit()", // kontrattaki revert mesajına göre ayarla
+        });
+        // Expect: Reverts with "CreateBatchSizeExceedsLimit()"
+      });
+
+      it("should fail to create a course if redeemer is not in withdrawers and not backend", async function () {
+        // Step 1: Try to create a course where redeemer is not in withdrawers and not backend
+        await createCourseBatchHelper({
+          uries: ["https://example.com/redeemer-not-in-withdrawers"],
+          withdrawersArrays: [[instructor2.address, instructor3.address]], // instructor1 yok
+          redeemers: [instructor1.address],
+          validUntils: [now + 86400],
+          createBatchTxCaller: instructor1,
+          expectRevertWith: "CallerIsNeitherWithdrawerNorBackend()",
+        });
+        // Expect: Reverts due to invalid role
+      });
+
+      it("should fail to create a course with empty URI", async function () {
+        // Step 1: Try to create a course with empty URI
+        await createCourseBatchHelper({
+          uries: [""], // boş URI
+          withdrawersArrays: [[instructor1.address]],
+          redeemers: [instructor1.address],
+          validUntils: [now + 86400],
+          createBatchTxCaller: instructor1,
+          expectRevertWith: "UriIsEmpty()",
+        });
+        // Expect: Reverts with "Course URI empty"
+      });
+      /////### End of CREATE Course Failure Cases###/////
     });
+    /////### End of CREATE Course###/////
+  });
+  // 2. Update Course
+  describe("📘✏️ UPDATE COURSE", function () {
+    describe("✅ Success Cases", function () {
+      it("should update an existing course with valid voucher", async function () {
+        // Step 1: instructor1 creates a course via CreateCourseVoucher
+        const course1 = await createCourseBatchHelper({
+          uries: ["https://example.com/course/1"],
+          withdrawersArrays: [[instructor1.address, instructor2.address, instructor4.address]],
+          redeemers: [instructor1.address],
+          validUntils: [now + 86400],
+          createBatchTxCaller: instructor1,
+          expectSuccessWith: "CourseCreated",
+        });
+        // Step 2: instructor1 updates course via UpdateCourseVoucher
+        const update_course1 = await updateCourseHelper({
+          courseId: course1.courseIds[0],
+          uri: "https://example.com/course/1New",
+          sellable: false,
+          withdrawers: [instructor1.address, instructor3.address],
+          redeemer: instructor1,
+          validUntil: now + 86400,
+          expectSuccessWith: "CourseUpdated",
+        });
+        // Expect: "CourseUpdated" with expected success states
+      });
+
+      it("should allow reusing a URI after course updates it to a new URI", async function () {
+        // Step 1: instructor1 creates a course with URI_A
+        const createA = await createCourseBatchHelper({
+          uries: ["https://example.com/uri-a"],
+          withdrawersArrays: [[instructor1.address]],
+          redeemers: [instructor1.address],
+          validUntils: [now + 86400],
+          createBatchTxCaller: instructor1,
+          expectSuccessWith: "CourseCreated",
+        });
+        // Step 2: instructor1 updates that course to URI_B
+        const updateToB = await updateCourseHelper({
+          courseId: createA.courseIds[0],
+          uri: "https://example.com/uri-b",
+          sellable: true,
+          withdrawers: [instructor1.address],
+          redeemer: instructor1,
+          validUntil: now + 86400,
+          expectSuccessWith: "CourseUpdated",
+        });
+        // Step 3: instructor1 creates a new course again using URI_A
+        const createAgainA = await createCourseBatchHelper({
+          uries: ["https://example.com/uri-a"],
+          withdrawersArrays: [[instructor1.address]],
+          redeemers: [instructor1.address],
+          validUntils: [now + 86400],
+          createBatchTxCaller: instructor1,
+          expectSuccessWith: "CourseCreated",
+        });
+        // Expect: all 3 steps succeed, and URI_A is used again for the second course
+      });
+
+      it("should allow course update if redeemer is backend and not in withdrawers", async function () {
+        // Step 1: instructor1 creates a valid course
+        const course1 = await createCourseBatchHelper({
+          uries: ["https://example.com/backend-update-course"],
+          withdrawersArrays: [[instructor1.address]],
+          redeemers: [instructor1.address],
+          validUntils: [now + 86400],
+          createBatchTxCaller: instructor1,
+          expectSuccessWith: "CourseCreated",
+        });
+        // Step 2: backend updates the course (not in withdrawers)
+        const update_course1 = await updateCourseHelper({
+          courseId: course1.courseIds[0],
+          uri: "https://example.com/backend-updated-uri",
+          sellable: true,
+          withdrawers: [instructor2.address, instructor3.address], // yeni withdrawer set
+          redeemer: backend, // backend yetkili
+          validUntil: now + 86400,
+          expectSuccessWith: "CourseUpdated",
+        });
+        // Expect: update succeeds via backend signer
+      });
+
+      it("should allow course update if instructor is in new withdrawers list but not in previous", async function () {
+        // Step 1: instructor1 creates a valid course
+        const course1 = await createCourseBatchHelper({
+          uries: ["https://example.com/backend-update-course"],
+          withdrawersArrays: [[instructor1.address]],
+          redeemers: [instructor1.address],
+          validUntils: [now + 86400],
+          createBatchTxCaller: instructor1,
+          expectSuccessWith: "CourseCreated",
+        });
+        // Step 2: backend updates the course (not in withdrawers)
+        const update_course1 = await updateCourseHelper({
+          courseId: course1.courseIds[0],
+          uri: "https://example.com/backend-updated-uri",
+          sellable: true,
+          withdrawers: [instructor2.address, instructor3.address], // yeni withdrawer set
+          redeemer: instructor2, // backend yetkili
+          validUntil: now + 86400,
+          expectSuccessWith: "CourseUpdated",
+        });
+        // Expect: update succeeds via backend signer
+      });
+
+      it("should update course while keeping URI unchanged when empty URI is provided", async function () {
+        // 1) önce geçerli bir kurs oluştur
+        const course1 = await createCourseBatchHelper({
+          uries: ["https://example.com/original-uri"],
+          withdrawersArrays: [[instructor1.address]],
+          redeemers: [instructor1.address],
+          validUntils: [now + 86400],
+          createBatchTxCaller: instructor1,
+          expectSuccessWith: "CourseCreated",
+        });
+        // 2) boş URI ile update: URI no-op, yine de CourseUpdated bekliyoruz
+        await updateCourseHelper({
+          courseId: course1.courseIds[0],
+          uri: "", // empty => no URI change
+          sellable: true,
+          withdrawers: [instructor1.address],
+          redeemer: instructor1,
+          validUntil: now + 86400,
+          expectSuccessWith: "CourseUpdated",
+        });
+        // Expect: "CourseUpdated" with expected success states, URI remains unchanged
+      });
+
+      it("should allow isolated and combined updates of sellable, withdrawers, and URI", async function () {
+        // Step 1: create course
+        const course1 = await createCourseBatchHelper({
+          uries: ["https://example.com/isolate/initial"],
+          withdrawersArrays: [[instructor1.address]],
+          redeemers: [instructor1.address],
+          validUntils: [now + 86400],
+          createBatchTxCaller: instructor1,
+          expectSuccessWith: "CourseCreated",
+        });
+        // Step 2: update only sellable toggle
+        const update1 = await updateCourseHelper({
+          courseId: course1.courseIds[0],
+          uri: "",
+          sellable: false,
+          withdrawers: [instructor1.address],
+          redeemer: instructor1,
+          validUntil: now + 86400,
+          expectSuccessWith: "CourseUpdated",
+        });
+        // Step 3: update only withdrawers
+        const update2 = await updateCourseHelper({
+          courseId: course1.courseIds[0],
+          uri: "https://example.com/isolate/initial",
+          sellable: false,
+          withdrawers: [instructor2.address],
+          redeemer: instructor2,
+          validUntil: now + 86400,
+          expectSuccessWith: "CourseUpdated",
+        });
+        // Step 4: update only URI
+        const update3 = await updateCourseHelper({
+          courseId: course1.courseIds[0],
+          uri: "https://example.com/isolate/only-uri",
+          sellable: false,
+          withdrawers: [], // same with =[instructor2.address] but cheaper
+          redeemer: instructor2,
+          validUntil: now + 86400,
+          expectSuccessWith: "CourseUpdated",
+        });
+        // Step 5: update all fields at once
+        const update4 = await updateCourseHelper({
+          courseId: course1.courseIds[0],
+          uri: "https://example.com/isolate/all-updated",
+          sellable: true,
+          withdrawers: [instructor2.address, instructor3.address],
+          redeemer: instructor2,
+          validUntil: now + 86400,
+          expectSuccessWith: "CourseUpdated",
+        });
+        // Expect: all updates succeed, each isolated and combined update works as expected
+      });
+
+      it("should allow redundant updates with partial or full parameter repetition", async function () {
+        // Step 1: create course
+        const course1 = await createCourseBatchHelper({
+          uries: ["https://example.com/redundant/start"],
+          withdrawersArrays: [[instructor1.address]],
+          redeemers: [instructor1.address],
+          validUntils: [now + 86400],
+          createBatchTxCaller: instructor1,
+          expectSuccessWith: "CourseCreated",
+        });
+        // Step 2: sellable same (true), URI and withdrawers change
+        const update1 = await updateCourseHelper({
+          courseId: course1.courseIds[0],
+          uri: "https://example.com/redundant/uri1",
+          sellable: true,
+          withdrawers: [instructor2.address],
+          redeemer: instructor2,
+          validUntil: now + 86400,
+          expectSuccessWith: "CourseUpdated",
+        });
+        // Step 3: withdrawers same as step2, sellable and URI change
+        const update2 = await updateCourseHelper({
+          courseId: course1.courseIds[0],
+          uri: "https://example.com/redundant/uri2-3",
+          sellable: false,
+          withdrawers: [instructor2.address],
+          redeemer: instructor2,
+          validUntil: now + 86400,
+          expectSuccessWith: "CourseUpdated",
+        });
+        // Step 4: URI same as step3, sellable and withdrawers change
+        const update3 = await updateCourseHelper({
+          courseId: course1.courseIds[0],
+          uri: "https://example.com/redundant/uri2-3",
+          sellable: true,
+          withdrawers: [instructor3.address],
+          redeemer: instructor3,
+          validUntil: now + 86400,
+          expectSuccessWith: "CourseUpdated",
+        });
+        // Step 5: all params same as step3
+        const update4 = await updateCourseHelper({
+          courseId: course1.courseIds[0],
+          uri: "https://example.com/redundant/uri2-3",
+          sellable: true,
+          withdrawers: [instructor3.address],
+          redeemer: instructor3,
+          validUntil: now + 86400,
+          expectSuccessWith: "CourseUpdated",
+        });
+        // Expect: all updates succeed, selective redundancy is handled gracefully
+      });
+
+      it("should keep previous withdrawers when empty withdrawers array is provided", async function () {
+        // Step 1: instructor1 creates a generic course with [instructor1]
+        const courseId1 = await quickCreateACourse();
+        const prevWithdrawers = await NewTreasury.getAuthorizedWithdrawers(courseId1);
+
+        // Step 2: Update with empty withdrawers -> should KEEP previous set
+        await updateCourseHelper({
+          courseId: courseId1,
+          uri: "https://example.com/emptied-uri",
+          sellable: true,
+          withdrawers: [], // <-- boş gönderiyoruz
+          redeemer: instructor1,
+          validUntil: now + 86400,
+          expectSuccessWith: "CourseUpdated", // <-- artık success bekliyoruz
+        });
+
+        // Ek güvence: zincirden kontrol (opsiyonel)
+        const wAfter = await NewTreasury.getAuthorizedWithdrawers(courseId1);
+        expect(wAfter).to.deep.equal(prevWithdrawers);
+      });
+      /////### End of UPDATE Course Success Cases###/////
+    });
+
+    describe("❌ Failure Cases", function () {
+      it("should fail to update a course with invalid signer", async function () {
+        // Step 1: instructor1 creates a generic course with [instructor1] array
+        const courseId1 = await quickCreateACourse();
+        // Step 2: Override default updateVH and get a new voucher with invalid signer
+        updateVH = getVoucherHelpers({ signer: instructor1 }).updateVH;
+        // Step 3: Try to update course using invalid signer
+        const updated = await updateCourseHelper({
+          courseId: courseId1,
+          uri: "https://example.com/course/1-updated",
+          sellable: false,
+          withdrawers: [instructor1.address],
+          redeemer: instructor1,
+          validUntil: now + 86400,
+          expectRevertWith: "SignerIsNotBackend()",
+        });
+        // Expect: Reverts with "SignerIsNotBackend()"
+      });
+
+      it("should fail to update a course with invalid signature (SignatureIsInvalid)", async function () {
+        // Step 1: Create a course
+        const courseId1 = await quickCreateACourse();
+        // Step 2: Build a valid voucher
+        const good = await updateVH.signVoucher({
+          courseId: courseId1,
+          sellable: false,
+          uri: "https://example.com/course/1-updated-invalidsig",
+          withdrawers: [instructor1.address],
+          redeemer: instructor1.address, // msg.sender ile aynı
+          validUntil: now + 86400,
+        });
+        // Step 3: Corrupt signature
+        const bad = { ...good };
+        bad.signature = "0x12"; // 65 byte değil -> tryRecover err != NoError
+        // Step 4: Expect revert
+        await expect(NewTreasury.connect(instructor1).updateCourse(bad)).to.be.revertedWithCustomError(
+          NewTreasury,
+          "SignatureIsInvalid()"
+        );
+      });
+
+      it("should fail to update a course with expired voucher", async function () {
+        // Step 1: instructor1 creates a generic course with [instructor1] array
+        const courseId1 = await quickCreateACourse();
+        // Step 2: set up an expired validUntil timestamp
+        const expiredTimestamp = now - 60; // 1 dakika önce
+        // Step 3: try to update the course using an expired voucher
+        const update1 = await updateCourseHelper({
+          courseId: courseId1,
+          uri: "https://example.com/expired-update",
+          sellable: false,
+          withdrawers: [instructor1.address],
+          redeemer: instructor1,
+          validUntil: expiredTimestamp,
+          expectRevertWith: "VoucherIsExpired()",
+        });
+        // Expect: Reverts with "VoucherIsExpired()"
+      });
+
+      it("should fail to update a course if msg.sender !== redeemer", async function () {
+        // Step 1: instructor1 creates a generic course with [instructor1] array
+        const courseId1 = await quickCreateACourse();
+        // Step 2: prepare mismatched redeemer (voucher will carry different redeemer)
+        falseRedeemer = ethers.ZeroAddress;
+        // Step 3: attempt update with mismatched msg.sender and voucher.redeemer
+        await updateCourseHelper({
+          courseId: courseId1,
+          uri: "https://example.com/update-redeemer-mismatch/attempt",
+          sellable: true,
+          withdrawers: [instructor1.address],
+          redeemer: instructor1, // msg.sender
+          validUntil: now + 86400,
+          expectRevertWith: "CallerIsNotVoucherRedeemer()",
+        });
+        // Expect: Reverts with "CallerIsNotVoucherRedeemer()"
+      });
+
+      it("should fail to update a course with duplicate withdrawers", async function () {
+        // Step 1: instructor1 creates a generic course with [instructor1] array
+        const courseId1 = await quickCreateACourse();
+        // Step 2: instructor1 attempts to update the course with a duplicate withdrawer
+        await updateCourseHelper({
+          courseId: courseId1,
+          uri: "https://example.com/update-duplicate-withdrawer",
+          sellable: true,
+          withdrawers: [instructor1.address, instructor2.address, instructor3.address, instructor1.address], // duplicate withdrawer
+          redeemer: instructor1,
+          validUntil: now + 86400,
+          expectRevertWith: "WithdrawerArrayContainsDuplicates()",
+        });
+        // Expect: Reverts with "WithdrawerArrayContainsDuplicates()"
+      });
+
+      it("should fail to update course with a URI that is already used by another course", async function () {
+        // Step 1: instructor1 creates first course with URI-A
+        const courseA = await createCourseBatchHelper({
+          uries: ["https://example.com/uri-a"],
+          withdrawersArrays: [[instructor1.address]],
+          redeemers: [instructor1.address],
+          validUntils: [now + 86400],
+          createBatchTxCaller: instructor1,
+          expectSuccessWith: "CourseCreated",
+        });
+        // Step 2: instructor2 creates second course with URI-B
+        const courseB = await createCourseBatchHelper({
+          uries: ["https://example.com/uri-b"],
+          withdrawersArrays: [[instructor2.address]],
+          redeemers: [instructor2.address],
+          validUntils: [now + 86400],
+          createBatchTxCaller: instructor2,
+          expectSuccessWith: "CourseCreated",
+        });
+        // Step 3: Try to update their course to use URI-A (which is already taken)
+        const updateB = await updateCourseHelper({
+          courseId: courseB.courseIds[0],
+          uri: "https://example.com/uri-a", // trying to reuse uri-a
+          sellable: true,
+          withdrawers: [instructor2.address],
+          redeemer: instructor2,
+          validUntil: now + 86400,
+          expectRevertWith: "UriIsAlreadyUsed()",
+        });
+        // Expect: Reverts with "UriIsAlreadyUsed()"
+      });
+
+      it("should fail to update a course with more than allowed withdrawers", async function () {
+        // Step 1: instructor1 creates a generic course with [instructor1] array
+        const courseId1 = await quickCreateACourse();
+        // Step 2: Read maxAllowedWithdrawers from contract and convert to Number
+        const max = Number(await NewTreasury.maxAllowedWithdrawers());
+        // Step 3: Generate (max + 1) random addresses
+        const extraWithdrawers = [];
+        for (let i = 0; i < max + 1; i++) {
+          extraWithdrawers.push(ethers.Wallet.createRandom().address);
+        }
+        extraWithdrawers.push(instructor1.address); // Ensure redeemer is included
+        // Step 4: Try to update the course with too many withdrawers
+        const update = await updateCourseHelper({
+          courseId: courseId1,
+          uri: "https://example.com/updated-uri-exceed",
+          sellable: true,
+          withdrawers: extraWithdrawers,
+          redeemer: instructor1,
+          validUntil: now + 86400,
+          expectRevertWith: "WithdrawerArrayExceedsLimit()",
+        });
+        // Expect: Reverts with "WithdrawerArrayExceedsLimit()"
+      });
+
+      it("should fail to update a course if any withdrawer is address(0)", async function () {
+        // Step 1: instructor1 creates a generic course with [instructor1] array
+        const courseId1 = await quickCreateACourse();
+        // Step 2: Set withdrawers with zero addresses in index 0
+        const invalidWithdrawers = [instructor1.address, ethers.ZeroAddress];
+        // Step 3: Try to update course
+        const update = await updateCourseHelper({
+          courseId: courseId1,
+          uri: "https://example.com/update-with-zero",
+          sellable: true,
+          withdrawers: invalidWithdrawers,
+          redeemer: instructor1,
+          validUntil: now + 86400,
+          expectRevertWith: "WithdrawerAddressIsZero()",
+        });
+        // Expect: Reverts with "Zero address not allowed"
+      });
+
+      it("should fail to update course if redeemer is not in withdrawers and not backend", async function () {
+        // Step 1: instructor1 creates a generic course with [instructor1] array
+        const courseId1 = await quickCreateACourse();
+        // Step 2: instructor2 tries to update, but is not in withdrawers
+        const update1_course1 = await updateCourseHelper({
+          courseId: courseId1,
+          uri: "https://example.com/invalid-update-attempt",
+          sellable: false,
+          withdrawers: [instructor3.address],
+          redeemer: instructor2,
+          validUntil: now + 86400,
+          expectRevertWith: "CallerIsNeitherWithdrawerNorBackend()",
+        });
+        // Expect: revert due to unauthorized redeemer
+      });
+
+      it("should fail to update a course with courseId = 0", async function () {
+        // Step 1: try to update courseId = 0
+        const update1 = await updateCourseHelper({
+          courseId: 0,
+          uri: "https://example.com/update-zero-id",
+          sellable: true,
+          withdrawers: [instructor1.address],
+          redeemer: instructor1,
+          validUntil: now + 86400,
+          expectRevertWith: "CourseIdIsInvalid()",
+        });
+        // Expect: Reverts with "CourseIdIsInvalid()-update"
+      });
+
+      it("should fail to update a course with non-existing courseId", async function () {
+        // Step 1: Get current courseCounter, then +1 to get a nonexistent ID
+        const current = await NewTreasury.courseCounter();
+        const nonexistentId = current + 1n;
+        // Step 2: Try to update a course with this nonexistent ID
+        const update1 = await updateCourseHelper({
+          courseId: nonexistentId,
+          uri: "https://example.com/nonexistent-id",
+          sellable: true,
+          withdrawers: [instructor1.address],
+          redeemer: instructor1,
+          validUntil: now + 86400,
+          expectRevertWith: "CourseIdIsInvalid()",
+          previousWithdrawers: [], // course zaten yok
+        });
+        // Expect: Reverts with "CourseIdIsInvalid()-update"
+        // Step 3: instructor1 creates a generic course with [instructor1] array to increase courseCounter
+        const courseId1 = await quickCreateACourse();
+        // Step 4: Get the new courseCounter after creation
+        const currentAfterCreate = await NewTreasury.courseCounter();
+        const nonExistentIdAfterCreate = currentAfterCreate + 1n;
+        // Step 5: Try to update again with the new nonexistent ID
+        const update2 = await updateCourseHelper({
+          courseId: nonExistentIdAfterCreate,
+          uri: "https://example.com/update-nonexistent-id",
+          sellable: true,
+          withdrawers: [instructor1.address],
+          redeemer: instructor1,
+          validUntil: now + 86400,
+          expectRevertWith: "CourseIdIsInvalid()",
+        });
+        // Expect: Reverts with "CourseIdIsInvalid()-update"
+      });
+      /////### End of UPDATE Course Failure Cases###/////
+    });
+    /////### End of UPDATE Course###/////
   });
 
-  // 2. Course Purchase
-  describe("💰 COURSE PURCHASE", function () {
+  // 3. Course Purchase
+  describe("💰💳 COURSE PURCHASE", function () {
     describe("✅ Success Cases", function () {
       it("should allow a user to buy a course using an ERC20 token and a valid voucher", async function () {
         // Step 1: instructor1 creates a generic course with [instructor1] array
@@ -2802,6 +2833,28 @@ describe("NewTreasury Contract Tests", function () {
           expectRevertWith: "SignerIsNotBackend()",
         });
         // Expect: Reverts with "SignerIsNotBackend()"
+      });
+
+      it("should fail to buy a course with invalid signature (SignatureIsInvalid)", async function () {
+        // Step 1: instructor1 creates a generic course
+        const courseId1 = await quickCreateACourse();
+        // Step 2: Build a valid buy voucher
+        const good = await buyVH.signVoucher({
+          courseId: courseId1,
+          tokenAddress: MKT1.target, // use ERC20 so msg.value = 0
+          coursePrice: ethers.parseEther("10"),
+          courseReceiver: person1.address,
+          redeemer: buyer1.address, // must match msg.sender
+          validUntil: now + 86400,
+        });
+        // Step 3: Corrupt signature
+        const bad = { ...good };
+        bad.signature = "0x12"; // invalid length -> tryRecover err != NoError
+        // Step 4: Expect revert with SignatureIsInvalid
+        await expect(NewTreasury.connect(buyer1).buyCourseBatch([bad], { value: 0 })).to.be.revertedWithCustomError(
+          NewTreasury,
+          "SignatureIsInvalid()"
+        );
       });
 
       it("should fail to buy a course with expired voucher", async function () {
@@ -3127,8 +3180,8 @@ describe("NewTreasury Contract Tests", function () {
     /////###End of Course Purchase###/////
   });
 
-  // 3. Refunds: paymentId
-  describe("💸 REFUNDS: refundCourse", function () {
+  // 4. Refunds: byPaymentId
+  describe("🆔↩️ REFUNDS: refundCourseByPaymentId", function () {
     describe("✅ Success Cases", function () {
       it("should allow a course purchased with native token to be refunded", async function () {
         // Step 1: instructor1 creates a generic course with [instructor1] array
@@ -3351,6 +3404,35 @@ describe("NewTreasury Contract Tests", function () {
           expectRevertWith: "SignerIsNotBackend()",
         });
         // Expect: Reverts with "SignerIsNotBackend()"
+      });
+
+      it("should fail to refund with invalid signature (SignatureIsInvalid)", async function () {
+        // Step 1: instructor1 creates a generic course
+        const courseId1 = await quickCreateACourse();
+        // Step 2: buyer1 buys the course for person1
+        const [paymentId] = await buyCourseBatchHelper({
+          courseIds: [courseId1],
+          tokenAddresses: [MKT1.target],
+          coursePrices: [ethers.parseEther("10")],
+          courseReceivers: [person1.address],
+          redeemers: [buyer1],
+          validUntils: [now + 86400],
+          nativeMsgValue: 0,
+          buyBatchTxCaller: buyer1,
+          expectSuccessWith: "ContentPurchased",
+        });
+        // Step 3: build a valid refund voucher, then corrupt its signature
+        const good = await refundVH.signVoucher({
+          paymentId,
+          redeemer: buyer1.address, // must match msg.sender
+          validUntil: now + 86400,
+        });
+        const bad = { ...good, signature: "0x12" }; // invalid length -> tryRecover err != NoError
+        // Step 4: expect revert with SignatureIsInvalid
+        await expect(NewTreasury.connect(buyer1).refundCourse(bad)).to.be.revertedWithCustomError(
+          NewTreasury,
+          "SignatureIsInvalid()"
+        );
       });
 
       it("should fail to refund with expired voucher", async function () {
@@ -3694,8 +3776,8 @@ describe("NewTreasury Contract Tests", function () {
     /////###End of Refunds: paymentId###/////
   });
 
-  // 4. Refunds: byowner and courseId
-  describe("💸 REFUNDS: refundCourseByOwnerAndCourseId", function () {
+  // 5. Refunds: byCourseOwner&Id
+  describe("👤↩️ REFUNDS: refundCourseByCourseOwnerAndId", function () {
     describe("✅ Success Cases", function () {
       it("should allow refund using RefundCourseByOwnerAndCourseIdVoucher", async function () {
         // Step 1: instructor1 creates a generic course with [instructor1] array
@@ -3957,6 +4039,36 @@ describe("NewTreasury Contract Tests", function () {
           expectRevertWith: "SignerIsNotBackend()",
         });
         // Expect: Reverts with "SignerIsNotBackend()"
+      });
+
+      it("should fail to refund (by owner+courseId) with invalid signature (SignatureIsInvalid)", async function () {
+        // Step 1: instructor1 creates a generic course
+        const courseId1 = await quickCreateACourse();
+        // Step 2: buyer1 buys the course for person1 (sets courseOwnerToPayment)
+        await buyCourseBatchHelper({
+          courseIds: [courseId1],
+          tokenAddresses: [MKT1.target],
+          coursePrices: [ethers.parseEther("10")],
+          courseReceivers: [person1.address],
+          redeemers: [buyer1],
+          validUntils: [now + 86400],
+          nativeMsgValue: 0,
+          buyBatchTxCaller: buyer1,
+          expectSuccessWith: "ContentPurchased",
+        });
+        // Step 3: build a valid refundByOwner voucher, then corrupt its signature
+        const good = await refundByOwnerVH.signVoucher({
+          courseOwner: person1.address,
+          courseId: courseId1,
+          redeemer: buyer1.address, // must match msg.sender
+          validUntil: now + 86400,
+        });
+        const bad = { ...good, signature: "0x12" }; // invalid length -> tryRecover err != NoError
+        // Step 4: expect revert with SignatureIsInvalid
+        await expect(NewTreasury.connect(buyer1).refundCourseByOwnerAndCourseId(bad)).to.be.revertedWithCustomError(
+          NewTreasury,
+          "SignatureIsInvalid()"
+        );
       });
 
       it("should fail to refund with expired voucher", async function () {
@@ -4312,8 +4424,8 @@ describe("NewTreasury Contract Tests", function () {
     /////###End of Refunds: byOwner and courseId###/////
   });
 
-  // 5. Withdrawals
-  describe("🏦 WITHDRAWALS", function () {
+  // 6. Withdrawals
+  describe("🏦💵 WITHDRAWALS", function () {
     describe("✅ Success Cases", function () {
       it("should allow instructor to withdraw payments for a subset of sales", async function () {
         // Step 1: instructor1 creates a generic course with [instructor1] array
@@ -5330,381 +5442,6 @@ describe("NewTreasury Contract Tests", function () {
       /////###End of Partial Success Cases###/////
     });
 
-    describe("Rescue Surplus", function () {
-      it("should rescue stray native&erc20 when no locked funds", async function () {
-        // Step 0: Try to rescue surplus
-        await expect(NewTreasury.connect(buyer2).rescueSurplus(ethers.ZeroAddress));
-        expect(await NewTreasury.locked(ethers.ZeroAddress)).to.equal(0);
-        await expect(NewTreasury.connect(buyer3).rescueSurplus(MKT2.target));
-        expect(await NewTreasury.locked(MKT2.target)).to.equal(0);
-        // Step 1: Zero state variables, and be sure there is no surplus in contract
-        const nativeSurplus = ethers.parseEther("1.2345");
-        const ercSurplus = ethers.parseEther("7");
-        const [foundNativeBalAt0, foundErcBalAt0] = await Promise.all([
-          ethers.provider.getBalance(foundation.address),
-          MKT2.balanceOf(foundation.address),
-        ]);
-        expect(await NewTreasury.getSurplusOf(ethers.ZeroAddress)).to.equal(0);
-        expect(await NewTreasury.getSurplusOf(MKT2.target)).to.equal(0);
-        // Step 2: Send Native&MTK2 surplus to contract, and check it
-        await buyer1.sendTransaction({ to: NewTreasury.target, value: nativeSurplus });
-        await MKT2.connect(buyer1).transfer(NewTreasury.target, ercSurplus);
-        expect(await NewTreasury.getSurplusOf(ethers.ZeroAddress)).to.equal(nativeSurplus);
-        expect(await NewTreasury.getSurplusOf(MKT2.target)).to.equal(ercSurplus);
-        // Step 3: Native rescue and verify the surplus zeroed out
-        await expect(NewTreasury.connect(buyer2).rescueSurplus(ethers.ZeroAddress))
-          .to.emit(NewTreasury, "SurplusRescued")
-          .withArgs(ethers.ZeroAddress, foundation.address, nativeSurplus, buyer2.address);
-        expect(await NewTreasury.locked(ethers.ZeroAddress)).to.equal(0);
-        // Step 4: MTK2 rescue, and verify the surplus zeroed out
-        await expect(NewTreasury.connect(buyer3).rescueSurplus(MKT2.target))
-          .to.emit(NewTreasury, "SurplusRescued")
-          .withArgs(MKT2.target, foundation.address, ercSurplus, buyer3.address);
-        expect(await NewTreasury.locked(MKT2.target)).to.equal(0);
-        // Step 5: Check balances after rescue
-        expect(await ethers.provider.getBalance(foundation.address)).to.equal(foundNativeBalAt0 + nativeSurplus);
-        expect(await MKT2.balanceOf(foundation.address)).to.equal(foundErcBalAt0 + ercSurplus);
-      });
-
-      it("should rescue mixed native&erc20 surplus when a course is created between deposits", async function () {
-        // Step 0: Zero state variables, and be sure there is no surplus in contract
-        const nativeSurplus = ethers.parseEther("1.2345");
-        const ercSurplus = ethers.parseEther("7");
-        const [foundNativeBalAt0, foundErcBalAt0] = await Promise.all([
-          ethers.provider.getBalance(foundation.address),
-          MKT2.balanceOf(foundation.address),
-        ]);
-        expect(await NewTreasury.getSurplusOf(ethers.ZeroAddress)).to.equal(0);
-        expect(await NewTreasury.getSurplusOf(MKT2.target)).to.equal(0);
-        // Step 1: Send Native&MTK2 surplus to contract, and check it
-        await buyer1.sendTransaction({ to: NewTreasury.target, value: nativeSurplus });
-        await MKT2.connect(buyer1).transfer(NewTreasury.target, ercSurplus);
-        expect(await NewTreasury.getSurplusOf(ethers.ZeroAddress)).to.equal(nativeSurplus);
-        expect(await NewTreasury.getSurplusOf(MKT2.target)).to.equal(ercSurplus);
-        // Step 2: instructor1 creates a generic course with [instructor1] array
-        const courseId1 = await quickCreateACourse();
-        expect(await NewTreasury.getSurplusOf(ethers.ZeroAddress)).to.equal(nativeSurplus);
-        expect(await NewTreasury.getSurplusOf(MKT2.target)).to.equal(ercSurplus);
-        // Step 3: Send Native&MTK2 surplus to contract 2nd time, and check it
-        await buyer1.sendTransaction({ to: NewTreasury.target, value: nativeSurplus });
-        await MKT2.connect(buyer1).transfer(NewTreasury.target, ercSurplus);
-        expect(await NewTreasury.getSurplusOf(ethers.ZeroAddress)).to.equal(nativeSurplus * 2n);
-        expect(await NewTreasury.getSurplusOf(MKT2.target)).to.equal(ercSurplus * 2n);
-        // Step 4: Native rescue and verify the surplus zeroed out
-        await expect(NewTreasury.connect(buyer2).rescueSurplus(ethers.ZeroAddress))
-          .to.emit(NewTreasury, "SurplusRescued")
-          .withArgs(ethers.ZeroAddress, foundation.address, nativeSurplus * 2n, buyer2.address);
-        expect(await NewTreasury.locked(ethers.ZeroAddress)).to.equal(0);
-        // Step 5: MTK2 rescue, and verify the surplus zeroed out
-        await expect(NewTreasury.connect(buyer3).rescueSurplus(MKT2.target))
-          .to.emit(NewTreasury, "SurplusRescued")
-          .withArgs(MKT2.target, foundation.address, ercSurplus * 2n, buyer3.address);
-        expect(await NewTreasury.locked(MKT2.target)).to.equal(0);
-        // Step 6: Check balances after rescue
-        expect(await ethers.provider.getBalance(foundation.address)).to.equal(foundNativeBalAt0 + nativeSurplus * 2n);
-        expect(await MKT2.balanceOf(foundation.address)).to.equal(foundErcBalAt0 + ercSurplus * 2n);
-      });
-
-      it("should rescue surplus while preserving locked balances after interleaved native&erc20 purchases", async function () {
-        // Step 0: Zero state variables, and be sure there is no surplus in contract
-        const nativeSurplus = ethers.parseEther("1.2345");
-        const ercSurplus = ethers.parseEther("7");
-        const [foundNativeBalAt0, foundErcBalAt0] = await Promise.all([
-          ethers.provider.getBalance(foundation.address),
-          MKT2.balanceOf(foundation.address),
-        ]);
-        expect(await NewTreasury.getSurplusOf(ethers.ZeroAddress)).to.equal(0);
-        expect(await NewTreasury.getSurplusOf(MKT2.target)).to.equal(0);
-        // Step 1: Send Native&MTK2 surplus to contract, and check it
-        await buyer1.sendTransaction({ to: NewTreasury.target, value: nativeSurplus });
-        await MKT2.connect(buyer1).transfer(NewTreasury.target, ercSurplus);
-        expect(await NewTreasury.getSurplusOf(ethers.ZeroAddress)).to.equal(nativeSurplus);
-        expect(await NewTreasury.getSurplusOf(MKT2.target)).to.equal(ercSurplus);
-        // Step 2: instructor1 creates a generic course with [instructor1] array and make 3 purchase
-        const courseId1 = await quickCreateACourse();
-        await buyCourseBatchHelper({
-          courseIds: Array(3).fill(courseId1), // 3 sales for the same course
-          tokenAddresses: [MKT1.target, MKT2.target, ethers.ZeroAddress],
-          coursePrices: [ethers.parseEther("5"), ethers.parseEther("10"), ethers.parseEther("15")],
-          courseReceivers: [person1.address, person2.address, person3.address],
-          redeemers: [buyer1, buyer1, buyer1], // genelde hepsi aynı: tx'i buyer1 atıyor
-          validUntils: [now + 86400, now + 86400, now + 86400],
-          nativeMsgValue: ethers.parseEther("15"), // sadece ERC20 olduğundan 0
-          buyBatchTxCaller: buyer1, // tx gönderen signer
-          expectSuccessWith: "ContentPurchased",
-        });
-        expect(await NewTreasury.getSurplusOf(ethers.ZeroAddress)).to.equal(nativeSurplus);
-        expect(await NewTreasury.getSurplusOf(MKT2.target)).to.equal(ercSurplus);
-        // Step 3: Send Native&MTK2 surplus to contract 2nd time, and check it
-        await buyer1.sendTransaction({ to: NewTreasury.target, value: nativeSurplus });
-        await MKT2.connect(buyer2).transfer(NewTreasury.target, ercSurplus);
-        expect(await NewTreasury.getSurplusOf(ethers.ZeroAddress)).to.equal(nativeSurplus * 2n);
-        expect(await NewTreasury.getSurplusOf(MKT2.target)).to.equal(ercSurplus * 2n);
-        // Step 4: Native rescue and verify the surplus zeroed out
-        await expect(NewTreasury.connect(buyer2).rescueSurplus(ethers.ZeroAddress))
-          .to.emit(NewTreasury, "SurplusRescued")
-          .withArgs(ethers.ZeroAddress, foundation.address, nativeSurplus * 2n, buyer2.address);
-        expect(await NewTreasury.locked(ethers.ZeroAddress)).to.equal(ethers.parseEther("15"));
-        // Step 5: MTK2 rescue, and verify the surplus zeroed out
-        await expect(NewTreasury.connect(buyer3).rescueSurplus(MKT2.target))
-          .to.emit(NewTreasury, "SurplusRescued")
-          .withArgs(MKT2.target, foundation.address, ercSurplus * 2n, buyer3.address);
-        expect(await NewTreasury.locked(MKT2.target)).to.equal(ethers.parseEther("10"));
-        // Step 6: Check balances after rescue
-        expect(await ethers.provider.getBalance(foundation.address)).to.equal(foundNativeBalAt0 + nativeSurplus * 2n);
-        expect(await MKT2.balanceOf(foundation.address)).to.equal(foundErcBalAt0 + ercSurplus * 2n);
-      });
-
-      it("should rescue surplus while preserving locked balances after interleaved native&erc20 refund", async function () {
-        // Step 0: Ensure no surplus in contract and snapshot foundation balances
-        const nativeSurplus = ethers.parseEther("1.2345");
-        const ercSurplus = ethers.parseEther("7");
-        const [foundNativeBalAt0, foundErcBalAt0] = await Promise.all([
-          ethers.provider.getBalance(foundation.address),
-          MKT2.balanceOf(foundation.address),
-        ]);
-        expect(await NewTreasury.getSurplusOf(ethers.ZeroAddress)).to.equal(0);
-        expect(await NewTreasury.getSurplusOf(MKT2.target)).to.equal(0);
-        // Step 1: Send stray native & MTK2 to contract; verify surplus reflects deposits
-        await buyer1.sendTransaction({ to: NewTreasury.target, value: nativeSurplus });
-        await MKT2.connect(buyer1).transfer(NewTreasury.target, ercSurplus);
-        expect(await NewTreasury.getSurplusOf(ethers.ZeroAddress)).to.equal(nativeSurplus);
-        expect(await NewTreasury.getSurplusOf(MKT2.target)).to.equal(ercSurplus);
-        // Step 2: Instructor creates two courses (each with [instructor1] as withdrawer)
-        const courses = await createCourseBatchHelper({
-          uries: ["https://erc:MTK2-1", "https://native-2"],
-          withdrawersArrays: [[instructor1.address], [instructor1.address]],
-          redeemers: [instructor1.address, instructor1.address],
-          validUntils: [now + 86400, now + 86400],
-          createBatchTxCaller: instructor1,
-          expectSuccessWith: "CourseCreated",
-        });
-        // Step 3: Buyer purchases 4 items (2× MTK2, 2× native) for person1 & person2
-        const buy_courses = await buyCourseBatchHelper({
-          courseIds: [courses.courseIds[0], courses.courseIds[1], courses.courseIds[0], courses.courseIds[1]],
-          tokenAddresses: [MKT2.target, MKT2.target, ethers.ZeroAddress, ethers.ZeroAddress],
-          coursePrices: [
-            ethers.parseEther("5"), // course1 price in MKT1
-            ethers.parseEther("7"), // course2 price in MKT2
-            ethers.parseEther("9"), // course3 price in MKT1
-            ethers.parseEther("11"), // course3 price in native
-          ],
-          courseReceivers: [person1.address, person1.address, person2.address, person2.address],
-          redeemers: [buyer1, buyer1, buyer1, buyer1], // farklı redeemerlar
-          validUntils: [now + 86400, now + 86400, now + 86400, now + 86400],
-          nativeMsgValue: ethers.parseEther("20"), // sadece ERC20 olduğundan 0
-          buyBatchTxCaller: buyer1, // tx gönderen signer
-          expectSuccessWith: "ContentPurchased",
-        });
-        // Step 4: Send stray native & MTK2 again; verify surplus doubled and locked reflect buys
-        await buyer1.sendTransaction({ to: NewTreasury.target, value: nativeSurplus });
-        await MKT2.connect(buyer2).transfer(NewTreasury.target, ercSurplus);
-        expect(await NewTreasury.getSurplusOf(ethers.ZeroAddress)).to.equal(nativeSurplus * 2n);
-        expect(await NewTreasury.getSurplusOf(MKT2.target)).to.equal(ercSurplus * 2n);
-        expect(await NewTreasury.locked(ethers.ZeroAddress)).to.equal(ethers.parseEther("20"));
-        expect(await NewTreasury.locked(MKT2.target)).to.equal(ethers.parseEther("12"));
-        // Step 5: Refund all four purchases; surplus unchanged, locked reduced to zero
-        const refund1 = await refundCourseHelper({
-          paymentId: buy_courses[0],
-          redeemer: buyer1,
-          validUntil: now + 86400,
-          expectSuccessWith: "CourseRefunded",
-        });
-        const refund2 = await refundCourseHelper({
-          paymentId: buy_courses[1],
-          redeemer: buyer2,
-          validUntil: now + 86400,
-          expectSuccessWith: "CourseRefunded",
-        });
-        const refund3 = await refundCourseByOwnerHelper({
-          courseOwner: person2.address,
-          courseId: courses.courseIds[0],
-          redeemer: buyer1,
-          validUntil: now + 86400,
-          expectSuccessWith: "CourseRefunded",
-        });
-        const refund4 = await refundCourseByOwnerHelper({
-          courseOwner: person2.address,
-          courseId: courses.courseIds[1],
-          redeemer: buyer1,
-          validUntil: now + 86400,
-          expectSuccessWith: "CourseRefunded",
-        });
-        expect(await NewTreasury.getSurplusOf(ethers.ZeroAddress)).to.equal(nativeSurplus * 2n);
-        expect(await NewTreasury.getSurplusOf(MKT2.target)).to.equal(ercSurplus * 2n);
-        // Step 6: Send stray native & MTK2 a 3rd time; verify surplus tripled
-        await buyer1.sendTransaction({ to: NewTreasury.target, value: nativeSurplus });
-        await MKT2.connect(buyer2).transfer(NewTreasury.target, ercSurplus);
-        expect(await NewTreasury.getSurplusOf(ethers.ZeroAddress)).to.equal(nativeSurplus * 3n);
-        expect(await NewTreasury.getSurplusOf(MKT2.target)).to.equal(ercSurplus * 3n);
-        // Step 7: Rescue native surplus; locked(native) remains zero
-        await expect(NewTreasury.connect(buyer2).rescueSurplus(ethers.ZeroAddress))
-          .to.emit(NewTreasury, "SurplusRescued")
-          .withArgs(ethers.ZeroAddress, foundation.address, nativeSurplus * 3n, buyer2.address);
-        expect(await NewTreasury.locked(ethers.ZeroAddress)).to.equal(ethers.parseEther("0"));
-        // Step 8: Rescue MTK2 surplus; locked(MTK2) remains zero
-        await expect(NewTreasury.connect(buyer3).rescueSurplus(MKT2.target))
-          .to.emit(NewTreasury, "SurplusRescued")
-          .withArgs(MKT2.target, foundation.address, ercSurplus * 3n, buyer3.address);
-        expect(await NewTreasury.locked(MKT2.target)).to.equal(ethers.parseEther("0"));
-        // Step 9: Verify foundation balances increased by rescued surplus
-        expect(await ethers.provider.getBalance(foundation.address)).to.equal(foundNativeBalAt0 + nativeSurplus * 3n);
-        expect(await MKT2.balanceOf(foundation.address)).to.equal(foundErcBalAt0 + ercSurplus * 3n);
-      });
-
-      it("should rescue surplus while preserving locked balances after interleaved native&erc20 withdraw", async function () {
-        // Step 0: Ensure no surplus in contract and snapshot foundation balances
-        const nativeSurplus = ethers.parseEther("1.2345");
-        const ercSurplus = ethers.parseEther("2");
-        const [foundNativeBalAt0, foundErcBalAt0] = await Promise.all([
-          ethers.provider.getBalance(foundation.address),
-          MKT1.balanceOf(foundation.address),
-        ]);
-        expect(await NewTreasury.getSurplusOf(ethers.ZeroAddress)).to.equal(0);
-        expect(await NewTreasury.getSurplusOf(MKT1.target)).to.equal(0);
-        // Step 1: Send stray native & MTK2 to contract; verify surplus reflects deposits
-        await buyer1.sendTransaction({ to: NewTreasury.target, value: nativeSurplus });
-        await MKT1.connect(buyer1).transfer(NewTreasury.target, ercSurplus);
-        expect(await NewTreasury.getSurplusOf(ethers.ZeroAddress)).to.equal(nativeSurplus);
-        expect(await NewTreasury.getSurplusOf(MKT1.target)).to.equal(ercSurplus);
-        // Step 2: Instructor creates two generic courses (each with [instructor1] as withdrawer)
-        const courses = await createCourseBatchHelper({
-          uries: ["https://erc:MTK2-1", "https://native-2"],
-          withdrawersArrays: [[instructor1.address], [instructor1.address]],
-          redeemers: [instructor1.address, instructor1.address],
-          validUntils: [now + 86400, now + 86400],
-          createBatchTxCaller: instructor1,
-          expectSuccessWith: "CourseCreated",
-        });
-        // Step 3: Buyer purchases 8 items (alternating MTK2/native) for person1–4; lock funds accordingly
-        const courseReceivers = [person1, person2, person3, person4].flatMap((p) => [p.address, p.address]);
-        const buy_courses = await buyCourseBatchHelper({
-          courseIds: Array.from({ length: 8 }, (_, i) => courses.courseIds[i % 2]), //0,1,0,1...
-          tokenAddresses: Array.from({ length: 8 }, (_, i) => (i % 4 < 2 ? MKT1.target : ethers.ZeroAddress)), // 2erc20, 2native...
-          coursePrices: Array.from({ length: 8 }, (_, i) => ethers.parseEther(String(5 + 2 * i))), // [5,7,9,11,13,15,17,19] ETH
-          courseReceivers: courseReceivers, //[person1, person2, person3, person4].flatMap((p) => [p.address, p.address]),
-          redeemers: Array(8).fill(buyer1), // farklı redeemerlar
-          validUntils: Array(8).fill(now + 86400),
-          nativeMsgValue: ethers.parseEther("56"), // sadece ERC20 olduğundan 0
-          buyBatchTxCaller: buyer1, // tx gönderen signer
-          expectSuccessWith: "ContentPurchased",
-        });
-        // Step 4: Send stray native & MTK2 again; verify surplus doubled and locked balances reflect buys
-        await buyer1.sendTransaction({ to: NewTreasury.target, value: nativeSurplus });
-        await MKT1.connect(buyer2).transfer(NewTreasury.target, ercSurplus);
-        expect(await NewTreasury.getSurplusOf(ethers.ZeroAddress)).to.equal(nativeSurplus * 2n);
-        expect(await NewTreasury.getSurplusOf(MKT1.target)).to.equal(ercSurplus * 2n);
-        expect(await NewTreasury.locked(ethers.ZeroAddress)).to.equal(ethers.parseEther("56"));
-        expect(await NewTreasury.locked(MKT1.target)).to.equal(ethers.parseEther("40"));
-        // Step 5: Refund 4 purchases (2 by paymentId, 2 by owner+courseId); verify locked decreases, surplus unchanged
-        const refund1 = await refundCourseHelper({
-          paymentId: buy_courses[0],
-          redeemer: buyer1,
-          validUntil: now + 86400,
-          expectSuccessWith: "CourseRefunded",
-        });
-        const refund2 = await refundCourseHelper({
-          paymentId: buy_courses[1],
-          redeemer: buyer2,
-          validUntil: now + 86400,
-          expectSuccessWith: "CourseRefunded",
-        });
-        const refund3 = await refundCourseByOwnerHelper({
-          courseOwner: person2.address,
-          courseId: courses.courseIds[0],
-          redeemer: buyer1,
-          validUntil: now + 86400,
-          expectSuccessWith: "CourseRefunded",
-        });
-        const refund4 = await refundCourseByOwnerHelper({
-          courseOwner: person2.address,
-          courseId: courses.courseIds[1],
-          redeemer: buyer1,
-          validUntil: now + 86400,
-          expectSuccessWith: "CourseRefunded",
-        });
-        expect(await NewTreasury.getSurplusOf(ethers.ZeroAddress)).to.equal(nativeSurplus * 2n);
-        expect(await NewTreasury.getSurplusOf(MKT1.target)).to.equal(ercSurplus * 2n);
-        expect(await NewTreasury.locked(ethers.ZeroAddress)).to.equal(ethers.parseEther("36"));
-        expect(await NewTreasury.locked(MKT1.target)).to.equal(ethers.parseEther("28"));
-        // Step 6: Send stray native & MTK2 a 3rd time; verify surplus tripled
-        await buyer1.sendTransaction({ to: NewTreasury.target, value: nativeSurplus });
-        await MKT1.connect(buyer2).transfer(NewTreasury.target, ercSurplus);
-        expect(await NewTreasury.getSurplusOf(ethers.ZeroAddress)).to.equal(nativeSurplus * 3n);
-        expect(await NewTreasury.getSurplusOf(MKT1.target)).to.equal(ercSurplus * 3n);
-        // Step 7: Advance past refund window; withdraw 2 sales for course[0]; verify ERC20 share calculation (amount=13)
-        const refundWindowDays = Number(await NewTreasury.refundWindow()) / 86400;
-        await fastForwardTime({ days: refundWindowDays + 1 });
-        await withdrawCoursePaymentsHelper({
-          courseId: courses.courseIds[0],
-          fromIndex: 2,
-          toIndex: 3, // 13 eth mtk2
-          redeemer: instructor1,
-          validUntil: now + 86400,
-          expectSuccessWith: "CoursePaymentsWithdrawn",
-          expectations: [RE, PES],
-        });
-        const [foundErcRevenue, goverErcRevenue, instErcRevenue] = await NewTreasury.connect(
-          buyer1
-        ).getCalculatedCourseCutShares(ethers.parseEther("13"), MKT1.target);
-        const calulatedFoundShareERC = (ethers.parseEther("13") * (await NewTreasury.utFoundCut())) / 100000n;
-        const calculatedGoverShareERC = (ethers.parseEther("13") * (await NewTreasury.utGoverCut())) / 100000n;
-        const calculatedInstShareERC = ethers.parseEther("13") - calulatedFoundShareERC - calculatedGoverShareERC;
-        expect(foundErcRevenue).to.equal(calulatedFoundShareERC);
-        expect(goverErcRevenue).to.equal(calculatedGoverShareERC);
-        expect(instErcRevenue).to.equal(calculatedInstShareERC);
-        // Step 8: Send stray native & MTK2 a 4th time; verify surplus quadrupled and locked reflect prior withdraw
-        await buyer1.sendTransaction({ to: NewTreasury.target, value: nativeSurplus });
-        await MKT1.connect(buyer2).transfer(NewTreasury.target, ercSurplus);
-        expect(await NewTreasury.getSurplusOf(ethers.ZeroAddress)).to.equal(nativeSurplus * 4n);
-        expect(await NewTreasury.getSurplusOf(MKT1.target)).to.equal(ercSurplus * 4n);
-        expect(await NewTreasury.locked(ethers.ZeroAddress)).to.equal(ethers.parseEther("36"));
-        expect(await NewTreasury.locked(MKT1.target)).to.equal(ethers.parseEther("15"));
-        // Step 9: Withdraw one sale for course[1] (index 4, native=19); verify native share calculation
-        await withdrawCoursePaymentsHelper({
-          courseId: courses.courseIds[1],
-          fromIndex: 4,
-          toIndex: 4, // 19 eth native
-          redeemer: instructor1,
-          validUntil: now + 86400,
-          expectSuccessWith: "CoursePaymentsWithdrawn",
-          expectations: [PES],
-        });
-        const [foundNativeRevenue, goverNativeRevenue, instNativeRevenue] = await NewTreasury.connect(
-          backend
-        ).getCalculatedCourseCutShares(ethers.parseEther("19"), ethers.ZeroAddress);
-        const calulatedFoundShareNat = (ethers.parseEther("19") * (await NewTreasury.atFoundCut())) / 100000n;
-        const calculatedGoverShareNat = (ethers.parseEther("19") * (await NewTreasury.atGoverCut())) / 100000n;
-        const calculatedInstShareNat = ethers.parseEther("19") - calulatedFoundShareNat - calculatedGoverShareNat;
-        expect(foundNativeRevenue).to.equal(calulatedFoundShareNat);
-        expect(goverNativeRevenue).to.equal(calculatedGoverShareNat);
-        expect(instNativeRevenue).to.equal(calculatedInstShareNat);
-        // Step 10: Send stray native & MTK2 a 5th time; verify surplus quintupled and locked reflect last withdraw
-        await buyer1.sendTransaction({ to: NewTreasury.target, value: nativeSurplus });
-        await MKT1.connect(buyer2).transfer(NewTreasury.target, ercSurplus);
-        expect(await NewTreasury.getSurplusOf(ethers.ZeroAddress)).to.equal(nativeSurplus * 5n);
-        expect(await NewTreasury.getSurplusOf(MKT1.target)).to.equal(ercSurplus * 5n);
-        expect(await NewTreasury.locked(ethers.ZeroAddress)).to.equal(ethers.parseEther("17"));
-        expect(await NewTreasury.locked(MKT1.target)).to.equal(ethers.parseEther("15"));
-        // Step 11: Rescue native surplus to foundation; locked(native) unchanged
-        await expect(NewTreasury.connect(buyer2).rescueSurplus(ethers.ZeroAddress))
-          .to.emit(NewTreasury, "SurplusRescued")
-          .withArgs(ethers.ZeroAddress, foundation.address, nativeSurplus * 5n, buyer2.address);
-        expect(await NewTreasury.locked(ethers.ZeroAddress)).to.equal(ethers.parseEther("17"));
-        // Step 12: Rescue MTK2 surplus to foundation; locked(MTK2) unchanged
-        await expect(NewTreasury.connect(buyer3).rescueSurplus(MKT1.target))
-          .to.emit(NewTreasury, "SurplusRescued")
-          .withArgs(MKT1.target, foundation.address, ercSurplus * 5n, buyer3.address);
-        expect(await NewTreasury.locked(MKT1.target)).to.equal(ethers.parseEther("15"));
-        // Step 13: Verify foundation balances increased by rescued surplus plus prior revenue shares
-        expect(await ethers.provider.getBalance(foundation.address)).to.equal(
-          foundNativeBalAt0 + nativeSurplus * 5n + foundNativeRevenue
-        );
-        expect(await MKT1.balanceOf(foundation.address)).to.equal(foundErcBalAt0 + ercSurplus * 5n + foundErcRevenue);
-      });
-      /////### Rescue Surplus Cases###/////
-    });
-
     describe("❌ Failure Cases", function () {
       it("should fail to withdraw with invalid signer", async function () {
         // Step 1: instructor1 creates a generic course with [instructor1] array
@@ -5737,6 +5474,40 @@ describe("NewTreasury Contract Tests", function () {
           expectations: [PES],
         });
         // Expect: Reverts with "SignerIsNotBackend()"
+      });
+
+      it("should fail to withdraw with invalid signature (SignatureIsInvalid)", async function () {
+        // Step 1: instructor1 creates a generic course
+        const courseId1 = await quickCreateACourse();
+        // Step 2: buyer1 purchases the course for person1
+        await buyCourseBatchHelper({
+          courseIds: [courseId1],
+          tokenAddresses: [MKT1.target],
+          coursePrices: [ethers.parseEther("10")],
+          courseReceivers: [person1.address],
+          redeemers: [buyer1],
+          validUntils: [now + 86400],
+          nativeMsgValue: 0,
+          buyBatchTxCaller: buyer1,
+          expectSuccessWith: "ContentPurchased",
+        });
+        // Step 3: fast forward after refund window
+        const refundWindowDays = Number(await NewTreasury.refundWindow()) / 86400;
+        await fastForwardTime({ days: refundWindowDays + 1 });
+        // Step 4: build a valid withdraw voucher, then corrupt its signature
+        const good = await withdrawVH.signVoucher({
+          courseId: courseId1,
+          fromIndex: 1,
+          toIndex: 1,
+          redeemer: instructor1.address, // must match msg.sender
+          validUntil: now + 86400,
+        });
+        const bad = { ...good, signature: "0x12" }; // invalid length -> tryRecover err != NoError
+        // Step 5: expect revert with SignatureIsInvalid
+        await expect(NewTreasury.connect(instructor1).withdrawCoursePayments(bad)).to.be.revertedWithCustomError(
+          NewTreasury,
+          "SignatureIsInvalid()"
+        );
       });
 
       it("should fail to withdraw with expired voucher", async function () {
@@ -6063,8 +5834,384 @@ describe("NewTreasury Contract Tests", function () {
     /////###End of Withdrawals###/////
   });
 
-  // 6. Settings
-  describe("⚙️ SETTINGS", function () {
+  // 7. Rescue Surplus
+  describe("🛟🛟 RESCUE SURPLUS", function () {
+    it("should rescue stray native&erc20 when no locked funds", async function () {
+      // Step 0: Try to rescue surplus
+      await expect(NewTreasury.connect(buyer2).rescueSurplus(ethers.ZeroAddress));
+      expect(await NewTreasury.locked(ethers.ZeroAddress)).to.equal(0);
+      await expect(NewTreasury.connect(buyer3).rescueSurplus(MKT2.target));
+      expect(await NewTreasury.locked(MKT2.target)).to.equal(0);
+      // Step 1: Zero state variables, and be sure there is no surplus in contract
+      const nativeSurplus = ethers.parseEther("1.2345");
+      const ercSurplus = ethers.parseEther("7");
+      const [foundNativeBalAt0, foundErcBalAt0] = await Promise.all([
+        ethers.provider.getBalance(foundation.address),
+        MKT2.balanceOf(foundation.address),
+      ]);
+      expect(await NewTreasury.getSurplusOf(ethers.ZeroAddress)).to.equal(0);
+      expect(await NewTreasury.getSurplusOf(MKT2.target)).to.equal(0);
+      // Step 2: Send Native&MTK2 surplus to contract, and check it
+      await buyer1.sendTransaction({ to: NewTreasury.target, value: nativeSurplus });
+      await MKT2.connect(buyer1).transfer(NewTreasury.target, ercSurplus);
+      expect(await NewTreasury.getSurplusOf(ethers.ZeroAddress)).to.equal(nativeSurplus);
+      expect(await NewTreasury.getSurplusOf(MKT2.target)).to.equal(ercSurplus);
+      // Step 3: Native rescue and verify the surplus zeroed out
+      await expect(NewTreasury.connect(buyer2).rescueSurplus(ethers.ZeroAddress))
+        .to.emit(NewTreasury, "SurplusRescued")
+        .withArgs(ethers.ZeroAddress, foundation.address, nativeSurplus, buyer2.address);
+      expect(await NewTreasury.locked(ethers.ZeroAddress)).to.equal(0);
+      // Step 4: MTK2 rescue, and verify the surplus zeroed out
+      await expect(NewTreasury.connect(buyer3).rescueSurplus(MKT2.target))
+        .to.emit(NewTreasury, "SurplusRescued")
+        .withArgs(MKT2.target, foundation.address, ercSurplus, buyer3.address);
+      expect(await NewTreasury.locked(MKT2.target)).to.equal(0);
+      // Step 5: Check balances after rescue
+      expect(await ethers.provider.getBalance(foundation.address)).to.equal(foundNativeBalAt0 + nativeSurplus);
+      expect(await MKT2.balanceOf(foundation.address)).to.equal(foundErcBalAt0 + ercSurplus);
+    });
+
+    it("should rescue mixed native&erc20 surplus when a course is created between deposits", async function () {
+      // Step 0: Zero state variables, and be sure there is no surplus in contract
+      const nativeSurplus = ethers.parseEther("1.2345");
+      const ercSurplus = ethers.parseEther("7");
+      const [foundNativeBalAt0, foundErcBalAt0] = await Promise.all([
+        ethers.provider.getBalance(foundation.address),
+        MKT2.balanceOf(foundation.address),
+      ]);
+      expect(await NewTreasury.getSurplusOf(ethers.ZeroAddress)).to.equal(0);
+      expect(await NewTreasury.getSurplusOf(MKT2.target)).to.equal(0);
+      // Step 1: Send Native&MTK2 surplus to contract, and check it
+      await buyer1.sendTransaction({ to: NewTreasury.target, value: nativeSurplus });
+      await MKT2.connect(buyer1).transfer(NewTreasury.target, ercSurplus);
+      expect(await NewTreasury.getSurplusOf(ethers.ZeroAddress)).to.equal(nativeSurplus);
+      expect(await NewTreasury.getSurplusOf(MKT2.target)).to.equal(ercSurplus);
+      // Step 2: instructor1 creates a generic course with [instructor1] array
+      const courseId1 = await quickCreateACourse();
+      expect(await NewTreasury.getSurplusOf(ethers.ZeroAddress)).to.equal(nativeSurplus);
+      expect(await NewTreasury.getSurplusOf(MKT2.target)).to.equal(ercSurplus);
+      // Step 3: Send Native&MTK2 surplus to contract 2nd time, and check it
+      await buyer1.sendTransaction({ to: NewTreasury.target, value: nativeSurplus });
+      await MKT2.connect(buyer1).transfer(NewTreasury.target, ercSurplus);
+      expect(await NewTreasury.getSurplusOf(ethers.ZeroAddress)).to.equal(nativeSurplus * 2n);
+      expect(await NewTreasury.getSurplusOf(MKT2.target)).to.equal(ercSurplus * 2n);
+      // Step 4: Native rescue and verify the surplus zeroed out
+      await expect(NewTreasury.connect(buyer2).rescueSurplus(ethers.ZeroAddress))
+        .to.emit(NewTreasury, "SurplusRescued")
+        .withArgs(ethers.ZeroAddress, foundation.address, nativeSurplus * 2n, buyer2.address);
+      expect(await NewTreasury.locked(ethers.ZeroAddress)).to.equal(0);
+      // Step 5: MTK2 rescue, and verify the surplus zeroed out
+      await expect(NewTreasury.connect(buyer3).rescueSurplus(MKT2.target))
+        .to.emit(NewTreasury, "SurplusRescued")
+        .withArgs(MKT2.target, foundation.address, ercSurplus * 2n, buyer3.address);
+      expect(await NewTreasury.locked(MKT2.target)).to.equal(0);
+      // Step 6: Check balances after rescue
+      expect(await ethers.provider.getBalance(foundation.address)).to.equal(foundNativeBalAt0 + nativeSurplus * 2n);
+      expect(await MKT2.balanceOf(foundation.address)).to.equal(foundErcBalAt0 + ercSurplus * 2n);
+    });
+
+    it("should rescue surplus while preserving locked balances after interleaved native&erc20 purchases", async function () {
+      // Step 0: Zero state variables, and be sure there is no surplus in contract
+      const nativeSurplus = ethers.parseEther("1.2345");
+      const ercSurplus = ethers.parseEther("7");
+      const [foundNativeBalAt0, foundErcBalAt0] = await Promise.all([
+        ethers.provider.getBalance(foundation.address),
+        MKT2.balanceOf(foundation.address),
+      ]);
+      expect(await NewTreasury.getSurplusOf(ethers.ZeroAddress)).to.equal(0);
+      expect(await NewTreasury.getSurplusOf(MKT2.target)).to.equal(0);
+      // Step 1: Send Native&MTK2 surplus to contract, and check it
+      await buyer1.sendTransaction({ to: NewTreasury.target, value: nativeSurplus });
+      await MKT2.connect(buyer1).transfer(NewTreasury.target, ercSurplus);
+      expect(await NewTreasury.getSurplusOf(ethers.ZeroAddress)).to.equal(nativeSurplus);
+      expect(await NewTreasury.getSurplusOf(MKT2.target)).to.equal(ercSurplus);
+      // Step 2: instructor1 creates a generic course with [instructor1] array and make 3 purchase
+      const courseId1 = await quickCreateACourse();
+      await buyCourseBatchHelper({
+        courseIds: Array(3).fill(courseId1), // 3 sales for the same course
+        tokenAddresses: [MKT1.target, MKT2.target, ethers.ZeroAddress],
+        coursePrices: [ethers.parseEther("5"), ethers.parseEther("10"), ethers.parseEther("15")],
+        courseReceivers: [person1.address, person2.address, person3.address],
+        redeemers: [buyer1, buyer1, buyer1], // genelde hepsi aynı: tx'i buyer1 atıyor
+        validUntils: [now + 86400, now + 86400, now + 86400],
+        nativeMsgValue: ethers.parseEther("15"), // sadece ERC20 olduğundan 0
+        buyBatchTxCaller: buyer1, // tx gönderen signer
+        expectSuccessWith: "ContentPurchased",
+      });
+      expect(await NewTreasury.getSurplusOf(ethers.ZeroAddress)).to.equal(nativeSurplus);
+      expect(await NewTreasury.getSurplusOf(MKT2.target)).to.equal(ercSurplus);
+      // Step 3: Send Native&MTK2 surplus to contract 2nd time, and check it
+      await buyer1.sendTransaction({ to: NewTreasury.target, value: nativeSurplus });
+      await MKT2.connect(buyer2).transfer(NewTreasury.target, ercSurplus);
+      expect(await NewTreasury.getSurplusOf(ethers.ZeroAddress)).to.equal(nativeSurplus * 2n);
+      expect(await NewTreasury.getSurplusOf(MKT2.target)).to.equal(ercSurplus * 2n);
+      // Step 4: Native rescue and verify the surplus zeroed out
+      await expect(NewTreasury.connect(buyer2).rescueSurplus(ethers.ZeroAddress))
+        .to.emit(NewTreasury, "SurplusRescued")
+        .withArgs(ethers.ZeroAddress, foundation.address, nativeSurplus * 2n, buyer2.address);
+      expect(await NewTreasury.locked(ethers.ZeroAddress)).to.equal(ethers.parseEther("15"));
+      // Step 5: MTK2 rescue, and verify the surplus zeroed out
+      await expect(NewTreasury.connect(buyer3).rescueSurplus(MKT2.target))
+        .to.emit(NewTreasury, "SurplusRescued")
+        .withArgs(MKT2.target, foundation.address, ercSurplus * 2n, buyer3.address);
+      expect(await NewTreasury.locked(MKT2.target)).to.equal(ethers.parseEther("10"));
+      // Step 6: Check balances after rescue
+      expect(await ethers.provider.getBalance(foundation.address)).to.equal(foundNativeBalAt0 + nativeSurplus * 2n);
+      expect(await MKT2.balanceOf(foundation.address)).to.equal(foundErcBalAt0 + ercSurplus * 2n);
+    });
+
+    it("should rescue surplus while preserving locked balances after interleaved native&erc20 refund", async function () {
+      // Step 0: Ensure no surplus in contract and snapshot foundation balances
+      const nativeSurplus = ethers.parseEther("1.2345");
+      const ercSurplus = ethers.parseEther("7");
+      const [foundNativeBalAt0, foundErcBalAt0] = await Promise.all([
+        ethers.provider.getBalance(foundation.address),
+        MKT2.balanceOf(foundation.address),
+      ]);
+      expect(await NewTreasury.getSurplusOf(ethers.ZeroAddress)).to.equal(0);
+      expect(await NewTreasury.getSurplusOf(MKT2.target)).to.equal(0);
+      // Step 1: Send stray native & MTK2 to contract; verify surplus reflects deposits
+      await buyer1.sendTransaction({ to: NewTreasury.target, value: nativeSurplus });
+      await MKT2.connect(buyer1).transfer(NewTreasury.target, ercSurplus);
+      expect(await NewTreasury.getSurplusOf(ethers.ZeroAddress)).to.equal(nativeSurplus);
+      expect(await NewTreasury.getSurplusOf(MKT2.target)).to.equal(ercSurplus);
+      // Step 2: Instructor creates two courses (each with [instructor1] as withdrawer)
+      const courses = await createCourseBatchHelper({
+        uries: ["https://erc:MTK2-1", "https://native-2"],
+        withdrawersArrays: [[instructor1.address], [instructor1.address]],
+        redeemers: [instructor1.address, instructor1.address],
+        validUntils: [now + 86400, now + 86400],
+        createBatchTxCaller: instructor1,
+        expectSuccessWith: "CourseCreated",
+      });
+      // Step 3: Buyer purchases 4 items (2× MTK2, 2× native) for person1 & person2
+      const buy_courses = await buyCourseBatchHelper({
+        courseIds: [courses.courseIds[0], courses.courseIds[1], courses.courseIds[0], courses.courseIds[1]],
+        tokenAddresses: [MKT2.target, MKT2.target, ethers.ZeroAddress, ethers.ZeroAddress],
+        coursePrices: [
+          ethers.parseEther("5"), // course1 price in MKT1
+          ethers.parseEther("7"), // course2 price in MKT2
+          ethers.parseEther("9"), // course3 price in MKT1
+          ethers.parseEther("11"), // course3 price in native
+        ],
+        courseReceivers: [person1.address, person1.address, person2.address, person2.address],
+        redeemers: [buyer1, buyer1, buyer1, buyer1], // farklı redeemerlar
+        validUntils: [now + 86400, now + 86400, now + 86400, now + 86400],
+        nativeMsgValue: ethers.parseEther("20"), // sadece ERC20 olduğundan 0
+        buyBatchTxCaller: buyer1, // tx gönderen signer
+        expectSuccessWith: "ContentPurchased",
+      });
+      // Step 4: Send stray native & MTK2 again; verify surplus doubled and locked reflect buys
+      await buyer1.sendTransaction({ to: NewTreasury.target, value: nativeSurplus });
+      await MKT2.connect(buyer2).transfer(NewTreasury.target, ercSurplus);
+      expect(await NewTreasury.getSurplusOf(ethers.ZeroAddress)).to.equal(nativeSurplus * 2n);
+      expect(await NewTreasury.getSurplusOf(MKT2.target)).to.equal(ercSurplus * 2n);
+      expect(await NewTreasury.locked(ethers.ZeroAddress)).to.equal(ethers.parseEther("20"));
+      expect(await NewTreasury.locked(MKT2.target)).to.equal(ethers.parseEther("12"));
+      // Step 5: Refund all four purchases; surplus unchanged, locked reduced to zero
+      const refund1 = await refundCourseHelper({
+        paymentId: buy_courses[0],
+        redeemer: buyer1,
+        validUntil: now + 86400,
+        expectSuccessWith: "CourseRefunded",
+      });
+      const refund2 = await refundCourseHelper({
+        paymentId: buy_courses[1],
+        redeemer: buyer2,
+        validUntil: now + 86400,
+        expectSuccessWith: "CourseRefunded",
+      });
+      const refund3 = await refundCourseByOwnerHelper({
+        courseOwner: person2.address,
+        courseId: courses.courseIds[0],
+        redeemer: buyer1,
+        validUntil: now + 86400,
+        expectSuccessWith: "CourseRefunded",
+      });
+      const refund4 = await refundCourseByOwnerHelper({
+        courseOwner: person2.address,
+        courseId: courses.courseIds[1],
+        redeemer: buyer1,
+        validUntil: now + 86400,
+        expectSuccessWith: "CourseRefunded",
+      });
+      expect(await NewTreasury.getSurplusOf(ethers.ZeroAddress)).to.equal(nativeSurplus * 2n);
+      expect(await NewTreasury.getSurplusOf(MKT2.target)).to.equal(ercSurplus * 2n);
+      // Step 6: Send stray native & MTK2 a 3rd time; verify surplus tripled
+      await buyer1.sendTransaction({ to: NewTreasury.target, value: nativeSurplus });
+      await MKT2.connect(buyer2).transfer(NewTreasury.target, ercSurplus);
+      expect(await NewTreasury.getSurplusOf(ethers.ZeroAddress)).to.equal(nativeSurplus * 3n);
+      expect(await NewTreasury.getSurplusOf(MKT2.target)).to.equal(ercSurplus * 3n);
+      // Step 7: Rescue native surplus; locked(native) remains zero
+      await expect(NewTreasury.connect(buyer2).rescueSurplus(ethers.ZeroAddress))
+        .to.emit(NewTreasury, "SurplusRescued")
+        .withArgs(ethers.ZeroAddress, foundation.address, nativeSurplus * 3n, buyer2.address);
+      expect(await NewTreasury.locked(ethers.ZeroAddress)).to.equal(ethers.parseEther("0"));
+      // Step 8: Rescue MTK2 surplus; locked(MTK2) remains zero
+      await expect(NewTreasury.connect(buyer3).rescueSurplus(MKT2.target))
+        .to.emit(NewTreasury, "SurplusRescued")
+        .withArgs(MKT2.target, foundation.address, ercSurplus * 3n, buyer3.address);
+      expect(await NewTreasury.locked(MKT2.target)).to.equal(ethers.parseEther("0"));
+      // Step 9: Verify foundation balances increased by rescued surplus
+      expect(await ethers.provider.getBalance(foundation.address)).to.equal(foundNativeBalAt0 + nativeSurplus * 3n);
+      expect(await MKT2.balanceOf(foundation.address)).to.equal(foundErcBalAt0 + ercSurplus * 3n);
+    });
+
+    it("should rescue surplus while preserving locked balances after interleaved native&erc20 withdraw", async function () {
+      // Step 0: Ensure no surplus in contract and snapshot foundation balances
+      const nativeSurplus = ethers.parseEther("1.2345");
+      const ercSurplus = ethers.parseEther("2");
+      const [foundNativeBalAt0, foundErcBalAt0] = await Promise.all([
+        ethers.provider.getBalance(foundation.address),
+        MKT1.balanceOf(foundation.address),
+      ]);
+      expect(await NewTreasury.getSurplusOf(ethers.ZeroAddress)).to.equal(0);
+      expect(await NewTreasury.getSurplusOf(MKT1.target)).to.equal(0);
+      // Step 1: Send stray native & MTK2 to contract; verify surplus reflects deposits
+      await buyer1.sendTransaction({ to: NewTreasury.target, value: nativeSurplus });
+      await MKT1.connect(buyer1).transfer(NewTreasury.target, ercSurplus);
+      expect(await NewTreasury.getSurplusOf(ethers.ZeroAddress)).to.equal(nativeSurplus);
+      expect(await NewTreasury.getSurplusOf(MKT1.target)).to.equal(ercSurplus);
+      // Step 2: Instructor creates two generic courses (each with [instructor1] as withdrawer)
+      const courses = await createCourseBatchHelper({
+        uries: ["https://erc:MTK2-1", "https://native-2"],
+        withdrawersArrays: [[instructor1.address], [instructor1.address]],
+        redeemers: [instructor1.address, instructor1.address],
+        validUntils: [now + 86400, now + 86400],
+        createBatchTxCaller: instructor1,
+        expectSuccessWith: "CourseCreated",
+      });
+      // Step 3: Buyer purchases 8 items (alternating MTK2/native) for person1–4; lock funds accordingly
+      const courseReceivers = [person1, person2, person3, person4].flatMap((p) => [p.address, p.address]);
+      const buy_courses = await buyCourseBatchHelper({
+        courseIds: Array.from({ length: 8 }, (_, i) => courses.courseIds[i % 2]), //0,1,0,1...
+        tokenAddresses: Array.from({ length: 8 }, (_, i) => (i % 4 < 2 ? MKT1.target : ethers.ZeroAddress)), // 2erc20, 2native...
+        coursePrices: Array.from({ length: 8 }, (_, i) => ethers.parseEther(String(5 + 2 * i))), // [5,7,9,11,13,15,17,19] ETH
+        courseReceivers: courseReceivers, //[person1, person2, person3, person4].flatMap((p) => [p.address, p.address]),
+        redeemers: Array(8).fill(buyer1), // farklı redeemerlar
+        validUntils: Array(8).fill(now + 86400),
+        nativeMsgValue: ethers.parseEther("56"), // sadece ERC20 olduğundan 0
+        buyBatchTxCaller: buyer1, // tx gönderen signer
+        expectSuccessWith: "ContentPurchased",
+      });
+      // Step 4: Send stray native & MTK2 again; verify surplus doubled and locked balances reflect buys
+      await buyer1.sendTransaction({ to: NewTreasury.target, value: nativeSurplus });
+      await MKT1.connect(buyer2).transfer(NewTreasury.target, ercSurplus);
+      expect(await NewTreasury.getSurplusOf(ethers.ZeroAddress)).to.equal(nativeSurplus * 2n);
+      expect(await NewTreasury.getSurplusOf(MKT1.target)).to.equal(ercSurplus * 2n);
+      expect(await NewTreasury.locked(ethers.ZeroAddress)).to.equal(ethers.parseEther("56"));
+      expect(await NewTreasury.locked(MKT1.target)).to.equal(ethers.parseEther("40"));
+      // Step 5: Refund 4 purchases (2 by paymentId, 2 by owner+courseId); verify locked decreases, surplus unchanged
+      const refund1 = await refundCourseHelper({
+        paymentId: buy_courses[0],
+        redeemer: buyer1,
+        validUntil: now + 86400,
+        expectSuccessWith: "CourseRefunded",
+      });
+      const refund2 = await refundCourseHelper({
+        paymentId: buy_courses[1],
+        redeemer: buyer2,
+        validUntil: now + 86400,
+        expectSuccessWith: "CourseRefunded",
+      });
+      const refund3 = await refundCourseByOwnerHelper({
+        courseOwner: person2.address,
+        courseId: courses.courseIds[0],
+        redeemer: buyer1,
+        validUntil: now + 86400,
+        expectSuccessWith: "CourseRefunded",
+      });
+      const refund4 = await refundCourseByOwnerHelper({
+        courseOwner: person2.address,
+        courseId: courses.courseIds[1],
+        redeemer: buyer1,
+        validUntil: now + 86400,
+        expectSuccessWith: "CourseRefunded",
+      });
+      expect(await NewTreasury.getSurplusOf(ethers.ZeroAddress)).to.equal(nativeSurplus * 2n);
+      expect(await NewTreasury.getSurplusOf(MKT1.target)).to.equal(ercSurplus * 2n);
+      expect(await NewTreasury.locked(ethers.ZeroAddress)).to.equal(ethers.parseEther("36"));
+      expect(await NewTreasury.locked(MKT1.target)).to.equal(ethers.parseEther("28"));
+      // Step 6: Send stray native & MTK2 a 3rd time; verify surplus tripled
+      await buyer1.sendTransaction({ to: NewTreasury.target, value: nativeSurplus });
+      await MKT1.connect(buyer2).transfer(NewTreasury.target, ercSurplus);
+      expect(await NewTreasury.getSurplusOf(ethers.ZeroAddress)).to.equal(nativeSurplus * 3n);
+      expect(await NewTreasury.getSurplusOf(MKT1.target)).to.equal(ercSurplus * 3n);
+      // Step 7: Advance past refund window; withdraw 2 sales for course[0]; verify ERC20 share calculation (amount=13)
+      const refundWindowDays = Number(await NewTreasury.refundWindow()) / 86400;
+      await fastForwardTime({ days: refundWindowDays + 1 });
+      await withdrawCoursePaymentsHelper({
+        courseId: courses.courseIds[0],
+        fromIndex: 2,
+        toIndex: 3, // 13 eth mtk2
+        redeemer: instructor1,
+        validUntil: now + 86400,
+        expectSuccessWith: "CoursePaymentsWithdrawn",
+        expectations: [RE, PES],
+      });
+      const [foundErcRevenue, goverErcRevenue, instErcRevenue] = await NewTreasury.connect(
+        buyer1
+      ).getCalculatedCourseCutShares(ethers.parseEther("13"), MKT1.target);
+      const calulatedFoundShareERC = (ethers.parseEther("13") * (await NewTreasury.utFoundCut())) / 100000n;
+      const calculatedGoverShareERC = (ethers.parseEther("13") * (await NewTreasury.utGoverCut())) / 100000n;
+      const calculatedInstShareERC = ethers.parseEther("13") - calulatedFoundShareERC - calculatedGoverShareERC;
+      expect(foundErcRevenue).to.equal(calulatedFoundShareERC);
+      expect(goverErcRevenue).to.equal(calculatedGoverShareERC);
+      expect(instErcRevenue).to.equal(calculatedInstShareERC);
+      // Step 8: Send stray native & MTK2 a 4th time; verify surplus quadrupled and locked reflect prior withdraw
+      await buyer1.sendTransaction({ to: NewTreasury.target, value: nativeSurplus });
+      await MKT1.connect(buyer2).transfer(NewTreasury.target, ercSurplus);
+      expect(await NewTreasury.getSurplusOf(ethers.ZeroAddress)).to.equal(nativeSurplus * 4n);
+      expect(await NewTreasury.getSurplusOf(MKT1.target)).to.equal(ercSurplus * 4n);
+      expect(await NewTreasury.locked(ethers.ZeroAddress)).to.equal(ethers.parseEther("36"));
+      expect(await NewTreasury.locked(MKT1.target)).to.equal(ethers.parseEther("15"));
+      // Step 9: Withdraw one sale for course[1] (index 4, native=19); verify native share calculation
+      await withdrawCoursePaymentsHelper({
+        courseId: courses.courseIds[1],
+        fromIndex: 4,
+        toIndex: 4, // 19 eth native
+        redeemer: instructor1,
+        validUntil: now + 86400,
+        expectSuccessWith: "CoursePaymentsWithdrawn",
+        expectations: [PES],
+      });
+      const [foundNativeRevenue, goverNativeRevenue, instNativeRevenue] = await NewTreasury.connect(
+        backend
+      ).getCalculatedCourseCutShares(ethers.parseEther("19"), ethers.ZeroAddress);
+      const calulatedFoundShareNat = (ethers.parseEther("19") * (await NewTreasury.atFoundCut())) / 100000n;
+      const calculatedGoverShareNat = (ethers.parseEther("19") * (await NewTreasury.atGoverCut())) / 100000n;
+      const calculatedInstShareNat = ethers.parseEther("19") - calulatedFoundShareNat - calculatedGoverShareNat;
+      expect(foundNativeRevenue).to.equal(calulatedFoundShareNat);
+      expect(goverNativeRevenue).to.equal(calculatedGoverShareNat);
+      expect(instNativeRevenue).to.equal(calculatedInstShareNat);
+      // Step 10: Send stray native & MTK2 a 5th time; verify surplus quintupled and locked reflect last withdraw
+      await buyer1.sendTransaction({ to: NewTreasury.target, value: nativeSurplus });
+      await MKT1.connect(buyer2).transfer(NewTreasury.target, ercSurplus);
+      expect(await NewTreasury.getSurplusOf(ethers.ZeroAddress)).to.equal(nativeSurplus * 5n);
+      expect(await NewTreasury.getSurplusOf(MKT1.target)).to.equal(ercSurplus * 5n);
+      expect(await NewTreasury.locked(ethers.ZeroAddress)).to.equal(ethers.parseEther("17"));
+      expect(await NewTreasury.locked(MKT1.target)).to.equal(ethers.parseEther("15"));
+      // Step 11: Rescue native surplus to foundation; locked(native) unchanged
+      await expect(NewTreasury.connect(buyer2).rescueSurplus(ethers.ZeroAddress))
+        .to.emit(NewTreasury, "SurplusRescued")
+        .withArgs(ethers.ZeroAddress, foundation.address, nativeSurplus * 5n, buyer2.address);
+      expect(await NewTreasury.locked(ethers.ZeroAddress)).to.equal(ethers.parseEther("17"));
+      // Step 12: Rescue MTK2 surplus to foundation; locked(MTK2) unchanged
+      await expect(NewTreasury.connect(buyer3).rescueSurplus(MKT1.target))
+        .to.emit(NewTreasury, "SurplusRescued")
+        .withArgs(MKT1.target, foundation.address, ercSurplus * 5n, buyer3.address);
+      expect(await NewTreasury.locked(MKT1.target)).to.equal(ethers.parseEther("15"));
+      // Step 13: Verify foundation balances increased by rescued surplus plus prior revenue shares
+      expect(await ethers.provider.getBalance(foundation.address)).to.equal(
+        foundNativeBalAt0 + nativeSurplus * 5n + foundNativeRevenue
+      );
+      expect(await MKT1.balanceOf(foundation.address)).to.equal(foundErcBalAt0 + ercSurplus * 5n + foundErcRevenue);
+    });
+    /////### Rescue Surplus Cases###/////
+  });
+
+  // 8. Settings
+  describe("⚙️⤴️ SETTINGS", function () {
     describe("✅ Success Cases", function () {
       it("should allow grant backend role to a valid address when called by foundation", async () => {
         // Step 1: Grant backend role to person1 by foundation
