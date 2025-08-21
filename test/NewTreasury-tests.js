@@ -80,7 +80,7 @@ before(async () => {
 
   // Project-specific initialization logic
   // grant backend role
-  await NewTreasury.connect(backend).setRefundWindow(19 * 86400); // 1 gün
+  //await NewTreasury.connect(backend).setRefundWindow(19 * 86400); // 1 gün
   //// ### END OF DEPLOY LOGIC ### ////
   // Take a snapshot of the current state
   snapshotId = await ethers.provider.send("evm_snapshot");
@@ -119,6 +119,7 @@ async function createCourseBatchHelper({
   createBatchTxCaller,
   expectRevertWith,
   expectSuccessWith,
+  revertIndex = null,
 }) {
   const n = uries.length;
   // 0) Parametre uzunluklarını doğrula
@@ -146,11 +147,23 @@ async function createCourseBatchHelper({
   // 4) Tx gönderimi ve kontrol
   let tx = null;
   if (!waitSuccess) {
+    // previewCreateCourseBatch
+    const [ok, failedIdx, reason] = await NewTreasury.connect(createBatchTxCaller).previewCreateCourseBatch(vouchers);
+    expect(ok).to.equal(false);
+    expect(failedIdx).to.equal(revertIndex); // bigint dönüyor
+    expect(reason).to.equal(expectRevertWith);
+
     await expect(NewTreasury.connect(createBatchTxCaller).createCourseBatch(vouchers)).to.be.revertedWithCustomError(
       NewTreasury,
       expectRevertWith
     );
   } else if (waitSuccess) {
+    // previewCreateCourseBatch
+    const [ok, failedIdx, reason] = await NewTreasury.connect(createBatchTxCaller).previewCreateCourseBatch(vouchers);
+    expect(ok).to.equal(true);
+    expect(failedIdx).to.equal(0n); // bigint dönüyor
+    expect(reason).to.equal("");
+
     tx = await NewTreasury.connect(createBatchTxCaller).createCourseBatch(vouchers);
     const receipt = await tx.wait();
     const gasUsed = receipt.gasUsed;
@@ -456,6 +469,7 @@ async function buyCourseBatchHelper({
   buyBatchTxCaller,
   expectRevertWith,
   expectSuccessWith,
+  revertIndex = null,
 }) {
   // 0) Basit doğrulamalar
   const n = courseIds.length;
@@ -500,6 +514,13 @@ async function buyCourseBatchHelper({
         })
       ).to.be.revertedWith(expectRevertWith);
     } else {
+      // previewBuyCourseBatch
+      if (expectRevertWith !== "NativeValueNotEqualToTotal()") {
+        const [ok, failedIdx, reason] = await NewTreasury.connect(buyBatchTxCaller).previewBuyCourseBatch(vouchers);
+        expect(ok).to.equal(false);
+        expect(failedIdx).to.equal(revertIndex); // bigint dönüyor
+        expect(reason).to.equal(expectRevertWith);
+      }
       await expect(
         NewTreasury.connect(buyBatchTxCaller).buyCourseBatch(vouchers, {
           value: nativeMsgValue,
@@ -508,6 +529,11 @@ async function buyCourseBatchHelper({
     }
     // not possible to catch gas cost on revert
   } else if (waitSuccess) {
+    // previewBuyCourseBatch
+    const [ok, failedIdx, reason] = await NewTreasury.connect(buyBatchTxCaller).previewBuyCourseBatch(vouchers);
+    expect(ok).to.equal(true);
+    expect(failedIdx).to.equal(0n); // bigint dönüyor
+    expect(reason).to.equal("");
     // send tx
     tx = await NewTreasury.connect(buyBatchTxCaller).buyCourseBatch(vouchers, {
       value: nativeMsgValue,
@@ -1946,6 +1972,7 @@ describe("NewTreasury Contract Tests", function () {
           validUntils: [now + 86400, now + 86400],
           createBatchTxCaller: instructor1,
           expectRevertWith: "SignerIsNotBackend()",
+          revertIndex: 0n,
         });
         // Expect: Reverts with "SignerIsNotBackend()"
       });
@@ -1961,6 +1988,11 @@ describe("NewTreasury Contract Tests", function () {
         // Step 2: Corrupt the voucher
         const bad = { ...good, uri: "https://example.com/course/invalid-sig-2" };
         bad.signature = "0x12"; // 65 byte değil -> tryRecover err != NoError
+        // Step 3: preview the create course batch with the corrupted voucher
+        const [ok, failedIdx, reason] = await NewTreasury.connect(instructor1).previewCreateCourseBatch([bad]);
+        expect(ok).to.equal(false);
+        expect(failedIdx).to.equal(0n); // bigint dönüyor
+        expect(reason).to.equal("SignatureIsInvalid()");
         // Expect: Reverts with "SignatureIsInvalid"
         await expect(NewTreasury.connect(instructor1).createCourseBatch([bad])).to.be.revertedWithCustomError(
           NewTreasury,
@@ -1979,6 +2011,7 @@ describe("NewTreasury Contract Tests", function () {
           validUntils: [expiredTimestamp],
           createBatchTxCaller: instructor1,
           expectRevertWith: "VoucherIsExpired()",
+          revertIndex: 0n,
         });
         // Expect: Reverts with "VoucherIsExpired()"
       });
@@ -1992,6 +2025,7 @@ describe("NewTreasury Contract Tests", function () {
           validUntils: [now + 86400],
           createBatchTxCaller: backend, // tx'i atan kişi farklı: msg.sender !== voucher.redeemer
           expectRevertWith: "CallerIsNotVoucherRedeemer()",
+          revertIndex: 0n,
         });
         // Expect: reverts with "CallerIsNotVoucherRedeemer()"
       });
@@ -2005,6 +2039,7 @@ describe("NewTreasury Contract Tests", function () {
           validUntils: [now + 86400],
           createBatchTxCaller: instructor1,
           expectRevertWith: "WithdrawerArrayContainsDuplicates()",
+          revertIndex: 0n,
         });
         // Expect: "CourseCreated" with expected success states
       });
@@ -2027,6 +2062,7 @@ describe("NewTreasury Contract Tests", function () {
           validUntils: [now + 86400],
           createBatchTxCaller: instructor1,
           expectRevertWith: "UriIsAlreadyUsedOrDuplicatedInBatch()",
+          revertIndex: 0n,
         });
         // Expect: Reverts with "UriIsAlreadyUsedOrDuplicatedInBatch()", with failure states
       });
@@ -2040,6 +2076,7 @@ describe("NewTreasury Contract Tests", function () {
           validUntils: [now + 86400, now + 86400],
           createBatchTxCaller: backend,
           expectRevertWith: "UriIsAlreadyUsedOrDuplicatedInBatch()",
+          revertIndex: 1n,
         });
         // Expect: Reverts with "UriIsAlreadyUsedOrDuplicatedInBatch()", with failure states
       });
@@ -2062,6 +2099,7 @@ describe("NewTreasury Contract Tests", function () {
           validUntils: [now + 86400],
           createBatchTxCaller: instructor2,
           expectRevertWith: "UriIsAlreadyUsedOrDuplicatedInBatch()",
+          revertIndex: 0n,
         });
         // Expect: Reverts with "UriIsAlreadyUsedOrDuplicatedInBatch()", with failure states
       });
@@ -2082,6 +2120,7 @@ describe("NewTreasury Contract Tests", function () {
           validUntils: [now + 86400],
           createBatchTxCaller: instructor1,
           expectRevertWith: "WithdrawerArrayExceedsLimit()",
+          revertIndex: 0n,
         });
         // Expect: Reverts with "WithdrawerArrayExceedsLimit()"
       });
@@ -2102,6 +2141,7 @@ describe("NewTreasury Contract Tests", function () {
           validUntils: [now + 86400],
           createBatchTxCaller: instructor1,
           expectRevertWith: "WithdrawerAddressIsZero()",
+          revertIndex: 0n,
         });
         // Expect: Reverts with "WithdrawerAddressIsZero()"
       });
@@ -2115,6 +2155,7 @@ describe("NewTreasury Contract Tests", function () {
           validUntils: [now + 86400],
           createBatchTxCaller: instructor1,
           expectRevertWith: "WithdrawerArrayIsEmpty()",
+          revertIndex: 0n,
         });
         // Expect: Reverts with "WithdrawerArrayIsEmpty()"
       });
@@ -2136,6 +2177,7 @@ describe("NewTreasury Contract Tests", function () {
           validUntils,
           createBatchTxCaller: instructor1,
           expectRevertWith: "CreateBatchSizeExceedsLimit()", // kontrattaki revert mesajına göre ayarla
+          revertIndex: 0n,
         });
         // Expect: Reverts with "CreateBatchSizeExceedsLimit()"
       });
@@ -2149,6 +2191,7 @@ describe("NewTreasury Contract Tests", function () {
           validUntils: [now + 86400],
           createBatchTxCaller: instructor1,
           expectRevertWith: "CallerIsNeitherWithdrawerNorBackend()",
+          revertIndex: 0n,
         });
         // Expect: Reverts due to invalid role
       });
@@ -2162,6 +2205,7 @@ describe("NewTreasury Contract Tests", function () {
           validUntils: [now + 86400],
           createBatchTxCaller: instructor1,
           expectRevertWith: "UriIsEmpty()",
+          revertIndex: 0n,
         });
         // Expect: Reverts with "Course URI empty"
       });
@@ -2831,6 +2875,7 @@ describe("NewTreasury Contract Tests", function () {
           nativeMsgValue: 0, // sadece ERC20 olduğundan 0
           buyBatchTxCaller: buyer1, // tx gönderen signer
           expectRevertWith: "SignerIsNotBackend()",
+          revertIndex: 0n,
         });
         // Expect: Reverts with "SignerIsNotBackend()"
       });
@@ -2850,6 +2895,11 @@ describe("NewTreasury Contract Tests", function () {
         // Step 3: Corrupt signature
         const bad = { ...good };
         bad.signature = "0x12"; // invalid length -> tryRecover err != NoError
+        // Step 4: Preview the buy course batch with the corrupted voucher
+        const [ok, failedIdx, reason] = await NewTreasury.connect(buyer1).previewBuyCourseBatch([bad]);
+        expect(ok).to.equal(false);
+        expect(failedIdx).to.equal(0n); // bigint dönüyor
+        expect(reason).to.equal("SignatureIsInvalid()");
         // Step 4: Expect revert with SignatureIsInvalid
         await expect(NewTreasury.connect(buyer1).buyCourseBatch([bad], { value: 0 })).to.be.revertedWithCustomError(
           NewTreasury,
@@ -2873,6 +2923,7 @@ describe("NewTreasury Contract Tests", function () {
           nativeMsgValue: 0, // sadece ERC20 olduğundan 0
           buyBatchTxCaller: buyer1, // tx gönderen signer
           expectRevertWith: "VoucherIsExpired()",
+          revertIndex: 0n,
         });
         // Expect: Reverts with "VoucherIsExpired()"
       });
@@ -2893,6 +2944,7 @@ describe("NewTreasury Contract Tests", function () {
           nativeMsgValue: 0, // sadece ERC20 olduğundan 0
           buyBatchTxCaller: buyer1, // tx gönderen signer
           expectRevertWith: "CallerIsNotVoucherRedeemer()",
+          revertIndex: 0n,
         });
         // Expect: Reverts with "CallerIsNotVoucherRedeemer()"
       });
@@ -2911,6 +2963,7 @@ describe("NewTreasury Contract Tests", function () {
           nativeMsgValue: 0, // sadece ERC20 olduğundan 0
           buyBatchTxCaller: buyer1, // tx gönderen signer
           expectRevertWith: "CourseIsAlreadyOwnedByReceiverOrDuplicatedInBatch()",
+          revertIndex: 1n,
         });
         // Step 3: Reverts with "CourseIsAlreadyOwnedByReceiverOrDuplicatedInBatch()"
       });
@@ -2941,6 +2994,7 @@ describe("NewTreasury Contract Tests", function () {
           nativeMsgValue: 0, // sadece ERC20 olduğundan 0
           buyBatchTxCaller: buyer2, // tx gönderen signer
           expectRevertWith: "CourseIsAlreadyOwnedByReceiverOrDuplicatedInBatch()",
+          revertIndex: 0n,
         });
         // Expect: Reverts with "CourseIsAlreadyOwnedByReceiverOrDuplicatedInBatch()"
       });
@@ -2957,6 +3011,7 @@ describe("NewTreasury Contract Tests", function () {
           nativeMsgValue: 0, // sadece ERC20 olduğundan 0
           buyBatchTxCaller: buyer1, // tx gönderen signer
           expectRevertWith: "CourseIdIsInvalid()",
+          revertIndex: 0n,
         });
         // Expect: Reverts with "CourseIdIsInvalid()-buy"
         // Step 2: instructor1 creates a generic course with [instructor1] array to increase courseCounter
@@ -2972,6 +3027,7 @@ describe("NewTreasury Contract Tests", function () {
           nativeMsgValue: 0, // sadece ERC20 olduğundan 0
           buyBatchTxCaller: buyer1, // tx gönderen signer
           expectRevertWith: "CourseIdIsInvalid()",
+          revertIndex: 0n,
         });
         // Expect: Reverts with "CourseIdIsInvalid()-buy"
       });
@@ -2990,6 +3046,7 @@ describe("NewTreasury Contract Tests", function () {
           nativeMsgValue: 0, // sadece ERC20 olduğundan 0
           buyBatchTxCaller: buyer1, // tx gönderen signer
           expectRevertWith: "CourseIdIsInvalid()",
+          revertIndex: 0n,
         });
         // Expect: Reverts with "CourseIdIsInvalid()-buy"
         // Step 3: instructor1 creates a generic course with [instructor1] array to increase courseCounter
@@ -3007,6 +3064,7 @@ describe("NewTreasury Contract Tests", function () {
           nativeMsgValue: 0, // sadece ERC20 olduğundan 0
           buyBatchTxCaller: buyer1, // tx gönderen signer
           expectRevertWith: "CourseIdIsInvalid()",
+          revertIndex: 0n,
         });
         // Expect: Reverts with "CourseIdIsInvalid()-buy"
       });
@@ -3043,6 +3101,7 @@ describe("NewTreasury Contract Tests", function () {
           nativeMsgValue: 0, // sadece ERC20 olduğundan 0
           buyBatchTxCaller: buyer1, // tx gönderen signer
           expectRevertWith: "CourseIsNotSellable()",
+          revertIndex: 0n,
         });
         // Expect: Reverts with "CourseIsNotSellable()"
       });
@@ -3065,6 +3124,7 @@ describe("NewTreasury Contract Tests", function () {
           nativeMsgValue: 0,
           buyBatchTxCaller: backend,
           expectRevertWith: "BuyBatchSizeExceedsLimit()", // kontrattaki revert mesajına göre değiştir
+          revertIndex: 0n,
         });
         // Expect: Reverts with "BuyBatchSizeExceedsLimit()"
       });
@@ -3083,6 +3143,7 @@ describe("NewTreasury Contract Tests", function () {
           nativeMsgValue: 0, // sadece ERC20 olduğundan 0
           buyBatchTxCaller: buyer1, // tx gönderen signer
           expectRevertWith: "CoursePriceIsZero()",
+          revertIndex: 0n,
         });
         // Expect: Reverts with "CoursePriceIsZero()"
       });
@@ -3101,6 +3162,7 @@ describe("NewTreasury Contract Tests", function () {
           nativeMsgValue: 0, // native token için msg.value
           buyBatchTxCaller: buyer1, // tx gönderen signer
           expectRevertWith: "CoursePriceIsZero()",
+          revertIndex: 0n,
         });
         // Expect: Reverts with "CoursePriceIsZero()"
       });
@@ -3150,6 +3212,7 @@ describe("NewTreasury Contract Tests", function () {
           nativeMsgValue: ethers.parseEther("1"), // should be 0
           buyBatchTxCaller: buyer1, // tx gönderen signer
           expectRevertWith: "NativeValueNotEqualToTotal()",
+          revertIndex: 0n,
         });
         // Expect: Reverts with "NativeValueNotEqualToTotal()"
       });
@@ -6216,6 +6279,28 @@ describe("NewTreasury Contract Tests", function () {
   // 8. Settings
   describe("⚙️⤴️ SETTINGS", function () {
     describe("✅ Success Cases", function () {
+      it("should deploy with foundation wallet", async () => {
+        // Create Factory for MockERC20 contract and deploy MKT1 tokeb to use it as UDAO token
+        const MockERC20FactoryNew = await ethers.getContractFactory("contracts/newTreasury/MockERC20.sol:MockERC20");
+        const MKT1New = await MockERC20FactoryNew.connect(foundation).deploy(
+          "MockToken1",
+          "MKT1",
+          ethers.parseEther("100000")
+        );
+        await MKT1New.waitForDeployment();
+
+        // Create Factory for NewTreasury contract and deploy it
+        const NewTreasuryFactoryNew = await ethers.getContractFactory(
+          "contracts/newTreasury/NewTreasury.sol:NewTreasury"
+        );
+        const NewTreasuryNew = await NewTreasuryFactoryNew.connect(foundation).deploy(
+          foundation.address,
+          MKT1.target,
+          foundation.address
+        );
+        await NewTreasuryNew.waitForDeployment();
+      });
+
       it("should allow grant backend role to a valid address when called by foundation", async () => {
         // Step 1: Grant backend role to person1 by foundation
         await expect(await NewTreasury.connect(foundation).grantBackendRole(person1.address))
