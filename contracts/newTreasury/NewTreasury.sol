@@ -800,10 +800,6 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         }
     }
 
-    ///address payer,
-    ///address tokenAddress,
-    ///uint256 receivedCoursePrice
-
     /////### COURSE REFUND LOGIC ###/////
     event CourseRefunded(
         uint256 indexed paymentId,
