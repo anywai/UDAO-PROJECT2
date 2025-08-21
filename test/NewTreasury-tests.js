@@ -168,11 +168,13 @@ async function createCourseBatchHelper({
       .filter((parsed) => parsed && parsed.name === "CourseCreated");
 
     // a) tam sayıda event basılmış mı?
-    expect(parsedEvents.length, "CourseCreated event sayısı beklenenle eşleşmiyor").to.equal(n);
+    expect(parsedEvents.length, "CourseCreated event count not match with the expected").to.equal(n);
     // b) sırayla decode edip courseId & uri karşılaştır
     for (let i = 0; i < n; i++) {
-      expect(parsedEvents[i].args.courseId).to.equal(currentCourseCounter + BigInt(i + 1));
-      //expect(parsedEvents[i].args.uri).to.equal(vouchers[i].uri);
+      const ev = parsedEvents[i].args;
+      expect(ev.courseId).to.equal(currentCourseCounter + BigInt(i + 1));
+      expect(ev.uriHash).to.equal(ethers.keccak256(ethers.toUtf8Bytes(uries[i])));
+      expect(ev.createdBy).to.equal(createBatchTxCaller.address);
     }
   }
 
@@ -315,11 +317,21 @@ async function updateCourseHelper({
       expectRevertWith
     );
   } else if (expectSuccessWith) {
+    const oldUri = (await NewTreasury.getCourse(courseId)).uri;
     tx = await NewTreasury.connect(redeemer).updateCourse(voucher);
     //receipt
     //const receipt = await tx.wait();
     //console.log("Update Gas used: ", receipt.gasUsed);
-    await expect(tx).to.emit(NewTreasury, expectSuccessWith).withArgs(courseId);
+    const emptyUriHash = ethers.keccak256(ethers.toUtf8Bytes(""));
+    const oldUriHash = ethers.keccak256(ethers.toUtf8Bytes(oldUri));
+    const newUriHash = ethers.keccak256(ethers.toUtf8Bytes(uri));
+    const isUriChanged = newUriHash !== oldUriHash && newUriHash !== emptyUriHash;
+    if (isUriChanged) {
+      await expect(tx).to.emit(NewTreasury, "CourseUriUpdated").withArgs(courseId, newUriHash, oldUriHash);
+    }
+    await expect(tx)
+      .to.emit(NewTreasury, expectSuccessWith)
+      .withArgs(courseId, sellable, isUriChanged, redeemer.address);
   } else {
     throw new Error("What you expect? No success or revert condition provided. --updateCourseHelper--");
   }

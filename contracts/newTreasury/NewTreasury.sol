@@ -345,7 +345,11 @@ contract NewTreasury is EIP712, ReentrancyGuard {
     mapping(address => mapping(uint256 => bool)) public isAuthorizedWithdrawer; // withdrawer => courseId => true if the withdrawer is authorized for the course
     mapping(bytes32 => uint256) public uriToCourseId;
 
-    event CourseCreated(uint256 indexed courseId);
+    event CourseCreated(
+        uint256 indexed courseId,
+        bytes32 indexed uriHash,
+        address createdBy
+    );
     struct CreateCourseVoucher {
         string uri;
         address[] withdrawers;
@@ -442,7 +446,7 @@ contract NewTreasury is EIP712, ReentrancyGuard {
             uriToCourseId[uriHash] = newCourseId;
             courses[newCourseId] = Course({uri: voucher.uri, sellable: true});
 
-            emit CourseCreated(newCourseId);
+            emit CourseCreated(newCourseId, uriHash, msg.sender);
             unchecked {
                 i++;
             }
@@ -450,7 +454,19 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         // end of createCourseBatch
     }
 
-    event CourseUpdated(uint256 indexed courseId);
+    event CourseUriUpdated(
+        uint256 indexed courseId,
+        bytes32 indexed newUriHash,
+        bytes32 indexed oldUriHash
+    );
+
+    event CourseUpdated(
+        uint256 indexed courseId,
+        bool sellable,
+        bool uriChanged,
+        address indexed updatedBy
+    );
+
     struct UpdateCourseVoucher {
         uint256 courseId;
         bool sellable; // true if sellable, false if not
@@ -560,17 +576,17 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         Course storage courseExisting = courses[courseId];
         // URI: only if non-empty and actually changed
         if (updateUri) {
-            //COMMENTED! bytes32 oldUriHash = keccak256(bytes(courseExisting.uri));
-            delete uriToCourseId[keccak256(bytes(courseExisting.uri))]; // clean up old
+            bytes32 oldUriHash = keccak256(bytes(courseExisting.uri));
+            delete uriToCourseId[oldUriHash]; // clean up old
             uriToCourseId[newUriHash] = courseId; // assign new
             courseExisting.uri = voucher.uri;
+            emit CourseUriUpdated(courseId, newUriHash, oldUriHash);
         }
-
         // update sellable
         courseExisting.sellable = sellable;
 
         // emit event
-        emit CourseUpdated(courseId);
+        emit CourseUpdated(courseId, sellable, updateUri, msg.sender);
     }
 
     /////### PAYMENT LOGIC ###/////
