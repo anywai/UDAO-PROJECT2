@@ -370,6 +370,88 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         bytes signature;
     }
 
+    function previewCreateCourseBatch(
+        CreateCourseVoucher[] calldata vouchers
+    )
+        external
+        view
+        returns (bool success, uint256 failedIndex, string memory reason)
+    {
+        if (vouchers.length > maxBatchCreateSize)
+            return (false, 0, "CreateBatchSizeExceedsLimit()");
+        // use memory instead:
+        bytes32[] memory uriHashes = new bytes32[](vouchers.length);
+
+        for (uint256 i = 0; i < vouchers.length; i++) {
+            CreateCourseVoucher calldata voucher = vouchers[i];
+            bytes32 uriHash = keccak256(bytes(voucher.uri));
+            if (uriHash == EMPTY_URI_HASH) return (false, i, "UriIsEmpty()");
+            if (uriToCourseId[uriHash] != 0)
+                return (false, i, "UriIsAlreadyUsedOrDuplicatedInBatch()");
+            // check for duplicates in batch
+            for (uint256 k = 0; k < i; k++) {
+                if (uriHashes[k] == uriHash)
+                    return (false, i, "UriIsAlreadyUsedOrDuplicatedInBatch()");
+            }
+            uriHashes[i] = uriHash;
+
+            address[] calldata withdrawers = voucher.withdrawers;
+            uint256 lenW = withdrawers.length;
+            if (lenW == 0) return (false, i, "WithdrawerArrayIsEmpty()");
+            if (lenW > maxAllowedWithdrawers)
+                return (false, i, "WithdrawerArrayExceedsLimit()");
+
+            if (voucher.redeemer != msg.sender)
+                return (false, i, "CallerIsNotVoucherRedeemer()");
+            if (voucher.validUntil < block.timestamp)
+                return (false, i, "VoucherIsExpired()");
+            (address signer, ECDSA.RecoverError err, ) = ECDSA.tryRecover(
+                _hashTypedDataV4(
+                    keccak256(
+                        abi.encode(
+                            CREATE_COURSE_VOUCHER_TYPEHASH,
+                            uriHash,
+                            keccak256(abi.encodePacked(withdrawers)),
+                            voucher.redeemer,
+                            voucher.validUntil
+                        )
+                    )
+                ),
+                voucher.signature
+            );
+            if (uint256(err) != 0) return (false, i, "SignatureIsInvalid()");
+            if (!hasBackendRole[signer])
+                return (false, i, "SignerIsNotBackend()");
+
+            // duplicate or zero address check for withdrawers also check is caller authorized?
+            bool found = false;
+            for (uint256 j = 0; j < lenW; j++) {
+                address w = withdrawers[j];
+                if (w == address(0))
+                    return (false, i, "WithdrawerAddressIsZero()");
+                if (w == msg.sender) {
+                    found = true;
+                }
+                for (uint256 k = 0; k < j; k++) {
+                    if (withdrawers[k] == w)
+                        return (
+                            false,
+                            i,
+                            "WithdrawerArrayContainsDuplicates()"
+                        );
+                }
+            }
+            // is caller authorized?
+            if (!hasBackendRole[msg.sender]) {
+                if (!found)
+                    return (false, i, "CallerIsNeitherWithdrawerNorBackend()");
+            }
+            //END FOR
+        }
+        return (true, 0, "");
+        //END FUNC
+    }
+
     function createCourseBatch(
         CreateCourseVoucher[] calldata vouchers
     ) external {
@@ -640,6 +722,81 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         address redeemer; // who pays for the course
         uint256 validUntil; // voucher valid until timestamp
         bytes signature; // signature of the voucher
+    }
+
+    function previewBuyCourseBatch(
+        BuyCourseVoucher[] calldata vouchers
+    )
+        external
+        view
+        returns (bool success, uint256 failedIndex, string memory reason)
+    {
+        if (vouchers.length > maxBatchBuySize)
+            return (false, 0, "BuyBatchSizeExceedsLimit()");
+
+        bytes32[] memory seen = new bytes32[](vouchers.length);
+        uint256 seenLen = 0;
+
+        for (uint256 i = 0; i < vouchers.length; i++) {
+            BuyCourseVoucher calldata voucher = vouchers[i];
+            address receiver = voucher.courseReceiver;
+            uint256 courseId = voucher.courseId;
+
+            if (courseId == 0 || courseId > courseCounter)
+                return (false, i, "CourseIdIsInvalid()");
+            if (!courses[courseId].sellable)
+                return (false, i, "CourseIsNotSellable()");
+            if (voucher.coursePrice == 0)
+                return (false, i, "CoursePriceIsZero()");
+
+            if (hasOwnedCourse[receiver][courseId])
+                return (
+                    false,
+                    i,
+                    "CourseIsAlreadyOwnedByReceiverOrDuplicatedInBatch()" // bu olmaz kayıt yapmadığımız içib batch içindeki dublicateleri yakalayamıyoruz.
+                );
+
+            bytes32 key = keccak256(abi.encodePacked(receiver, courseId));
+
+            // batch içi duplicate kontrolü
+            for (uint256 j = 0; j < seenLen; j++) {
+                if (seen[j] == key)
+                    return (
+                        false,
+                        i,
+                        "CourseIsAlreadyOwnedByReceiverOrDuplicatedInBatch()"
+                    );
+            }
+
+            seen[seenLen++] = key;
+
+            if (voucher.redeemer != msg.sender)
+                return (false, i, "CallerIsNotVoucherRedeemer()");
+            if (voucher.validUntil < block.timestamp)
+                return (false, i, "VoucherIsExpired()");
+
+            (address signer, ECDSA.RecoverError err, ) = ECDSA.tryRecover(
+                _hashTypedDataV4(
+                    keccak256(
+                        abi.encode(
+                            BUY_COURSE_VOUCHER_TYPEHASH,
+                            courseId,
+                            voucher.tokenAddress,
+                            voucher.coursePrice,
+                            receiver,
+                            voucher.redeemer,
+                            voucher.validUntil
+                        )
+                    )
+                ),
+                voucher.signature
+            );
+            if (uint256(err) != 0) return (false, i, "SignatureIsInvalid()");
+            if (!hasBackendRole[signer])
+                return (false, i, "SignerIsNotBackend()");
+        }
+
+        return (true, 0, "");
     }
 
     function buyCourseBatch(
@@ -1122,7 +1279,7 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         }
     }
 
-    function checkWithdrawStatus(
+    function previewWithdrawStatus(
         uint256 courseId,
         uint256 fromIndex,
         uint256 toIndex
@@ -1281,7 +1438,7 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         }
     }
 
-    function getSurplusOf(address token) external view returns (uint256) {
+    function getSurplusBalance(address token) external view returns (uint256) {
         uint256 bal = token == address(0)
             ? address(this).balance
             : IERC20(token).balanceOf(address(this));
@@ -1316,47 +1473,36 @@ contract NewTreasury is EIP712, ReentrancyGuard {
 }
 /*
 0)NOTE: fallback() external payable {revert("Direct ETH not accepted");}
-1)NOTE: Eğer ileride farklı token’lar için farklı cut yapısı (örneğin USDC, USDT, DAI özel oranlar) gerekiyorsa, 
-şöyle extensible yapabilirsin:
-    struct Cut {
-        uint256 foundation;
-        uint256 governance;
-    }
-    mapping(address => Cut) public tokenCuts;
-ve
-    Cut memory cut = tokenCuts[_tokenAddress];
-    if (cut.foundation == 0 && cut.governance == 0) {
-        cut = tokenCuts[DEFAULT_TOKEN];
-    }
-    // ve setCourseCuts fonksiyonunda da bu mapping’i güncelleyebilirsin.
+1)NOTE: course struct daha verimli eğer tamamını okuyacaksan. bölersen SLoad artar
+2)NOTE: Eğer ileride farklı token’lar için farklı cut yapısı (örneğin USDC, USDT, DAI özel oranlar) gerekiyorsa, 
+        şöyle extensible yapabilirsin:
+            struct Cut {
+                uint256 foundation;
+                uint256 governance;
+            }
+            mapping(address => Cut) public tokenCuts;
+        ve
+            Cut memory cut = tokenCuts[_tokenAddress];
+            if (cut.foundation == 0 && cut.governance == 0) {
+                cut = tokenCuts[DEFAULT_TOKEN];
+            }
+            // ve setCourseCuts fonksiyonunda da bu mapping’i güncelleyebilirsin.
 
-2)NOTE: hasOwnedCourse flag’ini mapping yerine bit-packing ile array’de tutmak
-3)NOTE: course struct daha verimli eğer tamamını okuyacaksan. bölersen SLoad artar
-4)NOTE: Yanlışlıkla kalan bakiyeleri kurtarma (opsiyonel ama pratik)
-    function rescue(address token, uint256 amount) external {
-        if (msg.sender != foundationAddress) revert OnlyFoundation();
-        if (token == address(0)) {
-            (bool ok, ) = payable(foundationAddress).call{value: amount}("");
-            require(ok, "ETH rescue failed");
-        } else {
-            IERC20(token).safeTransfer(foundationAddress, amount);
-        }
-    }
-5)NOTE: Kısaca, “slice” eklemeye en çok değecek yerler:
+3)NOTE: hasOwnedCourse flag’ini mapping yerine bit-packing ile array’de tutmak
+4)NOTE: Kısaca, “slice” eklemeye en çok değecek yerler:
+        ownedCourses[user] → ownedCoursesSlice(user, start, limit) returns (uint256[] memory)
+        (UI’de sayfalama için en kritik dizi bu.)
 
-ownedCourses[user] → ownedCoursesSlice(user, start, limit) returns (uint256[] memory)
-(UI’de sayfalama için en kritik dizi bu.)
+        courseSaleRecords[courseId][saleIdx] →
+        courseSaleRecordsSlice(courseId, startIdx, limit) returns (uint256[] memory paymentIds)
+        (Withdraw/P&L ekranlarında satış geçmişini sayfalamak için.)
 
-courseSaleRecords[courseId][saleIdx] →
-courseSaleRecordsSlice(courseId, startIdx, limit) returns (uint256[] memory paymentIds)
-(Withdraw/P&L ekranlarında satış geçmişini sayfalamak için.)
+        payments (global paging veya id listesiyle toplu okuma):
 
-payments (global paging veya id listesiyle toplu okuma):
+        paymentsSlice(startPaymentId, limit) returns (Payment[] memory) veya paralel alan dizileri,
 
-paymentsSlice(startPaymentId, limit) returns (Payment[] memory) veya paralel alan dizileri,
-
-getPaymentsBatch(uint256[] calldata ids) returns (Payment[] memory)
-(Off-chain tek çağrıda birden çok ödeme detayı.)
+        getPaymentsBatch(uint256[] calldata ids) returns (Payment[] memory)
+        (Off-chain tek çağrıda birden çok ödeme detayı.)
 */
 
 /*
