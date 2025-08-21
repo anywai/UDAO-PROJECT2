@@ -4416,7 +4416,7 @@ describe("NewTreasury Contract Tests", function () {
         const refundWindowInDays = Number(await NewTreasury.refundWindow()) / 86400;
         await fastForwardTime({ days: refundWindowInDays + 1 });
         // Step 4: Replace governance contract with a wallet
-        await NewTreasury.connect(backend).setGovernanceAddress(person5.address);
+        await NewTreasury.connect(foundation).setGovernanceAddress(person5.address);
         // Step 5: Withdraw payments for all 3 sales
         await withdrawCoursePaymentsHelper({
           courseId: courseId1,
@@ -4612,6 +4612,7 @@ describe("NewTreasury Contract Tests", function () {
         // Expect: "CoursePaymentsWithdrawn" with expected success states
       });
 
+      /* --DİSABLED, due to its imposible to have 100% cuts
       it("should allow instructor to withdraw payments when total cuts 100 percent", async function () {
         // Step 0: reduce cuts to zero
         const [utFoundCut, utGoverCut, atFoundCut, atGoverCut] = await Promise.all([
@@ -4673,7 +4674,7 @@ describe("NewTreasury Contract Tests", function () {
         });
         // Expect: "CoursePaymentsWithdrawn" with expected success states
       });
-
+      */
       /////###End of Success Cases###/////
     });
 
@@ -5123,7 +5124,7 @@ describe("NewTreasury Contract Tests", function () {
         const refundWindowDays = Number(await NewTreasury.refundWindow()) / 86400;
         await fastForwardTime({ days: refundWindowDays + 1 });
         // Step 4: replace governance with a wallet that fails on erc20 transfer
-        await NewTreasury.connect(backend).setGovernanceAddress(person5.address);
+        await NewTreasury.connect(foundation).setGovernanceAddress(person5.address);
         await failMKT.connect(backend).blockAddress(person5.address, true);
         // Step 5: sign withdraw voucher, and get before token stats
         const voucher = await withdrawVH.signVoucher({
@@ -5271,7 +5272,7 @@ describe("NewTreasury Contract Tests", function () {
         const refundWindowDays = Number(await NewTreasury.refundWindow()) / 86400;
         await fastForwardTime({ days: refundWindowDays + 1 });
         // Step 4: Replace governance contract with an other contract that doesn't have addGovernanceFunds function
-        await NewTreasury.connect(backend).setGovernanceAddress(failNativeWallet.target);
+        await NewTreasury.connect(foundation).setGovernanceAddress(failNativeWallet.target);
         // Step 5: sign withdraw voucher and get before token stats
         const voucher = await withdrawVH.signVoucher({
           courseId: courseIdA,
@@ -5711,14 +5712,14 @@ describe("NewTreasury Contract Tests", function () {
         // Step 1: Call setUdaoTokenAddress with a new address
         await expect(NewTreasury.connect(backend).setUdaoTokenAddress(MKT2.target))
           .to.emit(NewTreasury, "UdaoTokenAddressUpdated")
-          .withArgs(MKT2.target, MKT1.target);
+          .withArgs(MKT2.target, MKT1.target, backend.address);
         // Expect: new udao token address is set
         expect(await NewTreasury.udaoTokenAddress()).to.equal(MKT2.target);
       });
 
-      it("should allow backend to update the governance address", async () => {
+      it("should allow foundation to update the governance address", async () => {
         // Step 1: Call setGovernanceAddress with a new address
-        await expect(NewTreasury.connect(backend).setGovernanceAddress(person2.address))
+        await expect(NewTreasury.connect(foundation).setGovernanceAddress(person2.address))
           .to.emit(NewTreasury, "GovernanceAddressUpdated")
           .withArgs(person2.address, NewGovDummy.target);
         // Expect: new governance address is set
@@ -5732,7 +5733,7 @@ describe("NewTreasury Contract Tests", function () {
         const newMax = Number(existing) + 1;
         await expect(NewTreasury.connect(backend).setMaxAllowedWithdrawers(newMax))
           .to.emit(NewTreasury, "MaxAllowedWithdrawersUpdated")
-          .withArgs(newMax, existing);
+          .withArgs(newMax, existing, backend.address);
         // Expect: new value is set
         expect(await NewTreasury.maxAllowedWithdrawers()).to.equal(newMax);
       });
@@ -5744,7 +5745,7 @@ describe("NewTreasury Contract Tests", function () {
         const newValue = Number(existing) + 1;
         await expect(NewTreasury.connect(backend).setMaxBatchCreateSize(newValue))
           .to.emit(NewTreasury, "MaxBatchCreateSizeUpdated")
-          .withArgs(newValue, existing);
+          .withArgs(newValue, existing, backend.address);
         // Expect: new value is set
         expect(await NewTreasury.maxBatchCreateSize()).to.equal(newValue);
       });
@@ -5756,7 +5757,7 @@ describe("NewTreasury Contract Tests", function () {
         const newValue = Number(existing) + 1;
         await expect(NewTreasury.connect(backend).setMaxBatchBuySize(newValue))
           .to.emit(NewTreasury, "MaxBatchBuySizeUpdated")
-          .withArgs(newValue, existing);
+          .withArgs(newValue, existing, backend.address);
         // Expect: new value is set
         expect(await NewTreasury.maxBatchBuySize()).to.equal(newValue);
       });
@@ -5768,7 +5769,7 @@ describe("NewTreasury Contract Tests", function () {
         const newValue = Number(existing) + 1;
         await expect(NewTreasury.connect(backend).setMaxBatchWithdrawSize(newValue))
           .to.emit(NewTreasury, "MaxBatchWithdrawSizeUpdated")
-          .withArgs(newValue, existing);
+          .withArgs(newValue, existing, backend.address);
         // Expect: new value is set
         expect(await NewTreasury.maxBatchWithdrawSize()).to.equal(newValue);
       });
@@ -5780,7 +5781,7 @@ describe("NewTreasury Contract Tests", function () {
         const newValue = Number(existing) + 86400; // +1 day
         await expect(NewTreasury.connect(backend).setRefundWindow(newValue))
           .to.emit(NewTreasury, "RefundWindowUpdated")
-          .withArgs(newValue, existing);
+          .withArgs(newValue, existing, backend.address);
         // Expect: new value is set
         expect(await NewTreasury.refundWindow()).to.equal(newValue);
       });
@@ -5803,7 +5804,19 @@ describe("NewTreasury Contract Tests", function () {
         // Step 3: Update via setCourseCuts
         await expect(
           NewTreasury.connect(backend).setCourseCuts(updated.atFound, updated.atGover, updated.utFound, updated.utGover)
-        ).to.emit(NewTreasury, "CourseCutsUpdated");
+        )
+          .to.emit(NewTreasury, "CourseCutsUpdated")
+          .withArgs(
+            updated.atFound,
+            updated.atGover,
+            updated.utFound,
+            updated.utGover,
+            current.atFound,
+            current.atGover,
+            current.utFound,
+            current.utGover,
+            backend.address
+          );
         // Step 4: Assert new values
         expect(await NewTreasury.atFoundCut()).to.equal(updated.atFound);
         expect(await NewTreasury.atGoverCut()).to.equal(updated.atGover);
@@ -5977,11 +5990,11 @@ describe("NewTreasury Contract Tests", function () {
         expect(await NewTreasury.udaoTokenAddress()).to.equal(MKT1.target);
       });
 
-      it("should fail to update governance address if called by non-backend", async () => {
-        // Step 1: Try to update governance address by outsider (not backend)
+      it("should fail to update governance address if called by non-foundation", async () => {
+        // Step 1: Try to update governance address by outsider (not foundation)
         await expect(NewTreasury.connect(person3).setGovernanceAddress(person1.address)).to.be.revertedWithCustomError(
           NewTreasury,
-          "CallerIsNotBackend()"
+          "CallerIsNotFoundation()"
         );
         // Expect: address remains unchanged
         expect(await NewTreasury.governanceAddress()).to.equal(NewGovDummy.target);
@@ -5990,7 +6003,7 @@ describe("NewTreasury Contract Tests", function () {
       it("should fail to update governance address if new address is zero", async () => {
         // Step 1: Try to update governance address to zero address
         await expect(
-          NewTreasury.connect(backend).setGovernanceAddress(ethers.ZeroAddress)
+          NewTreasury.connect(foundation).setGovernanceAddress(ethers.ZeroAddress)
         ).to.be.revertedWithCustomError(NewTreasury, "GovernanceAddressIsZero()");
         // Expect: address remains unchanged
         expect(await NewTreasury.governanceAddress()).to.equal(NewGovDummy.target);
@@ -5999,7 +6012,7 @@ describe("NewTreasury Contract Tests", function () {
       it("should fail to update governance address if new address is same as current", async () => {
         // Step 1: Try to update governance address to current address
         await expect(
-          NewTreasury.connect(backend).setGovernanceAddress(NewGovDummy.target)
+          NewTreasury.connect(foundation).setGovernanceAddress(NewGovDummy.target)
         ).to.be.revertedWithCustomError(NewTreasury, "ChangeHasNoEffect()");
         // Expect: address remains unchanged
         expect(await NewTreasury.governanceAddress()).to.equal(NewGovDummy.target);

@@ -97,21 +97,21 @@ contract NewTreasury is EIP712, ReentrancyGuard {
     );
     event UdaoTokenAddressUpdated(
         address indexed newUdaoTokenAddress,
-        address indexed previousUdaoTokenAddress
+        address indexed previousUdaoTokenAddress,
+        address indexed changedBy
     );
     event GovernanceAddressUpdated(
         address indexed newGovernanceAddress,
         address indexed previousGovernanceAddress
     );
 
-    function grantBackendRole(address _backendAddress) external {
+    function grantBackendRole(address _newAddress) external {
         if (msg.sender != foundationAddress) revert CallerIsNotFoundation();
-        if (_backendAddress == address(0)) revert BackendAddressIsZero();
-        if (hasBackendRole[_backendAddress])
-            revert BackendRoleAlreadyAssigned();
+        if (_newAddress == address(0)) revert BackendAddressIsZero();
+        if (hasBackendRole[_newAddress]) revert BackendRoleAlreadyAssigned();
 
-        hasBackendRole[_backendAddress] = true;
-        emit BackendRoleGranted(_backendAddress);
+        hasBackendRole[_newAddress] = true;
+        emit BackendRoleGranted(_newAddress);
     }
 
     function revokeBackendRole(address _backendAddress) external {
@@ -120,51 +120,195 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         if (!hasBackendRole[_backendAddress]) revert BackendRoleAlreadyAbsent();
 
         hasBackendRole[_backendAddress] = false;
+
         emit BackendRoleRevoked(_backendAddress);
     }
 
-    function setFoundationAddress(address newFoundationAddress) external {
-        address currentFoundation = foundationAddress;
-        if (msg.sender != currentFoundation) revert CallerIsNotFoundation();
-        if (newFoundationAddress == address(0))
-            revert FoundationAddressIsZero();
-        if (newFoundationAddress == currentFoundation)
-            revert ChangeHasNoEffect();
+    function setFoundationAddress(address newFoundation) external {
+        address prevFoundation = foundationAddress;
+        if (msg.sender != prevFoundation) revert CallerIsNotFoundation();
+        if (newFoundation == address(0)) revert FoundationAddressIsZero();
+        if (newFoundation == prevFoundation) revert ChangeHasNoEffect();
 
-        foundationAddress = newFoundationAddress;
-        hasBackendRole[newFoundationAddress] = true; // ensure new foundation wallet has the backend role
-        hasBackendRole[currentFoundation] = false; // revoke backend role from old foundation address
+        foundationAddress = newFoundation;
+        hasBackendRole[newFoundation] = true; // ensure new foundation wallet has the backend role
+        hasBackendRole[prevFoundation] = false; // revoke backend role from old foundation address
 
-        emit FoundationAddressUpdated(newFoundationAddress, currentFoundation);
+        emit FoundationAddressUpdated(newFoundation, prevFoundation);
     }
 
-    function setUdaoTokenAddress(address newUdaoTokenAddress) external {
+    function setUdaoTokenAddress(address newUdaoToken) external {
         if (!hasBackendRole[msg.sender]) revert CallerIsNotBackend();
-        if (newUdaoTokenAddress == address(0)) revert UdaoTokenAddressIsZero();
-        address currentUdaoTokenAddress = udaoTokenAddress;
-        if (newUdaoTokenAddress == currentUdaoTokenAddress)
-            revert ChangeHasNoEffect();
+        if (newUdaoToken == address(0)) revert UdaoTokenAddressIsZero();
+        address prevUdaoToken = udaoTokenAddress;
+        if (newUdaoToken == prevUdaoToken) revert ChangeHasNoEffect();
 
-        udaoTokenAddress = newUdaoTokenAddress;
-        emit UdaoTokenAddressUpdated(
-            newUdaoTokenAddress,
-            currentUdaoTokenAddress
+        udaoTokenAddress = newUdaoToken;
+        emit UdaoTokenAddressUpdated(newUdaoToken, prevUdaoToken, msg.sender);
+    }
+
+    function setGovernanceAddress(address newGovernance) external {
+        if (msg.sender != foundationAddress) revert CallerIsNotFoundation();
+        if (newGovernance == address(0)) revert GovernanceAddressIsZero();
+        address prevGovernance = governanceAddress;
+        if (newGovernance == prevGovernance) revert ChangeHasNoEffect();
+
+        governanceAddress = newGovernance;
+        emit GovernanceAddressUpdated(newGovernance, prevGovernance);
+    }
+
+    /////### BASE PAYMENT SETTINGS & LOGIC ###/////
+    uint256 public maxAllowedWithdrawers = 4; // max 4 withdrawers allowed
+    uint256 public maxBatchCreateSize = 10; // max 10 courses can be created at once
+    uint256 public maxBatchBuySize = 10; // max 10 courses can be bought at once
+    uint256 public maxBatchWithdrawSize = 10; // max 10 sales can be withdrawn at once
+
+    uint32 public atFoundCut = 6000; // %6 foundation cut (any token)
+    uint32 public atGoverCut = 1000; // %1 governance cut (any token)
+    uint32 public utFoundCut = 4000; // %4 foundation cut (udao)
+    uint32 public utGoverCut = 500; // %0.5 governance cut (udao)
+    uint32 public refundWindow = 20 days;
+
+    event MaxAllowedWithdrawersUpdated(
+        uint256 indexed newMaxAllowedWithdrawers,
+        uint256 indexed previousMaxAllowedWithdrawers,
+        address indexed changedBy
+    );
+    event MaxBatchCreateSizeUpdated(
+        uint256 indexed newMaxBatchCreateSize,
+        uint256 indexed previousMaxBatchCreateSize,
+        address indexed changedBy
+    );
+    event MaxBatchBuySizeUpdated(
+        uint256 indexed newMaxBatchBuySize,
+        uint256 indexed previousMaxBatchBuySize,
+        address indexed changedBy
+    );
+    event MaxBatchWithdrawSizeUpdated(
+        uint256 indexed newMaxBatchWithdrawSize,
+        uint256 indexed previousMaxBatchWithdrawSize,
+        address indexed changedBy
+    );
+    event RefundWindowUpdated(
+        uint32 indexed newRefundWindow,
+        uint32 indexed previousRefundWindow,
+        address indexed changedBy
+    );
+    event CourseCutsUpdated(
+        uint32 atFoundCut,
+        uint32 atGoverCut,
+        uint32 utFoundCut,
+        uint32 utGoverCut,
+        uint32 prevAtFoundCut,
+        uint32 prevAtGoverCut,
+        uint32 prevUtFoundCut,
+        uint32 prevUtGoverCut,
+        address indexed changedBy
+    );
+
+    function setMaxAllowedWithdrawers(uint256 newMax) external {
+        if (!hasBackendRole[msg.sender]) revert CallerIsNotBackend();
+        if (newMax == 0) revert ValueIsZero();
+        uint256 prevMax = maxAllowedWithdrawers;
+        if (newMax == prevMax) revert ChangeHasNoEffect();
+
+        maxAllowedWithdrawers = newMax;
+        emit MaxAllowedWithdrawersUpdated(newMax, prevMax, msg.sender);
+    }
+
+    function setMaxBatchCreateSize(uint256 newMaxBatch) external {
+        if (!hasBackendRole[msg.sender]) revert CallerIsNotBackend();
+        if (newMaxBatch == 0) revert ValueIsZero();
+        uint256 prevMaxBatch = maxBatchCreateSize;
+        if (newMaxBatch == prevMaxBatch) revert ChangeHasNoEffect();
+
+        maxBatchCreateSize = newMaxBatch;
+        emit MaxBatchCreateSizeUpdated(newMaxBatch, prevMaxBatch, msg.sender);
+    }
+
+    function setMaxBatchBuySize(uint256 newMaxBatch) external {
+        if (!hasBackendRole[msg.sender]) revert CallerIsNotBackend();
+        if (newMaxBatch == 0) revert ValueIsZero();
+        uint256 prevMaxBatch = maxBatchBuySize;
+        if (newMaxBatch == prevMaxBatch) revert ChangeHasNoEffect();
+
+        maxBatchBuySize = newMaxBatch;
+        emit MaxBatchBuySizeUpdated(newMaxBatch, prevMaxBatch, msg.sender);
+    }
+
+    function setMaxBatchWithdrawSize(uint256 newMaxBatch) external {
+        if (!hasBackendRole[msg.sender]) revert CallerIsNotBackend();
+        if (newMaxBatch == 0) revert ValueIsZero();
+        uint256 prevMaxBatch = maxBatchWithdrawSize;
+        if (newMaxBatch == prevMaxBatch) revert ChangeHasNoEffect();
+
+        maxBatchWithdrawSize = newMaxBatch;
+        emit MaxBatchWithdrawSizeUpdated(newMaxBatch, prevMaxBatch, msg.sender);
+    }
+
+    function setRefundWindow(uint32 newWindow) external {
+        if (!hasBackendRole[msg.sender]) revert CallerIsNotBackend();
+        uint32 prevWindow = refundWindow;
+        if (newWindow == prevWindow) revert ChangeHasNoEffect();
+
+        refundWindow = newWindow;
+        emit RefundWindowUpdated(newWindow, prevWindow, msg.sender);
+    }
+
+    function setCourseCuts(
+        uint32 _atFoundCut,
+        uint32 _atGoverCut,
+        uint32 _utFoundCut,
+        uint32 _utGoverCut
+    ) external {
+        if (!hasBackendRole[msg.sender]) revert CallerIsNotBackend();
+        if (_atFoundCut + _atGoverCut >= 100_000)
+            revert NonUdaoCutsSumExceeds100Percent();
+        if (_utFoundCut + _utGoverCut >= 100_000)
+            revert UdaoCutsSumExceeds100Percent();
+
+        uint32 prevAtF = atFoundCut;
+        uint32 prevAtG = atGoverCut;
+        uint32 prevUtF = utFoundCut;
+        uint32 prevUtG = utGoverCut;
+        if (
+            _atFoundCut == prevAtF &&
+            _atGoverCut == prevAtG &&
+            _utFoundCut == prevUtF &&
+            _utGoverCut == prevUtG
+        ) revert ChangeHasNoEffect();
+
+        atFoundCut = _atFoundCut;
+        atGoverCut = _atGoverCut;
+
+        utFoundCut = _utFoundCut;
+        utGoverCut = _utGoverCut;
+
+        emit CourseCutsUpdated(
+            _atFoundCut,
+            _atGoverCut,
+            _utFoundCut,
+            _utGoverCut,
+            prevAtF,
+            prevAtG,
+            prevUtF,
+            prevUtG,
+            msg.sender
         );
     }
 
-    function setGovernanceAddress(address newGovernanceAddress) external {
-        if (!hasBackendRole[msg.sender]) revert CallerIsNotBackend();
-        if (newGovernanceAddress == address(0))
-            revert GovernanceAddressIsZero();
-        address currentGovernanceAddress = governanceAddress;
-        if (newGovernanceAddress == currentGovernanceAddress)
-            revert ChangeHasNoEffect();
-
-        governanceAddress = newGovernanceAddress;
-        emit GovernanceAddressUpdated(
-            newGovernanceAddress,
-            currentGovernanceAddress
-        );
+    /////### VOUCHER LOGIC ###/////
+    function _verifyVoucherSignerAndValidity(
+        bytes32 _digest,
+        bytes calldata signature,
+        address _redeemer,
+        uint256 _validUntil
+    ) internal view {
+        if (_redeemer != msg.sender) revert CallerIsNotVoucherRedeemer();
+        if (_validUntil < block.timestamp) revert VoucherIsExpired();
+        address signer = ECDSA.recover(_digest, signature);
+        if (!hasBackendRole[signer])
+            revert SignatureIsInvalidOrSignerIsNotBackend();
     }
 
     constructor(
@@ -237,6 +381,7 @@ contract NewTreasury is EIP712, ReentrancyGuard {
             if (lenW > maxW) revert WithdrawerArrayExceedsLimit();
             address redeemer = voucher.redeemer;
             uint256 validUntil = voucher.validUntil;
+            bytes32 withdrawersHash = keccak256(abi.encodePacked(withdrawers));
 
             // create digest for the voucher
             bytes32 digest = _hashTypedDataV4(
@@ -244,7 +389,7 @@ contract NewTreasury is EIP712, ReentrancyGuard {
                     abi.encode(
                         CREATE_COURSE_VOUCHER_TYPEHASH,
                         uriHash,
-                        keccak256(abi.encodePacked(withdrawers)),
+                        withdrawersHash,
                         redeemer,
                         validUntil
                     )
@@ -426,130 +571,6 @@ contract NewTreasury is EIP712, ReentrancyGuard {
 
         // emit event
         emit CourseUpdated(courseId);
-    }
-
-    /////### BASE PAYMENT SETTINGS & LOGIC ###/////
-    uint256 public maxAllowedWithdrawers = 4; // max 4 withdrawers allowed
-    uint256 public maxBatchCreateSize = 10; // max 10 courses can be created at once
-    uint256 public maxBatchBuySize = 10; // max 10 courses can be bought at once
-    uint256 public maxBatchWithdrawSize = 10; // max 10 sales can be withdrawn at once
-
-    uint32 public atFoundCut = 6000; // %6 foundation cut (any token)
-    uint32 public atGoverCut = 1000; // %1 governance cut (any token)
-    uint32 public utFoundCut = 4000; // %4 foundation cut (udao)
-    uint32 public utGoverCut = 500; // %0.5 governance cut (udao)
-    uint32 public refundWindow = 20 days;
-
-    event MaxAllowedWithdrawersUpdated(
-        uint256 indexed newMaxAllowedWithdrawers,
-        uint256 indexed previousMaxAllowedWithdrawers
-    );
-    event MaxBatchCreateSizeUpdated(
-        uint256 indexed newMaxBatchCreateSize,
-        uint256 indexed previousMaxBatchCreateSize
-    );
-    event MaxBatchBuySizeUpdated(
-        uint256 indexed newMaxBatchBuySize,
-        uint256 indexed previousMaxBatchBuySize
-    );
-    event MaxBatchWithdrawSizeUpdated(
-        uint256 indexed newMaxBatchWithdrawSize,
-        uint256 indexed previousMaxBatchWithdrawSize
-    );
-    event RefundWindowUpdated(
-        uint256 newRefundWindow,
-        uint256 previousRefundWindow
-    );
-    event CourseCutsUpdated();
-
-    function setMaxAllowedWithdrawers(uint256 newMax) external {
-        if (!hasBackendRole[msg.sender]) revert CallerIsNotBackend();
-        if (newMax == 0) revert ValueIsZero();
-        uint256 currentMax = maxAllowedWithdrawers;
-        if (newMax == currentMax) revert ChangeHasNoEffect();
-
-        maxAllowedWithdrawers = newMax;
-        emit MaxAllowedWithdrawersUpdated(newMax, currentMax);
-    }
-
-    function setMaxBatchCreateSize(uint256 newMaxBatch) external {
-        if (!hasBackendRole[msg.sender]) revert CallerIsNotBackend();
-        if (newMaxBatch == 0) revert ValueIsZero();
-        uint256 currentMaxBatch = maxBatchCreateSize;
-        if (newMaxBatch == currentMaxBatch) revert ChangeHasNoEffect();
-
-        maxBatchCreateSize = newMaxBatch;
-        emit MaxBatchCreateSizeUpdated(newMaxBatch, currentMaxBatch);
-    }
-
-    function setMaxBatchBuySize(uint256 newMaxBatch) external {
-        if (!hasBackendRole[msg.sender]) revert CallerIsNotBackend();
-        if (newMaxBatch == 0) revert ValueIsZero();
-        uint256 currentMaxBatch = maxBatchBuySize;
-        if (newMaxBatch == currentMaxBatch) revert ChangeHasNoEffect();
-
-        maxBatchBuySize = newMaxBatch;
-        emit MaxBatchBuySizeUpdated(newMaxBatch, currentMaxBatch);
-    }
-
-    function setMaxBatchWithdrawSize(uint256 newMaxBatch) external {
-        if (!hasBackendRole[msg.sender]) revert CallerIsNotBackend();
-        if (newMaxBatch == 0) revert ValueIsZero();
-        uint256 currentMaxBatch = maxBatchWithdrawSize;
-        if (newMaxBatch == currentMaxBatch) revert ChangeHasNoEffect();
-
-        maxBatchWithdrawSize = newMaxBatch;
-        emit MaxBatchWithdrawSizeUpdated(newMaxBatch, currentMaxBatch);
-    }
-
-    function setRefundWindow(uint32 newWindow) external {
-        if (!hasBackendRole[msg.sender]) revert CallerIsNotBackend();
-        uint32 currentWindow = refundWindow;
-        if (newWindow == currentWindow) revert ChangeHasNoEffect();
-
-        refundWindow = newWindow;
-        emit RefundWindowUpdated(newWindow, currentWindow);
-    }
-
-    function setCourseCuts(
-        uint32 _atFoundCut,
-        uint32 _atGoverCut,
-        uint32 _utFoundCut,
-        uint32 _utGoverCut
-    ) external {
-        if (!hasBackendRole[msg.sender]) revert CallerIsNotBackend();
-        if (
-            _atFoundCut == atFoundCut &&
-            _atGoverCut == atGoverCut &&
-            _utFoundCut == utFoundCut &&
-            _utGoverCut == utGoverCut
-        ) revert ChangeHasNoEffect();
-        if (_atFoundCut + _atGoverCut > 100_000)
-            revert NonUdaoCutsSumExceeds100Percent();
-        if (_utFoundCut + _utGoverCut > 100_000)
-            revert UdaoCutsSumExceeds100Percent();
-
-        atFoundCut = _atFoundCut;
-        atGoverCut = _atGoverCut;
-
-        utFoundCut = _utFoundCut;
-        utGoverCut = _utGoverCut;
-
-        emit CourseCutsUpdated();
-    }
-
-    /////### VOUCHER LOGIC ###/////
-    function _verifyVoucherSignerAndValidity(
-        bytes32 _digest,
-        bytes calldata signature,
-        address _redeemer,
-        uint256 _validUntil
-    ) internal view {
-        if (_redeemer != msg.sender) revert CallerIsNotVoucherRedeemer();
-        if (_validUntil < block.timestamp) revert VoucherIsExpired();
-        address signer = ECDSA.recover(_digest, signature);
-        if (!hasBackendRole[signer])
-            revert SignatureIsInvalidOrSignerIsNotBackend();
     }
 
     /////### PAYMENT LOGIC ###/////
