@@ -1621,7 +1621,7 @@ async function _prepareExpectedWithdrawTokenState(voucher, expectations, withdra
 
   if (isValidCourseId) {
     // On-chain withdraw status ile expectations karşılaştır
-    const [refundedOnChain, withdrawnOnChain, inWindowOnChain, readyOnChain] = await NewTreasury.checkWithdrawStatus(
+    const [refundedOnChain, withdrawnOnChain, inWindowOnChain, readyOnChain] = await NewTreasury.previewWithdrawStatus(
       courseId,
       fromIndex,
       toIndex
@@ -1760,8 +1760,8 @@ async function _expectWithdraw(voucher, tokenStats, gasCost, expectations, waitS
     );
   }
   if (isValidCourseId) {
-    // Final check with checkWithdrawStatus
-    const [refundedOnChain, withdrawnOnChain, inWindowOnChain, readyOnChain] = await NewTreasury.checkWithdrawStatus(
+    // Final check with previewWithdrawStatus
+    const [refundedOnChain, withdrawnOnChain, inWindowOnChain, readyOnChain] = await NewTreasury.previewWithdrawStatus(
       courseId,
       fromIndex,
       toIndex
@@ -5790,7 +5790,7 @@ describe("NewTreasury Contract Tests", function () {
         // Expect: Reverts with "CallerIsNotThisContract()" for all actors
       });
 
-      it("should fail to call checkWithdrawStatus with invalid courseId or index range", async () => {
+      it("should fail to call previewWithdrawStatus with invalid courseId or index range", async () => {
         // Step 1: instructor1 creates a generic course with [instructor1] array
         const courseId1 = await quickCreateACourse();
         // Step 2: make 3 sales
@@ -5806,27 +5806,27 @@ describe("NewTreasury Contract Tests", function () {
           expectSuccessWith: "ContentPurchased",
         });
         // Step 3: invalid courseId = 0
-        await expect(NewTreasury.connect(instructor1).checkWithdrawStatus(0, 1, 1)).to.be.revertedWithCustomError(
+        await expect(NewTreasury.connect(instructor1).previewWithdrawStatus(0, 1, 1)).to.be.revertedWithCustomError(
           NewTreasury,
           "CourseIdIsInvalid()"
         );
         // Step 4: invalid courseId = courseCounter + 1
         const invalidId = Number(await NewTreasury.courseCounter()) + 1;
         await expect(
-          NewTreasury.connect(instructor1).checkWithdrawStatus(invalidId, 1, 1)
+          NewTreasury.connect(instructor1).previewWithdrawStatus(invalidId, 1, 1)
         ).to.be.revertedWithCustomError(NewTreasury, "CourseIdIsInvalid()");
         // Step 5: invalid fromIndex = 0
         await expect(
-          NewTreasury.connect(instructor1).checkWithdrawStatus(courseId1, 0, 1)
+          NewTreasury.connect(instructor1).previewWithdrawStatus(courseId1, 0, 1)
         ).to.be.revertedWithCustomError(NewTreasury, "WithdrawIndexRangeIsInvalid()");
         // Step 6: fromIndex > toIndex
         await expect(
-          NewTreasury.connect(instructor1).checkWithdrawStatus(courseId1, 3, 2)
+          NewTreasury.connect(instructor1).previewWithdrawStatus(courseId1, 3, 2)
         ).to.be.revertedWithCustomError(NewTreasury, "WithdrawIndexRangeIsInvalid()");
         // Step 7: toIndex > saleCounter
         const saleCount = await NewTreasury.saleCounterPerCourse(courseId1);
         await expect(
-          NewTreasury.connect(instructor1).checkWithdrawStatus(courseId1, 1, Number(saleCount) + 1)
+          NewTreasury.connect(instructor1).previewWithdrawStatus(courseId1, 1, Number(saleCount) + 1)
         ).to.be.revertedWithCustomError(NewTreasury, "WithdrawIndexRangeIsInvalid()");
       });
       /////###End of Failure Cases###/////
@@ -5836,376 +5836,379 @@ describe("NewTreasury Contract Tests", function () {
 
   // 7. Rescue Surplus
   describe("🛟🛟 RESCUE SURPLUS", function () {
-    it("should rescue stray native&erc20 when no locked funds", async function () {
-      // Step 0: Try to rescue surplus
-      await expect(NewTreasury.connect(buyer2).rescueSurplus(ethers.ZeroAddress));
-      expect(await NewTreasury.locked(ethers.ZeroAddress)).to.equal(0);
-      await expect(NewTreasury.connect(buyer3).rescueSurplus(MKT2.target));
-      expect(await NewTreasury.locked(MKT2.target)).to.equal(0);
-      // Step 1: Zero state variables, and be sure there is no surplus in contract
-      const nativeSurplus = ethers.parseEther("1.2345");
-      const ercSurplus = ethers.parseEther("7");
-      const [foundNativeBalAt0, foundErcBalAt0] = await Promise.all([
-        ethers.provider.getBalance(foundation.address),
-        MKT2.balanceOf(foundation.address),
-      ]);
-      expect(await NewTreasury.getSurplusOf(ethers.ZeroAddress)).to.equal(0);
-      expect(await NewTreasury.getSurplusOf(MKT2.target)).to.equal(0);
-      // Step 2: Send Native&MTK2 surplus to contract, and check it
-      await buyer1.sendTransaction({ to: NewTreasury.target, value: nativeSurplus });
-      await MKT2.connect(buyer1).transfer(NewTreasury.target, ercSurplus);
-      expect(await NewTreasury.getSurplusOf(ethers.ZeroAddress)).to.equal(nativeSurplus);
-      expect(await NewTreasury.getSurplusOf(MKT2.target)).to.equal(ercSurplus);
-      // Step 3: Native rescue and verify the surplus zeroed out
-      await expect(NewTreasury.connect(buyer2).rescueSurplus(ethers.ZeroAddress))
-        .to.emit(NewTreasury, "SurplusRescued")
-        .withArgs(ethers.ZeroAddress, foundation.address, nativeSurplus, buyer2.address);
-      expect(await NewTreasury.locked(ethers.ZeroAddress)).to.equal(0);
-      // Step 4: MTK2 rescue, and verify the surplus zeroed out
-      await expect(NewTreasury.connect(buyer3).rescueSurplus(MKT2.target))
-        .to.emit(NewTreasury, "SurplusRescued")
-        .withArgs(MKT2.target, foundation.address, ercSurplus, buyer3.address);
-      expect(await NewTreasury.locked(MKT2.target)).to.equal(0);
-      // Step 5: Check balances after rescue
-      expect(await ethers.provider.getBalance(foundation.address)).to.equal(foundNativeBalAt0 + nativeSurplus);
-      expect(await MKT2.balanceOf(foundation.address)).to.equal(foundErcBalAt0 + ercSurplus);
-    });
+    describe("✅ Success Cases", function () {
+      it("should rescue stray native&erc20 when no locked funds", async function () {
+        // Step 0: Try to rescue surplus
+        await expect(NewTreasury.connect(buyer2).rescueSurplus(ethers.ZeroAddress));
+        expect(await NewTreasury.locked(ethers.ZeroAddress)).to.equal(0);
+        await expect(NewTreasury.connect(buyer3).rescueSurplus(MKT2.target));
+        expect(await NewTreasury.locked(MKT2.target)).to.equal(0);
+        // Step 1: Zero state variables, and be sure there is no surplus in contract
+        const nativeSurplus = ethers.parseEther("1.2345");
+        const ercSurplus = ethers.parseEther("7");
+        const [foundNativeBalAt0, foundErcBalAt0] = await Promise.all([
+          ethers.provider.getBalance(foundation.address),
+          MKT2.balanceOf(foundation.address),
+        ]);
+        expect(await NewTreasury.getSurplusBalance(ethers.ZeroAddress)).to.equal(0);
+        expect(await NewTreasury.getSurplusBalance(MKT2.target)).to.equal(0);
+        // Step 2: Send Native&MTK2 surplus to contract, and check it
+        await buyer1.sendTransaction({ to: NewTreasury.target, value: nativeSurplus });
+        await MKT2.connect(buyer1).transfer(NewTreasury.target, ercSurplus);
+        expect(await NewTreasury.getSurplusBalance(ethers.ZeroAddress)).to.equal(nativeSurplus);
+        expect(await NewTreasury.getSurplusBalance(MKT2.target)).to.equal(ercSurplus);
+        // Step 3: Native rescue and verify the surplus zeroed out
+        await expect(NewTreasury.connect(buyer2).rescueSurplus(ethers.ZeroAddress))
+          .to.emit(NewTreasury, "SurplusRescued")
+          .withArgs(ethers.ZeroAddress, foundation.address, nativeSurplus, buyer2.address);
+        expect(await NewTreasury.locked(ethers.ZeroAddress)).to.equal(0);
+        // Step 4: MTK2 rescue, and verify the surplus zeroed out
+        await expect(NewTreasury.connect(buyer3).rescueSurplus(MKT2.target))
+          .to.emit(NewTreasury, "SurplusRescued")
+          .withArgs(MKT2.target, foundation.address, ercSurplus, buyer3.address);
+        expect(await NewTreasury.locked(MKT2.target)).to.equal(0);
+        // Step 5: Check balances after rescue
+        expect(await ethers.provider.getBalance(foundation.address)).to.equal(foundNativeBalAt0 + nativeSurplus);
+        expect(await MKT2.balanceOf(foundation.address)).to.equal(foundErcBalAt0 + ercSurplus);
+      });
 
-    it("should rescue mixed native&erc20 surplus when a course is created between deposits", async function () {
-      // Step 0: Zero state variables, and be sure there is no surplus in contract
-      const nativeSurplus = ethers.parseEther("1.2345");
-      const ercSurplus = ethers.parseEther("7");
-      const [foundNativeBalAt0, foundErcBalAt0] = await Promise.all([
-        ethers.provider.getBalance(foundation.address),
-        MKT2.balanceOf(foundation.address),
-      ]);
-      expect(await NewTreasury.getSurplusOf(ethers.ZeroAddress)).to.equal(0);
-      expect(await NewTreasury.getSurplusOf(MKT2.target)).to.equal(0);
-      // Step 1: Send Native&MTK2 surplus to contract, and check it
-      await buyer1.sendTransaction({ to: NewTreasury.target, value: nativeSurplus });
-      await MKT2.connect(buyer1).transfer(NewTreasury.target, ercSurplus);
-      expect(await NewTreasury.getSurplusOf(ethers.ZeroAddress)).to.equal(nativeSurplus);
-      expect(await NewTreasury.getSurplusOf(MKT2.target)).to.equal(ercSurplus);
-      // Step 2: instructor1 creates a generic course with [instructor1] array
-      const courseId1 = await quickCreateACourse();
-      expect(await NewTreasury.getSurplusOf(ethers.ZeroAddress)).to.equal(nativeSurplus);
-      expect(await NewTreasury.getSurplusOf(MKT2.target)).to.equal(ercSurplus);
-      // Step 3: Send Native&MTK2 surplus to contract 2nd time, and check it
-      await buyer1.sendTransaction({ to: NewTreasury.target, value: nativeSurplus });
-      await MKT2.connect(buyer1).transfer(NewTreasury.target, ercSurplus);
-      expect(await NewTreasury.getSurplusOf(ethers.ZeroAddress)).to.equal(nativeSurplus * 2n);
-      expect(await NewTreasury.getSurplusOf(MKT2.target)).to.equal(ercSurplus * 2n);
-      // Step 4: Native rescue and verify the surplus zeroed out
-      await expect(NewTreasury.connect(buyer2).rescueSurplus(ethers.ZeroAddress))
-        .to.emit(NewTreasury, "SurplusRescued")
-        .withArgs(ethers.ZeroAddress, foundation.address, nativeSurplus * 2n, buyer2.address);
-      expect(await NewTreasury.locked(ethers.ZeroAddress)).to.equal(0);
-      // Step 5: MTK2 rescue, and verify the surplus zeroed out
-      await expect(NewTreasury.connect(buyer3).rescueSurplus(MKT2.target))
-        .to.emit(NewTreasury, "SurplusRescued")
-        .withArgs(MKT2.target, foundation.address, ercSurplus * 2n, buyer3.address);
-      expect(await NewTreasury.locked(MKT2.target)).to.equal(0);
-      // Step 6: Check balances after rescue
-      expect(await ethers.provider.getBalance(foundation.address)).to.equal(foundNativeBalAt0 + nativeSurplus * 2n);
-      expect(await MKT2.balanceOf(foundation.address)).to.equal(foundErcBalAt0 + ercSurplus * 2n);
-    });
+      it("should rescue mixed native&erc20 surplus when a course is created between deposits", async function () {
+        // Step 0: Zero state variables, and be sure there is no surplus in contract
+        const nativeSurplus = ethers.parseEther("1.2345");
+        const ercSurplus = ethers.parseEther("7");
+        const [foundNativeBalAt0, foundErcBalAt0] = await Promise.all([
+          ethers.provider.getBalance(foundation.address),
+          MKT2.balanceOf(foundation.address),
+        ]);
+        expect(await NewTreasury.getSurplusBalance(ethers.ZeroAddress)).to.equal(0);
+        expect(await NewTreasury.getSurplusBalance(MKT2.target)).to.equal(0);
+        // Step 1: Send Native&MTK2 surplus to contract, and check it
+        await buyer1.sendTransaction({ to: NewTreasury.target, value: nativeSurplus });
+        await MKT2.connect(buyer1).transfer(NewTreasury.target, ercSurplus);
+        expect(await NewTreasury.getSurplusBalance(ethers.ZeroAddress)).to.equal(nativeSurplus);
+        expect(await NewTreasury.getSurplusBalance(MKT2.target)).to.equal(ercSurplus);
+        // Step 2: instructor1 creates a generic course with [instructor1] array
+        const courseId1 = await quickCreateACourse();
+        expect(await NewTreasury.getSurplusBalance(ethers.ZeroAddress)).to.equal(nativeSurplus);
+        expect(await NewTreasury.getSurplusBalance(MKT2.target)).to.equal(ercSurplus);
+        // Step 3: Send Native&MTK2 surplus to contract 2nd time, and check it
+        await buyer1.sendTransaction({ to: NewTreasury.target, value: nativeSurplus });
+        await MKT2.connect(buyer1).transfer(NewTreasury.target, ercSurplus);
+        expect(await NewTreasury.getSurplusBalance(ethers.ZeroAddress)).to.equal(nativeSurplus * 2n);
+        expect(await NewTreasury.getSurplusBalance(MKT2.target)).to.equal(ercSurplus * 2n);
+        // Step 4: Native rescue and verify the surplus zeroed out
+        await expect(NewTreasury.connect(buyer2).rescueSurplus(ethers.ZeroAddress))
+          .to.emit(NewTreasury, "SurplusRescued")
+          .withArgs(ethers.ZeroAddress, foundation.address, nativeSurplus * 2n, buyer2.address);
+        expect(await NewTreasury.locked(ethers.ZeroAddress)).to.equal(0);
+        // Step 5: MTK2 rescue, and verify the surplus zeroed out
+        await expect(NewTreasury.connect(buyer3).rescueSurplus(MKT2.target))
+          .to.emit(NewTreasury, "SurplusRescued")
+          .withArgs(MKT2.target, foundation.address, ercSurplus * 2n, buyer3.address);
+        expect(await NewTreasury.locked(MKT2.target)).to.equal(0);
+        // Step 6: Check balances after rescue
+        expect(await ethers.provider.getBalance(foundation.address)).to.equal(foundNativeBalAt0 + nativeSurplus * 2n);
+        expect(await MKT2.balanceOf(foundation.address)).to.equal(foundErcBalAt0 + ercSurplus * 2n);
+      });
 
-    it("should rescue surplus while preserving locked balances after interleaved native&erc20 purchases", async function () {
-      // Step 0: Zero state variables, and be sure there is no surplus in contract
-      const nativeSurplus = ethers.parseEther("1.2345");
-      const ercSurplus = ethers.parseEther("7");
-      const [foundNativeBalAt0, foundErcBalAt0] = await Promise.all([
-        ethers.provider.getBalance(foundation.address),
-        MKT2.balanceOf(foundation.address),
-      ]);
-      expect(await NewTreasury.getSurplusOf(ethers.ZeroAddress)).to.equal(0);
-      expect(await NewTreasury.getSurplusOf(MKT2.target)).to.equal(0);
-      // Step 1: Send Native&MTK2 surplus to contract, and check it
-      await buyer1.sendTransaction({ to: NewTreasury.target, value: nativeSurplus });
-      await MKT2.connect(buyer1).transfer(NewTreasury.target, ercSurplus);
-      expect(await NewTreasury.getSurplusOf(ethers.ZeroAddress)).to.equal(nativeSurplus);
-      expect(await NewTreasury.getSurplusOf(MKT2.target)).to.equal(ercSurplus);
-      // Step 2: instructor1 creates a generic course with [instructor1] array and make 3 purchase
-      const courseId1 = await quickCreateACourse();
-      await buyCourseBatchHelper({
-        courseIds: Array(3).fill(courseId1), // 3 sales for the same course
-        tokenAddresses: [MKT1.target, MKT2.target, ethers.ZeroAddress],
-        coursePrices: [ethers.parseEther("5"), ethers.parseEther("10"), ethers.parseEther("15")],
-        courseReceivers: [person1.address, person2.address, person3.address],
-        redeemers: [buyer1, buyer1, buyer1], // genelde hepsi aynı: tx'i buyer1 atıyor
-        validUntils: [now + 86400, now + 86400, now + 86400],
-        nativeMsgValue: ethers.parseEther("15"), // sadece ERC20 olduğundan 0
-        buyBatchTxCaller: buyer1, // tx gönderen signer
-        expectSuccessWith: "ContentPurchased",
+      it("should rescue surplus while preserving locked balances after interleaved native&erc20 purchases", async function () {
+        // Step 0: Zero state variables, and be sure there is no surplus in contract
+        const nativeSurplus = ethers.parseEther("1.2345");
+        const ercSurplus = ethers.parseEther("7");
+        const [foundNativeBalAt0, foundErcBalAt0] = await Promise.all([
+          ethers.provider.getBalance(foundation.address),
+          MKT2.balanceOf(foundation.address),
+        ]);
+        expect(await NewTreasury.getSurplusBalance(ethers.ZeroAddress)).to.equal(0);
+        expect(await NewTreasury.getSurplusBalance(MKT2.target)).to.equal(0);
+        // Step 1: Send Native&MTK2 surplus to contract, and check it
+        await buyer1.sendTransaction({ to: NewTreasury.target, value: nativeSurplus });
+        await MKT2.connect(buyer1).transfer(NewTreasury.target, ercSurplus);
+        expect(await NewTreasury.getSurplusBalance(ethers.ZeroAddress)).to.equal(nativeSurplus);
+        expect(await NewTreasury.getSurplusBalance(MKT2.target)).to.equal(ercSurplus);
+        // Step 2: instructor1 creates a generic course with [instructor1] array and make 3 purchase
+        const courseId1 = await quickCreateACourse();
+        await buyCourseBatchHelper({
+          courseIds: Array(3).fill(courseId1), // 3 sales for the same course
+          tokenAddresses: [MKT1.target, MKT2.target, ethers.ZeroAddress],
+          coursePrices: [ethers.parseEther("5"), ethers.parseEther("10"), ethers.parseEther("15")],
+          courseReceivers: [person1.address, person2.address, person3.address],
+          redeemers: [buyer1, buyer1, buyer1], // genelde hepsi aynı: tx'i buyer1 atıyor
+          validUntils: [now + 86400, now + 86400, now + 86400],
+          nativeMsgValue: ethers.parseEther("15"), // sadece ERC20 olduğundan 0
+          buyBatchTxCaller: buyer1, // tx gönderen signer
+          expectSuccessWith: "ContentPurchased",
+        });
+        expect(await NewTreasury.getSurplusBalance(ethers.ZeroAddress)).to.equal(nativeSurplus);
+        expect(await NewTreasury.getSurplusBalance(MKT2.target)).to.equal(ercSurplus);
+        // Step 3: Send Native&MTK2 surplus to contract 2nd time, and check it
+        await buyer1.sendTransaction({ to: NewTreasury.target, value: nativeSurplus });
+        await MKT2.connect(buyer2).transfer(NewTreasury.target, ercSurplus);
+        expect(await NewTreasury.getSurplusBalance(ethers.ZeroAddress)).to.equal(nativeSurplus * 2n);
+        expect(await NewTreasury.getSurplusBalance(MKT2.target)).to.equal(ercSurplus * 2n);
+        // Step 4: Native rescue and verify the surplus zeroed out
+        await expect(NewTreasury.connect(buyer2).rescueSurplus(ethers.ZeroAddress))
+          .to.emit(NewTreasury, "SurplusRescued")
+          .withArgs(ethers.ZeroAddress, foundation.address, nativeSurplus * 2n, buyer2.address);
+        expect(await NewTreasury.locked(ethers.ZeroAddress)).to.equal(ethers.parseEther("15"));
+        // Step 5: MTK2 rescue, and verify the surplus zeroed out
+        await expect(NewTreasury.connect(buyer3).rescueSurplus(MKT2.target))
+          .to.emit(NewTreasury, "SurplusRescued")
+          .withArgs(MKT2.target, foundation.address, ercSurplus * 2n, buyer3.address);
+        expect(await NewTreasury.locked(MKT2.target)).to.equal(ethers.parseEther("10"));
+        // Step 6: Check balances after rescue
+        expect(await ethers.provider.getBalance(foundation.address)).to.equal(foundNativeBalAt0 + nativeSurplus * 2n);
+        expect(await MKT2.balanceOf(foundation.address)).to.equal(foundErcBalAt0 + ercSurplus * 2n);
       });
-      expect(await NewTreasury.getSurplusOf(ethers.ZeroAddress)).to.equal(nativeSurplus);
-      expect(await NewTreasury.getSurplusOf(MKT2.target)).to.equal(ercSurplus);
-      // Step 3: Send Native&MTK2 surplus to contract 2nd time, and check it
-      await buyer1.sendTransaction({ to: NewTreasury.target, value: nativeSurplus });
-      await MKT2.connect(buyer2).transfer(NewTreasury.target, ercSurplus);
-      expect(await NewTreasury.getSurplusOf(ethers.ZeroAddress)).to.equal(nativeSurplus * 2n);
-      expect(await NewTreasury.getSurplusOf(MKT2.target)).to.equal(ercSurplus * 2n);
-      // Step 4: Native rescue and verify the surplus zeroed out
-      await expect(NewTreasury.connect(buyer2).rescueSurplus(ethers.ZeroAddress))
-        .to.emit(NewTreasury, "SurplusRescued")
-        .withArgs(ethers.ZeroAddress, foundation.address, nativeSurplus * 2n, buyer2.address);
-      expect(await NewTreasury.locked(ethers.ZeroAddress)).to.equal(ethers.parseEther("15"));
-      // Step 5: MTK2 rescue, and verify the surplus zeroed out
-      await expect(NewTreasury.connect(buyer3).rescueSurplus(MKT2.target))
-        .to.emit(NewTreasury, "SurplusRescued")
-        .withArgs(MKT2.target, foundation.address, ercSurplus * 2n, buyer3.address);
-      expect(await NewTreasury.locked(MKT2.target)).to.equal(ethers.parseEther("10"));
-      // Step 6: Check balances after rescue
-      expect(await ethers.provider.getBalance(foundation.address)).to.equal(foundNativeBalAt0 + nativeSurplus * 2n);
-      expect(await MKT2.balanceOf(foundation.address)).to.equal(foundErcBalAt0 + ercSurplus * 2n);
-    });
 
-    it("should rescue surplus while preserving locked balances after interleaved native&erc20 refund", async function () {
-      // Step 0: Ensure no surplus in contract and snapshot foundation balances
-      const nativeSurplus = ethers.parseEther("1.2345");
-      const ercSurplus = ethers.parseEther("7");
-      const [foundNativeBalAt0, foundErcBalAt0] = await Promise.all([
-        ethers.provider.getBalance(foundation.address),
-        MKT2.balanceOf(foundation.address),
-      ]);
-      expect(await NewTreasury.getSurplusOf(ethers.ZeroAddress)).to.equal(0);
-      expect(await NewTreasury.getSurplusOf(MKT2.target)).to.equal(0);
-      // Step 1: Send stray native & MTK2 to contract; verify surplus reflects deposits
-      await buyer1.sendTransaction({ to: NewTreasury.target, value: nativeSurplus });
-      await MKT2.connect(buyer1).transfer(NewTreasury.target, ercSurplus);
-      expect(await NewTreasury.getSurplusOf(ethers.ZeroAddress)).to.equal(nativeSurplus);
-      expect(await NewTreasury.getSurplusOf(MKT2.target)).to.equal(ercSurplus);
-      // Step 2: Instructor creates two courses (each with [instructor1] as withdrawer)
-      const courses = await createCourseBatchHelper({
-        uries: ["https://erc:MTK2-1", "https://native-2"],
-        withdrawersArrays: [[instructor1.address], [instructor1.address]],
-        redeemers: [instructor1.address, instructor1.address],
-        validUntils: [now + 86400, now + 86400],
-        createBatchTxCaller: instructor1,
-        expectSuccessWith: "CourseCreated",
+      it("should rescue surplus while preserving locked balances after interleaved native&erc20 refund", async function () {
+        // Step 0: Ensure no surplus in contract and snapshot foundation balances
+        const nativeSurplus = ethers.parseEther("1.2345");
+        const ercSurplus = ethers.parseEther("7");
+        const [foundNativeBalAt0, foundErcBalAt0] = await Promise.all([
+          ethers.provider.getBalance(foundation.address),
+          MKT2.balanceOf(foundation.address),
+        ]);
+        expect(await NewTreasury.getSurplusBalance(ethers.ZeroAddress)).to.equal(0);
+        expect(await NewTreasury.getSurplusBalance(MKT2.target)).to.equal(0);
+        // Step 1: Send stray native & MTK2 to contract; verify surplus reflects deposits
+        await buyer1.sendTransaction({ to: NewTreasury.target, value: nativeSurplus });
+        await MKT2.connect(buyer1).transfer(NewTreasury.target, ercSurplus);
+        expect(await NewTreasury.getSurplusBalance(ethers.ZeroAddress)).to.equal(nativeSurplus);
+        expect(await NewTreasury.getSurplusBalance(MKT2.target)).to.equal(ercSurplus);
+        // Step 2: Instructor creates two courses (each with [instructor1] as withdrawer)
+        const courses = await createCourseBatchHelper({
+          uries: ["https://erc:MTK2-1", "https://native-2"],
+          withdrawersArrays: [[instructor1.address], [instructor1.address]],
+          redeemers: [instructor1.address, instructor1.address],
+          validUntils: [now + 86400, now + 86400],
+          createBatchTxCaller: instructor1,
+          expectSuccessWith: "CourseCreated",
+        });
+        // Step 3: Buyer purchases 4 items (2× MTK2, 2× native) for person1 & person2
+        const buy_courses = await buyCourseBatchHelper({
+          courseIds: [courses.courseIds[0], courses.courseIds[1], courses.courseIds[0], courses.courseIds[1]],
+          tokenAddresses: [MKT2.target, MKT2.target, ethers.ZeroAddress, ethers.ZeroAddress],
+          coursePrices: [
+            ethers.parseEther("5"), // course1 price in MKT1
+            ethers.parseEther("7"), // course2 price in MKT2
+            ethers.parseEther("9"), // course3 price in MKT1
+            ethers.parseEther("11"), // course3 price in native
+          ],
+          courseReceivers: [person1.address, person1.address, person2.address, person2.address],
+          redeemers: [buyer1, buyer1, buyer1, buyer1], // farklı redeemerlar
+          validUntils: [now + 86400, now + 86400, now + 86400, now + 86400],
+          nativeMsgValue: ethers.parseEther("20"), // sadece ERC20 olduğundan 0
+          buyBatchTxCaller: buyer1, // tx gönderen signer
+          expectSuccessWith: "ContentPurchased",
+        });
+        // Step 4: Send stray native & MTK2 again; verify surplus doubled and locked reflect buys
+        await buyer1.sendTransaction({ to: NewTreasury.target, value: nativeSurplus });
+        await MKT2.connect(buyer2).transfer(NewTreasury.target, ercSurplus);
+        expect(await NewTreasury.getSurplusBalance(ethers.ZeroAddress)).to.equal(nativeSurplus * 2n);
+        expect(await NewTreasury.getSurplusBalance(MKT2.target)).to.equal(ercSurplus * 2n);
+        expect(await NewTreasury.locked(ethers.ZeroAddress)).to.equal(ethers.parseEther("20"));
+        expect(await NewTreasury.locked(MKT2.target)).to.equal(ethers.parseEther("12"));
+        // Step 5: Refund all four purchases; surplus unchanged, locked reduced to zero
+        const refund1 = await refundCourseHelper({
+          paymentId: buy_courses[0],
+          redeemer: buyer1,
+          validUntil: now + 86400,
+          expectSuccessWith: "CourseRefunded",
+        });
+        const refund2 = await refundCourseHelper({
+          paymentId: buy_courses[1],
+          redeemer: buyer2,
+          validUntil: now + 86400,
+          expectSuccessWith: "CourseRefunded",
+        });
+        const refund3 = await refundCourseByOwnerHelper({
+          courseOwner: person2.address,
+          courseId: courses.courseIds[0],
+          redeemer: buyer1,
+          validUntil: now + 86400,
+          expectSuccessWith: "CourseRefunded",
+        });
+        const refund4 = await refundCourseByOwnerHelper({
+          courseOwner: person2.address,
+          courseId: courses.courseIds[1],
+          redeemer: buyer1,
+          validUntil: now + 86400,
+          expectSuccessWith: "CourseRefunded",
+        });
+        expect(await NewTreasury.getSurplusBalance(ethers.ZeroAddress)).to.equal(nativeSurplus * 2n);
+        expect(await NewTreasury.getSurplusBalance(MKT2.target)).to.equal(ercSurplus * 2n);
+        // Step 6: Send stray native & MTK2 a 3rd time; verify surplus tripled
+        await buyer1.sendTransaction({ to: NewTreasury.target, value: nativeSurplus });
+        await MKT2.connect(buyer2).transfer(NewTreasury.target, ercSurplus);
+        expect(await NewTreasury.getSurplusBalance(ethers.ZeroAddress)).to.equal(nativeSurplus * 3n);
+        expect(await NewTreasury.getSurplusBalance(MKT2.target)).to.equal(ercSurplus * 3n);
+        // Step 7: Rescue native surplus; locked(native) remains zero
+        await expect(NewTreasury.connect(buyer2).rescueSurplus(ethers.ZeroAddress))
+          .to.emit(NewTreasury, "SurplusRescued")
+          .withArgs(ethers.ZeroAddress, foundation.address, nativeSurplus * 3n, buyer2.address);
+        expect(await NewTreasury.locked(ethers.ZeroAddress)).to.equal(ethers.parseEther("0"));
+        // Step 8: Rescue MTK2 surplus; locked(MTK2) remains zero
+        await expect(NewTreasury.connect(buyer3).rescueSurplus(MKT2.target))
+          .to.emit(NewTreasury, "SurplusRescued")
+          .withArgs(MKT2.target, foundation.address, ercSurplus * 3n, buyer3.address);
+        expect(await NewTreasury.locked(MKT2.target)).to.equal(ethers.parseEther("0"));
+        // Step 9: Verify foundation balances increased by rescued surplus
+        expect(await ethers.provider.getBalance(foundation.address)).to.equal(foundNativeBalAt0 + nativeSurplus * 3n);
+        expect(await MKT2.balanceOf(foundation.address)).to.equal(foundErcBalAt0 + ercSurplus * 3n);
       });
-      // Step 3: Buyer purchases 4 items (2× MTK2, 2× native) for person1 & person2
-      const buy_courses = await buyCourseBatchHelper({
-        courseIds: [courses.courseIds[0], courses.courseIds[1], courses.courseIds[0], courses.courseIds[1]],
-        tokenAddresses: [MKT2.target, MKT2.target, ethers.ZeroAddress, ethers.ZeroAddress],
-        coursePrices: [
-          ethers.parseEther("5"), // course1 price in MKT1
-          ethers.parseEther("7"), // course2 price in MKT2
-          ethers.parseEther("9"), // course3 price in MKT1
-          ethers.parseEther("11"), // course3 price in native
-        ],
-        courseReceivers: [person1.address, person1.address, person2.address, person2.address],
-        redeemers: [buyer1, buyer1, buyer1, buyer1], // farklı redeemerlar
-        validUntils: [now + 86400, now + 86400, now + 86400, now + 86400],
-        nativeMsgValue: ethers.parseEther("20"), // sadece ERC20 olduğundan 0
-        buyBatchTxCaller: buyer1, // tx gönderen signer
-        expectSuccessWith: "ContentPurchased",
-      });
-      // Step 4: Send stray native & MTK2 again; verify surplus doubled and locked reflect buys
-      await buyer1.sendTransaction({ to: NewTreasury.target, value: nativeSurplus });
-      await MKT2.connect(buyer2).transfer(NewTreasury.target, ercSurplus);
-      expect(await NewTreasury.getSurplusOf(ethers.ZeroAddress)).to.equal(nativeSurplus * 2n);
-      expect(await NewTreasury.getSurplusOf(MKT2.target)).to.equal(ercSurplus * 2n);
-      expect(await NewTreasury.locked(ethers.ZeroAddress)).to.equal(ethers.parseEther("20"));
-      expect(await NewTreasury.locked(MKT2.target)).to.equal(ethers.parseEther("12"));
-      // Step 5: Refund all four purchases; surplus unchanged, locked reduced to zero
-      const refund1 = await refundCourseHelper({
-        paymentId: buy_courses[0],
-        redeemer: buyer1,
-        validUntil: now + 86400,
-        expectSuccessWith: "CourseRefunded",
-      });
-      const refund2 = await refundCourseHelper({
-        paymentId: buy_courses[1],
-        redeemer: buyer2,
-        validUntil: now + 86400,
-        expectSuccessWith: "CourseRefunded",
-      });
-      const refund3 = await refundCourseByOwnerHelper({
-        courseOwner: person2.address,
-        courseId: courses.courseIds[0],
-        redeemer: buyer1,
-        validUntil: now + 86400,
-        expectSuccessWith: "CourseRefunded",
-      });
-      const refund4 = await refundCourseByOwnerHelper({
-        courseOwner: person2.address,
-        courseId: courses.courseIds[1],
-        redeemer: buyer1,
-        validUntil: now + 86400,
-        expectSuccessWith: "CourseRefunded",
-      });
-      expect(await NewTreasury.getSurplusOf(ethers.ZeroAddress)).to.equal(nativeSurplus * 2n);
-      expect(await NewTreasury.getSurplusOf(MKT2.target)).to.equal(ercSurplus * 2n);
-      // Step 6: Send stray native & MTK2 a 3rd time; verify surplus tripled
-      await buyer1.sendTransaction({ to: NewTreasury.target, value: nativeSurplus });
-      await MKT2.connect(buyer2).transfer(NewTreasury.target, ercSurplus);
-      expect(await NewTreasury.getSurplusOf(ethers.ZeroAddress)).to.equal(nativeSurplus * 3n);
-      expect(await NewTreasury.getSurplusOf(MKT2.target)).to.equal(ercSurplus * 3n);
-      // Step 7: Rescue native surplus; locked(native) remains zero
-      await expect(NewTreasury.connect(buyer2).rescueSurplus(ethers.ZeroAddress))
-        .to.emit(NewTreasury, "SurplusRescued")
-        .withArgs(ethers.ZeroAddress, foundation.address, nativeSurplus * 3n, buyer2.address);
-      expect(await NewTreasury.locked(ethers.ZeroAddress)).to.equal(ethers.parseEther("0"));
-      // Step 8: Rescue MTK2 surplus; locked(MTK2) remains zero
-      await expect(NewTreasury.connect(buyer3).rescueSurplus(MKT2.target))
-        .to.emit(NewTreasury, "SurplusRescued")
-        .withArgs(MKT2.target, foundation.address, ercSurplus * 3n, buyer3.address);
-      expect(await NewTreasury.locked(MKT2.target)).to.equal(ethers.parseEther("0"));
-      // Step 9: Verify foundation balances increased by rescued surplus
-      expect(await ethers.provider.getBalance(foundation.address)).to.equal(foundNativeBalAt0 + nativeSurplus * 3n);
-      expect(await MKT2.balanceOf(foundation.address)).to.equal(foundErcBalAt0 + ercSurplus * 3n);
-    });
 
-    it("should rescue surplus while preserving locked balances after interleaved native&erc20 withdraw", async function () {
-      // Step 0: Ensure no surplus in contract and snapshot foundation balances
-      const nativeSurplus = ethers.parseEther("1.2345");
-      const ercSurplus = ethers.parseEther("2");
-      const [foundNativeBalAt0, foundErcBalAt0] = await Promise.all([
-        ethers.provider.getBalance(foundation.address),
-        MKT1.balanceOf(foundation.address),
-      ]);
-      expect(await NewTreasury.getSurplusOf(ethers.ZeroAddress)).to.equal(0);
-      expect(await NewTreasury.getSurplusOf(MKT1.target)).to.equal(0);
-      // Step 1: Send stray native & MTK2 to contract; verify surplus reflects deposits
-      await buyer1.sendTransaction({ to: NewTreasury.target, value: nativeSurplus });
-      await MKT1.connect(buyer1).transfer(NewTreasury.target, ercSurplus);
-      expect(await NewTreasury.getSurplusOf(ethers.ZeroAddress)).to.equal(nativeSurplus);
-      expect(await NewTreasury.getSurplusOf(MKT1.target)).to.equal(ercSurplus);
-      // Step 2: Instructor creates two generic courses (each with [instructor1] as withdrawer)
-      const courses = await createCourseBatchHelper({
-        uries: ["https://erc:MTK2-1", "https://native-2"],
-        withdrawersArrays: [[instructor1.address], [instructor1.address]],
-        redeemers: [instructor1.address, instructor1.address],
-        validUntils: [now + 86400, now + 86400],
-        createBatchTxCaller: instructor1,
-        expectSuccessWith: "CourseCreated",
+      it("should rescue surplus while preserving locked balances after interleaved native&erc20 withdraw", async function () {
+        // Step 0: Ensure no surplus in contract and snapshot foundation balances
+        const nativeSurplus = ethers.parseEther("1.2345");
+        const ercSurplus = ethers.parseEther("2");
+        const [foundNativeBalAt0, foundErcBalAt0] = await Promise.all([
+          ethers.provider.getBalance(foundation.address),
+          MKT1.balanceOf(foundation.address),
+        ]);
+        expect(await NewTreasury.getSurplusBalance(ethers.ZeroAddress)).to.equal(0);
+        expect(await NewTreasury.getSurplusBalance(MKT1.target)).to.equal(0);
+        // Step 1: Send stray native & MTK2 to contract; verify surplus reflects deposits
+        await buyer1.sendTransaction({ to: NewTreasury.target, value: nativeSurplus });
+        await MKT1.connect(buyer1).transfer(NewTreasury.target, ercSurplus);
+        expect(await NewTreasury.getSurplusBalance(ethers.ZeroAddress)).to.equal(nativeSurplus);
+        expect(await NewTreasury.getSurplusBalance(MKT1.target)).to.equal(ercSurplus);
+        // Step 2: Instructor creates two generic courses (each with [instructor1] as withdrawer)
+        const courses = await createCourseBatchHelper({
+          uries: ["https://erc:MTK2-1", "https://native-2"],
+          withdrawersArrays: [[instructor1.address], [instructor1.address]],
+          redeemers: [instructor1.address, instructor1.address],
+          validUntils: [now + 86400, now + 86400],
+          createBatchTxCaller: instructor1,
+          expectSuccessWith: "CourseCreated",
+        });
+        // Step 3: Buyer purchases 8 items (alternating MTK2/native) for person1–4; lock funds accordingly
+        const courseReceivers = [person1, person2, person3, person4].flatMap((p) => [p.address, p.address]);
+        const buy_courses = await buyCourseBatchHelper({
+          courseIds: Array.from({ length: 8 }, (_, i) => courses.courseIds[i % 2]), //0,1,0,1...
+          tokenAddresses: Array.from({ length: 8 }, (_, i) => (i % 4 < 2 ? MKT1.target : ethers.ZeroAddress)), // 2erc20, 2native...
+          coursePrices: Array.from({ length: 8 }, (_, i) => ethers.parseEther(String(5 + 2 * i))), // [5,7,9,11,13,15,17,19] ETH
+          courseReceivers: courseReceivers, //[person1, person2, person3, person4].flatMap((p) => [p.address, p.address]),
+          redeemers: Array(8).fill(buyer1), // farklı redeemerlar
+          validUntils: Array(8).fill(now + 86400),
+          nativeMsgValue: ethers.parseEther("56"), // sadece ERC20 olduğundan 0
+          buyBatchTxCaller: buyer1, // tx gönderen signer
+          expectSuccessWith: "ContentPurchased",
+        });
+        // Step 4: Send stray native & MTK2 again; verify surplus doubled and locked balances reflect buys
+        await buyer1.sendTransaction({ to: NewTreasury.target, value: nativeSurplus });
+        await MKT1.connect(buyer2).transfer(NewTreasury.target, ercSurplus);
+        expect(await NewTreasury.getSurplusBalance(ethers.ZeroAddress)).to.equal(nativeSurplus * 2n);
+        expect(await NewTreasury.getSurplusBalance(MKT1.target)).to.equal(ercSurplus * 2n);
+        expect(await NewTreasury.locked(ethers.ZeroAddress)).to.equal(ethers.parseEther("56"));
+        expect(await NewTreasury.locked(MKT1.target)).to.equal(ethers.parseEther("40"));
+        // Step 5: Refund 4 purchases (2 by paymentId, 2 by owner+courseId); verify locked decreases, surplus unchanged
+        const refund1 = await refundCourseHelper({
+          paymentId: buy_courses[0],
+          redeemer: buyer1,
+          validUntil: now + 86400,
+          expectSuccessWith: "CourseRefunded",
+        });
+        const refund2 = await refundCourseHelper({
+          paymentId: buy_courses[1],
+          redeemer: buyer2,
+          validUntil: now + 86400,
+          expectSuccessWith: "CourseRefunded",
+        });
+        const refund3 = await refundCourseByOwnerHelper({
+          courseOwner: person2.address,
+          courseId: courses.courseIds[0],
+          redeemer: buyer1,
+          validUntil: now + 86400,
+          expectSuccessWith: "CourseRefunded",
+        });
+        const refund4 = await refundCourseByOwnerHelper({
+          courseOwner: person2.address,
+          courseId: courses.courseIds[1],
+          redeemer: buyer1,
+          validUntil: now + 86400,
+          expectSuccessWith: "CourseRefunded",
+        });
+        expect(await NewTreasury.getSurplusBalance(ethers.ZeroAddress)).to.equal(nativeSurplus * 2n);
+        expect(await NewTreasury.getSurplusBalance(MKT1.target)).to.equal(ercSurplus * 2n);
+        expect(await NewTreasury.locked(ethers.ZeroAddress)).to.equal(ethers.parseEther("36"));
+        expect(await NewTreasury.locked(MKT1.target)).to.equal(ethers.parseEther("28"));
+        // Step 6: Send stray native & MTK2 a 3rd time; verify surplus tripled
+        await buyer1.sendTransaction({ to: NewTreasury.target, value: nativeSurplus });
+        await MKT1.connect(buyer2).transfer(NewTreasury.target, ercSurplus);
+        expect(await NewTreasury.getSurplusBalance(ethers.ZeroAddress)).to.equal(nativeSurplus * 3n);
+        expect(await NewTreasury.getSurplusBalance(MKT1.target)).to.equal(ercSurplus * 3n);
+        // Step 7: Advance past refund window; withdraw 2 sales for course[0]; verify ERC20 share calculation (amount=13)
+        const refundWindowDays = Number(await NewTreasury.refundWindow()) / 86400;
+        await fastForwardTime({ days: refundWindowDays + 1 });
+        await withdrawCoursePaymentsHelper({
+          courseId: courses.courseIds[0],
+          fromIndex: 2,
+          toIndex: 3, // 13 eth mtk2
+          redeemer: instructor1,
+          validUntil: now + 86400,
+          expectSuccessWith: "CoursePaymentsWithdrawn",
+          expectations: [RE, PES],
+        });
+        const [foundErcRevenue, goverErcRevenue, instErcRevenue] = await NewTreasury.connect(
+          buyer1
+        ).getCalculatedCourseCutShares(ethers.parseEther("13"), MKT1.target);
+        const calulatedFoundShareERC = (ethers.parseEther("13") * (await NewTreasury.utFoundCut())) / 100000n;
+        const calculatedGoverShareERC = (ethers.parseEther("13") * (await NewTreasury.utGoverCut())) / 100000n;
+        const calculatedInstShareERC = ethers.parseEther("13") - calulatedFoundShareERC - calculatedGoverShareERC;
+        expect(foundErcRevenue).to.equal(calulatedFoundShareERC);
+        expect(goverErcRevenue).to.equal(calculatedGoverShareERC);
+        expect(instErcRevenue).to.equal(calculatedInstShareERC);
+        // Step 8: Send stray native & MTK2 a 4th time; verify surplus quadrupled and locked reflect prior withdraw
+        await buyer1.sendTransaction({ to: NewTreasury.target, value: nativeSurplus });
+        await MKT1.connect(buyer2).transfer(NewTreasury.target, ercSurplus);
+        expect(await NewTreasury.getSurplusBalance(ethers.ZeroAddress)).to.equal(nativeSurplus * 4n);
+        expect(await NewTreasury.getSurplusBalance(MKT1.target)).to.equal(ercSurplus * 4n);
+        expect(await NewTreasury.locked(ethers.ZeroAddress)).to.equal(ethers.parseEther("36"));
+        expect(await NewTreasury.locked(MKT1.target)).to.equal(ethers.parseEther("15"));
+        // Step 9: Withdraw one sale for course[1] (index 4, native=19); verify native share calculation
+        await withdrawCoursePaymentsHelper({
+          courseId: courses.courseIds[1],
+          fromIndex: 4,
+          toIndex: 4, // 19 eth native
+          redeemer: instructor1,
+          validUntil: now + 86400,
+          expectSuccessWith: "CoursePaymentsWithdrawn",
+          expectations: [PES],
+        });
+        const [foundNativeRevenue, goverNativeRevenue, instNativeRevenue] = await NewTreasury.connect(
+          backend
+        ).getCalculatedCourseCutShares(ethers.parseEther("19"), ethers.ZeroAddress);
+        const calulatedFoundShareNat = (ethers.parseEther("19") * (await NewTreasury.atFoundCut())) / 100000n;
+        const calculatedGoverShareNat = (ethers.parseEther("19") * (await NewTreasury.atGoverCut())) / 100000n;
+        const calculatedInstShareNat = ethers.parseEther("19") - calulatedFoundShareNat - calculatedGoverShareNat;
+        expect(foundNativeRevenue).to.equal(calulatedFoundShareNat);
+        expect(goverNativeRevenue).to.equal(calculatedGoverShareNat);
+        expect(instNativeRevenue).to.equal(calculatedInstShareNat);
+        // Step 10: Send stray native & MTK2 a 5th time; verify surplus quintupled and locked reflect last withdraw
+        await buyer1.sendTransaction({ to: NewTreasury.target, value: nativeSurplus });
+        await MKT1.connect(buyer2).transfer(NewTreasury.target, ercSurplus);
+        expect(await NewTreasury.getSurplusBalance(ethers.ZeroAddress)).to.equal(nativeSurplus * 5n);
+        expect(await NewTreasury.getSurplusBalance(MKT1.target)).to.equal(ercSurplus * 5n);
+        expect(await NewTreasury.locked(ethers.ZeroAddress)).to.equal(ethers.parseEther("17"));
+        expect(await NewTreasury.locked(MKT1.target)).to.equal(ethers.parseEther("15"));
+        // Step 11: Rescue native surplus to foundation; locked(native) unchanged
+        await expect(NewTreasury.connect(buyer2).rescueSurplus(ethers.ZeroAddress))
+          .to.emit(NewTreasury, "SurplusRescued")
+          .withArgs(ethers.ZeroAddress, foundation.address, nativeSurplus * 5n, buyer2.address);
+        expect(await NewTreasury.locked(ethers.ZeroAddress)).to.equal(ethers.parseEther("17"));
+        // Step 12: Rescue MTK2 surplus to foundation; locked(MTK2) unchanged
+        await expect(NewTreasury.connect(buyer3).rescueSurplus(MKT1.target))
+          .to.emit(NewTreasury, "SurplusRescued")
+          .withArgs(MKT1.target, foundation.address, ercSurplus * 5n, buyer3.address);
+        expect(await NewTreasury.locked(MKT1.target)).to.equal(ethers.parseEther("15"));
+        // Step 13: Verify foundation balances increased by rescued surplus plus prior revenue shares
+        expect(await ethers.provider.getBalance(foundation.address)).to.equal(
+          foundNativeBalAt0 + nativeSurplus * 5n + foundNativeRevenue
+        );
+        expect(await MKT1.balanceOf(foundation.address)).to.equal(foundErcBalAt0 + ercSurplus * 5n + foundErcRevenue);
       });
-      // Step 3: Buyer purchases 8 items (alternating MTK2/native) for person1–4; lock funds accordingly
-      const courseReceivers = [person1, person2, person3, person4].flatMap((p) => [p.address, p.address]);
-      const buy_courses = await buyCourseBatchHelper({
-        courseIds: Array.from({ length: 8 }, (_, i) => courses.courseIds[i % 2]), //0,1,0,1...
-        tokenAddresses: Array.from({ length: 8 }, (_, i) => (i % 4 < 2 ? MKT1.target : ethers.ZeroAddress)), // 2erc20, 2native...
-        coursePrices: Array.from({ length: 8 }, (_, i) => ethers.parseEther(String(5 + 2 * i))), // [5,7,9,11,13,15,17,19] ETH
-        courseReceivers: courseReceivers, //[person1, person2, person3, person4].flatMap((p) => [p.address, p.address]),
-        redeemers: Array(8).fill(buyer1), // farklı redeemerlar
-        validUntils: Array(8).fill(now + 86400),
-        nativeMsgValue: ethers.parseEther("56"), // sadece ERC20 olduğundan 0
-        buyBatchTxCaller: buyer1, // tx gönderen signer
-        expectSuccessWith: "ContentPurchased",
-      });
-      // Step 4: Send stray native & MTK2 again; verify surplus doubled and locked balances reflect buys
-      await buyer1.sendTransaction({ to: NewTreasury.target, value: nativeSurplus });
-      await MKT1.connect(buyer2).transfer(NewTreasury.target, ercSurplus);
-      expect(await NewTreasury.getSurplusOf(ethers.ZeroAddress)).to.equal(nativeSurplus * 2n);
-      expect(await NewTreasury.getSurplusOf(MKT1.target)).to.equal(ercSurplus * 2n);
-      expect(await NewTreasury.locked(ethers.ZeroAddress)).to.equal(ethers.parseEther("56"));
-      expect(await NewTreasury.locked(MKT1.target)).to.equal(ethers.parseEther("40"));
-      // Step 5: Refund 4 purchases (2 by paymentId, 2 by owner+courseId); verify locked decreases, surplus unchanged
-      const refund1 = await refundCourseHelper({
-        paymentId: buy_courses[0],
-        redeemer: buyer1,
-        validUntil: now + 86400,
-        expectSuccessWith: "CourseRefunded",
-      });
-      const refund2 = await refundCourseHelper({
-        paymentId: buy_courses[1],
-        redeemer: buyer2,
-        validUntil: now + 86400,
-        expectSuccessWith: "CourseRefunded",
-      });
-      const refund3 = await refundCourseByOwnerHelper({
-        courseOwner: person2.address,
-        courseId: courses.courseIds[0],
-        redeemer: buyer1,
-        validUntil: now + 86400,
-        expectSuccessWith: "CourseRefunded",
-      });
-      const refund4 = await refundCourseByOwnerHelper({
-        courseOwner: person2.address,
-        courseId: courses.courseIds[1],
-        redeemer: buyer1,
-        validUntil: now + 86400,
-        expectSuccessWith: "CourseRefunded",
-      });
-      expect(await NewTreasury.getSurplusOf(ethers.ZeroAddress)).to.equal(nativeSurplus * 2n);
-      expect(await NewTreasury.getSurplusOf(MKT1.target)).to.equal(ercSurplus * 2n);
-      expect(await NewTreasury.locked(ethers.ZeroAddress)).to.equal(ethers.parseEther("36"));
-      expect(await NewTreasury.locked(MKT1.target)).to.equal(ethers.parseEther("28"));
-      // Step 6: Send stray native & MTK2 a 3rd time; verify surplus tripled
-      await buyer1.sendTransaction({ to: NewTreasury.target, value: nativeSurplus });
-      await MKT1.connect(buyer2).transfer(NewTreasury.target, ercSurplus);
-      expect(await NewTreasury.getSurplusOf(ethers.ZeroAddress)).to.equal(nativeSurplus * 3n);
-      expect(await NewTreasury.getSurplusOf(MKT1.target)).to.equal(ercSurplus * 3n);
-      // Step 7: Advance past refund window; withdraw 2 sales for course[0]; verify ERC20 share calculation (amount=13)
-      const refundWindowDays = Number(await NewTreasury.refundWindow()) / 86400;
-      await fastForwardTime({ days: refundWindowDays + 1 });
-      await withdrawCoursePaymentsHelper({
-        courseId: courses.courseIds[0],
-        fromIndex: 2,
-        toIndex: 3, // 13 eth mtk2
-        redeemer: instructor1,
-        validUntil: now + 86400,
-        expectSuccessWith: "CoursePaymentsWithdrawn",
-        expectations: [RE, PES],
-      });
-      const [foundErcRevenue, goverErcRevenue, instErcRevenue] = await NewTreasury.connect(
-        buyer1
-      ).getCalculatedCourseCutShares(ethers.parseEther("13"), MKT1.target);
-      const calulatedFoundShareERC = (ethers.parseEther("13") * (await NewTreasury.utFoundCut())) / 100000n;
-      const calculatedGoverShareERC = (ethers.parseEther("13") * (await NewTreasury.utGoverCut())) / 100000n;
-      const calculatedInstShareERC = ethers.parseEther("13") - calulatedFoundShareERC - calculatedGoverShareERC;
-      expect(foundErcRevenue).to.equal(calulatedFoundShareERC);
-      expect(goverErcRevenue).to.equal(calculatedGoverShareERC);
-      expect(instErcRevenue).to.equal(calculatedInstShareERC);
-      // Step 8: Send stray native & MTK2 a 4th time; verify surplus quadrupled and locked reflect prior withdraw
-      await buyer1.sendTransaction({ to: NewTreasury.target, value: nativeSurplus });
-      await MKT1.connect(buyer2).transfer(NewTreasury.target, ercSurplus);
-      expect(await NewTreasury.getSurplusOf(ethers.ZeroAddress)).to.equal(nativeSurplus * 4n);
-      expect(await NewTreasury.getSurplusOf(MKT1.target)).to.equal(ercSurplus * 4n);
-      expect(await NewTreasury.locked(ethers.ZeroAddress)).to.equal(ethers.parseEther("36"));
-      expect(await NewTreasury.locked(MKT1.target)).to.equal(ethers.parseEther("15"));
-      // Step 9: Withdraw one sale for course[1] (index 4, native=19); verify native share calculation
-      await withdrawCoursePaymentsHelper({
-        courseId: courses.courseIds[1],
-        fromIndex: 4,
-        toIndex: 4, // 19 eth native
-        redeemer: instructor1,
-        validUntil: now + 86400,
-        expectSuccessWith: "CoursePaymentsWithdrawn",
-        expectations: [PES],
-      });
-      const [foundNativeRevenue, goverNativeRevenue, instNativeRevenue] = await NewTreasury.connect(
-        backend
-      ).getCalculatedCourseCutShares(ethers.parseEther("19"), ethers.ZeroAddress);
-      const calulatedFoundShareNat = (ethers.parseEther("19") * (await NewTreasury.atFoundCut())) / 100000n;
-      const calculatedGoverShareNat = (ethers.parseEther("19") * (await NewTreasury.atGoverCut())) / 100000n;
-      const calculatedInstShareNat = ethers.parseEther("19") - calulatedFoundShareNat - calculatedGoverShareNat;
-      expect(foundNativeRevenue).to.equal(calulatedFoundShareNat);
-      expect(goverNativeRevenue).to.equal(calculatedGoverShareNat);
-      expect(instNativeRevenue).to.equal(calculatedInstShareNat);
-      // Step 10: Send stray native & MTK2 a 5th time; verify surplus quintupled and locked reflect last withdraw
-      await buyer1.sendTransaction({ to: NewTreasury.target, value: nativeSurplus });
-      await MKT1.connect(buyer2).transfer(NewTreasury.target, ercSurplus);
-      expect(await NewTreasury.getSurplusOf(ethers.ZeroAddress)).to.equal(nativeSurplus * 5n);
-      expect(await NewTreasury.getSurplusOf(MKT1.target)).to.equal(ercSurplus * 5n);
-      expect(await NewTreasury.locked(ethers.ZeroAddress)).to.equal(ethers.parseEther("17"));
-      expect(await NewTreasury.locked(MKT1.target)).to.equal(ethers.parseEther("15"));
-      // Step 11: Rescue native surplus to foundation; locked(native) unchanged
-      await expect(NewTreasury.connect(buyer2).rescueSurplus(ethers.ZeroAddress))
-        .to.emit(NewTreasury, "SurplusRescued")
-        .withArgs(ethers.ZeroAddress, foundation.address, nativeSurplus * 5n, buyer2.address);
-      expect(await NewTreasury.locked(ethers.ZeroAddress)).to.equal(ethers.parseEther("17"));
-      // Step 12: Rescue MTK2 surplus to foundation; locked(MTK2) unchanged
-      await expect(NewTreasury.connect(buyer3).rescueSurplus(MKT1.target))
-        .to.emit(NewTreasury, "SurplusRescued")
-        .withArgs(MKT1.target, foundation.address, ercSurplus * 5n, buyer3.address);
-      expect(await NewTreasury.locked(MKT1.target)).to.equal(ethers.parseEther("15"));
-      // Step 13: Verify foundation balances increased by rescued surplus plus prior revenue shares
-      expect(await ethers.provider.getBalance(foundation.address)).to.equal(
-        foundNativeBalAt0 + nativeSurplus * 5n + foundNativeRevenue
-      );
-      expect(await MKT1.balanceOf(foundation.address)).to.equal(foundErcBalAt0 + ercSurplus * 5n + foundErcRevenue);
+      /////### Rescue Surplus Success Cases###/////
     });
     /////### Rescue Surplus Cases###/////
   });
