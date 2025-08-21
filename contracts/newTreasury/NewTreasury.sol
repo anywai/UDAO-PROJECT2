@@ -108,9 +108,6 @@ contract NewTreasury is EIP712, ReentrancyGuard {
     error NativeTransferToFoundationFailed();
     error NativeTransferToGovernanceFailed();
 
-    // Fallback
-    error DirectETHNotAccepted();
-
     /////### ROLES AND AFFILIATIONS ###/////
     mapping(address => bool) public hasBackendRole;
     address public foundationAddress;
@@ -224,10 +221,10 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         address indexed changedBy
     );
     event CourseCutsUpdated(
-        uint32 atFoundCut,
-        uint32 atGoverCut,
-        uint32 utFoundCut,
-        uint32 utGoverCut,
+        uint32 newAtFoundCut,
+        uint32 newAtGoverCut,
+        uint32 newUtFoundCut,
+        uint32 newUtGoverCut,
         uint32 prevAtFoundCut,
         uint32 prevAtGoverCut,
         uint32 prevUtFoundCut,
@@ -1369,48 +1366,6 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         return ownedCourses[user].length;
     }
 
-    function getCourse(
-        uint256 courseId
-    ) external view returns (string memory uri, bool sellable) {
-        Course memory c = courses[courseId];
-        return (c.uri, c.sellable);
-    }
-
-    function getPayment(
-        uint256 id
-    )
-        external
-        view
-        returns (
-            uint256 courseId,
-            address payer,
-            address courseReceiver,
-            address tokenAddress,
-            uint256 totalAmount,
-            uint256 instructorShare,
-            uint256 foundationShare,
-            uint256 governanceShare,
-            uint256 endOfRefundWindow,
-            bool isRefunded,
-            bool isWithdrawn
-        )
-    {
-        Payment memory p = payments[id];
-        return (
-            p.courseId,
-            p.payer,
-            p.courseReceiver,
-            p.tokenAddress,
-            p.totalAmount,
-            p.instructorShare,
-            p.foundationShare,
-            p.governanceShare,
-            p.endOfRefundWindow,
-            p.isRefunded,
-            p.isWithdrawn
-        );
-    }
-
     event SurplusRescued(
         address indexed tokenAddress,
         address indexed sentTo,
@@ -1472,9 +1427,7 @@ contract NewTreasury is EIP712, ReentrancyGuard {
     }
 }
 /*
-0)NOTE: fallback() external payable {revert("Direct ETH not accepted");}
-1)NOTE: course struct daha verimli eğer tamamını okuyacaksan. bölersen SLoad artar
-2)NOTE: Eğer ileride farklı token’lar için farklı cut yapısı (örneğin USDC, USDT, DAI özel oranlar) gerekiyorsa, 
+1)NOTE: Eğer ileride farklı token’lar için farklı cut yapısı (örneğin USDC, USDT, DAI özel oranlar) gerekiyorsa, 
         şöyle extensible yapabilirsin:
             struct Cut {
                 uint256 foundation;
@@ -1503,9 +1456,4 @@ contract NewTreasury is EIP712, ReentrancyGuard {
 
         getPaymentsBatch(uint256[] calldata ids) returns (Payment[] memory)
         (Off-chain tek çağrıda birden çok ödeme detayı.)
-*/
-
-/*
-TODO BATU eğer governanceAddress kontrat değilse try catch'i kapat
-TODO BATU getCourse ve getPayment getterlarının gereksiz olduğunu düşünüyorum. Ve haklıyım.
 */
