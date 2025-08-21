@@ -619,7 +619,10 @@ contract NewTreasury is EIP712, ReentrancyGuard {
     event ContentPurchased(
         uint256 indexed paymentId,
         uint256 indexed courseId,
-        address indexed contentReceiver
+        address indexed contentReceiver,
+        address payer,
+        address tokenAddress,
+        uint256 receivedCoursePrice
     );
     struct BuyCourseVoucher {
         uint256 courseId;
@@ -783,21 +786,32 @@ contract NewTreasury is EIP712, ReentrancyGuard {
             ownedCourseIndex[courseReceiver][courseId] = lenOwned;
             // update hasOwnedCourse mapping, Removed because saved in first loop //hasOwnedCourse[_courseReceiver][_courseId] = true;
 
-            emit ContentPurchased(newPaymentId, courseId, courseReceiver);
+            emit ContentPurchased(
+                newPaymentId,
+                courseId,
+                courseReceiver,
+                msg.sender,
+                tokenAddress,
+                receivedCoursePrice
+            );
             unchecked {
                 ++i;
             }
         }
     }
 
+    ///address payer,
+    ///address tokenAddress,
+    ///uint256 receivedCoursePrice
+
     /////### COURSE REFUND LOGIC ###/////
     event CourseRefunded(
         uint256 indexed paymentId,
         uint256 indexed courseId,
         address indexed courseReceiver,
-        uint256 amount,
+        address refundedTo,
         address tokenAddress,
-        address payer
+        uint256 refundedAmount
     );
 
     bytes32 private constant REFUND_COURSE_VOUCHER_TYPEHASH =
@@ -946,9 +960,9 @@ contract NewTreasury is EIP712, ReentrancyGuard {
             _paymentId,
             _courseId,
             _receiver,
-            _totalAmount,
+            _payer, // refundedTo
             _tokenAddress,
-            _payer
+            _totalAmount // refundedAmount
         );
     }
 
@@ -1057,7 +1071,7 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         uint256 fromIndex,
         uint256 toIndex,
         address indexed withdrawer,
-        uint256 withdrawnCompleted,
+        uint256 withdrawnSucceeded,
         uint256 withdrawnFailed
     );
 

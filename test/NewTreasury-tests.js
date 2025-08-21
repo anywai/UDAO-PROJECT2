@@ -513,7 +513,7 @@ async function buyCourseBatchHelper({
       value: nativeMsgValue,
     });
     const receipt = await tx.wait();
-    //console.log("Buy Gas used: ", receipt.gasUsed.toString());
+    //console.log("Buy Gas used: ", receipt.gasUsed);
     // eventleri kontrol et:
     const parsed = receipt.logs
       .map((l) => {
@@ -529,7 +529,8 @@ async function buyCourseBatchHelper({
     expect(parsed.length, "ContentPurchased event sayısı beklenenle eşleşmiyor").to.equal(n);
     // b) sırayla decode edip courseId & courseReceiver karşılaştır
     for (let i = 0; i < n; i++) {
-      const { paymentId, courseId, contentReceiver } = parsed[i].args;
+      const ev = parsed[i].args;
+      const { paymentId, courseId, contentReceiver, payer, tokenAddress, receivedCoursePrice } = ev;
       // paymentId > 0
       expect(paymentId, `paymentId[${i}] > 0 olmalı`).to.equal(currentPaymentCounter + BigInt(i + 1));
       // courseId eşleşmeli
@@ -538,6 +539,12 @@ async function buyCourseBatchHelper({
       expect(contentReceiver.toLowerCase(), `courseReceiver mismatch at [${i}]`).to.equal(
         courseReceivers[i].toLowerCase()
       );
+      // payer eşleşmeli
+      expect(payer.toLowerCase(), `payer mismatch at [${i}]`).to.equal(buyBatchTxCaller.address.toLowerCase());
+      // token address eşleşmeli
+      expect(tokenAddress.toLowerCase(), `tokenAddress mismatch at [${i}]`).to.equal(tokenAddresses[i].toLowerCase());
+      // receivedCoursePrice eşleşmeli
+      expect(receivedCoursePrice, `receivedCoursePrice mismatch at [${i}]`).to.equal(coursePrices[i]);
     }
     // c) gaz maliyetini hesapla
     const effectiveGasPrice = receipt.effectiveGasPrice ?? receipt.gasPrice ?? 0n;
@@ -993,9 +1000,9 @@ async function refundCourseHelper({ paymentId, redeemer, validUntil, expectRever
         paymentId,
         payment.courseId,
         payment.courseReceiver,
-        payment.totalAmount,
+        payment.payer,
         payment.tokenAddress,
-        payment.payer
+        payment.totalAmount
       );
 
     const receipt = await tx.wait();
@@ -1085,9 +1092,9 @@ async function refundCourseByOwnerHelper({
         paymentId,
         payment.courseId,
         payment.courseReceiver,
-        payment.totalAmount,
+        payment.payer,
         payment.tokenAddress,
-        payment.payer
+        payment.totalAmount
       );
 
     const receipt = await tx.wait();
@@ -3658,7 +3665,14 @@ describe("NewTreasury Contract Tests", function () {
           .triggerBuy(NewTreasury.target, vouchers, { value: nativePrice });
         await expect(tx)
           .to.emit(NewTreasury, "ContentPurchased")
-          .withArgs(expPaymentId, voucher.courseId, voucher.courseReceiver);
+          .withArgs(
+            expPaymentId,
+            voucher.courseId,
+            voucher.courseReceiver,
+            failNativeWallet.target,
+            ethers.ZeroAddress,
+            nativePrice
+          );
         const receipt = await tx.wait();
         const effectiveGasPrice = receipt.effectiveGasPrice ?? receipt.gasPrice ?? 0n;
         const gasCost = receipt.gasUsed * effectiveGasPrice;
@@ -4268,7 +4282,14 @@ describe("NewTreasury Contract Tests", function () {
           .triggerBuy(NewTreasury.target, vouchers, { value: nativePrice });
         await expect(tx)
           .to.emit(NewTreasury, "ContentPurchased")
-          .withArgs(expPaymentId, voucher.courseId, voucher.courseReceiver);
+          .withArgs(
+            expPaymentId,
+            voucher.courseId,
+            voucher.courseReceiver,
+            failNativeWallet.target,
+            ethers.ZeroAddress,
+            nativePrice
+          );
         const receipt = await tx.wait();
         const effectiveGasPrice = receipt.effectiveGasPrice ?? receipt.gasPrice ?? 0n;
         const gasCost = receipt.gasUsed * effectiveGasPrice;
