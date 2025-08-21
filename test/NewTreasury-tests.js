@@ -153,7 +153,7 @@ async function createCourseBatchHelper({
   } else if (waitSuccess) {
     tx = await NewTreasury.connect(createBatchTxCaller).createCourseBatch(vouchers);
     const receipt = await tx.wait();
-    //const gasUsed = receipt.gasUsed;
+    const gasUsed = receipt.gasUsed;
     //console.log("Create Gas used: ", gasUsed);
 
     // 5) Event parsing ve doğrulama
@@ -320,7 +320,7 @@ async function updateCourseHelper({
     const oldUri = (await NewTreasury.courses(courseId)).uri;
     tx = await NewTreasury.connect(redeemer).updateCourse(voucher);
     //receipt
-    //const receipt = await tx.wait();
+    const receipt = await tx.wait();
     //console.log("Update Gas used: ", receipt.gasUsed);
     const emptyUriHash = ethers.keccak256(ethers.toUtf8Bytes(""));
     const oldUriHash = ethers.keccak256(ethers.toUtf8Bytes(oldUri));
@@ -1952,9 +1952,9 @@ describe("NewTreasury Contract Tests", function () {
             redeemers: [instructor1.address, instructor1.address],
             validUntils: [now + 86400, now + 86400],
             createBatchTxCaller: instructor1,
-            expectRevertWith: "SignatureIsInvalidOrSignerIsNotBackend()",
+            expectRevertWith: "SignerIsNotBackend()",
           });
-          // Expect: Reverts with "SignatureIsInvalidOrSignerIsNotBackend()"
+          // Expect: Reverts with "SignerIsNotBackend()"
         });
 
         it("should fail to create a course with expired voucher", async function () {
@@ -2429,9 +2429,9 @@ describe("NewTreasury Contract Tests", function () {
             withdrawers: [instructor1.address],
             redeemer: instructor1,
             validUntil: now + 86400,
-            expectRevertWith: "SignatureIsInvalidOrSignerIsNotBackend()",
+            expectRevertWith: "SignerIsNotBackend()",
           });
-          // Expect: Reverts with "SignatureIsInvalidOrSignerIsNotBackend()"
+          // Expect: Reverts with "SignerIsNotBackend()"
         });
 
         it("should fail to update a course with expired voucher", async function () {
@@ -2799,9 +2799,9 @@ describe("NewTreasury Contract Tests", function () {
           validUntils: [now + 86400],
           nativeMsgValue: 0, // sadece ERC20 olduğundan 0
           buyBatchTxCaller: buyer1, // tx gönderen signer
-          expectRevertWith: "SignatureIsInvalidOrSignerIsNotBackend()",
+          expectRevertWith: "SignerIsNotBackend()",
         });
-        // Expect: Reverts with "SignatureIsInvalidOrSignerIsNotBackend()"
+        // Expect: Reverts with "SignerIsNotBackend()"
       });
 
       it("should fail to buy a course with expired voucher", async function () {
@@ -3348,9 +3348,9 @@ describe("NewTreasury Contract Tests", function () {
           paymentId: buy_course[0],
           redeemer: buyer1,
           validUntil: now + 86400,
-          expectRevertWith: "SignatureIsInvalidOrSignerIsNotBackend()",
+          expectRevertWith: "SignerIsNotBackend()",
         });
-        // Expect: Reverts with "SignatureIsInvalidOrSignerIsNotBackend()"
+        // Expect: Reverts with "SignerIsNotBackend()"
       });
 
       it("should fail to refund with expired voucher", async function () {
@@ -3954,9 +3954,9 @@ describe("NewTreasury Contract Tests", function () {
           courseId: courseId1,
           redeemer: buyer1,
           validUntil: now + 86400,
-          expectRevertWith: "SignatureIsInvalidOrSignerIsNotBackend()",
+          expectRevertWith: "SignerIsNotBackend()",
         });
-        // Expect: Reverts with "SignatureIsInvalidOrSignerIsNotBackend()"
+        // Expect: Reverts with "SignerIsNotBackend()"
       });
 
       it("should fail to refund with expired voucher", async function () {
@@ -5358,10 +5358,10 @@ describe("NewTreasury Contract Tests", function () {
           toIndex: 1,
           redeemer: instructor1,
           validUntil: now + 86400,
-          expectRevertWith: "SignatureIsInvalidOrSignerIsNotBackend()",
+          expectRevertWith: "SignerIsNotBackend()",
           expectations: [PES],
         });
-        // Expect: Reverts with "SignatureIsInvalidOrSignerIsNotBackend()"
+        // Expect: Reverts with "SignerIsNotBackend()"
       });
 
       it("should fail to withdraw with expired voucher", async function () {

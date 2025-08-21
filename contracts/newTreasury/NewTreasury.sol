@@ -65,7 +65,8 @@ contract NewTreasury is EIP712, ReentrancyGuard {
     error UdaoCutsSumExceeds100Percent();
 
     // voucher
-    error SignatureIsInvalidOrSignerIsNotBackend(); // TODO: X1 divide later
+    error SignatureIsInvalid();
+    error SignerIsNotBackend();
     error CallerIsNotVoucherRedeemer();
     error VoucherIsExpired();
 
@@ -325,20 +326,6 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         );
     }
 
-    /////### VOUCHER LOGIC ###/////
-    function _verifyVoucherSignerAndValidity(
-        bytes32 _digest,
-        bytes calldata signature,
-        address _redeemer,
-        uint256 _validUntil
-    ) internal view {
-        if (_redeemer != msg.sender) revert CallerIsNotVoucherRedeemer();
-        if (_validUntil < block.timestamp) revert VoucherIsExpired();
-        address signer = ECDSA.recover(_digest, signature);
-        if (!hasBackendRole[signer])
-            revert SignatureIsInvalidOrSignerIsNotBackend();
-    }
-
     constructor(
         address _foundationAddress,
         address _udaoTokenAddress,
@@ -398,35 +385,37 @@ contract NewTreasury is EIP712, ReentrancyGuard {
             if (uriHash == EMPTY_URI_HASH) revert UriIsEmpty();
             if (uriToCourseId[uriHash] != 0)
                 revert UriIsAlreadyUsedOrDuplicatedInBatch();
-
             // withdrawers
             address[] memory withdrawers = voucher.withdrawers;
             uint256 lenW = withdrawers.length; //array length
             if (lenW == 0) revert WithdrawerArrayIsEmpty();
             if (lenW > maxW) revert WithdrawerArrayExceedsLimit();
+            // voucher
+            bytes32 wHash;
+            assembly {
+                wHash := keccak256(add(withdrawers, 0x20), mul(lenW, 0x20))
+            }
             address redeemer = voucher.redeemer;
+            if (redeemer != msg.sender) revert CallerIsNotVoucherRedeemer();
             uint256 validUntil = voucher.validUntil;
-            bytes32 withdrawersHash = keccak256(abi.encodePacked(withdrawers));
-
-            // create digest for the voucher
-            bytes32 digest = _hashTypedDataV4(
-                keccak256(
-                    abi.encode(
-                        CREATE_COURSE_VOUCHER_TYPEHASH,
-                        uriHash,
-                        withdrawersHash,
-                        redeemer,
-                        validUntil
+            if (validUntil < block.timestamp) revert VoucherIsExpired();
+            (address signer, ECDSA.RecoverError err, ) = ECDSA.tryRecover(
+                _hashTypedDataV4(
+                    keccak256(
+                        abi.encode(
+                            CREATE_COURSE_VOUCHER_TYPEHASH,
+                            uriHash,
+                            wHash,
+                            redeemer,
+                            validUntil
+                        )
                     )
-                )
+                ),
+                voucher.signature
             );
-            // verify voucher, signer and validity
-            _verifyVoucherSignerAndValidity(
-                digest,
-                voucher.signature,
-                redeemer,
-                validUntil
-            );
+            if (uint256(err) != 0) revert SignatureIsInvalid();
+            if (!hasBackendRole[signer]) revert SignerIsNotBackend();
+            // end voucher
 
             uint256 newCourseId;
             unchecked {
@@ -518,33 +507,34 @@ contract NewTreasury is EIP712, ReentrancyGuard {
                 revert UriIsAlreadyUsed();
             }
         }
-
         bool sellable = voucher.sellable;
-        // create digest
         {
+            bytes32 wHash;
+            assembly {
+                wHash := keccak256(add(withdrawers, 0x20), mul(lenW, 0x20))
+            }
             address redeemer = voucher.redeemer;
-            //uint256 validUntil = voucher.validUntil;
-            bytes32 digest = _hashTypedDataV4(
-                keccak256(
-                    abi.encode(
-                        UPDATE_COURSE_VOUCHER_TYPEHASH,
-                        courseId,
-                        sellable,
-                        newUriHash,
-                        keccak256(abi.encodePacked(withdrawers)),
-                        redeemer,
-                        voucher.validUntil
+            if (redeemer != msg.sender) revert CallerIsNotVoucherRedeemer();
+            uint256 validUntil = voucher.validUntil;
+            if (validUntil < block.timestamp) revert VoucherIsExpired();
+            (address signer, ECDSA.RecoverError err, ) = ECDSA.tryRecover(
+                _hashTypedDataV4(
+                    keccak256(
+                        abi.encode(
+                            UPDATE_COURSE_VOUCHER_TYPEHASH,
+                            courseId,
+                            sellable,
+                            newUriHash,
+                            wHash,
+                            redeemer,
+                            validUntil
+                        )
                     )
-                )
+                ),
+                voucher.signature
             );
-
-            // verify signer and validity
-            _verifyVoucherSignerAndValidity(
-                digest,
-                voucher.signature,
-                redeemer,
-                voucher.validUntil
-            );
+            if (uint256(err) != 0) revert SignatureIsInvalid();
+            if (!hasBackendRole[signer]) revert SignerIsNotBackend();
         }
 
         if (lenW != 0) {
@@ -677,13 +667,13 @@ contract NewTreasury is EIP712, ReentrancyGuard {
                 revert CourseIsAlreadyOwnedByReceiverOrDuplicatedInBatch();
             }
             address tokenAddress = voucher.tokenAddress;
-
-            {
-                address redeemer = voucher.redeemer;
-                uint256 validUntil = voucher.validUntil;
-
-                // create digest for the voucher
-                bytes32 digest = _hashTypedDataV4(
+            // voucher
+            address redeemer = voucher.redeemer;
+            if (redeemer != msg.sender) revert CallerIsNotVoucherRedeemer();
+            uint256 validUntil = voucher.validUntil;
+            if (validUntil < block.timestamp) revert VoucherIsExpired();
+            (address signer, ECDSA.RecoverError err, ) = ECDSA.tryRecover(
+                _hashTypedDataV4(
                     keccak256(
                         abi.encode(
                             BUY_COURSE_VOUCHER_TYPEHASH,
@@ -695,15 +685,12 @@ contract NewTreasury is EIP712, ReentrancyGuard {
                             validUntil
                         )
                     )
-                );
-                // verify voucher, signer and validity
-                _verifyVoucherSignerAndValidity(
-                    digest,
-                    voucher.signature,
-                    redeemer,
-                    validUntil
-                );
-            }
+                ),
+                voucher.signature
+            );
+            if (uint256(err) != 0) revert SignatureIsInvalid();
+            if (!hasBackendRole[signer]) revert SignerIsNotBackend();
+            // end voucher
 
             // check if the payment is made in native token or erc20 token
             if (tokenAddress == address(0)) {
@@ -751,10 +738,11 @@ contract NewTreasury is EIP712, ReentrancyGuard {
             address courseReceiver = voucher.courseReceiver;
 
             // calculate shares
+            bool isUdao = (tokenAddress == _udao);
             uint256 foundShare = (receivedCoursePrice *
-                (tokenAddress == _udao ? _utF : _atF)) / 100_000;
+                (isUdao ? _utF : _atF)) / 100_000;
             uint256 goverShare = (receivedCoursePrice *
-                (tokenAddress == _udao ? _utG : _atG)) / 100_000;
+                (isUdao ? _utG : _atG)) / 100_000;
 
             // save the payment details
             uint256 newPaymentId;
@@ -836,26 +824,27 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         uint256 paymentId = voucher.paymentId;
         if (paymentId == 0 || paymentId > paymentCounter)
             revert PaymentIdIsInvalid();
+        // voucher
         address redeemer = voucher.redeemer;
+        if (redeemer != msg.sender) revert CallerIsNotVoucherRedeemer();
         uint256 validUntil = voucher.validUntil;
-
-        bytes32 digest = _hashTypedDataV4(
-            keccak256(
-                abi.encode(
-                    REFUND_COURSE_VOUCHER_TYPEHASH,
-                    paymentId,
-                    redeemer,
-                    validUntil
+        if (validUntil < block.timestamp) revert VoucherIsExpired();
+        (address signer, ECDSA.RecoverError err, ) = ECDSA.tryRecover(
+            _hashTypedDataV4(
+                keccak256(
+                    abi.encode(
+                        REFUND_COURSE_VOUCHER_TYPEHASH,
+                        paymentId,
+                        redeemer,
+                        validUntil
+                    )
                 )
-            )
+            ),
+            voucher.signature
         );
-
-        _verifyVoucherSignerAndValidity(
-            digest,
-            voucher.signature,
-            redeemer,
-            validUntil
-        );
+        if (uint256(err) != 0) revert SignatureIsInvalid();
+        if (!hasBackendRole[signer]) revert SignerIsNotBackend();
+        // end voucher
 
         _refundCourse(paymentId);
     }
@@ -879,26 +868,27 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         if (paymentId == 0) revert PaymentNotFoundForOwnerAndCourse();
 
         address redeemer = voucher.redeemer;
+        if (redeemer != msg.sender) revert CallerIsNotVoucherRedeemer();
+
         uint256 validUntil = voucher.validUntil;
-
-        bytes32 digest = _hashTypedDataV4(
-            keccak256(
-                abi.encode(
-                    REFUND_COURSE_BY_OWNER_AND_COURSE_ID_VOUCHER_TYPEHASH,
-                    courseOwner,
-                    courseId,
-                    redeemer,
-                    validUntil
+        if (validUntil < block.timestamp) revert VoucherIsExpired();
+        (address signer, ECDSA.RecoverError err, ) = ECDSA.tryRecover(
+            _hashTypedDataV4(
+                keccak256(
+                    abi.encode(
+                        REFUND_COURSE_BY_OWNER_AND_COURSE_ID_VOUCHER_TYPEHASH,
+                        courseOwner,
+                        courseId,
+                        redeemer,
+                        validUntil
+                    )
                 )
-            )
+            ),
+            voucher.signature
         );
-
-        _verifyVoucherSignerAndValidity(
-            digest,
-            voucher.signature,
-            redeemer,
-            validUntil
-        );
+        if (uint256(err) != 0) revert SignatureIsInvalid();
+        if (!hasBackendRole[signer]) revert SignerIsNotBackend();
+        // end voucher
 
         _refundCourse(paymentId);
     }
@@ -995,28 +985,27 @@ contract NewTreasury is EIP712, ReentrancyGuard {
                 revert WithdrawBatchSizeExceedsLimit();
         }
         address redeemer = voucher.redeemer;
+        if (redeemer != msg.sender) revert CallerIsNotVoucherRedeemer();
         uint256 validUntil = voucher.validUntil;
-        // create digest for the voucher
-        bytes32 digest = _hashTypedDataV4(
-            keccak256(
-                abi.encode(
-                    WITHDRAW_VOUCHER_TYPEHASH,
-                    courseId,
-                    fromIndex,
-                    toIndex,
-                    redeemer,
-                    validUntil
+        if (validUntil < block.timestamp) revert VoucherIsExpired();
+        (address signer, ECDSA.RecoverError err, ) = ECDSA.tryRecover(
+            _hashTypedDataV4(
+                keccak256(
+                    abi.encode(
+                        WITHDRAW_VOUCHER_TYPEHASH,
+                        courseId,
+                        fromIndex,
+                        toIndex,
+                        redeemer,
+                        validUntil
+                    )
                 )
-            )
+            ),
+            voucher.signature
         );
-
-        // verify voucher, signer and validity
-        _verifyVoucherSignerAndValidity(
-            digest,
-            voucher.signature,
-            redeemer,
-            validUntil
-        );
+        if (uint256(err) != 0) revert SignatureIsInvalid();
+        if (!hasBackendRole[signer]) revert SignerIsNotBackend();
+        // end voucher
 
         //jump removed so this_withdrawCoursePayments(courseId, fromIndex, toIndex) is below in line code right know:
         uint256 withdrawnCompleted = 0;
