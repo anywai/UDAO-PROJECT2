@@ -14,8 +14,36 @@ interface IGovernanceTreasury {
 }
 
 contract NewTreasury is EIP712, ReentrancyGuard {
-    string private constant SIGNING_DOMAIN = "NewTreasuryVouchers";
-    string private constant SIGNATURE_VERSION = "1";
+    string internal constant SIGNING_DOMAIN = "NewTreasuryVouchers";
+    string internal constant SIGNATURE_VERSION = "1";
+
+    bytes32 internal constant CREATE_COURSE_VOUCHER_TYPEHASH =
+        keccak256(
+            "CreateCourseVoucher(string uri,address[] withdrawers,address redeemer,uint256 validUntil)"
+        );
+    bytes32 internal constant UPDATE_COURSE_VOUCHER_TYPEHASH =
+        keccak256(
+            "UpdateCourseVoucher(uint256 courseId,bool sellable,string uri,address[] withdrawers,address redeemer,uint256 validUntil)"
+        );
+    bytes32 internal constant BUY_COURSE_VOUCHER_TYPEHASH =
+        keccak256(
+            "BuyCourseVoucher(uint256 courseId,address tokenAddress,uint256 coursePrice,address courseReceiver,address redeemer,uint256 validUntil)"
+        );
+    bytes32 internal constant REFUND_COURSE_VOUCHER_TYPEHASH =
+        keccak256(
+            "RefundCourseVoucher(uint256 paymentId,address redeemer,uint256 validUntil)"
+        );
+    bytes32
+        internal constant REFUND_COURSE_BY_OWNER_AND_COURSE_ID_VOUCHER_TYPEHASH =
+        keccak256(
+            "RefundCourseByOwnerAndCourseIdVoucher(address courseOwner,uint256 courseId,address redeemer,uint256 validUntil)"
+        );
+    bytes32 internal constant WITHDRAW_VOUCHER_TYPEHASH =
+        keccak256(
+            "WithdrawVoucher(uint256 courseId,uint256 fromIndex,uint256 toIndex,address redeemer,uint256 validUntil)"
+        );
+    //string constant EMPTY_URI = "";
+    bytes32 internal constant EMPTY_URI_HASH = keccak256(bytes(""));
 
     // Zero address
     error BackendAddressIsZero();
@@ -330,9 +358,6 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         }
     }
 
-    //string constant EMPTY_URI = "";
-    bytes32 public constant EMPTY_URI_HASH = keccak256(bytes(""));
-
     /////### COURSE CREATION & UPDATING LOGIC ###/////
     struct Course {
         string uri;
@@ -357,10 +382,6 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         uint256 validUntil;
         bytes signature;
     }
-    bytes32 private constant CREATE_COURSE_VOUCHER_TYPEHASH =
-        keccak256(
-            "CreateCourseVoucher(string uri,address[] withdrawers,address redeemer,uint256 validUntil)"
-        );
 
     function createCourseBatch(
         CreateCourseVoucher[] calldata vouchers
@@ -476,10 +497,6 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         uint256 validUntil;
         bytes signature;
     }
-    bytes32 private constant UPDATE_COURSE_VOUCHER_TYPEHASH =
-        keccak256(
-            "UpdateCourseVoucher(uint256 courseId,bool sellable,string uri,address[] withdrawers,address redeemer,uint256 validUntil)"
-        );
 
     function updateCourse(UpdateCourseVoucher calldata voucher) external {
         // local copy to optimize calldata reads
@@ -633,11 +650,6 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         uint256 validUntil; // voucher valid until timestamp
         bytes signature; // signature of the voucher
     }
-
-    bytes32 private constant BUY_COURSE_VOUCHER_TYPEHASH =
-        keccak256(
-            "BuyCourseVoucher(uint256 courseId,address tokenAddress,uint256 coursePrice,address courseReceiver,address redeemer,uint256 validUntil)"
-        );
 
     function buyCourseBatch(
         BuyCourseVoucher[] calldata vouchers
@@ -810,17 +822,6 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         uint256 refundedAmount
     );
 
-    bytes32 private constant REFUND_COURSE_VOUCHER_TYPEHASH =
-        keccak256(
-            "RefundCourseVoucher(uint256 paymentId,address redeemer,uint256 validUntil)"
-        );
-
-    bytes32
-        private constant REFUND_COURSE_BY_OWNER_AND_COURSE_ID_VOUCHER_TYPEHASH =
-        keccak256(
-            "RefundCourseByOwnerAndCourseIdVoucher(address courseOwner,uint256 courseId,address redeemer,uint256 validUntil)"
-        );
-
     struct RefundCourseVoucher {
         uint256 paymentId;
         address redeemer;
@@ -972,11 +973,6 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         uint256 validUntil;
         bytes signature;
     }
-
-    bytes32 private constant WITHDRAW_VOUCHER_TYPEHASH =
-        keccak256(
-            "WithdrawVoucher(uint256 courseId,uint256 fromIndex,uint256 toIndex,address redeemer,uint256 validUntil)"
-        );
 
     function withdrawCoursePayments(
         WithdrawVoucher calldata voucher
@@ -1198,10 +1194,22 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         return authorizedWithdrawers[courseId];
     }
 
+    function getAuthorizedWithdrawersLength(
+        uint256 courseId
+    ) external view returns (uint256) {
+        return authorizedWithdrawers[courseId].length;
+    }
+
     function getOwnedCourses(
         address user
     ) external view returns (uint256[] memory) {
         return ownedCourses[user];
+    }
+
+    function getOwnedCoursesLength(
+        address user
+    ) external view returns (uint256) {
+        return ownedCourses[user].length;
     }
 
     function getCourse(
@@ -1304,14 +1312,27 @@ ve
             IERC20(token).safeTransfer(foundationAddress, amount);
         }
     }
+5)NOTE: Kısaca, “slice” eklemeye en çok değecek yerler:
+
+ownedCourses[user] → ownedCoursesSlice(user, start, limit) returns (uint256[] memory)
+(UI’de sayfalama için en kritik dizi bu.)
+
+courseSaleRecords[courseId][saleIdx] →
+courseSaleRecordsSlice(courseId, startIdx, limit) returns (uint256[] memory paymentIds)
+(Withdraw/P&L ekranlarında satış geçmişini sayfalamak için.)
+
+payments (global paging veya id listesiyle toplu okuma):
+
+paymentsSlice(startPaymentId, limit) returns (Payment[] memory) veya paralel alan dizileri,
+
+getPaymentsBatch(uint256[] calldata ids) returns (Payment[] memory)
+(Off-chain tek çağrıda birden çok ödeme detayı.)
 */
 
 /*
 TODO BATU eğer governanceAddress kontrat değilse try catch'i kapat
-TODO BATU getCourse ve getPayment getterlarının gereksiz olduğunu düşünüyorum.
+TODO BATU getCourse ve getPayment getterlarının gereksiz olduğunu düşünüyorum. Ve haklıyım.
 TODO X1: Voucher konusuna tekrar bir bak mümkünse ECDSA yı jumpsız kullan. internal fonksiyonu düzenle ve verify'ın gaz costunu düşür.
-TODO X2: Eventleri gözden geçir. Indexed pahalı. minimum gereken ile minimum gaz costu hedefle
 TODO X5: onlyBackend onlyFoundation modifier'a dönebilir. Sürekli tekrarlayan revertler internal pure'a dönebilir. (Jump cost)
-TODO X6: public private değişkenler, sabitler gaza etkisi.
 TODO X7: {} sadece o blokta tanımlanan değişkenlerin ömrünü kısaltır. Gerekliyse kullan.
 */

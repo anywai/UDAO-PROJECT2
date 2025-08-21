@@ -317,7 +317,7 @@ async function updateCourseHelper({
       expectRevertWith
     );
   } else if (expectSuccessWith) {
-    const oldUri = (await NewTreasury.getCourse(courseId)).uri;
+    const oldUri = (await NewTreasury.courses(courseId)).uri;
     tx = await NewTreasury.connect(redeemer).updateCourse(voucher);
     //receipt
     //const receipt = await tx.wait();
@@ -353,7 +353,7 @@ async function _prepareExpectedUpdateState(voucher, waitSuccess) {
   // get existing states from contract
   const [courseCounter, prevCourse, prevWithdrawers] = await Promise.all([
     NewTreasury.courseCounter(),
-    NewTreasury.getCourse(courseId), //{ uri, sellable } if invalid courseId retuns "", false
+    NewTreasury.courses(courseId), //{ uri, sellable } if invalid courseId retuns "", false
     NewTreasury.getAuthorizedWithdrawers(courseId), // if invalid courseId returns []
   ]);
   // if withdrawers is empty, use previous withdrawers
@@ -423,7 +423,7 @@ async function _expectUpdate(expected) {
   const actualCounter = await NewTreasury.courseCounter();
   expect(actualCounter).to.equal(expectedCourseCounter);
   // 2) Course (uri & sellable)
-  const course = await NewTreasury.getCourse(courseId);
+  const course = await NewTreasury.courses(courseId);
   expect(course.uri).to.equal(expectedCourse.uri);
   expect(course.sellable).to.equal(expectedCourse.sellable);
   // 3) authorizedWithdrawers listesi (sıra önemliyse expected oluşturulurken aynısını kullan)
@@ -820,7 +820,7 @@ async function _expectBuyBatch(
 
   // 2) payments[paymentId]
   for (const { paymentId, payment } of expectedOutcome.expectedPaymentsById) {
-    const p = await NewTreasury.getPayment(paymentId);
+    const p = await NewTreasury.payments(paymentId);
 
     expect(p.courseId).to.equal(payment.courseId);
     expect(p.payer).to.equal(payment.payer);
@@ -958,7 +958,7 @@ async function _expectBuyBatch(
 
 async function refundCourseHelper({ paymentId, redeemer, validUntil, expectRevertWith, expectSuccessWith }) {
   // Prepare input, desired refund payment, current contract state,
-  const payment = await NewTreasury.getPayment(paymentId);
+  const payment = await NewTreasury.payments(paymentId);
   // 1) Ensure exactly one is expectation provided; expectSuccess=true, expectRevertWith=false.
   const waitSuccess = decideSuccess(expectSuccessWith, expectRevertWith);
   // push paymentId to common helper to get expected values
@@ -1048,7 +1048,7 @@ async function refundCourseByOwnerHelper({
   // get paymentId from courseOwner + courseId and push to common helper
   const paymentId = await NewTreasury.courseOwnerToPayment(courseOwner, courseId);
   // Prepare input, desired refund payment, current contract state,
-  const payment = await NewTreasury.getPayment(paymentId);
+  const payment = await NewTreasury.payments(paymentId);
   // 1) Ensure exactly one is expectation provided; expectSuccess=true, expectRevertWith=false.
   const waitSuccess = decideSuccess(expectSuccessWith, expectRevertWith);
   // push paymentId to common helper to get expected values
@@ -1129,7 +1129,7 @@ async function refundCourseByOwnerHelper({
 }
 
 async function _prepareExpectedRefundStates(paymentId, waitSuccess) {
-  const payment = await NewTreasury.getPayment(paymentId);
+  const payment = await NewTreasury.payments(paymentId);
   const current = {
     paymentCounter: await NewTreasury.paymentCounter(),
     courseOwnerToPayment: await NewTreasury.courseOwnerToPayment(payment.courseReceiver, payment.courseId),
@@ -1234,7 +1234,7 @@ async function _prepareExpectedRefundStates(paymentId, waitSuccess) {
 async function _expectRefund(paymentId, expected) {
   const { payment, courseOwnerToPayment, ownedCoursesArrayOfReceiver, ownedCourseIndex, hasOwnedCourse } = expected;
   // 1) compare payment struct states
-  const actualPayment = await NewTreasury.getPayment(paymentId);
+  const actualPayment = await NewTreasury.payments(paymentId);
   expect(actualPayment.courseId).to.equal(payment.courseId);
   expect(actualPayment.payer).to.equal(payment.payer);
   expect(actualPayment.courseReceiver).to.equal(payment.courseReceiver);
@@ -1529,7 +1529,7 @@ async function _prepareExpectedWithdrawTokenState(voucher, expectations, withdra
 
     const paymentId = await NewTreasury.courseSaleRecords(courseId, i);
 
-    const rawPayment = await NewTreasury.getPayment(paymentId);
+    const rawPayment = await NewTreasury.payments(paymentId);
     const payment = {
       courseId: rawPayment[0],
       payer: rawPayment[1],
@@ -1723,7 +1723,7 @@ async function _expectWithdraw(voucher, tokenStats, gasCost, expectations, waitS
   for (let i = fromIndex; i <= toIndex; i++) {
     const expected = expectations[i - fromIndex];
     const paymentId = await NewTreasury.courseSaleRecords(courseId, i);
-    const raw = await NewTreasury.getPayment(paymentId);
+    const raw = await NewTreasury.payments(paymentId);
 
     const payment = {
       endOfRefundWindow: raw[8],
