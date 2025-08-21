@@ -608,6 +608,7 @@ contract NewTreasury is EIP712, ReentrancyGuard {
     mapping(address => mapping(uint256 => bool)) public hasOwnedCourse; // aUser => courseId => true if the buyer has owned the course
     // refund directly to the course receiver - courseID
     mapping(address => mapping(uint256 => uint256)) public courseOwnerToPayment; // aUser => courseId => paymentId
+    mapping(address => uint256) public locked; // token address => token amount that paid to buy courses
 
     struct Payment {
         uint256 courseId;
@@ -736,6 +737,9 @@ contract NewTreasury is EIP712, ReentrancyGuard {
             address tokenAddress = voucher.tokenAddress;
             uint256 receivedCoursePrice = gotAmounts[i];
             address courseReceiver = voucher.courseReceiver;
+
+            //lock incoming course price
+            locked[tokenAddress] += receivedCoursePrice;
 
             // calculate shares
             bool isUdao = (tokenAddress == _udao);
@@ -943,6 +947,9 @@ contract NewTreasury is EIP712, ReentrancyGuard {
             IERC20(_tokenAddress).safeTransfer(_payer, _totalAmount);
         }
 
+        // reduce paid amount to locked balances
+        locked[_tokenAddress] -= _totalAmount;
+
         emit CourseRefunded(
             _paymentId,
             _courseId,
@@ -1066,6 +1073,7 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         // mark as withdrawn before attempting (reentrancy protection)
         p.isWithdrawn = true; //if reverted, this will not be set
         address tokenAddress = p.tokenAddress;
+        uint256 totalAmount = p.totalAmount;
         uint256 iShare = p.instructorShare;
         uint256 fShare = p.foundationShare;
         uint256 gShare = p.governanceShare;
@@ -1102,6 +1110,9 @@ contract NewTreasury is EIP712, ReentrancyGuard {
                 IERC20(tokenAddress).safeTransfer(gAddress, gShare);
             }
         }
+        // reduce paid amount to locked balances
+        locked[tokenAddress] -= totalAmount;
+
         if (gShare != 0 && gAddress.code.length > 0) {
             // governanceAddress is a contract gShare != 0 &&
             IGovernanceTreasury(gAddress).addGovernanceFunds(
@@ -1243,7 +1254,43 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         );
     }
 
-    /*
+    event SurplusRescued(
+        address indexed tokenAddress,
+        address indexed sentTo,
+        uint256 rescueAmount,
+        address indexed rescuedBy
+    );
+
+    function rescueSurplus(address tokenAddress) external nonReentrant {
+        address to = foundationAddress;
+        uint256 contractBalance = tokenAddress == address(0)
+            ? address(this).balance
+            : IERC20(tokenAddress).balanceOf(address(this));
+        uint256 lockedBalance = locked[tokenAddress];
+
+        if (contractBalance > lockedBalance) {
+            uint256 surplus = contractBalance - lockedBalance;
+            if (tokenAddress == address(0)) {
+                (bool ok, ) = payable(to).call{value: surplus}("");
+                if (!ok) revert NativeTransferToFoundationFailed();
+            } else {
+                IERC20(tokenAddress).safeTransfer(to, surplus);
+            }
+
+            emit SurplusRescued(tokenAddress, to, surplus, msg.sender);
+        }
+    }
+
+    function getSurplusOf(address token) external view returns (uint256) {
+        uint256 bal = token == address(0)
+            ? address(this).balance
+            : IERC20(token).balanceOf(address(this));
+        uint256 lockedBalance = locked[token];
+        return bal > lockedBalance ? bal - lockedBalance : 0;
+    }
+
+    receive() external payable {}
+
     function getCalculatedCourseCutShares(
         uint256 _totalAmount,
         address _tokenAddress
@@ -1266,13 +1313,7 @@ contract NewTreasury is EIP712, ReentrancyGuard {
 
         instructorShare = _totalAmount - foundShare - goverShare;
     }
-    */
-
-    receive() external payable {
-        revert DirectETHNotAccepted(); // prevent direct ETH transfers
-    }
 }
-
 /*
 0)NOTE: fallback() external payable {revert("Direct ETH not accepted");}
 1)NOTE: Eğer ileride farklı token’lar için farklı cut yapısı (örneğin USDC, USDT, DAI özel oranlar) gerekiyorsa, 
@@ -1321,7 +1362,4 @@ getPaymentsBatch(uint256[] calldata ids) returns (Payment[] memory)
 /*
 TODO BATU eğer governanceAddress kontrat değilse try catch'i kapat
 TODO BATU getCourse ve getPayment getterlarının gereksiz olduğunu düşünüyorum. Ve haklıyım.
-TODO X1: Voucher konusuna tekrar bir bak mümkünse ECDSA yı jumpsız kullan. internal fonksiyonu düzenle ve verify'ın gaz costunu düşür.
-TODO X5: onlyBackend onlyFoundation modifier'a dönebilir. Sürekli tekrarlayan revertler internal pure'a dönebilir. (Jump cost)
-TODO X7: {} sadece o blokta tanımlanan değişkenlerin ömrünü kısaltır. Gerekliyse kullan.
 */
