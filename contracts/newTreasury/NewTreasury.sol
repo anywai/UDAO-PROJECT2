@@ -1366,6 +1366,86 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         return ownedCourses[user].length;
     }
 
+    function getOwnedCoursesSlice(
+        // [0,1,33,2,42,77]
+        address user,
+        uint256 startIdx,
+        uint256 limit
+    ) external view returns (uint256[] memory out) {
+        uint256 len = ownedCourses[user].length;
+        uint256 maxIdx = len == 0 ? 0 : len - 1;
+
+        if (maxIdx == 0 || limit == 0 || startIdx > maxIdx)
+            return new uint256[](0);
+        uint256 remaining = maxIdx - startIdx + 1;
+        uint256 n = (limit < remaining) ? limit : remaining;
+
+        out = new uint256[](n);
+        for (uint256 i = 0; i < n; ) {
+            out[i] = ownedCourses[user][startIdx + i];
+            unchecked {
+                ++i;
+            }
+        }
+    }
+
+    function getCourseSaleRecordsSlice(
+        //0-0 1- 33 2-21 3-222
+        uint256 courseId,
+        uint256 startIdx,
+        uint256 limit
+    ) external view returns (uint256[] memory out) {
+        uint256 maxIdx = saleCounterPerCourse[courseId];
+
+        if (maxIdx == 0 || limit == 0 || startIdx > maxIdx)
+            return new uint256[](0);
+        uint256 remaining = maxIdx - startIdx + 1;
+        uint256 n = (limit < remaining) ? limit : remaining;
+
+        out = new uint256[](n);
+        for (uint256 i; i < n; ) {
+            out[i] = courseSaleRecords[courseId][startIdx + i];
+            unchecked {
+                ++i;
+            }
+        }
+    }
+
+    /*
+    function getPaymentsSlice(
+        uint256 startIdx,
+        uint256 limit
+    ) external view returns (Payment[] memory out) {
+        uint256 maxIdx = paymentCounter;
+
+        if (maxIdx == 0 || limit == 0 || startIdx > maxIdx)
+            return new Payment[](0);
+        uint256 remaining = maxIdx - startIdx + 1;
+        uint256 n = (limit < remaining) ? limit : remaining;
+
+        out = new Payment[](n);
+        for (uint256 i; i < n; ) {
+            out[i] = payments[startIdx + i];
+            unchecked {
+                ++i;
+            }
+        }
+    }
+
+    function getPaymentsBatch(
+        uint256[] calldata ids
+    ) external view returns (Payment[] memory out) {
+        uint256 n = ids.length;
+        out = new Payment[](n);
+        for (uint256 i; i < n; ) {
+            out[i] = payments[ids[i]];
+            unchecked {
+                ++i;
+            }
+        }
+    }
+    */
+
     event SurplusRescued(
         address indexed tokenAddress,
         address indexed sentTo,
@@ -1426,34 +1506,3 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         instructorShare = _totalAmount - foundShare - goverShare;
     }
 }
-/*
-1)NOTE: Eğer ileride farklı token’lar için farklı cut yapısı (örneğin USDC, USDT, DAI özel oranlar) gerekiyorsa, 
-        şöyle extensible yapabilirsin:
-            struct Cut {
-                uint256 foundation;
-                uint256 governance;
-            }
-            mapping(address => Cut) public tokenCuts;
-        ve
-            Cut memory cut = tokenCuts[_tokenAddress];
-            if (cut.foundation == 0 && cut.governance == 0) {
-                cut = tokenCuts[DEFAULT_TOKEN];
-            }
-            // ve setCourseCuts fonksiyonunda da bu mapping’i güncelleyebilirsin.
-
-3)NOTE: hasOwnedCourse flag’ini mapping yerine bit-packing ile array’de tutmak
-4)NOTE: Kısaca, “slice” eklemeye en çok değecek yerler:
-        ownedCourses[user] → ownedCoursesSlice(user, start, limit) returns (uint256[] memory)
-        (UI’de sayfalama için en kritik dizi bu.)
-
-        courseSaleRecords[courseId][saleIdx] →
-        courseSaleRecordsSlice(courseId, startIdx, limit) returns (uint256[] memory paymentIds)
-        (Withdraw/P&L ekranlarında satış geçmişini sayfalamak için.)
-
-        payments (global paging veya id listesiyle toplu okuma):
-
-        paymentsSlice(startPaymentId, limit) returns (Payment[] memory) veya paralel alan dizileri,
-
-        getPaymentsBatch(uint256[] calldata ids) returns (Payment[] memory)
-        (Off-chain tek çağrıda birden çok ödeme detayı.)
-*/
