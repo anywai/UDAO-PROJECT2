@@ -1,6 +1,7 @@
-// @title FailMockERC20 - A mock ERC20 token for testing that can block transfers to certain addresses
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
+
+/// @title FailMockERC20 - A mock ERC20 token for testing that can block transfers to certain addresses
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
