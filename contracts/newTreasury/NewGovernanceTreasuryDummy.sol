@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
+/// @title NewGovernanceTreasuryDummy - A dummy contract to simulate governance treasury behavior for testing purposes
+
 contract NewGovernanceTreasuryDummy {
     mapping(address => uint256) public tokenBalances;
     uint256 public maticBalance;
