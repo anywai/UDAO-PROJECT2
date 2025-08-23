@@ -1,6 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
+/// @title NewTreasury - Voucher-gated course lifecycle, payments, refunds, and withdrawals
+/// @notice Manages course create/update, purchases, refunds, and instructor withdrawals using EIP-712 vouchers.
+/// @dev Uses EIP712, ECDSA, ReentrancyGuard, and SafeERC20. All amounts use 5-decimal basis points (100_000 = 100%).
+///      Roles: foundation (owner) and backend signers. Backend signs vouchers; redeemer must match caller.
+
 import "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
@@ -9,14 +14,23 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 using SafeERC20 for IERC20;
 
+/// @title Governance treasury hook
+/// @notice Minimal interface to credit governance funds on withdrawals.
 interface IGovernanceTreasury {
+    /// @notice Credit collected governance share for a token.
+    /// @param tokenAddress ERC20 token or zero for native.
+    /// @param amount Amount to credit.
     function addGovernanceFunds(address tokenAddress, uint256 amount) external;
 }
 
+/// @notice Treasury implementation.
+/// @dev EIP712 domain: SIGNING_DOMAIN/SIGNATURE_VERSION. Vouchers expire via `validUntil`.
 contract NewTreasury is EIP712, ReentrancyGuard {
+    /// @dev EIP712 domain name and version.
     string internal constant SIGNING_DOMAIN = "NewTreasuryVouchers";
     string internal constant SIGNATURE_VERSION = "1";
 
+    /// @dev EIP712 typehashes for all voucher kinds.
     bytes32 internal constant CREATE_COURSE_VOUCHER_TYPEHASH =
         keccak256(
             "CreateCourseVoucher(string uri,address[] withdrawers,address redeemer,uint256 validUntil)"
@@ -42,8 +56,11 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         keccak256(
             "WithdrawVoucher(uint256 courseId,uint256 fromIndex,uint256 toIndex,address redeemer,uint256 validUntil)"
         );
-    //string constant EMPTY_URI = "";
+
+    /// @dev Hash of empty string to detect empty URIs.
     bytes32 internal constant EMPTY_URI_HASH = keccak256(bytes(""));
+
+    // ---------------- Errors ----------------
 
     // Zero address
     error BackendAddressIsZero();
@@ -108,29 +125,56 @@ contract NewTreasury is EIP712, ReentrancyGuard {
     error NativeTransferToFoundationFailed();
     error NativeTransferToGovernanceFailed();
 
-    /////### ROLES AND AFFILIATIONS ###/////
+    // -------- ROLES AND AFFILIATIONS --------
+
+    /// @notice Backend role mapping.
     mapping(address => bool) public hasBackendRole;
+
+    /// @notice Foundation controller address.
     address public foundationAddress;
+
+    /// @notice UDAO ERC20 token address.
     address public udaoTokenAddress;
+
+    /// @notice Governance treasury contract or wallet.
     address public governanceAddress;
 
+    /// @notice Emitted on backend role grant.
+    /// @param backendAddress Address that received role.
     event BackendRoleGranted(address indexed backendAddress);
+
+    /// @notice Emitted on backend role revoke.
+    /// @param backendAddress Address that lost role.
     event BackendRoleRevoked(address indexed backendAddress);
 
+    /// @notice Emitted when foundation address changes.
+    /// @param newFoundationAddress New foundation.
+    /// @param previousFoundationAddress Old foundation.
     event FoundationAddressUpdated(
         address indexed newFoundationAddress,
         address indexed previousFoundationAddress
     );
+
+    /// @notice Emitted when UDAO token address changes.
+    /// @param newUdaoTokenAddress New token.
+    /// @param previousUdaoTokenAddress Old token.
+    /// @param changedBy Caller.
     event UdaoTokenAddressUpdated(
         address indexed newUdaoTokenAddress,
         address indexed previousUdaoTokenAddress,
         address indexed changedBy
     );
+
+    /// @notice Emitted when governance address changes.
+    /// @param newGovernanceAddress New governance.
+    /// @param previousGovernanceAddress Old governance.
     event GovernanceAddressUpdated(
         address indexed newGovernanceAddress,
         address indexed previousGovernanceAddress
     );
 
+    /// @notice Grant backend signer role.
+    /// @param _newAddress Account to grant.
     function grantBackendRole(address _newAddress) external {
         if (msg.sender != foundationAddress) revert CallerIsNotFoundation();
         if (_newAddress == address(0)) revert BackendAddressIsZero();
@@ -140,6 +184,8 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         emit BackendRoleGranted(_newAddress);
     }
 
+    /// @notice Revoke backend signer role.
+    /// @param _backendAddress Account to revoke.
     function revokeBackendRole(address _backendAddress) external {
         if (msg.sender != foundationAddress) revert CallerIsNotFoundation();
         if (_backendAddress == address(0)) revert BackendAddressIsZero();
@@ -150,6 +196,9 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         emit BackendRoleRevoked(_backendAddress);
     }
 
+    /// @notice Update foundation address. Only current foundation.
+    /// @param newFoundation New foundation address.
+    /// @dev Also transfers backend role to the new foundation.
     function setFoundationAddress(address newFoundation) external {
         address prevFoundation = foundationAddress;
         if (msg.sender != prevFoundation) revert CallerIsNotFoundation();
@@ -163,6 +212,8 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         emit FoundationAddressUpdated(newFoundation, prevFoundation);
     }
 
+    /// @notice Set UDAO token address.
+    /// @param newUdaoToken ERC20 token address.
     function setUdaoTokenAddress(address newUdaoToken) external {
         if (!hasBackendRole[msg.sender]) revert CallerIsNotBackend();
         if (newUdaoToken == address(0)) revert UdaoTokenAddressIsZero();
@@ -173,6 +224,8 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         emit UdaoTokenAddressUpdated(newUdaoToken, prevUdaoToken, msg.sender);
     }
 
+    /// @notice Set governance address.
+    /// @param newGovernance Governance wallet or contract.
     function setGovernanceAddress(address newGovernance) external {
         if (msg.sender != foundationAddress) revert CallerIsNotFoundation();
         if (newGovernance == address(0)) revert GovernanceAddressIsZero();
@@ -183,43 +236,71 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         emit GovernanceAddressUpdated(newGovernance, prevGovernance);
     }
 
-    /////### BASE PAYMENT SETTINGS & LOGIC ###/////
-    uint256 public maxAllowedWithdrawers = 4; // max 4 withdrawers allowed
-    uint256 public maxBatchCreateSize = 10; // max 10 courses can be created at once
-    uint256 public maxBatchBuySize = 10; // max 10 courses can be bought at once
-    uint256 public maxBatchWithdrawSize = 10; // max 10 sales can be withdrawn at once
+    // -------- BASE PAYMENT SETTINGS --------
 
-    uint32 public atFoundCut = 6000; // %6 foundation cut (any token)
-    uint32 public atGoverCut = 1000; // %1 governance cut (any token)
-    uint32 public utFoundCut = 4000; // %4 foundation cut (udao)
-    uint32 public utGoverCut = 500; // %0.5 governance cut (udao)
+    /// @notice Max allowed withdrawers for a course.
+    uint256 public maxAllowedWithdrawers = 4;
+
+    /// @notice Max courses per create batch.
+    uint256 public maxBatchCreateSize = 10;
+
+    /// @notice Max purchases per buy batch.
+    uint256 public maxBatchBuySize = 10;
+
+    /// @notice Max withdrawals processed per call.
+    uint256 public maxBatchWithdrawSize = 10;
+
+    /// @notice Foundation cut for non-UDAO, in 1e5 bps.
+    uint32 public atFoundCut = 6000; // 6%
+
+    /// @notice Governance cut for non-UDAO, in 1e5 bps.
+    uint32 public atGoverCut = 1000; // 1%
+
+    /// @notice Foundation cut for UDAO, in 1e5 bps.
+    uint32 public utFoundCut = 4000; // 4%
+
+    /// @notice Governance cut for UDAO, in 1e5 bps.
+    uint32 public utGoverCut = 500; // 0.5%
+
+    /// @notice Refund window duration in seconds.
     uint32 public refundWindow = 20 days;
 
+    /// @notice Emitted when max withdrawers changes.
     event MaxAllowedWithdrawersUpdated(
         uint256 indexed newMaxAllowedWithdrawers,
         uint256 indexed previousMaxAllowedWithdrawers,
         address indexed changedBy
     );
+
+    /// @notice Emitted when max batch create size changes.
     event MaxBatchCreateSizeUpdated(
         uint256 indexed newMaxBatchCreateSize,
         uint256 indexed previousMaxBatchCreateSize,
         address indexed changedBy
     );
+
+    /// @notice Emitted when max batch buy size changes.
     event MaxBatchBuySizeUpdated(
         uint256 indexed newMaxBatchBuySize,
         uint256 indexed previousMaxBatchBuySize,
         address indexed changedBy
     );
+
+    /// @notice Emitted when max batch withdraw size changes.
     event MaxBatchWithdrawSizeUpdated(
         uint256 indexed newMaxBatchWithdrawSize,
         uint256 indexed previousMaxBatchWithdrawSize,
         address indexed changedBy
     );
+
+    /// @notice Emitted when refund window changes.
     event RefundWindowUpdated(
         uint32 indexed newRefundWindow,
         uint32 indexed previousRefundWindow,
         address indexed changedBy
     );
+
+    /// @notice Emitted when fee cuts change.
     event CourseCutsUpdated(
         uint32 newAtFoundCut,
         uint32 newAtGoverCut,
@@ -232,6 +313,8 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         address indexed changedBy
     );
 
+    /// @notice Set max withdrawers.
+    /// @param newMax New cap.
     function setMaxAllowedWithdrawers(uint256 newMax) external {
         if (!hasBackendRole[msg.sender]) revert CallerIsNotBackend();
         if (newMax == 0) revert ValueIsZero();
@@ -242,6 +325,8 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         emit MaxAllowedWithdrawersUpdated(newMax, prevMax, msg.sender);
     }
 
+    /// @notice Set max batch size for create.
+    /// @param newMaxBatch New cap.
     function setMaxBatchCreateSize(uint256 newMaxBatch) external {
         if (!hasBackendRole[msg.sender]) revert CallerIsNotBackend();
         if (newMaxBatch == 0) revert ValueIsZero();
@@ -252,6 +337,8 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         emit MaxBatchCreateSizeUpdated(newMaxBatch, prevMaxBatch, msg.sender);
     }
 
+    /// @notice Set max batch size for buy.
+    /// @param newMaxBatch New cap.
     function setMaxBatchBuySize(uint256 newMaxBatch) external {
         if (!hasBackendRole[msg.sender]) revert CallerIsNotBackend();
         if (newMaxBatch == 0) revert ValueIsZero();
@@ -262,6 +349,8 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         emit MaxBatchBuySizeUpdated(newMaxBatch, prevMaxBatch, msg.sender);
     }
 
+    /// @notice Set max batch size for withdrawals.
+    /// @param newMaxBatch New cap.
     function setMaxBatchWithdrawSize(uint256 newMaxBatch) external {
         if (!hasBackendRole[msg.sender]) revert CallerIsNotBackend();
         if (newMaxBatch == 0) revert ValueIsZero();
@@ -272,6 +361,8 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         emit MaxBatchWithdrawSizeUpdated(newMaxBatch, prevMaxBatch, msg.sender);
     }
 
+    /// @notice Set refund window.
+    /// @param newWindow New duration in seconds.
     function setRefundWindow(uint32 newWindow) external {
         if (!hasBackendRole[msg.sender]) revert CallerIsNotBackend();
         uint32 prevWindow = refundWindow;
@@ -281,6 +372,12 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         emit RefundWindowUpdated(newWindow, prevWindow, msg.sender);
     }
 
+    /// @notice Set fee cuts for UDAO and non-UDAO.
+    /// @param _atFoundCut Foundation cut (any token).
+    /// @param _atGoverCut Governance cut (any token).
+    /// @param _utFoundCut Foundation cut (UDAO).
+    /// @param _utGoverCut Governance cut (UDAO).
+    /// @dev All inputs are in 1e5 bps. Sums must be < 100_000.
     function setCourseCuts(
         uint32 _atFoundCut,
         uint32 _atGoverCut,
@@ -306,7 +403,6 @@ contract NewTreasury is EIP712, ReentrancyGuard {
 
         atFoundCut = _atFoundCut;
         atGoverCut = _atGoverCut;
-
         utFoundCut = _utFoundCut;
         utGoverCut = _utGoverCut;
 
@@ -323,6 +419,11 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         );
     }
 
+    /// @notice Deploy treasury.
+    /// @param _foundationAddress Foundation controller.
+    /// @param _udaoTokenAddress UDAO ERC20.
+    /// @param _governanceContract Governance wallet/contract.
+    /// @dev Deployer also receives backend role if not foundation.
     constructor(
         address _foundationAddress,
         address _udaoTokenAddress,
@@ -332,33 +433,58 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         if (_udaoTokenAddress == address(0)) revert UdaoTokenAddressIsZero();
         if (_governanceContract == address(0)) revert GovernanceAddressIsZero();
 
-        foundationAddress = _foundationAddress; // set foundation wallet address
-        governanceAddress = _governanceContract; // set governance contract address
-        udaoTokenAddress = _udaoTokenAddress; // set udao token address
+        foundationAddress = _foundationAddress;
+        governanceAddress = _governanceContract;
+        udaoTokenAddress = _udaoTokenAddress;
 
-        hasBackendRole[_foundationAddress] = true; // ensure foundation wallet has the backend role
+        hasBackendRole[_foundationAddress] = true;
         if (msg.sender != _foundationAddress) {
             hasBackendRole[msg.sender] = true;
         }
     }
 
-    /////### COURSE CREATION & UPDATING LOGIC ###/////
+    // -------- COURSE CREATION & UPDATES --------
+
+    /// @notice Course data.
     struct Course {
+        /// @notice Off-chain metadata URI.
         string uri;
+        /// @notice True if purchasable.
         bool sellable;
     }
 
-    uint256 public courseCounter; //0x00 empty not used
-    mapping(uint256 => Course) public courses; // courseId => Course struct
-    mapping(uint256 => address[]) public authorizedWithdrawers; // courseId => list of authorized withdrawers
-    mapping(address => mapping(uint256 => bool)) public isAuthorizedWithdrawer; // withdrawer => courseId => true if the withdrawer is authorized for the course
+    /// @notice Incremental course id counter.
+    /// @dev Starts from 1. Zero means non-existent course.
+    uint256 public courseCounter;
+
+    /// @notice Course id to data.
+    mapping(uint256 => Course) public courses;
+
+    /// @notice Authorized withdrawers per course.
+    mapping(uint256 => address[]) public authorizedWithdrawers;
+
+    /// @notice Quick lookup of withdrawer auth.
+    mapping(address => mapping(uint256 => bool)) public isAuthorizedWithdrawer;
+
+    /// @notice URI hash to course id. Zero means unused.
     mapping(bytes32 => uint256) public uriToCourseId;
 
+    /// @notice Emitted on course creation.
+    /// @param courseId New course id.
+    /// @param uriHash keccak256(uri).
+    /// @param createdBy Caller who redeemed voucher.
     event CourseCreated(
         uint256 indexed courseId,
         bytes32 indexed uriHash,
         address createdBy
     );
+
+    /// @notice Voucher to create a course.
+    /// @param uri Metadata URI.
+    /// @param withdrawers Withdraw-authorized addresses.
+    /// @param redeemer Must equal caller.
+    /// @param validUntil Expiry timestamp.
+    /// @param signature Backend EIP712 signature.
     struct CreateCourseVoucher {
         string uri;
         address[] withdrawers;
@@ -367,6 +493,11 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         bytes signature;
     }
 
+    /// @notice Dry-run validation for a batch of create vouchers.
+    /// @param vouchers Batched vouchers.
+    /// @return success True if all pass.
+    /// @return failedIndex First failing index if any.
+    /// @return reason Stringified error selector-like text.
     function previewCreateCourseBatch(
         CreateCourseVoucher[] calldata vouchers
     )
@@ -376,7 +507,6 @@ contract NewTreasury is EIP712, ReentrancyGuard {
     {
         if (vouchers.length > maxBatchCreateSize)
             return (false, 0, "CreateBatchSizeExceedsLimit()");
-        // use memory instead:
         bytes32[] memory uriHashes = new bytes32[](vouchers.length);
 
         for (uint256 i = 0; i < vouchers.length; i++) {
@@ -385,7 +515,6 @@ contract NewTreasury is EIP712, ReentrancyGuard {
             if (uriHash == EMPTY_URI_HASH) return (false, i, "UriIsEmpty()");
             if (uriToCourseId[uriHash] != 0)
                 return (false, i, "UriIsAlreadyUsedOrDuplicatedInBatch()");
-            // check for duplicates in batch
             for (uint256 k = 0; k < i; k++) {
                 if (uriHashes[k] == uriHash)
                     return (false, i, "UriIsAlreadyUsedOrDuplicatedInBatch()");
@@ -420,7 +549,6 @@ contract NewTreasury is EIP712, ReentrancyGuard {
             if (!hasBackendRole[signer])
                 return (false, i, "SignerIsNotBackend()");
 
-            // duplicate or zero address check for withdrawers also check is caller authorized?
             bool found = false;
             for (uint256 j = 0; j < lenW; j++) {
                 address w = withdrawers[j];
@@ -438,17 +566,17 @@ contract NewTreasury is EIP712, ReentrancyGuard {
                         );
                 }
             }
-            // is caller authorized?
             if (!hasBackendRole[msg.sender]) {
                 if (!found)
                     return (false, i, "CallerIsNeitherWithdrawerNorBackend()");
             }
-            //END FOR
         }
         return (true, 0, "");
-        //END FUNC
     }
 
+    /// @notice Create courses from vouchers.
+    /// @param vouchers Batched create vouchers.
+    /// @dev Enforces unique URI and authorized withdrawers. Caller must be voucher.redeemer.
     function createCourseBatch(
         CreateCourseVoucher[] calldata vouchers
     ) external {
@@ -456,20 +584,16 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         if (len > maxBatchCreateSize) revert CreateBatchSizeExceedsLimit();
         uint256 maxW = maxAllowedWithdrawers;
         bool isCallerBackend = hasBackendRole[msg.sender];
-
         for (uint256 i = 0; i < len; ) {
             CreateCourseVoucher calldata voucher = vouchers[i];
-            //uri hash
             bytes32 uriHash = keccak256(bytes(voucher.uri));
             if (uriHash == EMPTY_URI_HASH) revert UriIsEmpty();
             if (uriToCourseId[uriHash] != 0)
                 revert UriIsAlreadyUsedOrDuplicatedInBatch();
-            // withdrawers
             address[] memory withdrawers = voucher.withdrawers;
-            uint256 lenW = withdrawers.length; //array length
+            uint256 lenW = withdrawers.length;
             if (lenW == 0) revert WithdrawerArrayIsEmpty();
             if (lenW > maxW) revert WithdrawerArrayExceedsLimit();
-            // voucher
             bytes32 wHash;
             assembly {
                 wHash := keccak256(add(withdrawers, 0x20), mul(lenW, 0x20))
@@ -494,61 +618,57 @@ contract NewTreasury is EIP712, ReentrancyGuard {
             );
             if (uint256(err) != 0) revert SignatureIsInvalid();
             if (!hasBackendRole[signer]) revert SignerIsNotBackend();
-            // end voucher
 
             uint256 newCourseId;
             unchecked {
-                newCourseId = ++courseCounter; // önce arttır, sonra arttırdığın değeri ata. Tek okuma ve yazma.
+                newCourseId = ++courseCounter;
             }
 
             address[] storage aw = authorizedWithdrawers[newCourseId];
-            // spare memory for withdrawers array
             uint256 base;
             assembly {
-                sstore(aw.slot, lenW) // set array length once
-                mstore(0x00, aw.slot) // store array slot in memory
-                base := keccak256(0x00, 0x20) // get first element slot
+                sstore(aw.slot, lenW)
+                mstore(0x00, aw.slot)
+                base := keccak256(0x00, 0x20)
             }
-
             for (uint256 j = 0; j < lenW; ) {
                 address w = withdrawers[j];
                 if (w == address(0)) revert WithdrawerAddressIsZero();
                 if (isAuthorizedWithdrawer[w][newCourseId])
                     revert WithdrawerArrayContainsDuplicates();
-
                 isAuthorizedWithdrawer[w][newCourseId] = true;
-                // gas efficient aw.push(w) op:
                 assembly {
-                    sstore(add(base, j), w) // store w into array
+                    sstore(add(base, j), w)
                 }
-
                 unchecked {
                     j++;
                 }
             }
-
             if (!isCallerBackend) {
                 if (!isAuthorizedWithdrawer[msg.sender][newCourseId])
                     revert CallerIsNeitherWithdrawerNorBackend();
             }
-
             uriToCourseId[uriHash] = newCourseId;
             courses[newCourseId] = Course({uri: voucher.uri, sellable: true});
-
             emit CourseCreated(newCourseId, uriHash, msg.sender);
             unchecked {
                 i++;
             }
         }
-        // end of createCourseBatch
     }
 
+    /// @notice Emitted when course URI hash changes.
     event CourseUriUpdated(
         uint256 indexed courseId,
         bytes32 indexed newUriHash,
         bytes32 indexed oldUriHash
     );
 
+    /// @notice Emitted on course updates.
+    /// @param courseId Course id.
+    /// @param sellable New sellable flag.
+    /// @param uriChanged True if URI updated.
+    /// @param updatedBy Caller.
     event CourseUpdated(
         uint256 indexed courseId,
         bool sellable,
@@ -556,24 +676,27 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         address indexed updatedBy
     );
 
+    /// @notice Voucher to update a course.
+    /// @dev Empty `uri` or `withdrawers` means no change for that field.
     struct UpdateCourseVoucher {
         uint256 courseId;
-        bool sellable; // true if sellable, false if not
-        string uri; // if empty no change in uri
-        address[] withdrawers; // if empty no change in withdrawers
+        bool sellable;
+        string uri;
+        address[] withdrawers;
         address redeemer;
         uint256 validUntil;
         bytes signature;
     }
 
+    /// @notice Update course metadata, sellable flag, and withdrawers via voucher.
+    /// @param voucher Signed update voucher.
     function updateCourse(UpdateCourseVoucher calldata voucher) external {
-        // local copy to optimize calldata reads
         uint256 courseId = voucher.courseId;
         if (courseId == 0 || courseId > courseCounter)
             revert CourseIdIsInvalid();
 
         address[] memory withdrawers = voucher.withdrawers;
-        uint256 lenW = withdrawers.length; //array length
+        uint256 lenW = withdrawers.length;
         if (lenW > maxAllowedWithdrawers) revert WithdrawerArrayExceedsLimit();
 
         bytes32 newUriHash = keccak256(bytes(voucher.uri));
@@ -617,8 +740,7 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         }
 
         if (lenW != 0) {
-            // clear previous authorized withdrawers
-            address[] storage aw = authorizedWithdrawers[courseId]; //storage gas cheper in this case
+            address[] storage aw = authorizedWithdrawers[courseId];
             uint256 lenPW = aw.length;
             for (uint256 i = 0; i < lenPW; ) {
                 isAuthorizedWithdrawer[aw[i]][courseId] = false;
@@ -626,31 +748,25 @@ contract NewTreasury is EIP712, ReentrancyGuard {
                     i++;
                 }
             }
-
             uint256 base;
             assembly {
-                sstore(aw.slot, lenW) // set length once
+                sstore(aw.slot, lenW)
                 mstore(0x00, aw.slot)
-                base := keccak256(0x00, 0x20) // first element slot
+                base := keccak256(0x00, 0x20)
             }
-
             for (uint256 i = 0; i < lenW; ) {
                 address w = withdrawers[i];
                 if (w == address(0)) revert WithdrawerAddressIsZero();
                 if (isAuthorizedWithdrawer[w][courseId])
                     revert WithdrawerArrayContainsDuplicates();
-
                 isAuthorizedWithdrawer[w][courseId] = true;
-
                 assembly {
-                    sstore(add(base, i), w) //store new ws' to authorizedWithdrawers
+                    sstore(add(base, i), w)
                 }
-
                 unchecked {
                     i++;
                 }
             }
-            //COMMENTED authorizedWithdrawers[courseId] = withdrawers; push daha verimli hatta asembly push dahada verimli.
         }
 
         if (!hasBackendRole[msg.sender]) {
@@ -658,51 +774,66 @@ contract NewTreasury is EIP712, ReentrancyGuard {
                 revert CallerIsNeitherWithdrawerNorBackend();
         }
 
-        // get existing course
         Course storage courseExisting = courses[courseId];
-        // URI: only if non-empty and actually changed
         if (updateUri) {
             bytes32 oldUriHash = keccak256(bytes(courseExisting.uri));
-            delete uriToCourseId[oldUriHash]; // clean up old
-            uriToCourseId[newUriHash] = courseId; // assign new
+            delete uriToCourseId[oldUriHash];
+            uriToCourseId[newUriHash] = courseId;
             courseExisting.uri = voucher.uri;
             emit CourseUriUpdated(courseId, newUriHash, oldUriHash);
         }
-        // update sellable
         courseExisting.sellable = sellable;
 
-        // emit event
         emit CourseUpdated(courseId, sellable, updateUri, msg.sender);
     }
 
-    /////### PAYMENT LOGIC ###/////
-    uint256 public paymentCounter; // 0x00 empty not used
-    mapping(uint256 => Payment) public payments; // paymentId => Payment struct
+    // -------- PAYMENTS --------
 
-    mapping(uint256 => uint256) public saleCounterPerCourse; // courseId => howManySalesMadeForThisCourse 0is empty never used
-    mapping(uint256 => mapping(uint256 => uint256)) public courseSaleRecords; // courseId => (saleCounterPerCourse => paymentId) start from 1 - 1
+    /// @notice Payment id counter.
+    /// @dev Starts from 1. Zero means non-existent payment.
+    uint256 public paymentCounter;
 
-    mapping(address => uint256[]) public ownedCourses; // aUser => list of courseIds owned by the buyer
-    mapping(address => mapping(uint256 => uint256)) public ownedCourseIndex; // aUser => courseId => index in the ownedCourses array
-    mapping(address => mapping(uint256 => bool)) public hasOwnedCourse; // aUser => courseId => true if the buyer has owned the course
-    // refund directly to the course receiver - courseID
-    mapping(address => mapping(uint256 => uint256)) public courseOwnerToPayment; // aUser => courseId => paymentId
-    mapping(address => uint256) public locked; // token address => token amount that paid to buy courses
+    /// @notice Payments by id.
+    mapping(uint256 => Payment) public payments;
 
+    /// @notice Per-course sale counters.
+    /// @dev Zero is never used as a sale index.
+    mapping(uint256 => uint256) public saleCounterPerCourse;
+
+    /// @notice courseId => saleIndex => paymentId.
+    mapping(uint256 => mapping(uint256 => uint256)) public courseSaleRecords;
+
+    /// @notice Owned course list per user. Index 0 is sentinel 0 when non-empty.
+    mapping(address => uint256[]) public ownedCourses;
+
+    /// @notice Index of a course id in a user's ownedCourses.
+    mapping(address => mapping(uint256 => uint256)) public ownedCourseIndex;
+
+    /// @notice Fast ownership flag.
+    mapping(address => mapping(uint256 => bool)) public hasOwnedCourse;
+
+    /// @notice courseOwner => courseId => paymentId.
+    mapping(address => mapping(uint256 => uint256)) public courseOwnerToPayment;
+
+    /// @notice Locked balances by token to protect refunds and pending withdrawals.
+    mapping(address => uint256) public locked;
+
+    /// @notice Payment record.
     struct Payment {
         uint256 courseId;
-        address payer; // buyer who paid for the course
-        address courseReceiver; // user address who gets the course
-        address tokenAddress; // ERC20 token address or 0x0 for native
-        uint256 totalAmount; // total amount of the payment
-        uint256 instructorShare; // amount delivered to the instructor
-        uint256 foundationShare; // amount delivered to the foundation
-        uint256 governanceShare; // amount delivered to the governance
-        uint256 endOfRefundWindow; // end of refund window
-        bool isRefunded; // true if already refunded
-        bool isWithdrawn; // true if already withdrawn
+        address payer;
+        address courseReceiver;
+        address tokenAddress; // 0x0 for native
+        uint256 totalAmount;
+        uint256 instructorShare;
+        uint256 foundationShare;
+        uint256 governanceShare;
+        uint256 endOfRefundWindow;
+        bool isRefunded;
+        bool isWithdrawn;
     }
 
+    /// @notice Emitted on successful purchase.
     event ContentPurchased(
         uint256 indexed paymentId,
         uint256 indexed courseId,
@@ -711,16 +842,23 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         address tokenAddress,
         uint256 receivedCoursePrice
     );
+
+    /// @notice Voucher to buy a course.
     struct BuyCourseVoucher {
         uint256 courseId;
-        address tokenAddress; // erc20 adressi or 0x0 for native token
-        uint256 coursePrice; // Total amount of the payment
-        address courseReceiver; // who will owns the course after payment
-        address redeemer; // who pays for the course
-        uint256 validUntil; // voucher valid until timestamp
-        bytes signature; // signature of the voucher
+        address tokenAddress;
+        uint256 coursePrice;
+        address courseReceiver;
+        address redeemer;
+        uint256 validUntil;
+        bytes signature;
     }
 
+    /// @notice Dry-run validation for a batch of buy vouchers.
+    /// @param vouchers Batched vouchers.
+    /// @return success True if all pass.
+    /// @return failedIndex First failing index if any.
+    /// @return reason Stringified error.
     function previewBuyCourseBatch(
         BuyCourseVoucher[] calldata vouchers
     )
@@ -730,10 +868,8 @@ contract NewTreasury is EIP712, ReentrancyGuard {
     {
         if (vouchers.length > maxBatchBuySize)
             return (false, 0, "BuyBatchSizeExceedsLimit()");
-
         bytes32[] memory seen = new bytes32[](vouchers.length);
         uint256 seenLen = 0;
-
         for (uint256 i = 0; i < vouchers.length; i++) {
             BuyCourseVoucher calldata voucher = vouchers[i];
             address receiver = voucher.courseReceiver;
@@ -750,12 +886,10 @@ contract NewTreasury is EIP712, ReentrancyGuard {
                 return (
                     false,
                     i,
-                    "CourseIsAlreadyOwnedByReceiverOrDuplicatedInBatch()" // bu olmaz kayıt yapmadığımız içib batch içindeki dublicateleri yakalayamıyoruz.
+                    "CourseIsAlreadyOwnedByReceiverOrDuplicatedInBatch()" // @TODO Batu böyle bir comment var bu ne? // bu olmaz kayıt yapmadığımız içib batch içindeki dublicateleri yakalayamıyoruz.
                 );
 
             bytes32 key = keccak256(abi.encodePacked(receiver, courseId));
-
-            // batch içi duplicate kontrolü
             for (uint256 j = 0; j < seenLen; j++) {
                 if (seen[j] == key)
                     return (
@@ -764,7 +898,6 @@ contract NewTreasury is EIP712, ReentrancyGuard {
                         "CourseIsAlreadyOwnedByReceiverOrDuplicatedInBatch()"
                     );
             }
-
             seen[seenLen++] = key;
 
             if (voucher.redeemer != msg.sender)
@@ -792,10 +925,12 @@ contract NewTreasury is EIP712, ReentrancyGuard {
             if (!hasBackendRole[signer])
                 return (false, i, "SignerIsNotBackend()");
         }
-
         return (true, 0, "");
     }
 
+    /// @notice Buy courses from vouchers.
+    /// @param vouchers Batched buy vouchers.
+    /// @dev msg.value must equal the sum of native-priced vouchers. ERC20s are pulled via transferFrom.
     function buyCourseBatch(
         BuyCourseVoucher[] calldata vouchers
     ) external payable nonReentrant {
@@ -808,21 +943,17 @@ contract NewTreasury is EIP712, ReentrancyGuard {
 
         for (uint256 i = 0; i < len; ) {
             BuyCourseVoucher calldata voucher = vouchers[i];
-            // encode the voucher fields to reduce gas cost
             uint256 courseId = voucher.courseId;
             if (courseId == 0 || courseId > courseCounter)
                 revert CourseIdIsInvalid();
             if (!courses[courseId].sellable) revert CourseIsNotSellable();
             uint256 coursePrice = voucher.coursePrice;
-            //course price must be greater than 0
             if (coursePrice == 0) revert CoursePriceIsZero();
             address courseReceiver = voucher.courseReceiver;
-            //content receiver has to be dont have the course already
             if (hasOwnedCourse[courseReceiver][courseId]) {
                 revert CourseIsAlreadyOwnedByReceiverOrDuplicatedInBatch();
             }
             address tokenAddress = voucher.tokenAddress;
-            // voucher
             address redeemer = voucher.redeemer;
             if (redeemer != msg.sender) revert CallerIsNotVoucherRedeemer();
             uint256 validUntil = voucher.validUntil;
@@ -845,9 +976,7 @@ contract NewTreasury is EIP712, ReentrancyGuard {
             );
             if (uint256(err) != 0) revert SignatureIsInvalid();
             if (!hasBackendRole[signer]) revert SignerIsNotBackend();
-            // end voucher
 
-            // check if the payment is made in native token or erc20 token
             if (tokenAddress == address(0)) {
                 totalNativeRequired += coursePrice;
                 gotAmounts[i] = coursePrice;
@@ -861,7 +990,6 @@ contract NewTreasury is EIP712, ReentrancyGuard {
                     address(this),
                     coursePrice
                 );
-
                 lastBal = IERC20(tokenAddress).balanceOf(address(this));
                 gotAmounts[i] = lastBal - beforeBal;
                 lastTok = tokenAddress;
@@ -876,7 +1004,6 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         if (msg.value != totalNativeRequired)
             revert NativeValueNotEqualToTotal();
 
-        // cache constants / globals
         address _udao = udaoTokenAddress;
         uint32 _atF = atFoundCut;
         uint32 _atG = atGoverCut;
@@ -886,26 +1013,22 @@ contract NewTreasury is EIP712, ReentrancyGuard {
 
         for (uint256 i = 0; i < len; ) {
             BuyCourseVoucher calldata voucher = vouchers[i];
-            // encode the voucher fields to reduce gas cost
             uint256 courseId = voucher.courseId;
             address tokenAddress = voucher.tokenAddress;
             uint256 receivedCoursePrice = gotAmounts[i];
             address courseReceiver = voucher.courseReceiver;
 
-            //lock incoming course price
             locked[tokenAddress] += receivedCoursePrice;
 
-            // calculate shares
             bool isUdao = (tokenAddress == _udao);
             uint256 foundShare = (receivedCoursePrice *
                 (isUdao ? _utF : _atF)) / 100_000;
             uint256 goverShare = (receivedCoursePrice *
                 (isUdao ? _utG : _atG)) / 100_000;
 
-            // save the payment details
             uint256 newPaymentId;
             unchecked {
-                newPaymentId = ++paymentCounter; // önce arttır, sonra arttırdığın değeri ata. Tek okuma ve yazma.
+                newPaymentId = ++paymentCounter;
             }
 
             payments[newPaymentId] = Payment({
@@ -917,32 +1040,27 @@ contract NewTreasury is EIP712, ReentrancyGuard {
                 instructorShare: receivedCoursePrice - foundShare - goverShare,
                 foundationShare: foundShare,
                 governanceShare: goverShare,
-                endOfRefundWindow: block.timestamp + _rw, //refundWindow,
+                endOfRefundWindow: block.timestamp + _rw,
                 isRefunded: false,
                 isWithdrawn: false
             });
 
-            // pair paymentId with courseReceiver and courseId
             courseOwnerToPayment[courseReceiver][courseId] = newPaymentId;
 
-            // increase saleCounterPerCourse for this course
             unchecked {
                 saleCounterPerCourse[courseId]++;
             }
-            // save paymentId to courseSaleRecords mapping according to CourseSaleCounter for this course
             courseSaleRecords[courseId][
                 saleCounterPerCourse[courseId]
             ] = newPaymentId;
 
             uint256 lenOwned = ownedCourses[courseReceiver].length;
             if (lenOwned == 0) {
-                // If the course receiver has owned courses, update the mapping
                 ownedCourses[courseReceiver].push(0);
-                lenOwned = 1; // zero index always holds 0
+                lenOwned = 1; /// @note Zero index always holds 0
             }
             ownedCourses[courseReceiver].push(courseId);
             ownedCourseIndex[courseReceiver][courseId] = lenOwned;
-            // update hasOwnedCourse mapping, Removed because saved in first loop //hasOwnedCourse[_courseReceiver][_courseId] = true;
 
             emit ContentPurchased(
                 newPaymentId,
@@ -958,7 +1076,9 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         }
     }
 
-    /////### COURSE REFUND LOGIC ###/////
+    // -------- REFUNDS --------
+
+    /// @notice Emitted on refund.
     event CourseRefunded(
         uint256 indexed paymentId,
         uint256 indexed courseId,
@@ -968,21 +1088,22 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         uint256 refundedAmount
     );
 
+    /// @notice Voucher to refund by payment id.
     struct RefundCourseVoucher {
         uint256 paymentId;
         address redeemer;
-        uint256 validUntil; // voucher valid until timestamp
+        uint256 validUntil;
         bytes signature;
     }
 
+    /// @notice Refund a payment by id via voucher.
+    /// @param voucher Signed refund voucher.
     function refundCourse(
         RefundCourseVoucher calldata voucher
     ) external nonReentrant {
-        // encode the voucher fields to reduce gas cost
         uint256 paymentId = voucher.paymentId;
         if (paymentId == 0 || paymentId > paymentCounter)
             revert PaymentIdIsInvalid();
-        // voucher
         address redeemer = voucher.redeemer;
         if (redeemer != msg.sender) revert CallerIsNotVoucherRedeemer();
         uint256 validUntil = voucher.validUntil;
@@ -1002,23 +1123,24 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         );
         if (uint256(err) != 0) revert SignatureIsInvalid();
         if (!hasBackendRole[signer]) revert SignerIsNotBackend();
-        // end voucher
 
         _refundCourse(paymentId);
     }
 
+    /// @notice Voucher to refund by owner+course.
     struct RefundCourseByOwnerAndCourseIdVoucher {
         address courseOwner;
         uint256 courseId;
         address redeemer;
-        uint256 validUntil; // voucher valid until timestamp
+        uint256 validUntil;
         bytes signature;
     }
 
+    /// @notice Refund using owner and course id.
+    /// @param voucher Signed refund voucher.
     function refundCourseByOwnerAndCourseId(
         RefundCourseByOwnerAndCourseIdVoucher calldata voucher
     ) external nonReentrant {
-        // encode the voucher fields to reduce gas cost
         address courseOwner = voucher.courseOwner;
         uint256 courseId = voucher.courseId;
 
@@ -1046,11 +1168,13 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         );
         if (uint256(err) != 0) revert SignatureIsInvalid();
         if (!hasBackendRole[signer]) revert SignerIsNotBackend();
-        // end voucher
 
         _refundCourse(paymentId);
     }
 
+    /// @notice Internal refund handler. Reverts on invalid state.
+    /// @param _paymentId Payment id.
+    /// @dev Updates ownership sets, transfers funds back to payer, and reduces locked balance.
     function _refundCourse(uint256 _paymentId) internal {
         Payment storage payment = payments[_paymentId];
 
@@ -1059,7 +1183,6 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         if (payment.endOfRefundWindow < block.timestamp)
             revert RefundWindowHasPassed();
 
-        //avoid the field access to save gas
         address _receiver = payment.courseReceiver;
         uint256 _courseId = payment.courseId;
 
@@ -1067,68 +1190,63 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         mapping(uint256 => uint256) storage oi = ownedCourseIndex[_receiver];
         uint256 courseIndex = oi[_courseId];
         if (courseIndex == 0) revert CourseIsNotOwnedByReceiver(); //TODO: imposible revert case buy cheap
-        // Mark refunded before transfer to prevent re-entrancy
+
         payment.isRefunded = true;
 
-        // remove the courseId from the ownedCourses list and update the indexes
-        // swap & pop
         unchecked {
             uint256 lastIndex = oc.length - 1;
-
             if (courseIndex != lastIndex) {
                 uint256 lastCourseId = oc[lastIndex];
                 oc[courseIndex] = lastCourseId;
-                oi[lastCourseId] = courseIndex; // sentinel 0 burada zaten olamaz
+                oi[lastCourseId] = courseIndex;
             }
         }
-        //
-        oc.pop(); // remove the last element
-        delete oi[_courseId]; // delete the index of the removed courseId
-        delete courseOwnerToPayment[_receiver][_courseId]; // remove the paymentId for the course owner
-        hasOwnedCourse[_receiver][_courseId] = false; // update hasOwnedCourse mapping
+        oc.pop();
+        delete oi[_courseId];
+        delete courseOwnerToPayment[_receiver][_courseId];
+        hasOwnedCourse[_receiver][_courseId] = false;
 
         address _payer = payment.payer;
         address _tokenAddress = payment.tokenAddress;
         uint256 _totalAmount = payment.totalAmount;
 
-        // Transfer refund
         if (_tokenAddress == address(0)) {
-            // native token
             (bool isSent, ) = payable(_payer).call{value: _totalAmount}("");
             if (!isSent) revert NativeRefundFailed();
         } else {
-            // ERC20
             IERC20(_tokenAddress).safeTransfer(_payer, _totalAmount);
         }
 
-        // reduce paid amount to locked balances
         locked[_tokenAddress] -= _totalAmount;
 
         emit CourseRefunded(
             _paymentId,
             _courseId,
             _receiver,
-            _payer, // refundedTo
+            _payer,
             _tokenAddress,
-            _totalAmount // refundedAmount
+            _totalAmount
         );
     }
 
-    /////### WITHDRAW LOGIC ###/////
-    // withdraw logic
+    // -------- WITHDRAWALS --------
+
+    /// @notice Voucher to withdraw a range of matured sales for a course.
     struct WithdrawVoucher {
         uint256 courseId;
         uint256 fromIndex; // inclusive
         uint256 toIndex; // inclusive
-        address redeemer;
+        address redeemer; // must be authorized withdrawer and caller
         uint256 validUntil;
         bytes signature;
     }
 
+    /// @notice Withdraw matured payments for a course.
+    /// @param voucher Signed withdraw voucher including sale index range.
+    /// @dev Skips refunded/withdrawn/in-window payments. Emits counts per attempt.
     function withdrawCoursePayments(
         WithdrawVoucher calldata voucher
     ) external nonReentrant {
-        // encode the voucher fields to reduce gas cost
         uint256 courseId = voucher.courseId;
         if (courseId == 0 || courseId > courseCounter)
             revert CourseIdIsInvalid();
@@ -1166,9 +1284,7 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         );
         if (uint256(err) != 0) revert SignatureIsInvalid();
         if (!hasBackendRole[signer]) revert SignerIsNotBackend();
-        // end voucher
 
-        //jump removed so this_withdrawCoursePayments(courseId, fromIndex, toIndex) is below in line code right know:
         uint256 withdrawnCompleted = 0;
         uint256 withdrawnFailed = 0;
         mapping(uint256 => uint256) storage csr = courseSaleRecords[courseId];
@@ -1178,7 +1294,7 @@ contract NewTreasury is EIP712, ReentrancyGuard {
             unchecked {
                 j++;
             }
-            if (paymentId == 0) continue; // imposible branch but cheap
+            if (paymentId == 0) continue;
 
             Payment storage p = payments[paymentId];
             if (
@@ -1208,6 +1324,7 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         );
     }
 
+    /// @notice Emitted after a withdrawal attempt range completes.
     event CoursePaymentsWithdrawn(
         uint256 indexed courseId,
         uint256 fromIndex,
@@ -1217,6 +1334,10 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         uint256 withdrawnFailed
     );
 
+    /// @notice Single payment withdrawal. Callable only by this contract.
+    /// @param paymentId Payment id.
+    /// @param instructor Target withdrawer to receive instructor share.
+    /// @dev Marks withdrawn, sends instructor/foundation/governance shares, updates locked.
     function attemptSingleWithdrawOrRevert(
         uint256 paymentId,
         address instructor
@@ -1224,36 +1345,30 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         if (msg.sender != address(this)) revert CallerIsNotThisContract();
 
         Payment storage p = payments[paymentId];
-        // mark as withdrawn before attempting (reentrancy protection)
-        p.isWithdrawn = true; //if reverted, this will not be set
+        p.isWithdrawn = true;
         address tokenAddress = p.tokenAddress;
         uint256 totalAmount = p.totalAmount;
         uint256 iShare = p.instructorShare;
         uint256 fShare = p.foundationShare;
         uint256 gShare = p.governanceShare;
-        address gAddress = governanceAddress; // governance address
+        address gAddress = governanceAddress;
 
         if (tokenAddress == address(0)) {
             if (iShare != 0) {
-                // Native token transfers
                 (bool iOK, ) = payable(instructor).call{value: iShare}("");
-                //require(iOK);
-                if (!iOK) revert NativeTransferToInstructorFailed(); // da yani okunamıyor ki bu.
+                if (!iOK) revert NativeTransferToInstructorFailed();
             }
             if (fShare != 0) {
                 (bool fOK, ) = payable(foundationAddress).call{value: fShare}(
                     ""
                 );
-                //require(fOK);
                 if (!fOK) revert NativeTransferToFoundationFailed();
             }
             if (gShare != 0) {
                 (bool gOK, ) = payable(gAddress).call{value: gShare}("");
-                //require(gOK);
                 if (!gOK) revert NativeTransferToGovernanceFailed();
             }
         } else {
-            // ERC20 transfers
             if (iShare != 0) {
                 IERC20(tokenAddress).safeTransfer(instructor, iShare);
             }
@@ -1264,11 +1379,9 @@ contract NewTreasury is EIP712, ReentrancyGuard {
                 IERC20(tokenAddress).safeTransfer(gAddress, gShare);
             }
         }
-        // reduce paid amount to locked balances
         locked[tokenAddress] -= totalAmount;
 
         if (gShare != 0 && gAddress.code.length > 0) {
-            // governanceAddress is a contract gShare != 0 &&
             IGovernanceTreasury(gAddress).addGovernanceFunds(
                 tokenAddress,
                 gShare
@@ -1276,6 +1389,14 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         }
     }
 
+    /// @notice Preview withdrawal statuses for a sale index range.
+    /// @param courseId Course id.
+    /// @param fromIndex Inclusive sale index.
+    /// @param toIndex Inclusive sale index.
+    /// @return refunded Sale indices refunded.
+    /// @return withdrawn Sale indices withdrawn.
+    /// @return inWindow Sale indices still in refund window.
+    /// @return ready Sale indices ready to withdraw.
     function previewWithdrawStatus(
         uint256 courseId,
         uint256 fromIndex,
@@ -1292,14 +1413,12 @@ contract NewTreasury is EIP712, ReentrancyGuard {
     {
         if (courseId == 0 || courseId > courseCounter)
             revert CourseIdIsInvalid();
-
         if (
             fromIndex == 0 ||
             fromIndex > toIndex ||
             toIndex > saleCounterPerCourse[courseId]
         ) revert WithdrawIndexRangeIsInvalid();
 
-        // max length = toIndex - fromIndex + 1
         uint256 len = toIndex - fromIndex + 1;
 
         refunded = new uint256[](len);
@@ -1333,7 +1452,6 @@ contract NewTreasury is EIP712, ReentrancyGuard {
             }
         }
 
-        // shrink arrays
         assembly {
             mstore(refunded, r)
             mstore(withdrawn, w)
@@ -1342,32 +1460,44 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         }
     }
 
+    /// @notice Get all authorized withdrawers for a course.
+    /// @param courseId Course id.
     function getAuthorizedWithdrawers(
         uint256 courseId
     ) external view returns (address[] memory) {
         return authorizedWithdrawers[courseId];
     }
 
+    /// @notice Get number of authorized withdrawers for a course.
+    /// @param courseId Course id.
     function getAuthorizedWithdrawersLength(
         uint256 courseId
     ) external view returns (uint256) {
         return authorizedWithdrawers[courseId].length;
     }
 
+    /// @notice Get full owned courses array for user.
+    /// @param user Account.
     function getOwnedCourses(
         address user
     ) external view returns (uint256[] memory) {
         return ownedCourses[user];
     }
 
+    /// @notice Get owned courses array length for user.
+    /// @param user Account.
     function getOwnedCoursesLength(
         address user
     ) external view returns (uint256) {
         return ownedCourses[user].length;
     }
 
+    /// @notice Slice of owned course ids.
+    /// @param user Account.
+    /// @param startIdx Start index into logical list (excluding sentinel).
+    /// @param limit Max items.
+    /// @return out Array slice.
     function getOwnedCoursesSlice(
-        // [0,1,33,2,42,77]
         address user,
         uint256 startIdx,
         uint256 limit
@@ -1389,8 +1519,12 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         }
     }
 
+    /// @notice Slice of course sale records -> paymentIds.
+    /// @param courseId Course id.
+    /// @param startIdx Start sale index.
+    /// @param limit Max items.
+    /// @return out Payment id slice.
     function getCourseSaleRecordsSlice(
-        //0-0 1- 33 2-21 3-222
         uint256 courseId,
         uint256 startIdx,
         uint256 limit
@@ -1453,6 +1587,9 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         address indexed rescuedBy
     );
 
+    /// @notice Rescue surplus funds above locked balance to foundation.
+    /// @param tokenAddress ERC20 token or zero for native.
+    /// @dev Does nothing if no surplus. Reverts on failed native transfer.
     function rescueSurplus(address tokenAddress) external nonReentrant {
         address to = foundationAddress;
         uint256 contractBalance = tokenAddress == address(0)
@@ -1468,11 +1605,13 @@ contract NewTreasury is EIP712, ReentrancyGuard {
             } else {
                 IERC20(tokenAddress).safeTransfer(to, surplus);
             }
-
             emit SurplusRescued(tokenAddress, to, surplus, msg.sender);
         }
     }
 
+    /// @notice View current surplus for a token.
+    /// @param token ERC20 token or zero for native.
+    /// @return Surplus amount available to rescue.
     function getSurplusBalance(address token) external view returns (uint256) {
         uint256 bal = token == address(0)
             ? address(this).balance
@@ -1481,8 +1620,15 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         return bal > lockedBalance ? bal - lockedBalance : 0;
     }
 
+    /// @notice Accept native token.
     receive() external payable {}
 
+    /// @notice Calculate fee shares for a payment amount.
+    /// @param _totalAmount Gross amount.
+    /// @param _tokenAddress Token used. Determines UDAO vs non-UDAO cuts.
+    /// @return foundShare Foundation share.
+    /// @return goverShare Governance share.
+    /// @return instructorShare Remainder to instructor.
     function getCalculatedCourseCutShares(
         uint256 _totalAmount,
         address _tokenAddress
@@ -1502,7 +1648,6 @@ contract NewTreasury is EIP712, ReentrancyGuard {
 
         foundShare = (_totalAmount * foundCut) / 100_000;
         goverShare = (_totalAmount * goverCut) / 100_000;
-
         instructorShare = _totalAmount - foundShare - goverShare;
     }
 }
