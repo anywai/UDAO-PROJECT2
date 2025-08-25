@@ -886,7 +886,7 @@ contract NewTreasury is EIP712, ReentrancyGuard {
                 return (
                     false,
                     i,
-                    "CourseIsAlreadyOwnedByReceiverOrDuplicatedInBatch()" // @TODO Batu böyle bir comment var bu ne? // bu olmaz kayıt yapmadığımız içib batch içindeki dublicateleri yakalayamıyoruz.
+                    "CourseIsAlreadyOwnedByReceiverOrDuplicatedInBatch()"
                 );
 
             bytes32 key = keccak256(abi.encodePacked(receiver, courseId));
@@ -1189,7 +1189,7 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         uint256[] storage oc = ownedCourses[_receiver];
         mapping(uint256 => uint256) storage oi = ownedCourseIndex[_receiver];
         uint256 courseIndex = oi[_courseId];
-        if (courseIndex == 0) revert CourseIsNotOwnedByReceiver(); //TODO: imposible revert case buy cheap
+        if (courseIndex == 0) revert CourseIsNotOwnedByReceiver();
 
         payment.isRefunded = true;
 
@@ -1433,7 +1433,7 @@ contract NewTreasury is EIP712, ReentrancyGuard {
 
         for (uint256 j = fromIndex; j <= toIndex; j++) {
             uint256 paymentId = courseSaleRecords[courseId][j];
-            if (paymentId == 0) continue; //TODO: BATU buraya gelemedim ben
+            if (paymentId == 0) continue;
 
             Payment memory p = payments[paymentId];
 
