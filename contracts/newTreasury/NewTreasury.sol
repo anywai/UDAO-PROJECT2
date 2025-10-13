@@ -124,6 +124,7 @@ contract NewTreasury is EIP712, ReentrancyGuard {
     error NativeTransferToInstructorFailed();
     error NativeTransferToFoundationFailed();
     error NativeTransferToGovernanceFailed();
+    error ContractIsPaused();
 
     // -------- ROLES AND AFFILIATIONS --------
 
@@ -138,6 +139,13 @@ contract NewTreasury is EIP712, ReentrancyGuard {
 
     /// @notice Governance treasury contract or wallet.
     address public governanceAddress;
+
+    /// @notice True if contract is paused (no state-changing actions allowed)
+    bool public paused;
+
+    /// @notice Emitted when contract is paused or unpaused
+    event ContractPaused(address indexed by);
+    event ContractUnpaused(address indexed by);
 
     /// @notice Emitted on backend role grant.
     /// @param backendAddress Address that received role.
@@ -172,6 +180,22 @@ contract NewTreasury is EIP712, ReentrancyGuard {
         address indexed newGovernanceAddress,
         address indexed previousGovernanceAddress
     );
+
+    /// @notice Pause or unpause the contract.
+    /// @dev Only callable by the foundation address.
+    /// @param _paused True to pause, false to unpause.
+    function setPaused(bool _paused) external {
+        if (msg.sender != foundationAddress) revert CallerIsNotFoundation();
+        if (paused == _paused) revert ChangeHasNoEffect();
+
+        paused = _paused;
+
+        if (_paused) {
+            emit ContractPaused(msg.sender);
+        } else {
+            emit ContractUnpaused(msg.sender);
+        }
+    }
 
     /// @notice Grant backend signer role.
     /// @param _newAddress Account to grant.
@@ -254,13 +278,13 @@ contract NewTreasury is EIP712, ReentrancyGuard {
     uint32 public atFoundCut = 6000; // 6%
 
     /// @notice Governance cut for non-UDAO, in 1e5 bps.
-    uint32 public atGoverCut = 1000; // 1%
+    uint32 public atGoverCut = 1500; // 1.5%
 
     /// @notice Foundation cut for UDAO, in 1e5 bps.
     uint32 public utFoundCut = 4000; // 4%
 
     /// @notice Governance cut for UDAO, in 1e5 bps.
-    uint32 public utGoverCut = 500; // 0.5%
+    uint32 public utGoverCut = 1000; // 1%
 
     /// @notice Refund window duration in seconds.
     uint32 public refundWindow = 20 days;
@@ -580,6 +604,8 @@ contract NewTreasury is EIP712, ReentrancyGuard {
     function createCourseBatch(
         CreateCourseVoucher[] calldata vouchers
     ) external {
+        if (paused) revert ContractIsPaused();
+
         uint256 len = vouchers.length;
         if (len > maxBatchCreateSize) revert CreateBatchSizeExceedsLimit();
         uint256 maxW = maxAllowedWithdrawers;
@@ -691,6 +717,8 @@ contract NewTreasury is EIP712, ReentrancyGuard {
     /// @notice Update course metadata, sellable flag, and withdrawers via voucher.
     /// @param voucher Signed update voucher.
     function updateCourse(UpdateCourseVoucher calldata voucher) external {
+        if (paused) revert ContractIsPaused();
+
         uint256 courseId = voucher.courseId;
         if (courseId == 0 || courseId > courseCounter)
             revert CourseIdIsInvalid();
@@ -934,6 +962,8 @@ contract NewTreasury is EIP712, ReentrancyGuard {
     function buyCourseBatch(
         BuyCourseVoucher[] calldata vouchers
     ) external payable nonReentrant {
+        if (paused) revert ContractIsPaused();
+
         uint256 len = vouchers.length;
         if (len > maxBatchBuySize) revert BuyBatchSizeExceedsLimit();
         uint256 totalNativeRequired = 0;
@@ -1101,6 +1131,8 @@ contract NewTreasury is EIP712, ReentrancyGuard {
     function refundCourse(
         RefundCourseVoucher calldata voucher
     ) external nonReentrant {
+        if (paused) revert ContractIsPaused();
+
         uint256 paymentId = voucher.paymentId;
         if (paymentId == 0 || paymentId > paymentCounter)
             revert PaymentIdIsInvalid();
@@ -1141,6 +1173,8 @@ contract NewTreasury is EIP712, ReentrancyGuard {
     function refundCourseByOwnerAndCourseId(
         RefundCourseByOwnerAndCourseIdVoucher calldata voucher
     ) external nonReentrant {
+        if (paused) revert ContractIsPaused();
+
         address courseOwner = voucher.courseOwner;
         uint256 courseId = voucher.courseId;
 
@@ -1247,6 +1281,8 @@ contract NewTreasury is EIP712, ReentrancyGuard {
     function withdrawCoursePayments(
         WithdrawVoucher calldata voucher
     ) external nonReentrant {
+        if (paused) revert ContractIsPaused();
+
         uint256 courseId = voucher.courseId;
         if (courseId == 0 || courseId > courseCounter)
             revert CourseIdIsInvalid();
